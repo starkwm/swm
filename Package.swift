@@ -1,0 +1,31 @@
+// swift-tools-version:5.3
+
+import PackageDescription
+
+let package = Package(
+    name: "swm",
+    platforms: [
+        .macOS(.v10_15),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.3.2"),
+    ],
+    targets: [
+        .target(
+            name: "swm",
+            dependencies: [
+              "swmlib",
+              .product(name: "ArgumentParser", package: "swift-argument-parser"),
+            ]),
+        .target(
+            name: "swmlib",
+            dependencies: []
+        ),
+        .testTarget(
+            name: "swmTests",
+            dependencies: ["swm"]),
+        .testTarget(
+            name: "swmlibTests",
+            dependencies: ["swmlib"]),
+    ]
+)
