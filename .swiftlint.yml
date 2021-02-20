@@ -79,7 +79,10 @@ number_separator:
 
 file_name:
   excluded:
+    - arguments.swift
     - main.swift
+    - signals.swift
+    - version.swift
 
 type_name:
   excluded: swmTests
