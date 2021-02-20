@@ -18,11 +18,11 @@ func printError(_ string: String) {
 
 struct Arguments: ParsableArguments {
     // --version/-v flag
-    @Flag(name: .shortAndLong, help: "")
+    @Flag(name: .shortAndLong, help: "Show version information.")
     var version: Bool = false
 
     // --config/-c
-    @Option(name: .shortAndLong, help: ArgumentHelp("", valueName: "path"))
+    @Option(name: .shortAndLong, help: ArgumentHelp("Path to the configuration file.", valueName: "path"))
     var config: String = defaultConfigPath
 
     // --message/-m
