@@ -14,15 +14,11 @@ func printError(_ string: String) {
     print(string, to: &err)
 }
 
-// swiftlint:disable let_var_whitespace
-// XXX: re-enable once property wrappers do not trigger this
-
 struct Arguments: ParsableArguments {
+    // --version/-v flag
     @Flag(name: .shortAndLong, help: "Display version information")
     var version: Bool = false
 }
-
-// swiftlint:enable let_var_whitespace
 
 let arguments = Arguments.parseOrExit()
 
