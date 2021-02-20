@@ -5,6 +5,8 @@ let majorVersion = 0
 let minorVersion = 0
 let patchVersion = 1
 
+let defaultConfigPath = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInPath
+
 struct StderrOutputStream: TextOutputStream {
     func write(_ string: String) { fputs(string, stderr) }
 }
@@ -16,8 +18,16 @@ func printError(_ string: String) {
 
 struct Arguments: ParsableArguments {
     // --version/-v flag
-    @Flag(name: .shortAndLong, help: "Display version information")
+    @Flag(name: .shortAndLong, help: "")
     var version: Bool = false
+
+    // --config/-c
+    @Option(name: .shortAndLong, help: ArgumentHelp("", valueName: "path"))
+    var config: String = defaultConfigPath
+
+    // --message/-m
+    @Flag(name: .shortAndLong, help: "")
+    var message: Bool = false
 }
 
 let arguments = Arguments.parseOrExit()
