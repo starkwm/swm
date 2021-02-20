@@ -32,6 +32,13 @@ func main(args _: [String]) -> Int32 {
         return printVersion()
     }
 
+    signal(SIGINT) { _ in
+        print("received sigint - terminating...")
+        NSApplication.shared.stop(nil)
+    }
+
+    NSApplication.shared.run()
+
     return EXIT_SUCCESS
 }
 
