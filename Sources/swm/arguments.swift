@@ -1,4 +1,5 @@
 import ArgumentParser
+import Foundation
 
 let defaultConfigPath = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInPath
 
