@@ -8,7 +8,8 @@ let package = Package(
         .macOS(.v11),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.1"),
+        .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.5.0"),
     ],
     targets: [
         .executableTarget(
