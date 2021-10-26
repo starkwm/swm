@@ -18,7 +18,7 @@ func main(args _: [String]) -> Int32 {
 
     signal(SIGINT, handleSigInt)
 
-    NSApplication.shared.run()
+    CFRunLoopRun()
 
     return EXIT_SUCCESS
 }
