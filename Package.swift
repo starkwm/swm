@@ -1,4 +1,4 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 
 import PackageDescription
 
@@ -11,7 +11,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.1"),
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "swm",
             dependencies: [
               "swmlib",
