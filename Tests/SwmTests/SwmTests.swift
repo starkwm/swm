@@ -2,7 +2,7 @@ import XCTest
 
 import class Foundation.Bundle
 
-final class swmTests: XCTestCase {
+final class SwmTests: XCTestCase {
     func testLongVersionFlag() throws {
         let swmBinary = productsDirectory.appendingPathComponent("swm")
 
