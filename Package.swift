@@ -22,10 +22,10 @@ let package = Package(
             dependencies: []
         ),
         .testTarget(
-            name: "swmTests",
+            name: "SwmTests",
             dependencies: ["swm"]),
         .testTarget(
-            name: "swmlibTests",
+            name: "SwmLibTests",
             dependencies: ["swmlib"]),
     ]
 )
