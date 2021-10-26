@@ -1,7 +1,8 @@
 .DS_Store
-/.build
-/Packages
 /*.xcodeproj
-xcuserdata/
-swm.tar.gz
+/.build
+/.swiftpm
+/Packages
 swm*.tar.gz
+swm.tar.gz
+xcuserdata/
