@@ -46,7 +46,7 @@ final class SwmTests: XCTestCase {
     }
 
     /// Returns path to the built products directory.
-    var productsDirectory: URL {
+    private var productsDirectory: URL {
         for bundle in Bundle.allBundles where bundle.bundlePath.hasSuffix(".xctest") {
             return bundle.bundleURL.deletingLastPathComponent()
         }
