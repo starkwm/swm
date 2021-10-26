@@ -6,7 +6,7 @@ let defaultConfigPath = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInP
 struct Arguments: ParsableArguments {
     // --version/-v flag
     @Flag(name: .shortAndLong, help: "Show version information.")
-    var version: Bool = false
+    var version = false
 
     // --config/-c
     @Option(name: .shortAndLong, help: ArgumentHelp("Path to the configuration file.", valueName: "path"))
@@ -14,5 +14,5 @@ struct Arguments: ParsableArguments {
 
     // --message/-m
     @Flag(name: .shortAndLong, help: "")
-    var message: Bool = false
+    var message = false
 }
