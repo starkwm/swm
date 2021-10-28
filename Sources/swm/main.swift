@@ -1,4 +1,5 @@
 import AppKit
+import swmlib
 
 struct StderrOutputStream: TextOutputStream {
     func write(_ string: String) { fputs(string, stderr) }
@@ -14,6 +15,13 @@ let arguments = Arguments.parseOrExit()
 func main(args _: [String]) -> Int32 {
     if arguments.version {
         return printVersion()
+    }
+
+    do {
+        try LockFile.acquire()
+    } catch {
+        printError("error creating pid file: \(error)")
+        return EXIT_FAILURE
     }
 
     signal(SIGINT, handleSigInt)
