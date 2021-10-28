@@ -1,6 +1,6 @@
 import AppKit
 
 func handleSigInt(_: Int32) {
-    print("received sigint - terminating...")
+    print("received SIGINT - terminating...")
     CFRunLoopStop(CFRunLoopGetCurrent())
 }
