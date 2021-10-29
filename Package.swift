@@ -27,16 +27,19 @@ let package = Package(
                     "-Xlinker", "-framework",
                     "-Xlinker", "SkyLight",
                 ]),
-            ]),
+            ]
+        ),
         .target(
             name: "swmlib",
             dependencies: []
         ),
         .testTarget(
             name: "SwmTests",
-            dependencies: ["swm"]),
+            dependencies: ["swm"]
+        ),
         .testTarget(
             name: "SwmLibTests",
-            dependencies: ["swmlib"]),
+            dependencies: ["swmlib"]
+        ),
     ]
 )
