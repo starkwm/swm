@@ -1,5 +1,5 @@
-import XCTest
 import swmlib
+import XCTest
 
 final class LockFileTests: XCTestCase {
     func testAcquire() {
