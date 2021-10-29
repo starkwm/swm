@@ -11,6 +11,15 @@
         }
       },
       {
+        "package": "SkyLight",
+        "repositoryURL": "https://github.com/tombell/skylight",
+        "state": {
+          "branch": null,
+          "revision": "1e3bdfe7ef5ffd9ebca60af94d4325fa833833c7",
+          "version": "0.0.1"
+        }
+      },
+      {
         "package": "swift-argument-parser",
         "repositoryURL": "https://github.com/apple/swift-argument-parser",
         "state": {
