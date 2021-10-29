@@ -11,7 +11,7 @@ lint:
 	swiftlint lint
 
 format:
-	swiftformat Sources/**/* Tests/**/*
+	swiftformat Package.swift Sources/**/* Tests/**/*
 
 test:
 	swift test
