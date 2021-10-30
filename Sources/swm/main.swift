@@ -1,9 +1,12 @@
 import AppKit
 import swmlib
 
+let version = "0.0.1"
+
 func main(args _: [String]) -> Int32 {
     if arguments.version {
-        return printVersion()
+        print("swm version \(version)")
+        return EXIT_SUCCESS
     }
 
     do {
