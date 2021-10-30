@@ -84,3 +84,4 @@ number_separator:
 file_name:
   excluded:
     - main.swift
+    - output.swift
