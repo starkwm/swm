@@ -1,15 +1,6 @@
 import AppKit
 import swmlib
 
-struct StderrOutputStream: TextOutputStream {
-    func write(_ string: String) { fputs(string, stderr) }
-}
-
-func printError(_ string: String) {
-    var err = StderrOutputStream()
-    print(string, to: &err)
-}
-
 func main(args _: [String]) -> Int32 {
     if arguments.version {
         return printVersion()
