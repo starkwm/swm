@@ -8,10 +8,10 @@ SRC=$(wildcard Sources/swm/*.swift)
 all: build
 
 lint:
-	swiftlint lint
+	swiftlint lint --quiet
 
 format:
-	swiftformat Package.swift Sources/**/* Tests/**/*
+	swiftformat --quiet Package.swift Sources/**/* Tests/**/*
 
 test:
 	swift test
