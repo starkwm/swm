@@ -11,3 +11,5 @@ struct Arguments: ParsableArguments {
     @Flag(name: .shortAndLong, help: "")
     var message = false
 }
+
+let arguments = Arguments.parseOrExit()

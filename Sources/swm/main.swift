@@ -10,8 +10,6 @@ func printError(_ string: String) {
     print(string, to: &err)
 }
 
-let arguments = Arguments.parseOrExit()
-
 func main(args _: [String]) -> Int32 {
     if arguments.version {
         return printVersion()
