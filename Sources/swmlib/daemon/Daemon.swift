@@ -59,7 +59,10 @@ public class Daemon {
     public func shutdown() {
         running = false
 
-        try? FileManager.default.removeItem(atPath: try Daemon.socketFilePath())
+        do {
+            let path = try Daemon.socketFilePath()
+            try FileManager.default.removeItem(atPath: path)
+        } catch {}
     }
 
     private func handle(socket: Socket) {
