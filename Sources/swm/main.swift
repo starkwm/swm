@@ -46,7 +46,7 @@ func main() -> Int32 {
 
     CFRunLoopRun()
 
-    try? daemon.shutdown()
+    daemon.shutdown()
 
     return EXIT_SUCCESS
 }

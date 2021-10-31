@@ -22,38 +22,44 @@ public class Daemon {
     public init() {}
 
     public func run() throws {
-        let queue = DispatchQueue.global(qos: .userInteractive)
-
-        queue.async { [weak self] in
-            do {
-                try listen = Socket.create(family: .unix)
-
-                guard let socket = self.listen else {
-                    print("unable to unwrap socket")
-                    return
-                }
-
-                try socket.listen(on: try Daemon.socketFilePath())
-
-                self.running = true
-
-                repeat {
-                    let client = try socket.acceptClientConnection()
-                    self.handle(socket: client)
-                } while self.running
-            } catch {
-                print("error: \(error)")
-                return
-            }
+        do {
+            try listen = Socket.create(family: .unix)
+        } catch {
+            throw DaemonError.unableToCreateSocket
         }
 
-        listen?.close()
+        guard let socket = listen else {
+            throw DaemonError.unableToUnwrapSocket
+        }
+
+        do {
+            let path = try Daemon.socketFilePath()
+            try socket.listen(on: path)
+        } catch {
+            throw DaemonError.unableToListenOnSocket
+        }
+
+        running = true
+
+        let queue = DispatchQueue.global(qos: .userInteractive)
+
+        // swiftlint:disable:next unowned_variable_capture
+        queue.async { [unowned self] in
+            repeat {
+                do {
+                    let client = try socket.acceptClientConnection()
+                    self.handle(socket: client)
+                } catch {
+                    fputs("error: accepting incoming client connection - \(error)", stderr)
+                }
+            } while self.running
+        }
     }
 
-    public func shutdown() throws {
+    public func shutdown() {
         running = false
 
-        try FileManager.default.removeItem(atPath: try Daemon.socketFilePath())
+        try? FileManager.default.removeItem(atPath: try Daemon.socketFilePath())
     }
 
     private func handle(socket: Socket) {
