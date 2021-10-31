@@ -17,7 +17,7 @@ struct Arguments: ParsableArguments {
 
 let arguments = Arguments.parseOrExit()
 
-func main(args _: [String]) -> Int32 {
+func main() -> Int32 {
     if arguments.version {
         print("swm version \(version)")
         return EXIT_SUCCESS
@@ -37,4 +37,4 @@ func main(args _: [String]) -> Int32 {
     return EXIT_SUCCESS
 }
 
-exit(main(args: CommandLine.arguments))
+exit(main())
