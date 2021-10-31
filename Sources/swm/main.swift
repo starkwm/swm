@@ -30,12 +30,23 @@ func main() -> Int32 {
         return EXIT_FAILURE
     }
 
+    let daemon = Daemon()
+
+    do {
+        try daemon.run()
+    } catch {
+        printError("error starting messaging daemon: \(error)")
+        return EXIT_FAILURE
+    }
+
     signal(SIGINT) { _ in
         print("received SIGINT - terminating...")
         CFRunLoopStop(CFRunLoopGetCurrent())
     }
 
     CFRunLoopRun()
+
+    try? daemon.shutdown()
 
     return EXIT_SUCCESS
 }
