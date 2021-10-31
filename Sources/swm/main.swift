@@ -30,7 +30,10 @@ func main() -> Int32 {
         return EXIT_FAILURE
     }
 
-    signal(SIGINT, handleSigInt)
+    signal(SIGINT) { _ in
+        print("received SIGINT - terminating...")
+        CFRunLoopStop(CFRunLoopGetCurrent())
+    }
 
     CFRunLoopRun()
 
