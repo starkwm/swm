@@ -26,7 +26,7 @@ func main() -> Int32 {
     do {
         try LockFile.acquire()
     } catch {
-        printError("error creating pid file: \(error)")
+        fputs("error: unable to create lock file - \(error)", stderr)
         return EXIT_FAILURE
     }
 
@@ -35,7 +35,7 @@ func main() -> Int32 {
     do {
         try daemon.run()
     } catch {
-        printError("error starting messaging daemon: \(error)")
+        fputs("error: unable to run messaging daemon - \(error)", stderr)
         return EXIT_FAILURE
     }
 
