@@ -10,7 +10,7 @@ final class LockFileErrorTests: XCTestCase {
         }
     }
 
-    func testFailedToOpenFile() {
+    func testFailedToOpenFileError() {
         do {
             throw LockFileError.failedToOpenFile
         } catch {
@@ -18,7 +18,7 @@ final class LockFileErrorTests: XCTestCase {
         }
     }
 
-    func testFailedToLockFile() {
+    func testFailedToLockFileError() {
         do {
             throw LockFileError.failedToLockFile
         } catch {
