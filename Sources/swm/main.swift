@@ -20,6 +20,9 @@ struct Arguments: ParsableArguments {
 
     @Option(name: .shortAndLong)
     var message: MessageOption?
+
+    @Argument(parsing: .unconditionalRemaining)
+    var args: [String] = []
 }
 
 let arguments = Arguments.parseOrExit()
