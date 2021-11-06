@@ -5,6 +5,9 @@ import swmlib
 let version = "0.0.1"
 
 struct Arguments: ParsableArguments {
+    @Flag(name: .shortAndLong)
+    var help = false
+
     @Flag(name: .shortAndLong, help: "Show version information.")
     var version = false
 
@@ -15,6 +18,11 @@ struct Arguments: ParsableArguments {
 let arguments = Arguments.parseOrExit()
 
 func main() -> Int32 {
+    if arguments.help {
+        fputs(Arguments.helpMessage(), stderr)
+        return EXIT_SUCCESS
+    }
+
     if arguments.version {
         print("swm version \(version)")
         return EXIT_SUCCESS
