@@ -4,6 +4,10 @@ import swmlib
 
 let version = "0.0.1"
 
+enum MessageOption: String, ExpressibleByArgument {
+    case config, display, space, window, query
+}
+
 struct Arguments: ParsableArguments {
     @Flag(name: .shortAndLong)
     var help = false
@@ -13,6 +17,9 @@ struct Arguments: ParsableArguments {
 
     @Option(name: .shortAndLong, help: ArgumentHelp("Path to the configuration file.", valueName: "path"))
     var config: String = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInPath
+
+    @Option(name: .shortAndLong)
+    var message: MessageOption?
 }
 
 let arguments = Arguments.parseOrExit()
