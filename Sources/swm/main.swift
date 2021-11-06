@@ -38,6 +38,11 @@ func main() -> Int32 {
         return EXIT_SUCCESS
     }
 
+    if getuid() == 0 || geteuid() == 0 {
+        fputs("error: running as root is not allowed\n", stderr)
+        return EXIT_FAILURE
+    }
+
     do {
         try LockFile.acquire()
     } catch {
