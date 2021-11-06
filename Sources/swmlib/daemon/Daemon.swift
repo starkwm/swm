@@ -50,7 +50,7 @@ public class Daemon {
                     let client = try socket.acceptClientConnection()
                     self.handle(socket: client)
                 } catch {
-                    fputs("error: accepting incoming client connection - \(error)", stderr)
+                    fputs("error: accepting incoming client connection - \(error)\n", stderr)
                 }
             } while self.running
         }

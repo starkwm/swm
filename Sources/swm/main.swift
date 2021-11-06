@@ -41,7 +41,7 @@ func main() -> Int32 {
     do {
         try LockFile.acquire()
     } catch {
-        fputs("error: unable to create lock file - \(error)", stderr)
+        fputs("error: unable to create lock file - \(error)\n", stderr)
         return EXIT_FAILURE
     }
 
@@ -50,7 +50,7 @@ func main() -> Int32 {
     do {
         try daemon.run()
     } catch {
-        fputs("error: unable to run messaging daemon - \(error)", stderr)
+        fputs("error: unable to run messaging daemon - \(error)\n", stderr)
         return EXIT_FAILURE
     }
 
