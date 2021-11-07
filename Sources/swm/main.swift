@@ -38,6 +38,13 @@ func main() -> Int32 {
         return EXIT_SUCCESS
     }
 
+    if let message = arguments.message {
+        print("Client Message: \(message)")
+        print("Client Message Args: \(arguments.args)")
+        // TODO: figure out API for sending the client message
+        return EXIT_SUCCESS
+    }
+
     if getuid() == 0 || geteuid() == 0 {
         fputs("error: running as root is not allowed\n", stderr)
         return EXIT_FAILURE
