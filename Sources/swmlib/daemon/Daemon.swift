@@ -23,7 +23,7 @@ public class Daemon {
 
     public func run() throws {
         do {
-            try listen = Socket.create(family: .unix)
+            try listen = Socket.create(family: .unix, type: .stream, proto: .unix)
         } catch {
             throw DaemonError.unableToCreateSocket
         }
