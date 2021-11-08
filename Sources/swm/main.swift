@@ -4,9 +4,7 @@ import swmlib
 
 let version = "0.0.1"
 
-enum MessageOption: String, ExpressibleByArgument {
-    case config, display, space, window, query
-}
+extension MessageDomain: ExpressibleByArgument {}
 
 struct Arguments: ParsableArguments {
     @Flag(name: .shortAndLong)
@@ -19,7 +17,7 @@ struct Arguments: ParsableArguments {
     var config: String = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInPath
 
     @Option(name: .shortAndLong)
-    var message: MessageOption?
+    var message: MessageDomain?
 
     @Argument(parsing: .unconditionalRemaining)
     var args: [String] = []
