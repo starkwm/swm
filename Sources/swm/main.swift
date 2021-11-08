@@ -37,10 +37,12 @@ func main() -> Int32 {
     }
 
     if let message = arguments.message {
-        print("Client Message: \(message)")
-        print("Client Message Args: \(arguments.args)")
-        // TODO: figure out API for sending the client message
-        return EXIT_SUCCESS
+        do {
+            return try Client.send(message: message, args: arguments.args)
+        } catch {
+            fputs("error: could not send message - \(error)\n", stderr)
+            return EXIT_FAILURE
+        }
     }
 
     if getuid() == 0 || geteuid() == 0 {
