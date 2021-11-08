@@ -38,7 +38,8 @@ func main() -> Int32 {
 
     if let message = arguments.message {
         do {
-            return try Client.send(message: message, args: arguments.args)
+            try MessageClient.send(message: message, args: arguments.args)
+            return EXIT_SUCCESS
         } catch {
             fputs("error: could not send message - \(error)\n", stderr)
             return EXIT_FAILURE
