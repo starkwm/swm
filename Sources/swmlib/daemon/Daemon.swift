@@ -69,7 +69,7 @@ public class Daemon {
         print("socket connected: \(socket.remotePath ?? "unkown")")
     }
 
-    private static func socketFilePath() throws -> String {
+    public static func socketFilePath() throws -> String {
         guard let user = ProcessInfo.processInfo.environment["USER"] else {
             throw DaemonError.userEnvVarMissing
         }
