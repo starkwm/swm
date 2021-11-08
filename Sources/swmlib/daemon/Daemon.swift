@@ -66,7 +66,11 @@ public class Daemon {
     }
 
     private func handle(socket: Socket) {
-        print("socket connected: \(socket.remotePath ?? "unkown")")
+        let queue = DispatchQueue.global(qos: .userInitiated)
+
+        queue.async {
+            print("socket connected: \(socket.remotePath ?? "unkown")")
+        }
     }
 
     public static func socketFilePath() throws -> String {
