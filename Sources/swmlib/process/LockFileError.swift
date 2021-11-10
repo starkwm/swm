@@ -1,4 +1,4 @@
-public enum LockFileError: Error {
+enum LockFileError: Error {
     case userEnvVarMissing
     case failedToOpenFile
     case failedToLockFile

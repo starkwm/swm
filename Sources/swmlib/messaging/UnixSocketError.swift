@@ -1,4 +1,4 @@
-public enum UnixSocketError: Error {
+enum UnixSocketError: Error {
     case userEnvVarMissing
 }
 

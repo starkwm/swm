@@ -1,4 +1,4 @@
-public enum DaemonError: Error {
+enum DaemonError: Error {
     case userEnvVarMissing
     case unableToCreateSocket
     case unableToUnwrapSocket
