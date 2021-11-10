@@ -4,7 +4,9 @@ import swmlib
 
 let version = "0.0.1"
 
-extension MessageDomain: ExpressibleByArgument {}
+public enum MessageDomain: String, ExpressibleByArgument {
+    case config, display, space, window, query
+}
 
 struct Arguments: ParsableArguments {
     @Flag(name: .shortAndLong)
@@ -36,7 +38,7 @@ if arguments.version {
 }
 
 if let message = arguments.message {
-    Client.send(message: message, args: arguments.args)
+    Client.send(message: message.rawValue, args: arguments.args)
 }
 
 if getuid() == 0 || geteuid() == 0 {

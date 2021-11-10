@@ -2,7 +2,7 @@ import Foundation
 import Socket
 
 public enum Client {
-    public static func send(message: MessageDomain, args: [String]) {
+    public static func send(message: String, args: [String]) {
         do {
             let socket = try Socket.create(family: .unix)
             try socket.connect(to: try Daemon.socketFilePath())
