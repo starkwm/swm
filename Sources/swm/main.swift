@@ -36,7 +36,7 @@ if arguments.version {
 }
 
 if let message = arguments.message {
-    MessageClient.send(message: message, args: arguments.args)
+    Client.send(message: message, args: arguments.args)
 }
 
 if getuid() == 0 || geteuid() == 0 {

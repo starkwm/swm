@@ -1,7 +1,7 @@
 import Foundation
 import Socket
 
-public enum MessageClient {
+public enum Client {
     public static func send(message: MessageDomain, args: [String]) {
         do {
             let socket = try Socket.create(family: .unix)
