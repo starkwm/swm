@@ -33,7 +33,7 @@ public class Daemon {
         }
 
         do {
-            try socket.listen(on: try Daemon.socketFilePath())
+            try socket.listen(on: try UnixSocket.filePath())
         } catch {
             throw DaemonError.unableToListenOnSocket
         }
@@ -58,10 +58,9 @@ public class Daemon {
     public func shutdown() {
         running = false
 
-        do {
-            let path = try Daemon.socketFilePath()
-            try FileManager.default.removeItem(atPath: path)
-        } catch {}
+        if let path = try? UnixSocket.filePath() {
+            try? FileManager.default.removeItem(atPath: path)
+        }
     }
 
     private func handle(socket: Socket) {
@@ -85,17 +84,5 @@ public class Daemon {
 
             socket.close()
         }
-    }
-
-    public static func socketFilePath() throws -> String {
-        guard let user = ProcessInfo.processInfo.environment["USER"] else {
-            throw DaemonError.userEnvVarMissing
-        }
-
-        return FileManager
-            .default
-            .temporaryDirectory
-            .appendingPathComponent("swm_\(user).sock", isDirectory: false)
-            .path
     }
 }
