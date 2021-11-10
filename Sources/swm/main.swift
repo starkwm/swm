@@ -62,6 +62,13 @@ do {
     exit(EXIT_FAILURE)
 }
 
+do {
+    try Config.exec(path: arguments.config)
+} catch {
+    fputs("error: could not execute the configuration file - \(error)", stderr)
+    exit(EXIT_FAILURE)
+}
+
 signal(SIGINT) { _ in
     print("received SIGINT - terminating...")
     CFRunLoopStop(CFRunLoopGetCurrent())
