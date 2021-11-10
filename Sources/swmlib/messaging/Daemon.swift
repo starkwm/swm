@@ -69,6 +69,21 @@ public class Daemon {
 
         queue.async {
             print("socket connected: \(socket.remotePath ?? "unkown")")
+
+            do {
+                var data = Data(capacity: Daemon.maxReadBufferSize)
+                let bytes = try socket.read(into: &data)
+
+                if bytes > 0 {
+                    if let recv = String(data: data, encoding: .utf8) {
+                        print("recv: \(recv)")
+                    }
+                }
+            } catch {
+                fputs("error: could not receive data from socket - \(error)", stderr)
+            }
+
+            socket.close()
         }
     }
 
