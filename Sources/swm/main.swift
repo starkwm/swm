@@ -65,7 +65,7 @@ do {
 do {
     try Config.exec(path: arguments.config)
 } catch {
-    fputs("error: could not execute the configuration file - \(error)", stderr)
+    fputs("error: could not execute the configuration file - \(error)\n", stderr)
     exit(EXIT_FAILURE)
 }
 

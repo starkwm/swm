@@ -79,7 +79,7 @@ public class Daemon {
                     }
                 }
             } catch {
-                fputs("error: could not receive data from socket - \(error)", stderr)
+                fputs("error: could not receive data from socket - \(error)\n", stderr)
             }
 
             socket.close()
