@@ -6,7 +6,7 @@ lint:
 	swiftlint lint --quiet
 
 format:
-	swiftformat --quiet Package.swift Sources/**/* Tests/**/*
+	swiftformat --quiet Package.swift Sources/**/*
 
 test:
 	swift test
