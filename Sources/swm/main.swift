@@ -25,52 +25,48 @@ struct Arguments: ParsableArguments {
 
 let arguments = Arguments.parseOrExit()
 
-func main() -> Int32 {
-    if arguments.help {
-        fputs(Arguments.helpMessage(), stderr)
-        return EXIT_SUCCESS
-    }
-
-    if arguments.version {
-        print("swm version \(version)")
-        return EXIT_SUCCESS
-    }
-
-    if let message = arguments.message {
-        MessageClient.send(message: message, args: arguments.args)
-    }
-
-    if getuid() == 0 || geteuid() == 0 {
-        fputs("error: running as root is not allowed\n", stderr)
-        return EXIT_FAILURE
-    }
-
-    do {
-        try LockFile.acquire()
-    } catch {
-        fputs("error: unable to create lock file - \(error)\n", stderr)
-        return EXIT_FAILURE
-    }
-
-    let daemon = Daemon()
-
-    do {
-        try daemon.run()
-    } catch {
-        fputs("error: unable to run messaging daemon - \(error)\n", stderr)
-        return EXIT_FAILURE
-    }
-
-    signal(SIGINT) { _ in
-        print("received SIGINT - terminating...")
-        CFRunLoopStop(CFRunLoopGetCurrent())
-    }
-
-    CFRunLoopRun()
-
-    daemon.shutdown()
-
-    return EXIT_SUCCESS
+if arguments.help {
+    fputs(Arguments.helpMessage(), stderr)
+    exit(EXIT_SUCCESS)
 }
 
-exit(main())
+if arguments.version {
+    print("swm version \(version)")
+    exit(EXIT_SUCCESS)
+}
+
+if let message = arguments.message {
+    MessageClient.send(message: message, args: arguments.args)
+}
+
+if getuid() == 0 || geteuid() == 0 {
+    fputs("error: running as root is not allowed\n", stderr)
+    exit(EXIT_FAILURE)
+}
+
+do {
+    try LockFile.acquire()
+} catch {
+    fputs("error: unable to create lock file - \(error)\n", stderr)
+    exit(EXIT_FAILURE)
+}
+
+let daemon = Daemon()
+
+do {
+    try daemon.run()
+} catch {
+    fputs("error: unable to run messaging daemon - \(error)\n", stderr)
+    exit(EXIT_FAILURE)
+}
+
+signal(SIGINT) { _ in
+    print("received SIGINT - terminating...")
+    CFRunLoopStop(CFRunLoopGetCurrent())
+}
+
+CFRunLoopRun()
+
+daemon.shutdown()
+
+exit(EXIT_SUCCESS)
