@@ -46,6 +46,11 @@ if getuid() == 0 || geteuid() == 0 {
     exit(EXIT_FAILURE)
 }
 
+if !Accessibility.askForAccessibilityIfNeeded() {
+    fputs("error: could not access accessbility features\n", stderr)
+    exit(EXIT_FAILURE)
+}
+
 do {
     try LockFile.acquire()
 } catch {
