@@ -3,18 +3,18 @@ SRC=$(wildcard Sources/**/*.swift)
 all: build
 
 lint:
-	swiftlint lint --quiet
+	@swiftlint lint --quiet
 
 format:
-	swiftformat --quiet Package.swift Sources/**/*
+	@swiftformat --quiet Package.swift Sources/**/*
 
 test:
-	swift test
+	@swift test
 
 clean:
-	swift package clean
+	@swift package clean
 
 build: $(SRC)
-	swift build
+	@swift build
 
 .PHONY: all lint format test clean build
