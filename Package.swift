@@ -8,7 +8,7 @@ let package = Package(
         .macOS(.v12),
     ],
     dependencies: [
-        .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.0"),
+        .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.2"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "0.5.0"),
         .package(url: "https://github.com/tombell/skylight", from: "0.0.1"),
     ],
