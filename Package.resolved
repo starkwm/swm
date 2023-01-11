@@ -6,16 +6,16 @@
         "repositoryURL": "https://github.com/Kitura/BlueSocket.git",
         "state": {
           "branch": null,
-          "revision": "dd924c3bc2c1c144c42b8dda3896f1a03115ded4",
-          "version": "2.0.2"
+          "revision": "7b23a867008e0027bfd6f4d398d44720707bc8ca",
+          "version": "2.0.4"
         }
       },
       {
         "package": "SkyLight",
-        "repositoryURL": "https://github.com/tombell/skylight",
+        "repositoryURL": "https://github.com/starkwm/skylight",
         "state": {
           "branch": null,
-          "revision": "1e3bdfe7ef5ffd9ebca60af94d4325fa833833c7",
+          "revision": "6e9620117ca9d5cab082db971ecbca6142cdbaee",
           "version": "0.0.1"
         }
       },
