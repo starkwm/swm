@@ -3,7 +3,7 @@ import Foundation
 
 public enum LockFile {
     public static func acquire() throws {
-        let handle = open(try lockFilePath(), O_CREAT | O_WRONLY, 0o600)
+        let handle = try open(lockFilePath(), O_CREAT | O_WRONLY, 0o600)
 
         if handle == -1 {
             throw LockFileError.failedToOpenFile

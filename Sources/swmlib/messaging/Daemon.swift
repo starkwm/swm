@@ -33,7 +33,7 @@ public class Daemon {
         }
 
         do {
-            try socket.listen(on: try UnixSocket.filePath())
+            try socket.listen(on: UnixSocket.filePath())
         } catch {
             throw DaemonError.unableToListenOnSocket
         }
@@ -47,11 +47,11 @@ public class Daemon {
             repeat {
                 do {
                     let client = try socket.acceptClientConnection()
-                    self.handle(socket: client)
+                    handle(socket: client)
                 } catch {
                     fputs("error: accepting incoming client connection - \(error)\n", stderr)
                 }
-            } while self.running
+            } while running
         }
     }
 
