@@ -1,6 +1,10 @@
 import AppKit
 
 public struct Application {
+    public static func all() -> [Application] {
+        NSWorkspace.shared.runningApplications.map { Application(app: $0) }
+    }
+
     private var element: AXUIElement
 
     private var app: NSRunningApplication
