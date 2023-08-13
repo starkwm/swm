@@ -74,12 +74,7 @@ do {
     exit(EXIT_FAILURE)
 }
 
-signal(SIGINT) { _ in
-    print("received SIGINT - terminating...")
-    CFRunLoopStop(CFRunLoopGetCurrent())
-}
-
-CFRunLoopRun()
+NSApplication.shared.run()
 
 daemon.shutdown()
 
