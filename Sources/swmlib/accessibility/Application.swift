@@ -14,4 +14,19 @@ public struct Application {
         element = AXUIElementCreateApplication(app.processIdentifier)
         self.app = app
     }
+
+    public func windows() -> [Window] {
+        var values: CFArray?
+        let result = AXUIElementCopyAttributeValues(element, kAXWindowsAttribute as CFString, 0, 100, &values)
+
+        if result != .success {
+            return []
+        }
+
+        guard let elements = values as? [AXUIElement] else {
+            return []
+        }
+
+        return elements.map { Window(element: $0) }
+    }
 }
