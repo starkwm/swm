@@ -4,7 +4,7 @@ import Socket
 public class Daemon {
     private static let maxReadBufferSize = 1024
 
-    private let lockQueue = DispatchQueue(label: "io.tomb.swm")
+    private let lockQueue = DispatchQueue(label: "app.usestark.swm")
 
     private var isRunning = false
 
