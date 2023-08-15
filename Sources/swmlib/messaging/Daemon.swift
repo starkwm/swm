@@ -73,10 +73,13 @@ public class Daemon {
                 var data = Data(capacity: Daemon.maxReadBufferSize)
                 let bytes = try socket.read(into: &data)
 
-                if bytes > 0 {
-                    if let recv = String(data: data, encoding: .utf8) {
-                        print("recv: \(recv)")
-                    }
+                if bytes <= 0 {
+                    return
+                }
+
+                if let recv = String(data: data, encoding: .utf8) {
+                    print("recv: \(recv)")
+                    try socket.write(from: recv)
                 }
             } catch {
                 fputs("error: could not receive data from socket - \(error)\n", stderr)
