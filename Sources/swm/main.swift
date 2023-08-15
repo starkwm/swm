@@ -4,10 +4,10 @@ import swmlib
 
 let version = "0.0.1"
 
-let arguments = Arguments.parseOrExit()
+let arguments = Swm.parseOrExit()
 
 if arguments.help {
-    fputs(Arguments.helpMessage(), stderr)
+    fputs(Swm.helpMessage(), stderr)
     exit(EXIT_SUCCESS)
 }
 

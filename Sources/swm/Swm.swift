@@ -2,7 +2,7 @@ import AppKit
 import ArgumentParser
 import swmlib
 
-struct Arguments: ParsableArguments {
+struct Swm: ParsableArguments {
     @Flag(name: .shortAndLong)
     var help = false
 
