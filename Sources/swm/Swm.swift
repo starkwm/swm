@@ -10,11 +10,15 @@ struct Swm: ParsableArguments {
     var version = false
 
     @Option(name: .shortAndLong, help: ArgumentHelp("Path to the configuration file.", valueName: "path"))
-    var config: String = ("~/.config/swm/swmrc" as NSString).resolvingSymlinksInPath
+    var config: String = FileManager
+        .default
+        .homeDirectoryForCurrentUser
+        .appending(path: ".config/swm/swmrc")
+        .path()
 
     @Option(name: .shortAndLong)
     var message: MessageDomain?
 
-    @Argument(parsing: .unconditionalRemaining)
+    @Argument(parsing: .captureForPassthrough)
     var args: [String] = []
 }
