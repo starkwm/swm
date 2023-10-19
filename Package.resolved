@@ -1,34 +1,32 @@
 {
-  "object": {
-    "pins": [
-      {
-        "package": "Socket",
-        "repositoryURL": "https://github.com/Kitura/BlueSocket.git",
-        "state": {
-          "branch": null,
-          "revision": "7b23a867008e0027bfd6f4d398d44720707bc8ca",
-          "version": "2.0.4"
-        }
-      },
-      {
-        "package": "SkyLight",
-        "repositoryURL": "https://github.com/starkwm/skylight",
-        "state": {
-          "branch": null,
-          "revision": "6e9620117ca9d5cab082db971ecbca6142cdbaee",
-          "version": "0.0.1"
-        }
-      },
-      {
-        "package": "swift-argument-parser",
-        "repositoryURL": "https://github.com/apple/swift-argument-parser",
-        "state": {
-          "branch": null,
-          "revision": "6b2aa2748a7881eebb9f84fb10c01293e15b52ca",
-          "version": "0.5.0"
-        }
+  "pins" : [
+    {
+      "identity" : "bluesocket",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Kitura/BlueSocket.git",
+      "state" : {
+        "revision" : "7b23a867008e0027bfd6f4d398d44720707bc8ca",
+        "version" : "2.0.4"
       }
-    ]
-  },
-  "version": 1
+    },
+    {
+      "identity" : "skylight",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/starkwm/skylight",
+      "state" : {
+        "revision" : "6e9620117ca9d5cab082db971ecbca6142cdbaee",
+        "version" : "0.0.1"
+      }
+    },
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "8f4d2753f0e4778c76d5f05ad16c74f707390531",
+        "version" : "1.2.3"
+      }
+    }
+  ],
+  "version" : 2
 }

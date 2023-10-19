@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.2"),
-        .package(url: "https://github.com/apple/swift-argument-parser", from: "0.5.0"),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.2"),
         .package(url: "https://github.com/starkwm/skylight", from: "0.0.1"),
     ],
     targets: [
@@ -32,6 +32,7 @@ let package = Package(
         .target(
             name: "swmlib",
             dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Socket", package: "BlueSocket"),
             ]
         ),
