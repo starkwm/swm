@@ -1,11 +1,11 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.9
 
 import PackageDescription
 
 let package = Package(
     name: "swm",
     platforms: [
-        .macOS(.v12),
+        .macOS(.v13),
     ],
     dependencies: [
         .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.2"),
