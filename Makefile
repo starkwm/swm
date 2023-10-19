@@ -5,9 +5,6 @@ all: build
 lint:
 	@swiftlint lint --quiet
 
-format:
-	@swiftformat --quiet Package.swift Sources/**/*
-
 test:
 	@swift test
 
@@ -17,4 +14,4 @@ clean:
 build: $(SRC)
 	@swift build
 
-.PHONY: all lint format test clean build
+.PHONY: all lint test clean build
