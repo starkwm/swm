@@ -53,8 +53,10 @@ do {
   exit(EXIT_FAILURE)
 }
 
+signal(SIGINT) { _ in
+  fputs("received SIGINT - terminating...\n", stderr)
+  daemon.shutdown()
+  exit(EXIT_SUCCESS)
+}
+
 NSApplication.shared.run()
-
-daemon.shutdown()
-
-exit(EXIT_SUCCESS)
