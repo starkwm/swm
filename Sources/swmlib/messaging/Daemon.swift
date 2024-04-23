@@ -42,7 +42,6 @@ public class Daemon {
 
     let queue = DispatchQueue.global(qos: .userInteractive)
 
-    // swiftlint:disable:next unowned_variable_capture
     queue.async { [unowned self] in
       repeat {
         do {
