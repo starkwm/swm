@@ -1,5 +1,5 @@
 {
-  "originHash" : "572147bcd2c2cea45fd4b9aca2ad7ed8c29c6a3c0764486199289841fb9b0ba5",
+  "originHash" : "853511523563c1c288869091e7b9ca62fe02ad18ffeb4e31290c09f05c0e511c",
   "pins" : [
     {
       "identity" : "bluesocket",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "7b23a867008e0027bfd6f4d398d44720707bc8ca",
         "version" : "2.0.4"
-      }
-    },
-    {
-      "identity" : "skylight",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/starkwm/skylight",
-      "state" : {
-        "revision" : "6e9620117ca9d5cab082db971ecbca6142cdbaee",
-        "version" : "0.0.1"
       }
     },
     {
