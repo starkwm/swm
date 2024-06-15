@@ -34,5 +34,9 @@ let package = Package(
         .product(name: "Socket", package: "BlueSocket"),
       ]
     ),
+    .testTarget(
+      name: "swmlibTests",
+      dependencies: ["swmlib"]
+    ),
   ]
 )
