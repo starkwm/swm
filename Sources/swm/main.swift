@@ -2,8 +2,6 @@ import AppKit
 import ArgumentParser
 import swmlib
 
-let version = "0.0.1"
-
 let arguments = Swm.parseOrExit()
 
 if arguments.help {
@@ -12,7 +10,7 @@ if arguments.help {
 }
 
 if arguments.version {
-  print("swm version \(version)")
+  print("swm version \(Version.current.value)")
   exit(EXIT_SUCCESS)
 }
 
