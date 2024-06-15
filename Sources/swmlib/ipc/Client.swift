@@ -21,7 +21,7 @@ public enum Client {
       }
       exit(EXIT_SUCCESS)
     } catch {
-      print("error: \(error)")
+      fputs("error: \(error)", stderr)
       exit(EXIT_FAILURE)
     }
   }
