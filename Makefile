@@ -1,10 +1,13 @@
 SRC=$(wildcard Sources/**/*.swift)
 
+VERSION_TMPL=Sources/swm/version.swift.tmpl
+VERSION_FILE=Sources/swm/version.swift
+
 format:
-	@swift-format format -r -i Sources
+	@swift-format format -r -i Sources Tests Package.swift
 
 lint:
-	@swift-format lint -r Sources
+	@swift-format lint -r Sources Tests Package.swift
 
 test:
 	@swift test --parallel --enable-code-coverage
@@ -28,5 +31,16 @@ build: $(SRC)
 release: clean
 	@swift build --configuration release --disable-sandbox
 
+bump_version:
+ifneq ($(strip $(shell git status --untracked-files=no --porcelain 2>/dev/null)),)
+	$(error git state is not clean)
+endif
+	@sed 's/__VERSION__/$(NEW_VERSION)/g' $(VERSION_TMPL) > $(VERSION_FILE)
+	git add $(VERSION_FILE)
+	git commit -m "Release $(NEW_VERSION)"
+	git tag $(NEW_VERSION)
+	git push origin HEAD
+	git push origin $(NEW_VERSION)
+
 .DEFAULT_GOAL := build
-.PHONY: format lint test coverage clean build release
+.PHONY: format lint test coverage clean build release bump_version
