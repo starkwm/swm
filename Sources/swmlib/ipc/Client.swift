@@ -16,7 +16,7 @@ public enum Client {
 
       if bytes > 0 {
         if let recv = String(data: data, encoding: .utf8) {
-          print("recv: \(recv)")
+          print("client recv: \(recv)")
         }
       }
       exit(EXIT_SUCCESS)

@@ -77,7 +77,7 @@ public class Daemon {
         }
 
         if let recv = String(data: data, encoding: .utf8) {
-          print("recv: \(recv)")
+          print("daemon recv: \(recv)")
           try socket.write(from: recv)
         }
       } catch {
