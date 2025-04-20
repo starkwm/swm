@@ -4,10 +4,10 @@ VERSION_TMPL=Sources/swm/version.swift.tmpl
 VERSION_FILE=Sources/swm/version.swift
 
 format:
-	@swift-format format -r -i Sources Tests Package.swift
+	@swift format format -r -i Sources Tests Package.swift
 
 lint:
-	@swift-format lint -r Sources Tests Package.swift
+	@swift format lint -r Sources Tests Package.swift
 
 test:
 	@swift test --parallel --enable-code-coverage
