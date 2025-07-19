@@ -1,4 +1,4 @@
-// swift-tools-version:5.10
+// swift-tools-version: 5.10.1
 
 import PackageDescription
 
@@ -7,15 +7,18 @@ let package = Package(
   platforms: [
     .macOS(.v14)
   ],
+  products: [
+    .executable(name: "swm", targets: ["Swm"])
+  ],
   dependencies: [
     .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.2"),
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.2"),
   ],
   targets: [
     .executableTarget(
-      name: "swm",
+      name: "Swm",
       dependencies: [
-        "swmlib",
+        "SwmLib",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
       exclude: ["version.swift.tmpl"],
@@ -29,15 +32,15 @@ let package = Package(
       ]
     ),
     .target(
-      name: "swmlib",
+      name: "SwmLib",
       dependencies: [
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
         .product(name: "Socket", package: "BlueSocket"),
       ]
     ),
     .testTarget(
-      name: "swmlibTests",
-      dependencies: ["swmlib"]
+      name: "SwmLibTests",
+      dependencies: ["SwmLib"]
     ),
   ]
 )

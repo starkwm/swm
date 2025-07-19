@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import swmlib
+@testable import SwmLib
 
 final class DummyTests: XCTestCase {
   func testDummy() {

@@ -1,6 +1,6 @@
 import AppKit
 import ArgumentParser
-import swmlib
+import SwmLib
 
 let arguments = Swm.parseOrExit()
 

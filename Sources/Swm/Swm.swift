@@ -1,6 +1,6 @@
 import AppKit
 import ArgumentParser
-import swmlib
+import SwmLib
 
 struct Swm: ParsableArguments {
   @Flag(name: .shortAndLong)
