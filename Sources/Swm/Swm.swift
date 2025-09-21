@@ -9,7 +9,10 @@ struct Swm: ParsableArguments {
   @Flag(name: .shortAndLong, help: "Show version information.")
   var version = false
 
-  @Option(name: .shortAndLong, help: ArgumentHelp("Path to the configuration file.", valueName: "path"))
+  @Option(
+    name: .shortAndLong,
+    help: ArgumentHelp("Path to the configuration file.", valueName: "path")
+  )
   var config: String = FileManager
     .default
     .homeDirectoryForCurrentUser

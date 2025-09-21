@@ -124,7 +124,8 @@ func GetNextProcess(_ psn: inout ProcessSerialNumber) -> OSStatus
 /// Get process information for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("GetProcessInformation") @discardableResult
-func GetProcessInformation(_ psn: inout ProcessSerialNumber, _ info: inout ProcessInfoRec) -> OSStatus
+func GetProcessInformation(_ psn: inout ProcessSerialNumber, _ info: inout ProcessInfoRec)
+  -> OSStatus
 
 /// Get the process ID for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
