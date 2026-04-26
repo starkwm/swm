@@ -2,8 +2,6 @@ import Foundation
 import Socket
 
 public class Daemon {
-  private static let maxReadBufferSize = 1024
-
   private let lockQueue = DispatchQueue(label: "app.usestark.swm")
 
   private var isRunning = false
@@ -66,25 +64,28 @@ public class Daemon {
     let queue = DispatchQueue.global(qos: .userInitiated)
 
     queue.async {
-      print("socket connected: \(socket.remotePath ?? "unkown")")
+      print("socket connected: \(socket.remotePath ?? "unknown")")
+      defer {
+        socket.close()
+      }
 
       do {
-        var data = Data(capacity: Daemon.maxReadBufferSize)
-        let bytes = try socket.read(into: &data)
-
-        if bytes <= 0 {
+        guard let data = try IPCMessage.readFrame(from: socket) else {
           return
         }
 
-        if let recv = String(data: data, encoding: .utf8) {
-          print("daemon recv: \(recv)")
-          try socket.write(from: recv)
-        }
+        let request = try IPCMessage.decode(IPCRequest.self, from: data)
+        print("daemon recv: \(request.message.rawValue) \(request.args)")
+
+        let response = IPCResponse.success("received \(request.message.rawValue)")
+        try socket.write(from: IPCMessage.encode(response))
       } catch {
         fputs("error: could not receive data from socket - \(error)\n", stderr)
+        let response = IPCResponse.failure("error: \(error)")
+        do {
+          try socket.write(from: IPCMessage.encode(response))
+        } catch {}
       }
-
-      socket.close()
     }
   }
 }
