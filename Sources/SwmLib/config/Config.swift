@@ -11,7 +11,7 @@ public enum Config {
     }
 
     do {
-      let proc = Process()
+      let proc = Foundation.Process()
       proc.executableURL = URL(fileURLWithPath: path)
       try proc.run()
     } catch {
