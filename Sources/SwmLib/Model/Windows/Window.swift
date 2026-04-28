@@ -1,7 +1,7 @@
 import AppKit
 
 public final class Window: NSObject {
-  private static let accessibilityClient = AccessibilityClient.live
+  private static let accessibilityClient = AccessibilityClient.shared
   private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
     notifications: windowNotifications
   )
