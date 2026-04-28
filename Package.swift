@@ -36,6 +36,14 @@ let package = Package(
       dependencies: [
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
         .product(name: "Socket", package: "BlueSocket"),
+      ],
+      linkerSettings: [
+        .unsafeFlags([
+          "-Xlinker", "-F",
+          "-Xlinker", "/System/Library/PrivateFrameworks",
+          "-Xlinker", "-framework",
+          "-Xlinker", "SkyLight",
+        ])
       ]
     ),
     .testTarget(

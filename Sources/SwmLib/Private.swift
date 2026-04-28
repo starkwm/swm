@@ -71,6 +71,11 @@ func SLSWindowIteratorGetAttributes(_ iterator: CFTypeRef) -> UInt64
 @_silgen_name("SLSWindowIteratorGetParentID") @discardableResult
 func SLSWindowIteratorGetParentID(_ iterator: CFTypeRef) -> UInt32
 
+/// Get the window level for the given query iterator.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("SLSWindowIteratorGetLevel") @discardableResult
+func SLSWindowIteratorGetLevel(_ iterator: CFTypeRef) -> Int
+
 /// Get the tags for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetTags") @discardableResult
@@ -111,6 +116,11 @@ func SLSSetWindowListWorkspace(
 @_silgen_name("_AXUIElementGetWindow") @discardableResult
 func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout UInt32) -> AXError
 
+/// Create an accessibility element from a remote token.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("_AXUIElementCreateWithRemoteToken") @discardableResult
+func _AXUIElementCreateWithRemoteToken(_ data: CFData) -> Unmanaged<AXUIElement>?
+
 /// Copy the process name.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("CopyProcessName") @discardableResult
@@ -131,3 +141,8 @@ func GetProcessInformation(_ psn: inout ProcessSerialNumber, _ info: inout Proce
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("GetProcessPID") @discardableResult
 func GetProcessPID(_ psn: inout ProcessSerialNumber, _ pid: inout pid_t) -> OSStatus
+
+/// Get the frontmost process serial number.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("_SLPSGetFrontProcess") @discardableResult
+func _SLPSGetFrontProcess(_ psn: inout ProcessSerialNumber) -> OSStatus
