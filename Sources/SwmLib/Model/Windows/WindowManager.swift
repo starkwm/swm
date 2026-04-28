@@ -24,7 +24,7 @@ public final class WindowManager {
 
   init(
     processManager: WindowManagerProcessListing = ProcessManager.shared,
-    workspace: WindowManagerWorkspaceObserving = DefaultWorkspaceObserver.shared
+    workspace: WindowManagerWorkspaceObserving = Workspace.shared
   ) {
     self.processManager = processManager
     self.workspace = workspace
@@ -237,18 +237,7 @@ public final class WindowManager {
 }
 
 extension ProcessManager: WindowManagerProcessListing {}
-
-private final class DefaultWorkspaceObserver: WindowManagerWorkspaceObserving {
-  static let shared = DefaultWorkspaceObserver()
-
-  private init() {}
-
-  func isObservable(_ process: Process) -> Bool {
-    !process.terminated
-  }
-
-  func observeActivationPolicy(_ process: Process) {}
-}
+extension Workspace: WindowManagerWorkspaceObserving {}
 
 private enum WindowDiscoveryMode {
   case initialDiscovery
