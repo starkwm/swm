@@ -3,6 +3,7 @@ import Socket
 
 public class Daemon {
   private let lockQueue = DispatchQueue(label: "app.usestark.swm")
+  private let dispatcher: IPCCommandDispatcher
 
   private var isRunning = false
 
@@ -17,7 +18,13 @@ public class Daemon {
 
   private var listen: Socket?
 
-  public init() {}
+  public convenience init() {
+    self.init(dispatcher: DefaultIPCCommandDispatcher())
+  }
+
+  init(dispatcher: IPCCommandDispatcher) {
+    self.dispatcher = dispatcher
+  }
 
   public func run() throws {
     do {
@@ -75,13 +82,17 @@ public class Daemon {
         }
 
         let request = try IPCMessage.decode(IPCRequest.self, from: data)
-        print("daemon recv: \(request.message.rawValue) \(request.args)")
+        print("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
 
-        let response = IPCResponse.success("received \(request.message.rawValue)")
+        let response = self.dispatcher.dispatch(request)
         try socket.write(from: IPCMessage.encode(response))
       } catch {
         fputs("error: could not receive data from socket - \(error)\n", stderr)
-        let response = IPCResponse.failure("error: \(error)")
+        let response = IPCResponse.failure(
+          id: "",
+          message: "error: \(error)",
+          errorCode: .invalidRequest
+        )
         do {
           try socket.write(from: IPCMessage.encode(response))
         } catch {}
