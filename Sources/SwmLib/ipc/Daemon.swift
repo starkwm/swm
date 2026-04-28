@@ -1,7 +1,10 @@
+import Darwin
 import Foundation
 import Socket
 
 public class Daemon {
+  private static let socketTimeout: UInt = 5_000
+
   private let lockQueue = DispatchQueue(label: "app.usestark.swm")
   private let dispatcher: IPCCommandDispatcher
 
@@ -27,6 +30,12 @@ public class Daemon {
   }
 
   public func run() throws {
+    do {
+      try UnixSocket.removeStaleFileIfNeeded()
+    } catch {
+      throw DaemonError.unableToPrepareSocket("\(error)")
+    }
+
     do {
       try listen = Socket.create(family: .unix)
     } catch {
@@ -61,10 +70,10 @@ public class Daemon {
 
   public func shutdown() {
     running = false
+    listen?.close()
+    listen = nil
 
-    if let path = try? UnixSocket.filePath() {
-      try? FileManager.default.removeItem(atPath: path)
-    }
+    try? FileManager.default.removeItem(atPath: UnixSocket.filePath())
   }
 
   private func handle(socket: Socket) {
@@ -77,6 +86,19 @@ public class Daemon {
       }
 
       do {
+        try socket.setReadTimeout(value: Daemon.socketTimeout)
+        try socket.setWriteTimeout(value: Daemon.socketTimeout)
+
+        guard self.isAuthorized(socket: socket) else {
+          let response = IPCResponse.failure(
+            id: "",
+            message: "unauthorized IPC client",
+            errorCode: .unauthorized
+          )
+          try socket.write(from: IPCMessage.encode(response))
+          return
+        }
+
         guard let data = try IPCMessage.readFrame(from: socket) else {
           return
         }
@@ -98,5 +120,16 @@ public class Daemon {
         } catch {}
       }
     }
+  }
+
+  private func isAuthorized(socket: Socket) -> Bool {
+    var uid: uid_t = 0
+    var gid: gid_t = 0
+
+    guard getpeereid(socket.socketfd, &uid, &gid) == 0 else {
+      return false
+    }
+
+    return uid == getuid()
   }
 }

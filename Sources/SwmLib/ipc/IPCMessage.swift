@@ -35,6 +35,9 @@ enum IPCMessage {
 
       if let delimiterIndex = chunk.firstIndex(of: delimiter) {
         frame.append(chunk[..<delimiterIndex])
+        if frame.count > maxFrameSize {
+          throw UnixSocketError.frameTooLarge(maxFrameSize)
+        }
         return frame
       }
 

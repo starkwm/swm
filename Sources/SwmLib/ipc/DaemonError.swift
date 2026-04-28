@@ -1,5 +1,5 @@
 enum DaemonError: Error {
-  case userEnvVarMissing
+  case unableToPrepareSocket(String)
   case unableToCreateSocket
   case unableToUnwrapSocket
   case unableToListenOnSocket
@@ -8,8 +8,8 @@ enum DaemonError: Error {
 extension DaemonError: CustomStringConvertible {
   public var description: String {
     switch self {
-    case .userEnvVarMissing:
-      return "USER environment variable is not set"
+    case .unableToPrepareSocket(let error):
+      return "unable to prepare listening socket - \(error)"
     case .unableToCreateSocket:
       return "unable to create listening socket"
     case .unableToUnwrapSocket:

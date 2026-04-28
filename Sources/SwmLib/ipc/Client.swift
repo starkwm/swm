@@ -10,6 +10,8 @@ public enum Client {
         socket.close()
       }
 
+      try socket.setReadTimeout(value: 5_000)
+      try socket.setWriteTimeout(value: 5_000)
       try socket.connect(to: UnixSocket.filePath())
       try socket.write(from: IPCMessage.encode(request))
 
