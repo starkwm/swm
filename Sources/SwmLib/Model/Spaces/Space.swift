@@ -3,7 +3,7 @@ import AppKit
 public final class Space: NSObject {
   static let connection = windowServerClient.mainConnectionID()
 
-  private static let windowServerClient = WindowServerClient.live
+  private static let windowServerClient = WindowServerClient.shared
 
   public static func all() -> [Space] {
     windowServerClient.allSpaceIDs(connectionID: connection).map(Space.init(id:))

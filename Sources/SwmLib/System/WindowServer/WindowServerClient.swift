@@ -3,7 +3,7 @@ import Carbon
 import CoreGraphics
 
 final class WindowServerClient {
-  static let live = WindowServerClient()
+  static let shared = WindowServerClient()
 
   private let screenIDKey = "Display Identifier"
   private let spaceIDKey = "ManagedSpaceID"

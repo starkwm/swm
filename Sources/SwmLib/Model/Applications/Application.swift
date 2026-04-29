@@ -3,7 +3,7 @@ import AppKit
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
 public final class Application: NSObject {
-  private static let windowServerClient = WindowServerClient.live
+  private static let windowServerClient = WindowServerClient.shared
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
     notifications: applicationNotifications
   )
