@@ -3,7 +3,6 @@ import AppKit
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
 public final class Application: NSObject {
-  private static let windowServerClient = WindowServerClient.shared
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
     notifications: applicationNotifications
   )
@@ -40,7 +39,7 @@ public final class Application: NSObject {
     }
     application = app
 
-    if let connectionID = Self.windowServerClient.connectionID(
+    if let connectionID = WindowServerClient.shared.connectionID(
       for: process.psn,
       mainConnectionID: Space.connection
     ) {
@@ -126,7 +125,7 @@ public final class Application: NSObject {
   }
 
   func windowIdentifiers() -> [CGWindowID] {
-    Self.windowServerClient.windowIdentifiers(
+    WindowServerClient.shared.windowIdentifiers(
       connectionID: Space.connection,
       applicationConnectionID: connection,
       spaceIDs: Space.all().map(\.id)
