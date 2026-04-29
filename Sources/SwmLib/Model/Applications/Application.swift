@@ -3,7 +3,6 @@ import AppKit
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
 public final class Application: NSObject {
-  private static let accessibilityClient = AccessibilityClient.shared
   private static let windowServerClient = WindowServerClient.live
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
     notifications: applicationNotifications
@@ -34,7 +33,7 @@ public final class Application: NSObject {
   private var observing = false
 
   public init?(for process: Process) {
-    element = Self.accessibilityClient.applicationElement(for: process.pid)
+    element = AccessibilityClient.shared.applicationElement(for: process.pid)
 
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {
       return nil
@@ -54,7 +53,7 @@ public final class Application: NSObject {
   }
 
   func observe() -> Result<Void, AccessibilityClientError> {
-    switch Self.accessibilityClient.createObserver(
+    switch AccessibilityClient.shared.createObserver(
       processID: application.processIdentifier,
       callback: accessibilityObserverCallback
     ) {
@@ -72,7 +71,7 @@ public final class Application: NSObject {
     let observedAllNotifications = Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
       addNotification: { notification in
-        Self.accessibilityClient.addNotification(
+        AccessibilityClient.shared.addNotification(
           observer: observer,
           element: element,
           notification: notification,
@@ -110,7 +109,7 @@ public final class Application: NSObject {
     Self.notificationRegistrar.unobserve(
       observedNotifications: &observedNotifications,
       removeNotification: { notification in
-        Self.accessibilityClient.removeNotification(
+        AccessibilityClient.shared.removeNotification(
           observer: observer,
           element: element,
           notification: notification
@@ -135,14 +134,14 @@ public final class Application: NSObject {
   }
 
   func windowElements() -> [AXUIElement] {
-    Self.accessibilityClient.windowElements(for: element)
+    AccessibilityClient.shared.windowElements(for: element)
   }
 
   func enhancedUIWorkaround(callback: () -> Void) {
     let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
 
     if enhancedUserInterfaceEnabled {
-      Self.accessibilityClient.setAttributeValue(
+      AccessibilityClient.shared.setAttributeValue(
         kCFBooleanFalse,
         for: element,
         attribute: kAXEnhancedUserInterface
@@ -152,7 +151,7 @@ public final class Application: NSObject {
     callback()
 
     if enhancedUserInterfaceEnabled {
-      Self.accessibilityClient.setAttributeValue(
+      AccessibilityClient.shared.setAttributeValue(
         kCFBooleanTrue,
         for: element,
         attribute: kAXEnhancedUserInterface
@@ -161,7 +160,7 @@ public final class Application: NSObject {
   }
 
   private func isEnhancedUIEnabled() -> Bool {
-    Self.accessibilityClient.enhancedUIEnabled(
+    AccessibilityClient.shared.enhancedUIEnabled(
       for: element,
       attribute: kAXEnhancedUserInterface
     )

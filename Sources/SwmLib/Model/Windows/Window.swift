@@ -1,13 +1,12 @@
 import AppKit
 
 public final class Window: NSObject {
-  private static let accessibilityClient = AccessibilityClient.shared
   private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
     notifications: windowNotifications
   )
 
   static func id(for element: AXUIElement) -> CGWindowID {
-    accessibilityClient.windowID(for: element)
+    AccessibilityClient.shared.windowID(for: element)
   }
 
   static func validID(for element: AXUIElement) -> CGWindowID? {
@@ -16,11 +15,11 @@ public final class Window: NSObject {
   }
 
   static func isWindow(_ element: AXUIElement) -> Bool {
-    accessibilityClient.isWindow(element)
+    AccessibilityClient.shared.isWindow(element)
   }
 
   static func pid(for element: AXUIElement) -> pid_t? {
-    accessibilityClient.processID(for: element)
+    AccessibilityClient.shared.processID(for: element)
   }
 
   public override var description: String {
@@ -52,12 +51,13 @@ public final class Window: NSObject {
 
   public override func isEqual(_ object: Any?) -> Bool {
     guard let window = object as? Self else { return false }
+
     return id == window.id
   }
 
   var subrole: String? {
     guard let element else { return nil }
-    return Self.accessibilityClient.subrole(for: element)
+    return AccessibilityClient.shared.subrole(for: element)
   }
 
   func observe() -> Bool {
@@ -65,10 +65,11 @@ public final class Window: NSObject {
     guard let element else { return false }
 
     let context = UnsafeMutableRawPointer(bitPattern: UInt(id))
+
     return Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
       addNotification: { notification in
-        Self.accessibilityClient.addNotification(
+        AccessibilityClient.shared.addNotification(
           observer: observer,
           element: element,
           notification: notification,
@@ -82,10 +83,11 @@ public final class Window: NSObject {
   func unobserve() {
     guard let observer = application?.observer else { return }
     guard let element else { return }
+
     Self.notificationRegistrar.unobserve(
       observedNotifications: &observedNotifications,
       removeNotification: { notification in
-        Self.accessibilityClient.removeNotification(
+        AccessibilityClient.shared.removeNotification(
           observer: observer,
           element: element,
           notification: notification
@@ -96,7 +98,8 @@ public final class Window: NSObject {
 
   private var titleDescription: String {
     guard let element else { return "" }
-    return Self.accessibilityClient.stringAttribute(
+
+    return AccessibilityClient.shared.stringAttribute(
       for: element,
       attribute: kAXTitleAttribute as String
     )
