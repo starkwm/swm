@@ -1,4 +1,3 @@
-import ApplicationServices
 import Carbon
 import Testing
 
@@ -21,11 +20,10 @@ struct EventManagerTests {
     EventManager.shared.post(.space(.changed(space)))
   }
 
-  @Test("post accepts window identifier events")
-  func postAcceptsWindowIdentifierEvents() {
-    let element = AXUIElementCreateSystemWide()
-
-    EventManager.shared.post(windowIdentifierEvent: .focused, withWindowElement: element)
-    EventManager.shared.post(windowCreatedWithElement: element)
+  @Test("post accepts window events")
+  func postAcceptsWindowEvents() {
+    EventManager.shared.post(.window(.focused(1)))
+    EventManager.shared.post(.window(.moved(1)))
+    EventManager.shared.post(.window(.resized(1)))
   }
 }

@@ -176,16 +176,21 @@ private func accessibilityObserverCallback(
 ) {
   switch notification as String {
   case kAXCreatedNotification:
-    EventManager.shared.post(windowCreatedWithElement: element)
+    guard let pid = Window.pid(for: element) else { return }
+    guard let windowID = Window.validID(for: element) else { return }
+    EventManager.shared.post(.window(.created(pid, windowID)))
 
   case kAXFocusedWindowChangedNotification:
-    EventManager.shared.post(windowIdentifierEvent: .focused, withWindowElement: element)
+    guard let windowID = Window.validID(for: element) else { return }
+    EventManager.shared.post(.window(.focused(windowID)))
 
   case kAXWindowMovedNotification:
-    EventManager.shared.post(windowIdentifierEvent: .moved, withWindowElement: element)
+    guard let windowID = Window.validID(for: element) else { return }
+    EventManager.shared.post(.window(.moved(windowID)))
 
   case kAXWindowResizedNotification:
-    EventManager.shared.post(windowIdentifierEvent: .resized, withWindowElement: element)
+    guard let windowID = Window.validID(for: element) else { return }
+    EventManager.shared.post(.window(.resized(windowID)))
 
   case kAXWindowMiniaturizedNotification:
     guard let context else { return }
