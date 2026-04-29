@@ -26,4 +26,19 @@ struct ProcessTests {
 
     #expect(process.description == "<Process pid: 42, name: Example>")
   }
+
+  @Test("explicit initializer preserves override properties")
+  func explicitInitializerPreservesOverrideProperties() {
+    let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
+    let process = Process(
+      psn: psn,
+      pid: 42,
+      name: "Example",
+      terminated: true,
+      policy: .regular
+    )
+
+    #expect(process.terminated)
+    #expect(process.policy == .regular)
+  }
 }

@@ -22,6 +22,7 @@ struct EventManagerTests {
 
   @Test("post accepts window events")
   func postAcceptsWindowEvents() {
+    EventManager.shared.post(.window(.created(42, 1)))
     EventManager.shared.post(.window(.focused(1)))
     EventManager.shared.post(.window(.moved(1)))
     EventManager.shared.post(.window(.resized(1)))
