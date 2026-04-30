@@ -72,34 +72,35 @@ struct QueryResponseTests {
       frame: nil,
       role: nil,
       subrole: nil,
-      rootWindow: nil,
-      display: nil,
-      space: nil,
-      level: nil,
-      subLevel: nil,
+      display: 0,
+      space: 0,
       layer: nil,
       subLayer: nil,
-      opacity: nil,
       canMove: nil,
       canResize: nil,
       hasFocus: nil,
-      hasShadow: nil,
-      hasParentZoom: nil,
-      hasFullscreenZoom: nil,
       hasAXReference: false,
       isNativeFullscreen: nil,
       isVisible: nil,
       isMinimized: nil,
-      isHidden: nil,
-      isFloating: nil,
-      isSticky: nil
+      isFloating: nil
     )
 
     let object = try encodedObject(window)
 
-    #expect(object["root-window"] is NSNull)
     #expect(object["has-ax-reference"] as? Bool == false)
+    #expect(object["display"] as? Int == 0)
+    #expect(object["space"] as? Int == 0)
     #expect(object["is-native-fullscreen"] is NSNull)
+    #expect(object["root-window"] == nil)
+    #expect(object["level"] == nil)
+    #expect(object["sub-level"] == nil)
+    #expect(object["opacity"] == nil)
+    #expect(object["has-shadow"] == nil)
+    #expect(object["has-parent-zoom"] == nil)
+    #expect(object["has-fullscreen-zoom"] == nil)
+    #expect(object["is-hidden"] == nil)
+    #expect(object["is-sticky"] == nil)
   }
 
   @Test("space DTO encodes serialized windows")
@@ -112,27 +113,18 @@ struct QueryResponseTests {
       frame: nil,
       role: nil,
       subrole: nil,
-      rootWindow: nil,
-      display: nil,
-      space: nil,
-      level: nil,
-      subLevel: nil,
+      display: 0,
+      space: 0,
       layer: nil,
       subLayer: nil,
-      opacity: nil,
       canMove: nil,
       canResize: nil,
       hasFocus: nil,
-      hasShadow: nil,
-      hasParentZoom: nil,
-      hasFullscreenZoom: nil,
       hasAXReference: false,
       isNativeFullscreen: nil,
       isVisible: nil,
       isMinimized: nil,
-      isHidden: nil,
-      isFloating: nil,
-      isSticky: nil
+      isFloating: nil
     )
     let space = QuerySpace(
       id: 1,
@@ -153,6 +145,8 @@ struct QueryResponseTests {
 
     #expect(encodedWindow["id"] as? Int == 1)
     #expect(encodedWindow["has-ax-reference"] as? Bool == false)
+    #expect(encodedWindow["display"] as? Int == 0)
+    #expect(encodedWindow["space"] as? Int == 0)
     #expect(object["first-window"] == nil)
     #expect(object["last-window"] == nil)
     #expect(object["has-focus"] as? Bool == false)

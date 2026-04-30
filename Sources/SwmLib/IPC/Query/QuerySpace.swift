@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 struct QuerySpace: Encodable, Equatable {
@@ -45,6 +46,7 @@ extension QuerySpace {
     let spaces = Space.all()
     let activeSpaceID = Space.active().id
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
+    let screens = NSScreen.screens
     let windows = WindowManager.shared.allWindows()
     let windowInfo = QueryWindow.windowInfo()
 
@@ -56,7 +58,14 @@ extension QuerySpace {
           WindowServerClient.shared.spaceIDs(containing: window.id, connectionID: Space.connection)
             .contains(space.id)
         }
-        .map { QueryWindow(window: $0, info: windowInfo.info(for: $0.id)) }
+        .map {
+          QueryWindow(
+            window: $0,
+            info: windowInfo.info(for: $0.id),
+            screens: screens,
+            spaceIndex: index
+          )
+        }
 
       return QuerySpace(
         id: space.id,

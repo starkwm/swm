@@ -8,27 +8,18 @@ struct QueryWindow: Encodable, Equatable {
   let frame: QueryFrame?
   let role: String?
   let subrole: String?
-  let rootWindow: CGWindowID?
-  let display: String?
-  let space: UInt64?
-  let level: Int?
-  let subLevel: Int?
+  let display: Int?
+  let space: Int?
   let layer: Int?
   let subLayer: Int?
-  let opacity: Double?
   let canMove: Bool?
   let canResize: Bool?
   let hasFocus: Bool?
-  let hasShadow: Bool?
-  let hasParentZoom: Bool?
-  let hasFullscreenZoom: Bool?
   let hasAXReference: Bool
   let isNativeFullscreen: Bool?
   let isVisible: Bool?
   let isMinimized: Bool?
-  let isHidden: Bool?
   let isFloating: Bool?
-  let isSticky: Bool?
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -38,27 +29,18 @@ struct QueryWindow: Encodable, Equatable {
     case frame
     case role
     case subrole
-    case rootWindow = "root-window"
     case display
     case space
-    case level
-    case subLevel = "sub-level"
     case layer
     case subLayer = "sub-layer"
-    case opacity
     case canMove = "can-move"
     case canResize = "can-resize"
     case hasFocus = "has-focus"
-    case hasShadow = "has-shadow"
-    case hasParentZoom = "has-parent-zoom"
-    case hasFullscreenZoom = "has-fullscreen-zoom"
     case hasAXReference = "has-ax-reference"
     case isNativeFullscreen = "is-native-fullscreen"
     case isVisible = "is-visible"
     case isMinimized = "is-minimized"
-    case isHidden = "is-hidden"
     case isFloating = "is-floating"
-    case isSticky = "is-sticky"
   }
 
   func encode(to encoder: Encoder) throws {
@@ -70,36 +52,34 @@ struct QueryWindow: Encodable, Equatable {
     try container.encodeNilOrValue(frame, forKey: .frame)
     try container.encodeNilOrValue(role, forKey: .role)
     try container.encodeNilOrValue(subrole, forKey: .subrole)
-    try container.encodeNilOrValue(rootWindow, forKey: .rootWindow)
     try container.encodeNilOrValue(display, forKey: .display)
     try container.encodeNilOrValue(space, forKey: .space)
-    try container.encodeNilOrValue(level, forKey: .level)
-    try container.encodeNilOrValue(subLevel, forKey: .subLevel)
     try container.encodeNilOrValue(layer, forKey: .layer)
     try container.encodeNilOrValue(subLayer, forKey: .subLayer)
-    try container.encodeNilOrValue(opacity, forKey: .opacity)
     try container.encodeNilOrValue(canMove, forKey: .canMove)
     try container.encodeNilOrValue(canResize, forKey: .canResize)
     try container.encodeNilOrValue(hasFocus, forKey: .hasFocus)
-    try container.encodeNilOrValue(hasShadow, forKey: .hasShadow)
-    try container.encodeNilOrValue(hasParentZoom, forKey: .hasParentZoom)
-    try container.encodeNilOrValue(hasFullscreenZoom, forKey: .hasFullscreenZoom)
     try container.encode(hasAXReference, forKey: .hasAXReference)
     try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
     try container.encodeNilOrValue(isVisible, forKey: .isVisible)
     try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
-    try container.encodeNilOrValue(isHidden, forKey: .isHidden)
     try container.encodeNilOrValue(isFloating, forKey: .isFloating)
-    try container.encodeNilOrValue(isSticky, forKey: .isSticky)
   }
 }
 
 extension QueryWindow {
   static func all() -> [QueryWindow] {
     let windowInfo = windowInfo()
+    let screens = NSScreen.screens
+    let spaces = Space.all()
 
     return WindowManager.shared.allWindows().map { window in
-      QueryWindow(window: window, info: windowInfo.info(for: window.id))
+      QueryWindow(
+        window: window,
+        info: windowInfo.info(for: window.id),
+        screens: screens,
+        spaceIndex: spaces.spaceIndex(containing: window.id)
+      )
     }
   }
 
@@ -107,10 +87,15 @@ extension QueryWindow {
     CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
   }
 
-  init(window: Window, info: [String: Any]?) {
+  init(
+    window: Window,
+    info: [String: Any]?,
+    screens: [NSScreen] = NSScreen.screens,
+    spaceIndex: Int? = nil
+  ) {
     let element = window.element
     let frame = element.flatMap { AccessibilityClient.shared.frame(for: $0) }
-    let spaces = WindowServerClient.shared.spaceIDs(
+    let spaceIDs = WindowServerClient.shared.spaceIDs(
       containing: window.id,
       connectionID: Space.connection
     )
@@ -135,18 +120,14 @@ extension QueryWindow {
       )
     }
     subrole = window.subrole
-    rootWindow = nil
     display = frame.flatMap { rect in
-      NSScreen.screens.max { a, b in
-        rect.intersection(a.frame).area < rect.intersection(b.frame).area
-      }?.id
+      screens.indices.max { a, b in
+        rect.intersection(screens[a].frame).area < rect.intersection(screens[b].frame).area
+      }
     }
-    space = spaces.first
-    level = nil
-    subLevel = nil
+    space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
     subLayer = nil
-    opacity = (info?[kCGWindowAlpha as String] as? NSNumber)?.doubleValue
     canMove = element.map {
       AccessibilityClient.shared.isAttributeSettable(
         kAXPositionAttribute as String,
@@ -157,11 +138,8 @@ extension QueryWindow {
       AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: $0)
     }
     hasFocus = element.map { AccessibilityClient.shared.isMainWindow($0) }
-    hasShadow = nil
-    hasParentZoom = nil
-    hasFullscreenZoom = nil
     hasAXReference = element != nil
-    isNativeFullscreen = spaces.first.map {
+    isNativeFullscreen = spaceIDs.first.map {
       WindowServerClient.shared.spaceType(connectionID: Space.connection, spaceID: $0)
         == .fullscreen
     }
@@ -169,9 +147,7 @@ extension QueryWindow {
     isMinimized = element.flatMap {
       AccessibilityClient.shared.boolAttribute(for: $0, attribute: kAXMinimizedAttribute as String)
     }
-    isHidden = nil
     isFloating = layer.map { $0 != 0 }
-    isSticky = nil
   }
 }
 
@@ -180,6 +156,18 @@ extension [[String: Any]] {
     first { info in
       (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowID
     }
+  }
+}
+
+extension [Space] {
+  func spaceIndex(containing windowID: CGWindowID) -> Int? {
+    let spaceIDs = WindowServerClient.shared.spaceIDs(
+      containing: windowID,
+      connectionID: Space.connection
+    )
+
+    guard let spaceID = spaceIDs.first else { return nil }
+    return firstIndex { $0.id == spaceID }
   }
 }
 
