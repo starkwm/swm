@@ -1,4 +1,3 @@
-import CoreGraphics
 import Foundation
 
 struct QuerySpace: Encodable, Equatable {
@@ -8,9 +7,7 @@ struct QuerySpace: Encodable, Equatable {
   let label: String?
   let type: String
   let display: String?
-  let windows: [CGWindowID]
-  let firstWindow: CGWindowID?
-  let lastWindow: CGWindowID?
+  let windows: [QueryWindow]
   let hasFocus: Bool
   let isVisible: Bool
   let isNativeFullscreen: Bool
@@ -23,8 +20,6 @@ struct QuerySpace: Encodable, Equatable {
     case type
     case display
     case windows
-    case firstWindow = "first-window"
-    case lastWindow = "last-window"
     case hasFocus = "has-focus"
     case isVisible = "is-visible"
     case isNativeFullscreen = "is-native-fullscreen"
@@ -39,8 +34,6 @@ struct QuerySpace: Encodable, Equatable {
     try container.encode(type, forKey: .type)
     try container.encodeNilOrValue(display, forKey: .display)
     try container.encode(windows, forKey: .windows)
-    try container.encodeNilOrValue(firstWindow, forKey: .firstWindow)
-    try container.encodeNilOrValue(lastWindow, forKey: .lastWindow)
     try container.encode(hasFocus, forKey: .hasFocus)
     try container.encode(isVisible, forKey: .isVisible)
     try container.encode(isNativeFullscreen, forKey: .isNativeFullscreen)
@@ -53,16 +46,17 @@ extension QuerySpace {
     let activeSpaceID = Space.active().id
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let windows = WindowManager.shared.allWindows()
+    let windowInfo = QueryWindow.windowInfo()
 
     return spaces.enumerated().map { index, space in
       let display = displaySpaces.first { $0.spaces.contains(space.id) }?.id
-      let windowIDs =
+      let queryWindows =
         windows
         .filter { window in
           WindowServerClient.shared.spaceIDs(containing: window.id, connectionID: Space.connection)
             .contains(space.id)
         }
-        .map(\.id)
+        .map { QueryWindow(window: $0, info: windowInfo.info(for: $0.id)) }
 
       return QuerySpace(
         id: space.id,
@@ -71,9 +65,7 @@ extension QuerySpace {
         label: nil,
         type: space.type.description,
         display: display,
-        windows: windowIDs,
-        firstWindow: windowIDs.first,
-        lastWindow: windowIDs.last,
+        windows: queryWindows,
         hasFocus: space.id == activeSpaceID,
         isVisible: display.map { screenID in
           WindowServerClient.shared.currentSpace(connectionID: Space.connection, screenID: screenID)

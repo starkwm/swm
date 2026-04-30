@@ -96,18 +96,15 @@ struct QueryWindow: Encodable, Equatable {
 
 extension QueryWindow {
   static func all() -> [QueryWindow] {
-    let windowInfo =
-      CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]]
-      ?? []
+    let windowInfo = windowInfo()
 
     return WindowManager.shared.allWindows().map { window in
-      QueryWindow(
-        window: window,
-        info: windowInfo.first { info in
-          (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value == window.id
-        }
-      )
+      QueryWindow(window: window, info: windowInfo.info(for: window.id))
     }
+  }
+
+  static func windowInfo() -> [[String: Any]] {
+    CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
   }
 
   init(window: Window, info: [String: Any]?) {
@@ -175,6 +172,14 @@ extension QueryWindow {
     isHidden = nil
     isFloating = layer.map { $0 != 0 }
     isSticky = nil
+  }
+}
+
+extension [[String: Any]] {
+  func info(for windowID: CGWindowID) -> [String: Any]? {
+    first { info in
+      (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowID
+    }
   }
 }
 

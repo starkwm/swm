@@ -102,8 +102,65 @@ struct QueryResponseTests {
     #expect(object["is-native-fullscreen"] is NSNull)
   }
 
-  @Test("space DTO encodes nullable kebab-case keys")
-  func spaceDTOEncodesNullableKebabCaseKeys() throws {
+  @Test("space DTO encodes serialized windows")
+  func spaceDTOEncodesSerializedWindows() throws {
+    let window = QueryWindow(
+      id: 1,
+      pid: nil,
+      app: nil,
+      title: nil,
+      frame: nil,
+      role: nil,
+      subrole: nil,
+      rootWindow: nil,
+      display: nil,
+      space: nil,
+      level: nil,
+      subLevel: nil,
+      layer: nil,
+      subLayer: nil,
+      opacity: nil,
+      canMove: nil,
+      canResize: nil,
+      hasFocus: nil,
+      hasShadow: nil,
+      hasParentZoom: nil,
+      hasFullscreenZoom: nil,
+      hasAXReference: false,
+      isNativeFullscreen: nil,
+      isVisible: nil,
+      isMinimized: nil,
+      isHidden: nil,
+      isFloating: nil,
+      isSticky: nil
+    )
+    let space = QuerySpace(
+      id: 1,
+      uuid: nil,
+      index: 0,
+      label: nil,
+      type: "normal",
+      display: nil,
+      windows: [window],
+      hasFocus: false,
+      isVisible: false,
+      isNativeFullscreen: false
+    )
+
+    let object = try encodedObject(space)
+    let windows = try #require(object["windows"] as? [[String: Any]])
+    let encodedWindow = try #require(windows.first)
+
+    #expect(encodedWindow["id"] as? Int == 1)
+    #expect(encodedWindow["has-ax-reference"] as? Bool == false)
+    #expect(object["first-window"] == nil)
+    #expect(object["last-window"] == nil)
+    #expect(object["has-focus"] as? Bool == false)
+    #expect(object["is-native-fullscreen"] as? Bool == false)
+  }
+
+  @Test("space DTO encodes empty window array")
+  func spaceDTOEncodesEmptyWindowArray() throws {
     let space = QuerySpace(
       id: 1,
       uuid: nil,
@@ -112,19 +169,17 @@ struct QueryResponseTests {
       type: "normal",
       display: nil,
       windows: [],
-      firstWindow: nil,
-      lastWindow: nil,
       hasFocus: false,
       isVisible: false,
       isNativeFullscreen: false
     )
 
     let object = try encodedObject(space)
+    let windows = try #require(object["windows"] as? [Any])
 
-    #expect(object["first-window"] is NSNull)
-    #expect(object["last-window"] is NSNull)
-    #expect(object["has-focus"] as? Bool == false)
-    #expect(object["is-native-fullscreen"] as? Bool == false)
+    #expect(windows.isEmpty)
+    #expect(object["first-window"] == nil)
+    #expect(object["last-window"] == nil)
   }
 
   private func encodedObject<T: Encodable>(_ value: T) throws -> [String: Any] {
