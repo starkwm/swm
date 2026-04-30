@@ -23,7 +23,7 @@ public final class Window: NSObject {
   }
 
   public override var description: String {
-    "<Window id: \(id), title: \(titleDescription)>"
+    "<Window id: \(id), title: \(title)>"
   }
 
   private(set) var element: AXUIElement?
@@ -97,7 +97,7 @@ public final class Window: NSObject {
     )
   }
 
-  private var titleDescription: String {
+  private var title: String {
     guard let element else { return "" }
 
     return AccessibilityClient.shared.stringAttribute(
