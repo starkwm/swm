@@ -79,6 +79,7 @@ final class Workspace: NSObject {
     guard process.application != nil else { return }
 
     let token = registry.register(process)
+    log("adding observer for \(registry.kind.logName) \(process)")
     process.application?.addObserver(
       self,
       forKeyPath: token.keyPath,
@@ -91,6 +92,7 @@ final class Workspace: NSObject {
     guard process.application != nil else { return }
     guard let token = registry.unregister(process) else { return }
 
+    log("removing observer for \(registry.kind.logName) \(process)")
     process.application?.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
   }
 
@@ -122,6 +124,15 @@ private enum ProcessObservationKind {
       "activationPolicy"
     case .finishedLaunching:
       "finishedLaunching"
+    }
+  }
+
+  var logName: String {
+    switch self {
+    case .activationPolicy:
+      "activation policy"
+    case .finishedLaunching:
+      "finished launching"
     }
   }
 

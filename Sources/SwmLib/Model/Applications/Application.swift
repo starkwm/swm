@@ -49,6 +49,7 @@ public final class Application: NSObject {
 
   deinit {
     unobserve()
+    log("application deinit \(self)")
   }
 
   func observe() -> Result<Void, AccessibilityClientError> {
@@ -79,6 +80,10 @@ public final class Application: NSObject {
       },
       onFailure: { notification, result in
         retryObserving = result == .cannotComplete
+        log(
+          "notification \(notification) not added \(self) (retry: \(retryObserving))",
+          level: .warn
+        )
 
         if observationError == nil {
           observationError = .notificationFailed("failed to add notification \(notification)")

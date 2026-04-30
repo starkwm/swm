@@ -38,6 +38,7 @@ public final class Process: CustomStringConvertible {
     if NSFileTypeForHFSTypeCode(info.processType).trimmingCharacters(
       in: CharacterSet(charactersIn: "'")
     ) == "XPC!" {
+      log("ignoring xpc service \(name)")
       return nil
     }
 
@@ -60,5 +61,9 @@ public final class Process: CustomStringConvertible {
     self.terminated = terminated
     self.application = application
     self.policy = policy
+  }
+
+  deinit {
+    log("process deinit \(self)")
   }
 }

@@ -80,7 +80,7 @@ public class Daemon {
     let queue = DispatchQueue.global(qos: .userInitiated)
 
     queue.async {
-      print("socket connected: \(socket.remotePath ?? "unknown")")
+      log("socket connected: \(socket.remotePath ?? "unknown")", level: .info)
       defer {
         socket.close()
       }
@@ -104,7 +104,7 @@ public class Daemon {
         }
 
         let request = try IPCMessage.decode(IPCRequest.self, from: data)
-        print("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
+        log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
 
         let response = self.dispatcher.dispatch(request)
         try socket.write(from: IPCMessage.encode(response))

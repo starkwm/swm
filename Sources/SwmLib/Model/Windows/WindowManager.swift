@@ -120,6 +120,7 @@ public final class WindowManager {
 
   public func refreshWindows(for application: Application) {
     guard unresolvedApplicationIDs.contains(application.processID) else { return }
+    log("application has windows that are not yet resolved \(application)", level: .info)
     _ = reconcileWindows(for: application, mode: .refreshAttempt)
   }
 
@@ -155,18 +156,21 @@ public final class WindowManager {
 
   private func startManaging(_ process: Process) {
     guard workspace.isObservable(process) else {
+      log("application is not observable \(process)", level: .warn)
       workspace.observeActivationPolicy(process)
       return
     }
 
     guard let application = Application(for: process) else {
+      log("could not create application for process \(process)", level: .warn)
       return
     }
 
     switch application.observe() {
     case .success:
       break
-    case .failure:
+    case .failure(let error):
+      log("could not observe application \(application): \(error)", level: .warn)
       application.unobserve()
       return
     }
@@ -196,6 +200,7 @@ public final class WindowManager {
 
   private func finishResolution(for application: Application, mode: WindowDiscoveryMode) -> Bool {
     guard mode == .refreshAttempt else { return false }
+    log("all windows resolved \(application)", level: .info)
     unresolvedApplicationIDs.remove(application.processID)
     return true
   }
@@ -204,6 +209,11 @@ public final class WindowManager {
     _ unresolvedWindowIDs: inout [CGWindowID],
     for application: Application
   ) {
+    log(
+      "application has windows that are not resolved, attempting workaround \(application)",
+      level: .info
+    )
+
     resolver.resolve(
       unresolvedWindowIDs: &unresolvedWindowIDs,
       for: application,
@@ -222,11 +232,13 @@ public final class WindowManager {
     switch mode {
     case .initialDiscovery:
       if !unresolvedWindowIDs.isEmpty {
+        log("workaround failed to resolve all windows \(application)", level: .warn)
         unresolvedApplicationIDs.insert(application.processID)
       }
 
     case .refreshAttempt:
       if unresolvedWindowIDs.isEmpty {
+        log("workaround successfully resolved all windows \(application)", level: .info)
         unresolvedApplicationIDs.remove(application.processID)
         return true
       }
@@ -266,6 +278,7 @@ private final class RemoteWindowResolver {
       if let index = unresolvedWindowIDs.firstIndex(of: windowID) {
         unresolvedWindowIDs.remove(at: index)
         addWindow(element)
+        log("resolved window \(windowID) for \(application)", level: .info)
       }
     }
   }

@@ -40,6 +40,7 @@ public final class Window: NSObject {
 
   deinit {
     unobserve()
+    log("window deinit \(self)")
   }
 
   func invalidate() {
