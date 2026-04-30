@@ -19,7 +19,7 @@ public final class Space: NSObject {
 
   var id: UInt64
 
-  private var type: SpaceType
+  var type: SpaceType
 
   public convenience init(id: UInt64) {
     self.init(

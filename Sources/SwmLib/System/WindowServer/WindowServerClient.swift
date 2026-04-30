@@ -2,6 +2,11 @@ import AppKit
 import Carbon
 import CoreGraphics
 
+struct WindowServerDisplaySpaces: Equatable {
+  let id: String
+  let spaces: [UInt64]
+}
+
 final class WindowServerClient {
   static let shared = WindowServerClient()
 
@@ -46,6 +51,18 @@ final class WindowServerClient {
     managedDisplaySpaces(connectionID: connectionID).flatMap { info -> [UInt64] in
       guard let spacesInfo = info[spacesKey] as? [[String: AnyObject]] else { return [] }
       return spacesInfo.compactMap { $0[spaceIDKey] as? UInt64 }
+    }
+  }
+
+  func displaySpaces(connectionID: Int32) -> [WindowServerDisplaySpaces] {
+    managedDisplaySpaces(connectionID: connectionID).compactMap { info in
+      guard let screenID = info[screenIDKey] as? String else { return nil }
+      let spaces =
+        (info[spacesKey] as? [[String: AnyObject]])?.compactMap {
+          $0[spaceIDKey] as? UInt64
+        } ?? []
+
+      return WindowServerDisplaySpaces(id: screenID, spaces: spaces)
     }
   }
 

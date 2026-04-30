@@ -64,6 +64,26 @@ final class AccessibilityClient {
     return size
   }
 
+  func frame(for element: AXUIElement) -> CGRect? {
+    guard let origin = pointAttribute(for: element, attribute: kAXPositionAttribute as String),
+      let size = sizeAttribute(for: element, attribute: kAXSizeAttribute as String)
+    else {
+      return nil
+    }
+
+    return CGRect(origin: origin, size: size)
+  }
+
+  func isAttributeSettable(_ attribute: String, for element: AXUIElement) -> Bool {
+    var settable = DarwinBoolean(false)
+    guard AXUIElementIsAttributeSettable(element, attribute as CFString, &settable) == .success
+    else {
+      return false
+    }
+
+    return settable.boolValue
+  }
+
   @discardableResult
   func setPoint(_ point: CGPoint, for element: AXUIElement, attribute: String) -> Bool {
     var pointValue = point

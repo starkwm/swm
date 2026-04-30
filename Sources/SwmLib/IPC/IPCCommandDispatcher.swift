@@ -5,7 +5,10 @@ protocol IPCCommandDispatcher {
 struct DefaultIPCCommandDispatcher: IPCCommandDispatcher {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     switch request.domain {
-    case .config, .display, .query, .space, .window:
+    case .query:
+      return QueryCommandHandler().dispatch(request)
+
+    case .config, .display, .space, .window:
       return .failure(
         id: request.id,
         message: "unsupported \(request.domain.rawValue) command: \(request.command)",
