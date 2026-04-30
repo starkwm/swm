@@ -35,6 +35,16 @@ do {
   exit(EXIT_FAILURE)
 }
 
+switch ProcessManager.shared.start() {
+case .success:
+  break
+case .failure(let error):
+  fputs("error: unable to start process manager - \(error)\n", stderr)
+  exit(EXIT_FAILURE)
+}
+
+WindowManager.shared.start()
+
 let daemon = Daemon()
 
 do {
