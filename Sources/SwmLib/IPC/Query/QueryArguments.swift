@@ -10,6 +10,15 @@ struct QueryArguments: ParsableArguments {
   @Flag(help: "Return space information as JSON.")
   var spaces = false
 
+  @Option(parsing: .upToNextOption, help: "Select focused display or display index.")
+  var display: [String] = []
+
+  @Option(parsing: .upToNextOption, help: "Select focused space or space index.")
+  var space: [String] = []
+
+  @Option(parsing: .upToNextOption, help: "Select focused window or window id.")
+  var window: [String] = []
+
   func selectedCommand() throws -> String {
     let selected = [
       (displays, "--displays"),
@@ -25,14 +34,14 @@ struct QueryArguments: ParsableArguments {
   }
 
   static func makeRequest(arguments: [String]) throws -> IPCRequest {
-    let supportedFlags = Set(["--displays", "--windows", "--spaces"])
-    if let unsupported = arguments.first(where: { !supportedFlags.contains($0) }) {
-      throw ValidationError(
-        "unsupported query argument: \(unsupported); use --displays, --windows, or --spaces"
-      )
-    }
+    let selection = try QuerySelection.parse(arguments: arguments)
+    let query = try QueryArguments.parse(
+      arguments.filter {
+        ["--displays", "--windows", "--spaces"].contains($0)
+      }
+    )
+    let command = try query.selectedCommand()
 
-    let query = try QueryArguments.parse(arguments)
-    return try IPCRequest(domain: .query, command: query.selectedCommand(), args: [])
+    return IPCRequest(domain: .query, command: command, args: selection.requestArguments)
   }
 }
