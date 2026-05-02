@@ -2,20 +2,11 @@ import ApplicationServices
 import Carbon
 import Foundation
 
-protocol WindowManagerProcessListing {
-  func all() -> [Process]
-}
-
-protocol WindowManagerWorkspaceObserving {
-  func isObservable(_ process: Process) -> Bool
-  func observeActivationPolicy(_ process: Process)
-}
-
 public final class WindowManager {
   public static let shared = WindowManager()
 
-  private let processManager: WindowManagerProcessListing
-  private let workspace: WindowManagerWorkspaceObserving
+  private let processManager: ProcessManager
+  private let workspace: Workspace
   private let resolver = RemoteWindowResolver()
 
   private var applicationsByPID = [pid_t: Application]()
@@ -23,8 +14,8 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
 
   init(
-    processManager: WindowManagerProcessListing = ProcessManager.shared,
-    workspace: WindowManagerWorkspaceObserving = Workspace.shared
+    processManager: ProcessManager = ProcessManager.shared,
+    workspace: Workspace = Workspace.shared
   ) {
     self.processManager = processManager
     self.workspace = workspace
@@ -249,9 +240,6 @@ public final class WindowManager {
 }
 
 extension WindowManager: @unchecked Sendable {}
-
-extension ProcessManager: WindowManagerProcessListing {}
-extension Workspace: WindowManagerWorkspaceObserving {}
 
 private enum WindowDiscoveryMode {
   case initialDiscovery
