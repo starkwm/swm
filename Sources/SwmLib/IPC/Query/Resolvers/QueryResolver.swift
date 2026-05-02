@@ -95,8 +95,3 @@ struct QueryResolver {
     return spaces.first { $0.index == spaceIndex }
   }
 }
-
-enum QueryResult<Value: Encodable> {
-  case many([Value])
-  case one(Value?)
-}
