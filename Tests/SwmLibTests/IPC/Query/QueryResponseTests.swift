@@ -57,9 +57,11 @@ struct QueryResponseTests {
     )
 
     let object = try encodedObject(display)
+    let spaces = try #require(object["spaces"] as? [Int])
 
     #expect(object["has-focus"] as? Bool == true)
     #expect(object["uuid"] is NSNull)
+    #expect(spaces == [1])
   }
 
   @Test("window DTO encodes nullable kebab-case keys")
@@ -72,7 +74,7 @@ struct QueryResponseTests {
       frame: nil,
       role: nil,
       subrole: nil,
-      display: 0,
+      display: "display-0",
       space: 0,
       layer: nil,
       subLayer: nil,
@@ -89,7 +91,7 @@ struct QueryResponseTests {
     let object = try encodedObject(window)
 
     #expect(object["has-ax-reference"] as? Bool == false)
-    #expect(object["display"] as? Int == 0)
+    #expect(object["display"] as? String == "display-0")
     #expect(object["space"] as? Int == 0)
     #expect(object["is-native-fullscreen"] is NSNull)
     #expect(object["root-window"] == nil)
@@ -103,29 +105,8 @@ struct QueryResponseTests {
     #expect(object["is-sticky"] == nil)
   }
 
-  @Test("space DTO encodes serialized windows")
-  func spaceDTOEncodesSerializedWindows() throws {
-    let window = QueryWindow(
-      id: 1,
-      pid: nil,
-      app: nil,
-      title: nil,
-      frame: nil,
-      role: nil,
-      subrole: nil,
-      display: 0,
-      space: 0,
-      layer: nil,
-      subLayer: nil,
-      canMove: nil,
-      canResize: nil,
-      hasFocus: nil,
-      hasAXReference: false,
-      isNativeFullscreen: nil,
-      isVisible: nil,
-      isMinimized: nil,
-      isFloating: nil
-    )
+  @Test("space DTO encodes window IDs")
+  func spaceDTOEncodesWindowIDs() throws {
     let space = QuerySpace(
       id: 1,
       uuid: nil,
@@ -133,20 +114,16 @@ struct QueryResponseTests {
       label: nil,
       type: "normal",
       display: nil,
-      windows: [window],
+      windows: [1],
       hasFocus: false,
       isVisible: false,
       isNativeFullscreen: false
     )
 
     let object = try encodedObject(space)
-    let windows = try #require(object["windows"] as? [[String: Any]])
-    let encodedWindow = try #require(windows.first)
+    let windows = try #require(object["windows"] as? [Int])
 
-    #expect(encodedWindow["id"] as? Int == 1)
-    #expect(encodedWindow["has-ax-reference"] as? Bool == false)
-    #expect(encodedWindow["display"] as? Int == 0)
-    #expect(encodedWindow["space"] as? Int == 0)
+    #expect(windows == [1])
     #expect(object["first-window"] == nil)
     #expect(object["last-window"] == nil)
     #expect(object["has-focus"] as? Bool == false)

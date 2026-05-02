@@ -66,8 +66,8 @@ struct QueryResolverTests {
         space(index: 1, id: 20, display: "display-1", hasFocus: false),
       ],
       windows: [
-        window(id: 100, display: 0, space: 0, hasFocus: true),
-        window(id: 200, display: 1, space: 1, hasFocus: false),
+        window(id: 100, display: "display-0", space: 0, hasFocus: true),
+        window(id: 200, display: "display-1", space: 1, hasFocus: false),
       ]
     )
   }
@@ -98,7 +98,7 @@ struct QueryResolverTests {
     )
   }
 
-  private func window(id: UInt32, display: Int, space: Int, hasFocus: Bool) -> QueryWindow {
+  private func window(id: UInt32, display: String, space: Int, hasFocus: Bool) -> QueryWindow {
     QueryWindow(
       id: id,
       pid: nil,

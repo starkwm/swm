@@ -47,8 +47,8 @@ struct QueryResolver {
     case .none:
       return .many(windows)
     case .display(let index):
-      guard let displayIndex = display(for: index)?.index else { return .many([]) }
-      return .many(windows.filter { $0.display == displayIndex })
+      guard let displayID = display(for: index)?.id else { return .many([]) }
+      return .many(windows.filter { $0.display == displayID })
     case .space(let index):
       guard let spaceIndex = space(for: index)?.index else { return .many([]) }
       return .many(windows.filter { $0.space == spaceIndex })
@@ -86,8 +86,8 @@ struct QueryResolver {
   }
 
   private func display(containing window: QueryWindow) -> QueryDisplay? {
-    guard let displayIndex = window.display else { return nil }
-    return displays.first { $0.index == displayIndex }
+    guard let displayID = window.display else { return nil }
+    return displays.first { $0.id == displayID }
   }
 
   private func space(containing window: QueryWindow) -> QuerySpace? {

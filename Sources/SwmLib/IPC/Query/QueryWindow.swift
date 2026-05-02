@@ -8,7 +8,7 @@ struct QueryWindow: Encodable, Equatable {
   let frame: QueryFrame?
   let role: String?
   let subrole: String?
-  let display: Int?
+  let display: String?
   let space: Int?
   let layer: Int?
   let subLayer: Int?
@@ -71,6 +71,7 @@ extension QueryWindow {
   static func all() -> [QueryWindow] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
+    let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let spaces = Space.all()
 
     return WindowManager.shared.allWindows().map { window in
@@ -78,6 +79,7 @@ extension QueryWindow {
         window: window,
         info: windowInfo.info(for: window.id),
         screens: screens,
+        displaySpaces: displaySpaces,
         spaceIndex: spaces.spaceIndex(containing: window.id)
       )
     }
@@ -91,6 +93,9 @@ extension QueryWindow {
     window: Window,
     info: [String: Any]?,
     screens: [NSScreen] = NSScreen.screens,
+    displaySpaces: [WindowServerDisplaySpaces] = WindowServerClient.shared.displaySpaces(
+      connectionID: Space.connection
+    ),
     spaceIndex: Int? = nil
   ) {
     let element = window.element
@@ -120,10 +125,15 @@ extension QueryWindow {
       )
     }
     subrole = window.subrole
-    display = frame.flatMap { rect in
+    let displayIndex = frame.flatMap { rect in
       screens.indices.max { a, b in
         rect.intersection(screens[a].frame).area < rect.intersection(screens[b].frame).area
       }
+    }
+    display = displayIndex.flatMap { index in
+      displaySpaces.first { $0.id == screens[index].id }?.id
+        ?? displaySpaces[safe: index]?.id
+        ?? screens[index].id
     }
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
@@ -168,6 +178,12 @@ extension [Space] {
 
     guard let spaceID = spaceIDs.first else { return nil }
     return firstIndex { $0.id == spaceID }
+  }
+}
+
+extension Array {
+  fileprivate subscript(safe index: Int) -> Element? {
+    indices.contains(index) ? self[index] : nil
   }
 }
 
