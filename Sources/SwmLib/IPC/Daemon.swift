@@ -62,7 +62,7 @@ public class Daemon {
           let client = try socket.acceptClientConnection()
           handle(socket: client)
         } catch {
-          fputs("error: accepting incoming client connection - \(error)\n", stderr)
+          log("accepting incoming client connection failed: \(error)", level: .error)
         }
       } while running
     }
@@ -109,7 +109,7 @@ public class Daemon {
         let response = self.dispatcher.dispatch(request)
         try socket.write(from: IPCMessage.encode(response))
       } catch {
-        fputs("error: could not receive data from socket - \(error)\n", stderr)
+        log("could not receive data from socket: \(error)", level: .error)
         let response = IPCResponse.failure(
           id: "",
           message: "error: \(error)",
