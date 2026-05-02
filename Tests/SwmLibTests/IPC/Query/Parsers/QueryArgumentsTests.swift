@@ -5,29 +5,61 @@ import Testing
 
 @Suite("QueryArguments")
 struct QueryArgumentsTests {
-  @Test("accepts displays flag")
-  func acceptsDisplaysFlag() throws {
+  @Test("parse: accepts displays flag")
+  func parseAcceptsDisplaysFlag() throws {
     let arguments = try QueryArguments.parse(["--displays"])
 
     #expect(try arguments.selectedCommand() == "--displays")
   }
 
-  @Test("accepts windows flag")
-  func acceptsWindowsFlag() throws {
+  @Test("parse: accepts windows flag")
+  func parseAcceptsWindowsFlag() throws {
     let arguments = try QueryArguments.parse(["--windows"])
 
     #expect(try arguments.selectedCommand() == "--windows")
   }
 
-  @Test("accepts spaces flag")
-  func acceptsSpacesFlag() throws {
+  @Test("parse: accepts spaces flag")
+  func parseAcceptsSpacesFlag() throws {
     let arguments = try QueryArguments.parse(["--spaces"])
 
     #expect(try arguments.selectedCommand() == "--spaces")
   }
 
-  @Test("rejects bare query command")
-  func rejectsBareQueryCommand() {
+  @Test("selectedCommand: rejects missing query flag")
+  func selectedCommandRejectsMissingQueryFlag() {
+    do {
+      _ = try QueryArguments.parse([]).selectedCommand()
+      Issue.record("Expected missing query flag to fail")
+    } catch {}
+  }
+
+  @Test("selectedCommand: rejects multiple query flags")
+  func selectedCommandRejectsMultipleQueryFlags() {
+    do {
+      _ = try QueryArguments.parse(["--displays", "--windows"]).selectedCommand()
+      Issue.record("Expected multiple query flags to fail")
+    } catch {}
+  }
+
+  @Test("makeRequest: accepts selector flags without values")
+  func makeRequestAcceptsSelectorFlagsWithoutValues() throws {
+    let request = try QueryArguments.makeRequest(arguments: ["--windows", "--display"])
+
+    #expect(request.command == "--windows")
+    #expect(request.args == ["--display"])
+  }
+
+  @Test("makeRequest: accepts selector flags with values")
+  func makeRequestAcceptsSelectorFlagsWithValues() throws {
+    let request = try QueryArguments.makeRequest(arguments: ["--spaces", "--window", "42"])
+
+    #expect(request.command == "--spaces")
+    #expect(request.args == ["--window", "42"])
+  }
+
+  @Test("makeRequest: rejects bare query command")
+  func makeRequestRejectsBareQueryCommand() {
     do {
       _ = try QueryArguments.makeRequest(arguments: ["displays"])
       Issue.record("Expected bare query command to fail")
@@ -36,40 +68,8 @@ struct QueryArgumentsTests {
     } catch {}
   }
 
-  @Test("accepts selector flags without values")
-  func acceptsSelectorFlagsWithoutValues() throws {
-    let request = try QueryArguments.makeRequest(arguments: ["--windows", "--display"])
-
-    #expect(request.command == "--windows")
-    #expect(request.args == ["--display"])
-  }
-
-  @Test("accepts selector flags with values")
-  func acceptsSelectorFlagsWithValues() throws {
-    let request = try QueryArguments.makeRequest(arguments: ["--spaces", "--window", "42"])
-
-    #expect(request.command == "--spaces")
-    #expect(request.args == ["--window", "42"])
-  }
-
-  @Test("rejects missing query flag")
-  func rejectsMissingQueryFlag() {
-    do {
-      _ = try QueryArguments.parse([]).selectedCommand()
-      Issue.record("Expected missing query flag to fail")
-    } catch {}
-  }
-
-  @Test("rejects multiple query flags")
-  func rejectsMultipleQueryFlags() {
-    do {
-      _ = try QueryArguments.parse(["--displays", "--windows"]).selectedCommand()
-      Issue.record("Expected multiple query flags to fail")
-    } catch {}
-  }
-
-  @Test("rejects multiple selectors")
-  func rejectsMultipleSelectors() {
+  @Test("makeRequest: rejects multiple selectors")
+  func makeRequestRejectsMultipleSelectors() {
     do {
       _ = try QueryArguments.makeRequest(arguments: ["--windows", "--display", "--space"])
       Issue.record("Expected multiple selectors to fail")
@@ -78,8 +78,8 @@ struct QueryArgumentsTests {
     } catch {}
   }
 
-  @Test("rejects multiple selector values")
-  func rejectsMultipleSelectorValues() {
+  @Test("makeRequest: rejects multiple selector values")
+  func makeRequestRejectsMultipleSelectorValues() {
     do {
       _ = try QueryArguments.makeRequest(arguments: ["--windows", "--display", "1", "2"])
       Issue.record("Expected multiple selector values to fail")
@@ -88,8 +88,8 @@ struct QueryArgumentsTests {
     } catch {}
   }
 
-  @Test("rejects invalid selector values")
-  func rejectsInvalidSelectorValues() {
+  @Test("makeRequest: rejects invalid selector values")
+  func makeRequestRejectsInvalidSelectorValues() {
     do {
       _ = try QueryArguments.makeRequest(arguments: ["--windows", "--space", "-1"])
       Issue.record("Expected invalid selector value to fail")

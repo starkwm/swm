@@ -4,8 +4,8 @@ import Testing
 
 @Suite("QueryResolver")
 struct QueryResolverTests {
-  @Test("display selectors resolve matrix results")
-  func displaySelectorsResolveMatrixResults() throws {
+  @Test("displays(for:): resolves display selectors")
+  func displaysForResolvesDisplaySelectors() throws {
     let resolver = queryResolver()
 
     #expect(try many(resolver.displays(for: .none)).map(\.index) == [0, 1])
@@ -17,8 +17,8 @@ struct QueryResolverTests {
     #expect(try one(resolver.displays(for: .window(200)))?.index == 1)
   }
 
-  @Test("space selectors resolve matrix results")
-  func spaceSelectorsResolveMatrixResults() throws {
+  @Test("spaces(for:): resolves space selectors")
+  func spacesForResolvesSpaceSelectors() throws {
     let resolver = queryResolver()
 
     #expect(try many(resolver.spaces(for: .none)).map(\.index) == [0, 1])
@@ -30,8 +30,8 @@ struct QueryResolverTests {
     #expect(try one(resolver.spaces(for: .window(200)))?.index == 1)
   }
 
-  @Test("window selectors resolve matrix results")
-  func windowSelectorsResolveMatrixResults() throws {
+  @Test("windows(for:): resolves window selectors")
+  func windowsForResolvesWindowSelectors() throws {
     let resolver = queryResolver()
 
     #expect(try many(resolver.windows(for: .none)).map(\.id) == [100, 200])
@@ -42,17 +42,6 @@ struct QueryResolverTests {
     #expect(try one(resolver.windows(for: .window(nil)))?.id == 100)
     #expect(try one(resolver.windows(for: .window(200)))?.id == 200)
     #expect(try one(resolver.windows(for: .window(999))) == nil)
-  }
-
-  @Test("singular misses encode null")
-  func singularMissesEncodeNull() throws {
-    let response = try QueryCommandHandler().response(
-      id: "request-id",
-      result: QueryResult<QueryWindow>.one(nil)
-    )
-
-    #expect(response.ok)
-    #expect(response.message == "null")
   }
 
   private func queryResolver() -> QueryResolver {
