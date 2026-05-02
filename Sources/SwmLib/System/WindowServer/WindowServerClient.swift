@@ -50,7 +50,7 @@ final class WindowServerClient {
   func allSpaceIDs(connectionID: Int32) -> [UInt64] {
     managedDisplaySpaces(connectionID: connectionID).flatMap { info -> [UInt64] in
       guard let spacesInfo = info[spacesKey] as? [[String: AnyObject]] else { return [] }
-      return spacesInfo.compactMap { $0[spaceIDKey] as? UInt64 }
+      return spacesInfo.compactMap { managedSpaceID(from: $0[spaceIDKey]) }
     }
   }
 
@@ -59,7 +59,7 @@ final class WindowServerClient {
       guard let screenID = info[screenIDKey] as? String else { return nil }
       let spaces =
         (info[spacesKey] as? [[String: AnyObject]])?.compactMap {
-          $0[spaceIDKey] as? UInt64
+          managedSpaceID(from: $0[spaceIDKey])
         } ?? []
 
       return WindowServerDisplaySpaces(id: screenID, spaces: spaces)
@@ -74,7 +74,7 @@ final class WindowServerClient {
         continue
       }
 
-      if spacesInfo.contains(where: { ($0[spaceIDKey] as? UInt64) == spaceID }) {
+      if spacesInfo.contains(where: { managedSpaceID(from: $0[spaceIDKey]) == spaceID }) {
         return screenID
       }
     }
@@ -84,7 +84,7 @@ final class WindowServerClient {
 
   func spaceIDs(containing windowID: CGWindowID, connectionID: Int32) -> [UInt64] {
     let identifiers = SLSCopySpacesForWindows(connectionID, 0x7, [windowID] as CFArray) as NSArray
-    return identifiers.compactMap { $0 as? UInt64 }
+    return identifiers.compactMap { managedSpaceID(from: $0) }
   }
 
   func spaceType(connectionID: Int32, spaceID: UInt64) -> SpaceType {
@@ -135,6 +135,14 @@ final class WindowServerClient {
   private func managedDisplaySpaces(connectionID: Int32) -> [[String: AnyObject]] {
     let info = SLSCopyManagedDisplaySpaces(connectionID) as NSArray
     return info.compactMap { $0 as? [String: AnyObject] }
+  }
+
+  private func managedSpaceID(from value: Any?) -> UInt64? {
+    if let id = value as? UInt64 {
+      return id
+    }
+
+    return (value as? NSNumber)?.uint64Value
   }
 
   private func validWindow(attributes: UInt64, tags: UInt64) -> Bool {
