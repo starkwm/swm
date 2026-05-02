@@ -107,3 +107,5 @@ public final class Window: NSObject {
       ?? ""
   }
 }
+
+extension Window: @unchecked Sendable {}

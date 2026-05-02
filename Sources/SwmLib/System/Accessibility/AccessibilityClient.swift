@@ -151,8 +151,10 @@ final class AccessibilityClient {
       return unsafeWindowID(for: element)
     }
 
-    return DispatchQueue.main.sync {
-      unsafeWindowID(for: element)
+    let uncheckedElement = UncheckedAXUIElement(element: element)
+
+    return DispatchQueue.main.sync { [uncheckedElement] in
+      unsafeWindowID(for: uncheckedElement.element)
     }
   }
 
@@ -211,4 +213,10 @@ final class AccessibilityClient {
 
     return identifier
   }
+}
+
+extension AccessibilityClient: @unchecked Sendable {}
+
+private struct UncheckedAXUIElement: @unchecked Sendable {
+  let element: AXUIElement
 }

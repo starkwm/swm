@@ -56,6 +56,8 @@ public final class ProcessManager {
   }
 }
 
+extension ProcessManager: @unchecked Sendable {}
+
 extension ProcessManager {
   func handle(event: EventRef) -> OSStatus {
     var psn = ProcessSerialNumber()

@@ -162,3 +162,5 @@ final class WindowServerClient {
     return false
   }
 }
+
+extension WindowServerClient: @unchecked Sendable {}

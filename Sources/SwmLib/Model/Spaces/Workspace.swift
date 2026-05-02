@@ -108,6 +108,8 @@ final class Workspace: NSObject {
   }
 }
 
+extension Workspace: @unchecked Sendable {}
+
 private struct ProcessObservationToken {
   let keyPath: String
   let context: UnsafeMutableRawPointer?

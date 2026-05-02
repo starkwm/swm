@@ -56,11 +56,13 @@ public class Daemon {
 
     let queue = DispatchQueue.global(qos: .userInteractive)
 
-    queue.async { [unowned self] in
+    let listeningSocket = UncheckedSocket(socket: socket)
+
+    queue.async { [unowned self, listeningSocket] in
       repeat {
         do {
-          let client = try socket.acceptClientConnection()
-          handle(socket: client)
+          let client = try listeningSocket.socket.acceptClientConnection()
+          handle(socket: UncheckedSocket(socket: client))
         } catch {
           log("accepting incoming client connection failed: \(error)", level: .error)
         }
@@ -76,10 +78,12 @@ public class Daemon {
     try? FileManager.default.removeItem(atPath: UnixSocket.filePath())
   }
 
-  private func handle(socket: Socket) {
+  private func handle(socket client: UncheckedSocket) {
     let queue = DispatchQueue.global(qos: .userInitiated)
 
-    queue.async {
+    queue.async { [client] in
+      let socket = client.socket
+
       log("socket connected: \(socket.remotePath ?? "unknown")", level: .info)
       defer {
         socket.close()
@@ -132,4 +136,10 @@ public class Daemon {
 
     return uid == getuid()
   }
+}
+
+extension Daemon: @unchecked Sendable {}
+
+private struct UncheckedSocket: @unchecked Sendable {
+  let socket: Socket
 }

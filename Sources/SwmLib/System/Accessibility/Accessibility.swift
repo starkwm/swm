@@ -2,7 +2,7 @@ import Cocoa
 
 public enum Accessibility {
   public static func askForAccessibilityIfNeeded() -> Bool {
-    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary?
+    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary?
     return AXIsProcessTrustedWithOptions(options)
   }
 }

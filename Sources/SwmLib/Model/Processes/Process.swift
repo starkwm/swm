@@ -67,3 +67,5 @@ public final class Process: CustomStringConvertible {
     log("process deinit \(self)")
   }
 }
+
+extension Process: @unchecked Sendable {}

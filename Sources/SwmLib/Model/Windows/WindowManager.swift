@@ -248,6 +248,8 @@ public final class WindowManager {
   }
 }
 
+extension WindowManager: @unchecked Sendable {}
+
 extension ProcessManager: WindowManagerProcessListing {}
 extension Workspace: WindowManagerWorkspaceObserving {}
 

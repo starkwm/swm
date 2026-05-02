@@ -1,6 +1,6 @@
 import CoreGraphics
 
-enum WindowEvent {
+enum WindowEvent: Sendable {
   case created(pid_t, CGWindowID)
   case destroyed(Window)
   case focused(CGWindowID)

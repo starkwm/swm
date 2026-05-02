@@ -39,3 +39,5 @@ public final class Space: NSObject {
   }
 
 }
+
+extension Space: @unchecked Sendable {}

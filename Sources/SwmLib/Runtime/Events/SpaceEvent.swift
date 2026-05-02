@@ -1,4 +1,4 @@
-enum SpaceEvent {
+enum SpaceEvent: Sendable {
   case changed(Space)
 
   var type: EventType {

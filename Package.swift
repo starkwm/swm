@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10.1
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -50,5 +50,6 @@ let package = Package(
       name: "SwmLibTests",
       dependencies: ["SwmLib"]
     ),
-  ]
+  ],
+  swiftLanguageModes: [.v6]
 )

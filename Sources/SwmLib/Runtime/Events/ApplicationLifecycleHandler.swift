@@ -5,7 +5,7 @@ struct ApplicationLifecycleHandler {
   let windowManager: WindowManager
   let processLookup: ProcessManager
   let dispatcher: RuntimeEventDispatcher
-  let postEvent: (RuntimeEvent) -> Void
+  let postEvent: @Sendable (RuntimeEvent) -> Void
 
   func handle(_ event: ApplicationEvent) {
     switch event {
@@ -55,8 +55,12 @@ struct ApplicationLifecycleHandler {
       application.unobserve()
 
       if application.retryObserving {
+        let processLookup = processLookup
+        let postEvent = postEvent
+        let psn = process.psn
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-          guard let process = processLookup.find(by: process.psn) else { return }
+          guard let process = processLookup.find(by: psn) else { return }
           postEvent(.application(.launched(process)))
         }
       }

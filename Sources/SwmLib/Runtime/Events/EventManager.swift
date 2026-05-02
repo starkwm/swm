@@ -49,3 +49,5 @@ final class EventManager {
     }
   }
 }
+
+extension EventManager: @unchecked Sendable {}
