@@ -20,6 +20,19 @@ enum QuerySelection: Equatable {
     }
   }
 
+  var defaultCommand: String? {
+    switch self {
+    case .none:
+      nil
+    case .display:
+      "--displays"
+    case .space:
+      "--spaces"
+    case .window:
+      "--windows"
+    }
+  }
+
   static func parse(arguments: [String]) throws -> QuerySelection {
     var selection: QuerySelection = .none
     var index = 0

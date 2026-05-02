@@ -1,6 +1,8 @@
 import ArgumentParser
 
 struct QueryArguments: ParsableArguments {
+  private static let commandFlags = ["--displays", "--windows", "--spaces"]
+
   @Flag(help: "Return display information as JSON.")
   var displays = false
 
@@ -35,13 +37,29 @@ struct QueryArguments: ParsableArguments {
 
   static func makeRequest(arguments: [String]) throws -> IPCRequest {
     let selection = try QuerySelection.parse(arguments: arguments)
-    let query = try QueryArguments.parse(
-      arguments.filter {
-        ["--displays", "--windows", "--spaces"].contains($0)
-      }
-    )
-    let command = try query.selectedCommand()
+    let command = try selectedCommand(in: arguments, selection: selection)
 
     return IPCRequest(domain: .query, command: command, args: selection.requestArguments)
+  }
+
+  private static func selectedCommand(
+    in arguments: [String],
+    selection: QuerySelection
+  ) throws -> String {
+    let query = try QueryArguments.parse(
+      arguments.filter {
+        commandFlags.contains($0)
+      }
+    )
+
+    do {
+      return try query.selectedCommand()
+    } catch {
+      if let command = selection.defaultCommand {
+        return command
+      }
+
+      throw error
+    }
   }
 }

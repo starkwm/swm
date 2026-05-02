@@ -50,12 +50,50 @@ struct QueryArgumentsTests {
     #expect(request.args == ["--display"])
   }
 
+  @Test("makeRequest: defaults singular display query to focused display")
+  func makeRequestDefaultsSingularDisplayQueryToFocusedDisplay() throws {
+    let request = try QueryArguments.makeRequest(arguments: ["--display"])
+
+    #expect(request.command == "--displays")
+    #expect(request.args == ["--display"])
+  }
+
+  @Test("makeRequest: defaults singular space query to focused space")
+  func makeRequestDefaultsSingularSpaceQueryToFocusedSpace() throws {
+    let request = try QueryArguments.makeRequest(arguments: ["--space"])
+
+    #expect(request.command == "--spaces")
+    #expect(request.args == ["--space"])
+  }
+
+  @Test("makeRequest: defaults singular window query to focused window")
+  func makeRequestDefaultsSingularWindowQueryToFocusedWindow() throws {
+    let request = try QueryArguments.makeRequest(arguments: ["--window"])
+
+    #expect(request.command == "--windows")
+    #expect(request.args == ["--window"])
+  }
+
   @Test("makeRequest: accepts selector flags with values")
   func makeRequestAcceptsSelectorFlagsWithValues() throws {
     let request = try QueryArguments.makeRequest(arguments: ["--spaces", "--window", "42"])
 
     #expect(request.command == "--spaces")
     #expect(request.args == ["--window", "42"])
+  }
+
+  @Test("makeRequest: accepts singular query flags with values")
+  func makeRequestAcceptsSingularQueryFlagsWithValues() throws {
+    let display = try QueryArguments.makeRequest(arguments: ["--display", "1"])
+    let space = try QueryArguments.makeRequest(arguments: ["--space", "2"])
+    let window = try QueryArguments.makeRequest(arguments: ["--window", "42"])
+
+    #expect(display.command == "--displays")
+    #expect(display.args == ["--display", "1"])
+    #expect(space.command == "--spaces")
+    #expect(space.args == ["--space", "2"])
+    #expect(window.command == "--windows")
+    #expect(window.args == ["--window", "42"])
   }
 
   @Test("makeRequest: rejects bare query command")
