@@ -12,5 +12,9 @@ struct ConfigErrorTests {
         == "unable to mark the configuration file as executable"
     )
     #expect(ConfigError.unableToExecute.description == "unable to execute the configuration file")
+    #expect(
+      ConfigError.configurationFailed(status: 7).description
+        == "configuration file exited with status 7"
+    )
   }
 }
