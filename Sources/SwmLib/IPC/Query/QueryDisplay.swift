@@ -5,7 +5,7 @@ struct QueryDisplay: Encodable, Equatable {
   let uuid: String?
   let index: Int
   let frame: QueryFrame
-  let spaces: [UInt64]
+  let spaces: [Int]
   let hasFocus: Bool
 
   enum CodingKeys: String, CodingKey {
@@ -31,19 +31,32 @@ struct QueryDisplay: Encodable, Equatable {
 extension QueryDisplay {
   static func all() -> [QueryDisplay] {
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
+    let indexedSpaces = Space.all().enumerated().map { (index: $0.offset, id: $0.element.id) }
     let focusedSpace = Space.active().id
 
-    return NSScreen.screens.enumerated().map { index, screen in
-      let spaces = displaySpaces.first { $0.id == screen.id }?.spaces ?? []
+    return displaySpaces.enumerated().map { index, display in
+      let screen = NSScreen.screen(for: display.id) ?? NSScreen.screens[safe: index]
+      let spaceIDs = display.spaces
+      let spaces = indexedSpaces.compactMap { spaceIDs.contains($0.id) ? $0.index : nil }
+      let currentSpace = WindowServerClient.shared.currentSpace(
+        connectionID: Space.connection,
+        screenID: display.id
+      )
 
       return QueryDisplay(
-        id: screen.id,
-        uuid: screen.id,
+        id: display.id,
+        uuid: display.id,
         index: index,
-        frame: QueryFrame(screen.frame),
+        frame: QueryFrame(screen?.frame ?? .zero),
         spaces: spaces,
-        hasFocus: spaces.contains(focusedSpace)
+        hasFocus: currentSpace == focusedSpace
       )
     }
+  }
+}
+
+extension [NSScreen] {
+  fileprivate subscript(safe index: Int) -> NSScreen? {
+    indices.contains(index) ? self[index] : nil
   }
 }
