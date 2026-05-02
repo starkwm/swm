@@ -4,8 +4,8 @@ import Testing
 
 @Suite("IPCCommandDispatcher")
 struct IPCCommandDispatcherTests {
-  @Test("unsupported commands preserve request id")
-  func unsupportedCommandsPreserveRequestID() {
+  @Test("dispatch: returns unsupported command for unsupported domains")
+  func dispatchReturnsUnsupportedCommandForUnsupportedDomains() {
     let dispatcher = DefaultIPCCommandDispatcher()
     let request = IPCRequest(
       id: "request-id",

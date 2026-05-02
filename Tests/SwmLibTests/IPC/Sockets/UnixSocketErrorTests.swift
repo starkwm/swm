@@ -4,8 +4,8 @@ import Testing
 
 @Suite("UnixSocketError")
 struct UnixSocketErrorTests {
-  @Test("unix socket errors describe failures")
-  func unixSocketErrorsDescribeFailures() {
+  @Test("description: describes failures")
+  func descriptionDescribesFailures() {
     #expect(
       UnixSocketError.frameTooLarge(1024).description
         == "IPC frame exceeded maximum size of 1024 bytes"

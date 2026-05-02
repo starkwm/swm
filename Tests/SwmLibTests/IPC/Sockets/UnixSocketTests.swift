@@ -5,8 +5,8 @@ import Testing
 
 @Suite("UnixSocket")
 struct UnixSocketTests {
-  @Test("socket path uses uid")
-  func socketPathUsesUID() {
+  @Test("filePath: uses uid")
+  func filePathUsesUID() {
     #expect(UnixSocket.filePath().hasSuffix("swm_\(getuid()).sock"))
   }
 }

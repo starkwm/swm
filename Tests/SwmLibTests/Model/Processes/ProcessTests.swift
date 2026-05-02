@@ -5,8 +5,16 @@ import Testing
 
 @Suite("Process")
 struct ProcessTests {
-  @Test("explicit initializer sets properties")
-  func explicitInitializerSetsProperties() {
+  @Test("description: includes pid and name")
+  func descriptionIncludesPIDAndName() {
+    let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
+    let process = Process(psn: psn, pid: 42, name: "Example")
+
+    #expect(process.description == "<Process pid: 42, name: Example>")
+  }
+
+  @Test("init: sets properties")
+  func initSetsProperties() {
     let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
     let process = Process(psn: psn, pid: 42, name: "Example")
 
@@ -19,16 +27,8 @@ struct ProcessTests {
     #expect(process.policy == nil)
   }
 
-  @Test("description includes pid and name")
-  func descriptionIncludesPIDAndName() {
-    let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
-    let process = Process(psn: psn, pid: 42, name: "Example")
-
-    #expect(process.description == "<Process pid: 42, name: Example>")
-  }
-
-  @Test("explicit initializer preserves override properties")
-  func explicitInitializerPreservesOverrideProperties() {
+  @Test("init: preserves override properties")
+  func initPreservesOverrideProperties() {
     let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
     let process = Process(
       psn: psn,

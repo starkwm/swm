@@ -4,8 +4,8 @@ import Testing
 
 @Suite("DaemonError")
 struct DaemonErrorTests {
-  @Test("daemon errors describe failures")
-  func daemonErrorsDescribeFailures() {
+  @Test("description: describes failures")
+  func descriptionDescribesFailures() {
     #expect(
       DaemonError.unableToPrepareSocket("busy").description
         == "unable to prepare listening socket - busy"

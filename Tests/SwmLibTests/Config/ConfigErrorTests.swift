@@ -4,8 +4,8 @@ import Testing
 
 @Suite("ConfigError")
 struct ConfigErrorTests {
-  @Test("config errors describe failures")
-  func configErrorsDescribeFailures() {
+  @Test("description: describes failures")
+  func descriptionDescribesFailures() {
     #expect(ConfigError.fileDoesNotExist.description == "configuration file does not exist")
     #expect(
       ConfigError.unableToMakeExecutable.description
