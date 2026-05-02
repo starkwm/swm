@@ -2,14 +2,22 @@ import Foundation
 
 public enum Config {
   public static func exec(path: String) throws {
-    if !FileManager.default.fileExists(atPath: path) {
-      throw ConfigError.fileDoesNotExist
-    }
+    try validateExists(path: path)
 
     if !ensureExecutable(path: path) {
       throw ConfigError.unableToMakeExecutable
     }
 
+    try run(path: path)
+  }
+
+  private static func validateExists(path: String) throws {
+    if !FileManager.default.fileExists(atPath: path) {
+      throw ConfigError.fileDoesNotExist
+    }
+  }
+
+  private static func run(path: String) throws {
     do {
       let proc = Foundation.Process()
       proc.executableURL = URL(fileURLWithPath: path)
