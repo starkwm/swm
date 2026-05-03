@@ -6,7 +6,7 @@ import Testing
 struct IPCCommandDispatcherTests {
   @Test("dispatch: returns unsupported command for unsupported domains")
   func dispatchReturnsUnsupportedCommandForUnsupportedDomains() {
-    let dispatcher = DefaultIPCCommandDispatcher()
+    let dispatcher = IPCCommandDispatcher()
     let request = IPCRequest(
       id: "request-id",
       domain: .window,

@@ -22,11 +22,11 @@ public class Daemon {
   private var listen: Socket?
 
   public convenience init() {
-    self.init(dispatcher: DefaultIPCCommandDispatcher())
+    self.init(dispatcher: IPCCommandDispatcher())
   }
 
   public convenience init(windowManager: WindowManager) {
-    self.init(dispatcher: DefaultIPCCommandDispatcher(windowManager: windowManager))
+    self.init(dispatcher: IPCCommandDispatcher(windowManager: windowManager))
   }
 
   init(dispatcher: IPCCommandDispatcher) {

@@ -6,7 +6,7 @@ import Testing
 struct QueryCommandHandlerTests {
   @Test("dispatch: returns query JSON arrays")
   func dispatchReturnsQueryJSONArrays() {
-    let dispatcher = DefaultIPCCommandDispatcher()
+    let dispatcher = IPCCommandDispatcher()
 
     for command in ["--displays", "--windows", "--spaces"] {
       let request = IPCRequest(
@@ -28,7 +28,7 @@ struct QueryCommandHandlerTests {
 
   @Test("dispatch: returns unsupported query command failure")
   func dispatchReturnsUnsupportedQueryCommandFailure() {
-    let dispatcher = DefaultIPCCommandDispatcher()
+    let dispatcher = IPCCommandDispatcher()
     let request = IPCRequest(
       id: "request-id",
       domain: .query,

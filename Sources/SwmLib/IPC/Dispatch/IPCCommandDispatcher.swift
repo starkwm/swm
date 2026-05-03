@@ -1,8 +1,4 @@
-protocol IPCCommandDispatcher {
-  func dispatch(_ request: IPCRequest) -> IPCResponse
-}
-
-struct DefaultIPCCommandDispatcher: IPCCommandDispatcher {
+struct IPCCommandDispatcher {
   private let windowManager: WindowManager
 
   init(windowManager: WindowManager = WindowManager(workspace: Workspace())) {
