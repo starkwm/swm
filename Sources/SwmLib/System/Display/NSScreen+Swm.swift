@@ -12,13 +12,4 @@ extension NSScreen {
     let uuid = CGDisplayCreateUUIDFromDisplayID(number.uint32Value).takeRetainedValue()
     return CFUUIDCreateString(nil, uuid) as String
   }
-
-  var flippedFrame: CGRect {
-    guard let primaryScreen = NSScreen.screens.first else { return CGRect.zero }
-
-    var frame = frame
-    frame.origin.y = primaryScreen.frame.height - frame.height - frame.origin.y
-
-    return frame
-  }
 }
