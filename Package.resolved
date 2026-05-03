@@ -1,5 +1,5 @@
 {
-  "originHash" : "8140d4772c7bb9232f890e1402cbd5145be4d31897781ca479532039c2beb4c5",
+  "originHash" : "0ccedfe09e2b4dda2db8eafea4672a146f5c1e11f1be162ce0b0479eeb7b6771",
   "pins" : [
     {
       "identity" : "bluesocket",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser",
       "state" : {
-        "revision" : "41982a3656a71c768319979febd796c6fd111d5c",
-        "version" : "1.5.0"
+        "revision" : "626b5b7b2f45e1b0b1c6f4a309296d1d21d7311b",
+        "version" : "1.7.1"
       }
     }
   ],
