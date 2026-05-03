@@ -26,7 +26,21 @@ public class Daemon {
   }
 
   public convenience init(windowManager: WindowManager) {
-    self.init(dispatcher: IPCCommandDispatcher(windowManager: windowManager))
+    self.init(
+      dispatcher: IPCCommandDispatcher(
+        windowManager: windowManager,
+        spaceManager: SpaceManager()
+      )
+    )
+  }
+
+  public convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
+    self.init(
+      dispatcher: IPCCommandDispatcher(
+        windowManager: windowManager,
+        spaceManager: spaceManager
+      )
+    )
   }
 
   init(dispatcher: IPCCommandDispatcher) {

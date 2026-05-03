@@ -38,6 +38,7 @@ do {
 let workspace = Workspace()
 let processManager = ProcessManager()
 let windowManager = WindowManager(workspace: workspace)
+let spaceManager = SpaceManager()
 EventManager.shared.configure(
   processLookup: processManager,
   workspace: workspace,
@@ -54,7 +55,7 @@ case .failure(let error):
 
 windowManager.start(processes: processManager.all())
 
-let daemon = Daemon(windowManager: windowManager)
+let daemon = Daemon(windowManager: windowManager, spaceManager: spaceManager)
 
 do {
   try daemon.run()
