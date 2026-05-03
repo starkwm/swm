@@ -4,7 +4,6 @@ import Foundation
 
 public final class WindowManager {
   private let workspace: Workspace
-  private let resolver = RemoteWindowResolver()
 
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
@@ -204,14 +203,36 @@ public final class WindowManager {
       level: .info
     )
 
-    resolver.resolve(
-      unresolvedWindowIDs: &unresolvedWindowIDs,
-      for: application,
-      addWindow: { [weak self] element in
-        guard let self else { return }
-        _ = self.addWindow(for: application, with: element)
+    for id in 0...0x7fff {
+      guard !unresolvedWindowIDs.isEmpty else { break }
+
+      let token = createRemoteToken(for: application.processID, with: id)
+
+      guard
+        let element = _AXUIElementCreateWithRemoteToken(token)?.takeRetainedValue(),
+        Window.isWindow(element),
+        let windowID = Window.validID(for: element)
+      else {
+        continue
       }
-    )
+
+      if let index = unresolvedWindowIDs.firstIndex(of: windowID) {
+        unresolvedWindowIDs.remove(at: index)
+        _ = addWindow(for: application, with: element)
+        log("resolved window \(windowID) for \(application)", level: .info)
+      }
+    }
+  }
+
+  private func createRemoteToken(for pid: pid_t, with id: Int) -> CFData {
+    var token = Data()
+
+    token.append(contentsOf: withUnsafeBytes(of: pid) { Data($0) })
+    token.append(contentsOf: withUnsafeBytes(of: Int32(0)) { Data($0) })
+    token.append(contentsOf: withUnsafeBytes(of: Int32(0x636f_636f)) { Data($0) })
+    token.append(contentsOf: withUnsafeBytes(of: id) { Data($0) })
+
+    return token as CFData
   }
 
   private func updateRefreshTracking(
@@ -243,43 +264,4 @@ extension WindowManager: @unchecked Sendable {}
 private enum WindowDiscoveryMode {
   case initialDiscovery
   case refreshAttempt
-}
-
-private final class RemoteWindowResolver {
-  func resolve(
-    unresolvedWindowIDs: inout [CGWindowID],
-    for application: Application,
-    addWindow: (AXUIElement) -> Void
-  ) {
-    for id in 0...0x7fff {
-      guard !unresolvedWindowIDs.isEmpty else { break }
-
-      let token = createRemoteToken(for: application.processID, with: id)
-
-      guard
-        let element = _AXUIElementCreateWithRemoteToken(token)?.takeRetainedValue(),
-        Window.isWindow(element),
-        let windowID = Window.validID(for: element)
-      else {
-        continue
-      }
-
-      if let index = unresolvedWindowIDs.firstIndex(of: windowID) {
-        unresolvedWindowIDs.remove(at: index)
-        addWindow(element)
-        log("resolved window \(windowID) for \(application)", level: .info)
-      }
-    }
-  }
-
-  private func createRemoteToken(for pid: pid_t, with id: Int) -> CFData {
-    var token = Data()
-
-    token.append(contentsOf: withUnsafeBytes(of: pid) { Data($0) })
-    token.append(contentsOf: withUnsafeBytes(of: Int32(0)) { Data($0) })
-    token.append(contentsOf: withUnsafeBytes(of: Int32(0x636f_636f)) { Data($0) })
-    token.append(contentsOf: withUnsafeBytes(of: id) { Data($0) })
-
-    return token as CFData
-  }
 }
