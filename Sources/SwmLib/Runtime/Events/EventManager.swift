@@ -4,7 +4,6 @@ public final class EventManager {
   public static let shared = EventManager()
 
   private let queue = OperationQueue.main
-  private let workspace = Workspace.shared
   private let windowManager = WindowManager.shared
 
   private let dispatcher = RuntimeEventDispatcher()
@@ -23,7 +22,7 @@ public final class EventManager {
 
   private init() {}
 
-  public func configure(processLookup: ProcessManager) {
+  public func configure(processLookup: ProcessManager, workspace: Workspace) {
     applicationHandler = ApplicationLifecycleHandler(
       workspace: workspace,
       windowManager: windowManager,

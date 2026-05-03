@@ -1,8 +1,6 @@
 import AppKit
 
-final class Workspace: NSObject {
-  static let shared = Workspace()
-
+public final class Workspace: NSObject {
   private let activationPolicyObservations = ProcessObservationRegistry(
     kind: .activationPolicy
   )
@@ -10,7 +8,7 @@ final class Workspace: NSObject {
     kind: .finishedLaunching
   )
 
-  override init() {
+  public override init() {
     super.init()
 
     NSWorkspace.shared.notificationCenter.addObserver(
@@ -59,7 +57,7 @@ final class Workspace: NSObject {
     EventManager.shared.post(.space(.changed(Space.active())))
   }
 
-  override func observeValue(
+  public override func observeValue(
     forKeyPath keyPath: String?,
     of object: Any?,
     change: [NSKeyValueChangeKey: Any]?,

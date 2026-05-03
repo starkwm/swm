@@ -8,44 +8,48 @@ import Testing
 struct WorkspaceTests {
   @Test("isObservable: returns true for regular application")
   func isObservableReturnsTrueForRegularApplication() {
+    let workspace = Workspace()
     let process = process(
       lowPSN: 1,
       application: testApplication(policy: .regular, finishedLaunching: true)
     )
 
-    #expect(Workspace.shared.isObservable(process))
+    #expect(workspace.isObservable(process))
     #expect(process.policy == .regular)
   }
 
   @Test("isObservable: returns false for non-regular application")
   func isObservableReturnsFalseForNonRegularApplication() {
+    let workspace = Workspace()
     let process = process(
       lowPSN: 2,
       application: testApplication(policy: .accessory, finishedLaunching: true)
     )
 
-    #expect(!Workspace.shared.isObservable(process))
+    #expect(!workspace.isObservable(process))
     #expect(process.policy == .accessory)
   }
 
   @Test("isObservable: marks missing applications prohibited")
   func isObservableMarksMissingApplicationsProhibited() {
+    let workspace = Workspace()
     let process = process(lowPSN: 3, application: nil)
 
-    #expect(!Workspace.shared.isObservable(process))
+    #expect(!workspace.isObservable(process))
     #expect(process.policy == .prohibited)
   }
 
   @Test("isFinishedLaunching: reads application state")
   func isFinishedLaunchingReadsApplicationState() {
+    let workspace = Workspace()
     let launched = process(
       lowPSN: 4,
       application: testApplication(policy: .regular, finishedLaunching: true)
     )
     let missing = process(lowPSN: 5, application: nil)
 
-    #expect(Workspace.shared.isFinishedLaunching(launched))
-    #expect(!Workspace.shared.isFinishedLaunching(missing))
+    #expect(workspace.isFinishedLaunching(launched))
+    #expect(!workspace.isFinishedLaunching(missing))
   }
 
   private func process(

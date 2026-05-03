@@ -35,8 +35,10 @@ do {
   exit(EXIT_FAILURE)
 }
 
+let workspace = Workspace()
 let processManager = ProcessManager()
-EventManager.shared.configure(processLookup: processManager)
+WindowManager.shared.configure(workspace: workspace)
+EventManager.shared.configure(processLookup: processManager, workspace: workspace)
 
 switch processManager.start() {
 case .success:
