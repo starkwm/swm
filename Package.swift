@@ -21,7 +21,7 @@ let package = Package(
         "SwmLib",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
-      exclude: ["version.swift.tmpl"],
+      exclude: ["Version.swift.tmpl"],
       linkerSettings: [
         .unsafeFlags([
           "-Xlinker", "-F",
