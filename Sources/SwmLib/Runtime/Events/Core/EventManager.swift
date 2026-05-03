@@ -5,9 +5,7 @@ public final class EventManager {
 
   private let queue = OperationQueue.main
 
-  private var applicationHandler: ApplicationLifecycleHandler?
-  private var windowHandler: WindowLifecycleHandler?
-  private var spaceHandler: SpaceLifecycleHandler?
+  private var configuration: Configuration?
 
   private init() {}
 
@@ -16,18 +14,9 @@ public final class EventManager {
     workspace: Workspace,
     windowManager: WindowManager
   ) {
-    applicationHandler = ApplicationLifecycleHandler(
-      workspace: workspace,
-      windowManager: windowManager,
+    configuration = Configuration(
       processLookup: processLookup,
-      postEvent: { [weak self] event in
-        self?.post(event)
-      }
-    )
-    windowHandler = WindowLifecycleHandler(
-      windowManager: windowManager
-    )
-    spaceHandler = SpaceLifecycleHandler(
+      workspace: workspace,
       windowManager: windowManager
     )
   }
@@ -39,24 +28,38 @@ public final class EventManager {
   }
 
   private func handle(_ event: RuntimeEvent) {
+    guard let configuration else {
+      preconditionFailure("EventManager must be configured before handling events")
+    }
+
     switch event {
     case .application(let event):
-      guard let applicationHandler else {
-        preconditionFailure("EventManager must be configured before handling application events")
-      }
-      applicationHandler.handle(event)
+      ApplicationLifecycleHandler(
+        workspace: configuration.workspace,
+        windowManager: configuration.windowManager,
+        processLookup: configuration.processLookup,
+        postEvent: { [weak self] event in
+          self?.post(event)
+        }
+      ).handle(event)
+
     case .window(let event):
-      guard let windowHandler else {
-        preconditionFailure("EventManager must be configured before handling window events")
-      }
-      windowHandler.handle(event)
+      WindowLifecycleHandler(
+        windowManager: configuration.windowManager
+      ).handle(event)
+
     case .space(let event):
-      guard let spaceHandler else {
-        preconditionFailure("EventManager must be configured before handling space events")
-      }
-      spaceHandler.handle(event)
+      SpaceLifecycleHandler(
+        windowManager: configuration.windowManager
+      ).handle(event)
     }
   }
 }
 
 extension EventManager: @unchecked Sendable {}
+
+private struct Configuration {
+  let processLookup: ProcessManager
+  let workspace: Workspace
+  let windowManager: WindowManager
+}
