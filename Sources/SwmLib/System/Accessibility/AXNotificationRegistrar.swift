@@ -1,11 +1,9 @@
 import ApplicationServices
 
-protocol AXNotificationSet: OptionSet where RawValue == Int8 {
-  static var all: Self { get }
-}
-
-struct AXNotificationRegistrar<Notifications: AXNotificationSet> {
+struct AXNotificationRegistrar<Notifications: OptionSet & Sendable>: Sendable
+where Notifications.RawValue == Int8 {
   let notifications: [String]
+  let allNotifications: Notifications
 
   func observe(
     observedNotifications: inout Notifications,
@@ -22,7 +20,7 @@ struct AXNotificationRegistrar<Notifications: AXNotificationSet> {
       }
     }
 
-    return observedNotifications.isSuperset(of: .all)
+    return observedNotifications.isSuperset(of: allNotifications)
   }
 
   func unobserve(

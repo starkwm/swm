@@ -4,7 +4,8 @@ private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
 public final class Application: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
-    notifications: applicationNotifications
+    notifications: applicationNotifications,
+    allNotifications: .all
   )
 
   public override var description: String {

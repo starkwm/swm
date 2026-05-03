@@ -2,7 +2,8 @@ import AppKit
 
 public final class Window: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
-    notifications: windowNotifications
+    notifications: windowNotifications,
+    allNotifications: .all
   )
 
   static func id(for element: AXUIElement) -> CGWindowID {

@@ -1,6 +1,6 @@
 import Carbon
 
-struct WindowNotifications: OptionSet {
+struct WindowNotifications: OptionSet, Sendable {
   static let windowDestroyed = WindowNotifications(rawValue: 1 << 0)
   static let windowMinimized = WindowNotifications(rawValue: 1 << 1)
   static let windowDeminimized = WindowNotifications(rawValue: 1 << 2)
@@ -15,5 +15,3 @@ let windowNotifications = [
   kAXWindowMiniaturizedNotification,
   kAXWindowDeminiaturizedNotification,
 ]
-
-extension WindowNotifications: AXNotificationSet {}

@@ -1,6 +1,6 @@
 import ApplicationServices
 
-struct ApplicationNotifications: OptionSet {
+struct ApplicationNotifications: OptionSet, Sendable {
   static let windowCreated = ApplicationNotifications(rawValue: 1 << 0)
   static let windowFocused = ApplicationNotifications(rawValue: 1 << 1)
   static let windowMoved = ApplicationNotifications(rawValue: 1 << 2)
@@ -19,5 +19,3 @@ let applicationNotifications = [
   kAXWindowMovedNotification,
   kAXWindowResizedNotification,
 ]
-
-extension ApplicationNotifications: AXNotificationSet {}
