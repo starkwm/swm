@@ -5,7 +5,6 @@ import Foundation
 public final class WindowManager {
   public static let shared = WindowManager()
 
-  private let processManager: ProcessManager
   private let workspace: Workspace
   private let resolver = RemoteWindowResolver()
 
@@ -14,15 +13,13 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
 
   init(
-    processManager: ProcessManager = ProcessManager.shared,
     workspace: Workspace = Workspace.shared
   ) {
-    self.processManager = processManager
     self.workspace = workspace
   }
 
-  public func start() {
-    for process in processManager.all() {
+  public func start(processes: [Process]) {
+    for process in processes {
       startManaging(process)
     }
   }

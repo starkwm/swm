@@ -1,24 +1,15 @@
 import Foundation
 
-final class EventManager {
-  static let shared = EventManager()
+public final class EventManager {
+  public static let shared = EventManager()
 
   private let queue = OperationQueue.main
   private let workspace = Workspace.shared
   private let windowManager = WindowManager.shared
-  private let processLookup = ProcessManager.shared
 
   private let dispatcher = RuntimeEventDispatcher()
 
-  private lazy var applicationHandler = ApplicationLifecycleHandler(
-    workspace: workspace,
-    windowManager: windowManager,
-    processLookup: processLookup,
-    dispatcher: dispatcher,
-    postEvent: { [weak self] event in
-      self?.post(event)
-    }
-  )
+  private var applicationHandler: ApplicationLifecycleHandler?
 
   private lazy var windowHandler = WindowLifecycleHandler(
     windowManager: windowManager,
@@ -32,6 +23,18 @@ final class EventManager {
 
   private init() {}
 
+  public func configure(processLookup: ProcessManager) {
+    applicationHandler = ApplicationLifecycleHandler(
+      workspace: workspace,
+      windowManager: windowManager,
+      processLookup: processLookup,
+      dispatcher: dispatcher,
+      postEvent: { [weak self] event in
+        self?.post(event)
+      }
+    )
+  }
+
   func post(_ event: RuntimeEvent) {
     queue.addOperation {
       self.handle(event)
@@ -41,6 +44,9 @@ final class EventManager {
   private func handle(_ event: RuntimeEvent) {
     switch event {
     case .application(let event):
+      guard let applicationHandler else {
+        preconditionFailure("EventManager must be configured before handling application events")
+      }
       applicationHandler.handle(event)
     case .window(let event):
       windowHandler.handle(event)

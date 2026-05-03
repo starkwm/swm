@@ -35,7 +35,10 @@ do {
   exit(EXIT_FAILURE)
 }
 
-switch ProcessManager.shared.start() {
+let processManager = ProcessManager()
+EventManager.shared.configure(processLookup: processManager)
+
+switch processManager.start() {
 case .success:
   break
 case .failure(let error):
@@ -43,7 +46,7 @@ case .failure(let error):
   exit(EXIT_FAILURE)
 }
 
-WindowManager.shared.start()
+WindowManager.shared.start(processes: processManager.all())
 
 let daemon = Daemon()
 

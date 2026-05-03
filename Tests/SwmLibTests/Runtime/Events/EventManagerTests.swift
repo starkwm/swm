@@ -10,6 +10,7 @@ struct EventManagerTests {
     let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
     let process = Process(psn: psn, pid: 42, name: "Example")
 
+    EventManager.shared.configure(processLookup: ProcessManager())
     EventManager.shared.post(.application(.launched(process)))
   }
 

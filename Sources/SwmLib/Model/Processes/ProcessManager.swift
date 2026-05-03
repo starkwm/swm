@@ -1,11 +1,9 @@
 import Carbon
 
 public final class ProcessManager {
-  public static let shared = ProcessManager()
-
   private var processes = [UInt32: Process]()
 
-  private init() {}
+  public init() {}
 
   public func start() -> Result<Void, ProcessManagerError> {
     addRunningProcesses()
@@ -30,7 +28,7 @@ public final class ProcessManager {
       processEventHandler,
       eventTypes.count,
       eventTypes,
-      nil,
+      Unmanaged.passUnretained(self).toOpaque(),
       nil
     )
 
@@ -117,9 +115,11 @@ extension ProcessManager {
 private func processEventHandler(
   _: EventHandlerCallRef?,
   event: EventRef?,
-  _: UnsafeMutableRawPointer?
+  context: UnsafeMutableRawPointer?
 ) -> OSStatus {
   guard let event = event else { return noErr }
+  guard let context else { return noErr }
 
-  return ProcessManager.shared.handle(event: event)
+  let processManager = Unmanaged<ProcessManager>.fromOpaque(context).takeUnretainedValue()
+  return processManager.handle(event: event)
 }
