@@ -1,10 +1,16 @@
 import Foundation
 
 struct QueryCommandHandler {
+  private let windowManager: WindowManager
+
+  init(windowManager: WindowManager = WindowManager(workspace: Workspace())) {
+    self.windowManager = windowManager
+  }
+
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     do {
       let selection = try QuerySelection.parse(arguments: request.args)
-      let resolver = QueryResolver()
+      let resolver = QueryResolver(windowManager: windowManager)
 
       switch request.command {
       case "--displays":

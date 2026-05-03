@@ -4,25 +4,20 @@ public final class EventManager {
   public static let shared = EventManager()
 
   private let queue = OperationQueue.main
-  private let windowManager = WindowManager.shared
 
   private let dispatcher = RuntimeEventDispatcher()
 
   private var applicationHandler: ApplicationLifecycleHandler?
-
-  private lazy var windowHandler = WindowLifecycleHandler(
-    windowManager: windowManager,
-    dispatcher: dispatcher
-  )
-
-  private lazy var spaceHandler = SpaceLifecycleHandler(
-    windowManager: windowManager,
-    dispatcher: dispatcher
-  )
+  private var windowHandler: WindowLifecycleHandler?
+  private var spaceHandler: SpaceLifecycleHandler?
 
   private init() {}
 
-  public func configure(processLookup: ProcessManager, workspace: Workspace) {
+  public func configure(
+    processLookup: ProcessManager,
+    workspace: Workspace,
+    windowManager: WindowManager
+  ) {
     applicationHandler = ApplicationLifecycleHandler(
       workspace: workspace,
       windowManager: windowManager,
@@ -31,6 +26,14 @@ public final class EventManager {
       postEvent: { [weak self] event in
         self?.post(event)
       }
+    )
+    windowHandler = WindowLifecycleHandler(
+      windowManager: windowManager,
+      dispatcher: dispatcher
+    )
+    spaceHandler = SpaceLifecycleHandler(
+      windowManager: windowManager,
+      dispatcher: dispatcher
     )
   }
 
@@ -48,8 +51,14 @@ public final class EventManager {
       }
       applicationHandler.handle(event)
     case .window(let event):
+      guard let windowHandler else {
+        preconditionFailure("EventManager must be configured before handling window events")
+      }
       windowHandler.handle(event)
     case .space(let event):
+      guard let spaceHandler else {
+        preconditionFailure("EventManager must be configured before handling space events")
+      }
       spaceHandler.handle(event)
     }
   }

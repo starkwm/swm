@@ -30,9 +30,17 @@ public final class Application: NSObject {
   private var connection: Int32 = -1
   private var observedNotifications = ApplicationNotifications(rawValue: 0)
   private var observing = false
+  private let postEvent: (RuntimeEvent) -> Void
+  private let windowLookup: (CGWindowID) -> Window?
 
-  public init?(for process: Process) {
+  init?(
+    for process: Process,
+    postEvent: @escaping (RuntimeEvent) -> Void,
+    windowLookup: @escaping (CGWindowID) -> Window?
+  ) {
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
+    self.postEvent = postEvent
+    self.windowLookup = windowLookup
 
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {
       return nil
@@ -169,6 +177,14 @@ public final class Application: NSObject {
       attribute: kAXEnhancedUserInterface
     )
   }
+
+  func post(_ event: RuntimeEvent) {
+    postEvent(event)
+  }
+
+  func window(by id: CGWindowID) -> Window? {
+    windowLookup(id)
+  }
 }
 
 private func accessibilityObserverCallback(
@@ -179,39 +195,47 @@ private func accessibilityObserverCallback(
 ) {
   switch notification as String {
   case kAXCreatedNotification:
+    guard let context else { return }
+    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let pid = Window.pid(for: element) else { return }
     guard let windowID = Window.validID(for: element) else { return }
-    EventManager.shared.post(.window(.created(pid, windowID)))
+    application.post(.window(.created(pid, windowID)))
 
   case kAXFocusedWindowChangedNotification:
+    guard let context else { return }
+    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    EventManager.shared.post(.window(.focused(windowID)))
+    application.post(.window(.focused(windowID)))
 
   case kAXWindowMovedNotification:
+    guard let context else { return }
+    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    EventManager.shared.post(.window(.moved(windowID)))
+    application.post(.window(.moved(windowID)))
 
   case kAXWindowResizedNotification:
+    guard let context else { return }
+    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    EventManager.shared.post(.window(.resized(windowID)))
+    application.post(.window(.resized(windowID)))
 
   case kAXWindowMiniaturizedNotification:
     guard let context else { return }
-    let windowID = CGWindowID(UInt(bitPattern: context))
-    guard let window = WindowManager.shared.window(by: windowID) else { return }
-    EventManager.shared.post(.window(.minimized(window)))
+    let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
+    guard let window = observation.window() else { return }
+    observation.post(.window(.minimized(window)))
 
   case kAXWindowDeminiaturizedNotification:
     guard let context else { return }
-    let windowID = CGWindowID(UInt(bitPattern: context))
-    guard let window = WindowManager.shared.window(by: windowID) else { return }
-    EventManager.shared.post(.window(.deminimized(window)))
+    let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
+    guard let window = observation.window() else { return }
+    observation.post(.window(.deminimized(window)))
 
   case kAXUIElementDestroyedNotification:
     guard let context else { return }
-    let windowID = CGWindowID(UInt(bitPattern: context))
-    guard let window = WindowManager.shared.window(by: windowID) else { return }
-    EventManager.shared.post(.window(.destroyed(window)))
+    let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
+    guard let window = observation.window() else { return }
+    observation.post(.window(.destroyed(window)))
 
   default:
     break

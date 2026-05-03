@@ -25,6 +25,10 @@ public class Daemon {
     self.init(dispatcher: DefaultIPCCommandDispatcher())
   }
 
+  public convenience init(windowManager: WindowManager) {
+    self.init(dispatcher: DefaultIPCCommandDispatcher(windowManager: windowManager))
+  }
+
   init(dispatcher: IPCCommandDispatcher) {
     self.dispatcher = dispatcher
   }

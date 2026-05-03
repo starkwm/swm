@@ -31,6 +31,7 @@ public final class Window: NSObject {
   private(set) var id: CGWindowID
 
   private var observedNotifications = WindowNotifications(rawValue: 0)
+  private var observationContext: WindowObservationContext?
 
   init(with element: AXUIElement, for application: Application) {
     self.element = element
@@ -62,10 +63,17 @@ public final class Window: NSObject {
   }
 
   func observe() -> Bool {
-    guard let observer = application?.observer else { return false }
+    guard let application else { return false }
+    guard let observer = application.observer else { return false }
     guard let element else { return false }
 
-    let context = UnsafeMutableRawPointer(bitPattern: UInt(id))
+    let observationContext = WindowObservationContext(
+      windowID: id,
+      postEvent: application.post,
+      windowLookup: application.window
+    )
+    self.observationContext = observationContext
+    let context = Unmanaged.passUnretained(observationContext).toOpaque()
 
     return Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
@@ -95,6 +103,8 @@ public final class Window: NSObject {
         )
       }
     )
+
+    observationContext = nil
   }
 
   private var title: String {
@@ -109,3 +119,27 @@ public final class Window: NSObject {
 }
 
 extension Window: @unchecked Sendable {}
+
+final class WindowObservationContext {
+  private let windowID: CGWindowID
+  private let postEvent: (RuntimeEvent) -> Void
+  private let windowLookup: (CGWindowID) -> Window?
+
+  init(
+    windowID: CGWindowID,
+    postEvent: @escaping (RuntimeEvent) -> Void,
+    windowLookup: @escaping (CGWindowID) -> Window?
+  ) {
+    self.windowID = windowID
+    self.postEvent = postEvent
+    self.windowLookup = windowLookup
+  }
+
+  func post(_ event: RuntimeEvent) {
+    postEvent(event)
+  }
+
+  func window() -> Window? {
+    windowLookup(windowID)
+  }
+}

@@ -5,10 +5,18 @@ struct QueryResolver {
   let spaces: [QuerySpace]
   let windows: [QueryWindow]
 
+  init(windowManager: WindowManager) {
+    self.init(
+      displays: QueryDisplay.all(),
+      spaces: QuerySpace.all(windowManager: windowManager),
+      windows: QueryWindow.all(windowManager: windowManager)
+    )
+  }
+
   init(
     displays: [QueryDisplay] = QueryDisplay.all(),
-    spaces: [QuerySpace] = QuerySpace.all(),
-    windows: [QueryWindow] = QueryWindow.all()
+    spaces: [QuerySpace],
+    windows: [QueryWindow]
   ) {
     self.displays = displays
     self.spaces = spaces

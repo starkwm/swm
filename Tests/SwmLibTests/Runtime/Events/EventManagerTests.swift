@@ -9,13 +9,19 @@ struct EventManagerTests {
   func postAcceptsApplicationEvents() {
     let psn = ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2)
     let process = Process(psn: psn, pid: 42, name: "Example")
+    let workspace = Workspace()
 
-    EventManager.shared.configure(processLookup: ProcessManager(), workspace: Workspace())
+    EventManager.shared.configure(
+      processLookup: ProcessManager(),
+      workspace: workspace,
+      windowManager: WindowManager(workspace: workspace)
+    )
     EventManager.shared.post(.application(.launched(process)))
   }
 
   @Test("post: accepts space events")
   func postAcceptsSpaceEvents() {
+    configureEventManager()
     let space = Space(id: 1, type: .normal)
 
     EventManager.shared.post(.space(.changed(space)))
@@ -23,9 +29,19 @@ struct EventManagerTests {
 
   @Test("post: accepts window events")
   func postAcceptsWindowEvents() {
+    configureEventManager()
     EventManager.shared.post(.window(.created(42, 1)))
     EventManager.shared.post(.window(.focused(1)))
     EventManager.shared.post(.window(.moved(1)))
     EventManager.shared.post(.window(.resized(1)))
+  }
+
+  private func configureEventManager() {
+    let workspace = Workspace()
+    EventManager.shared.configure(
+      processLookup: ProcessManager(),
+      workspace: workspace,
+      windowManager: WindowManager(workspace: workspace)
+    )
   }
 }

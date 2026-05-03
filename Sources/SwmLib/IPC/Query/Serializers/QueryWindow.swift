@@ -68,13 +68,13 @@ struct QueryWindow: Encodable, Equatable {
 }
 
 extension QueryWindow {
-  static func all() -> [QueryWindow] {
+  static func all(windowManager: WindowManager) -> [QueryWindow] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let spaces = Space.all()
 
-    return WindowManager.shared.allWindows().map { window in
+    return windowManager.allWindows().map { window in
       QueryWindow(
         window: window,
         info: windowInfo.info(for: window.id),

@@ -41,11 +41,11 @@ struct QuerySpace: Encodable, Equatable {
 }
 
 extension QuerySpace {
-  static func all() -> [QuerySpace] {
+  static func all(windowManager: WindowManager) -> [QuerySpace] {
     let spaces = Space.all()
     let activeSpaceID = Space.active().id
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
-    let windows = WindowManager.shared.allWindows()
+    let windows = windowManager.allWindows()
 
     return spaces.enumerated().map { index, space in
       let display = displaySpaces.first { $0.spaces.contains(space.id) }?.id

@@ -42,7 +42,13 @@ struct ApplicationLifecycleHandler {
 
     guard windowManager.application(by: process.pid) == nil else { return }
 
-    guard let application = Application(for: process) else {
+    guard
+      let application = Application(
+        for: process,
+        postEvent: postEvent,
+        windowLookup: { [windowManager] id in windowManager.window(by: id) }
+      )
+    else {
       log("could not create application for process \(process)", level: .warn)
       return
     }

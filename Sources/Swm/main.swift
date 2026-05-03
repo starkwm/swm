@@ -37,8 +37,12 @@ do {
 
 let workspace = Workspace()
 let processManager = ProcessManager()
-WindowManager.shared.configure(workspace: workspace)
-EventManager.shared.configure(processLookup: processManager, workspace: workspace)
+let windowManager = WindowManager(workspace: workspace)
+EventManager.shared.configure(
+  processLookup: processManager,
+  workspace: workspace,
+  windowManager: windowManager
+)
 
 switch processManager.start() {
 case .success:
@@ -48,9 +52,9 @@ case .failure(let error):
   exit(EXIT_FAILURE)
 }
 
-WindowManager.shared.start(processes: processManager.all())
+windowManager.start(processes: processManager.all())
 
-let daemon = Daemon()
+let daemon = Daemon(windowManager: windowManager)
 
 do {
   try daemon.run()

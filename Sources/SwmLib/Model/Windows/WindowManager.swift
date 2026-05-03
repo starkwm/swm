@@ -3,18 +3,14 @@ import Carbon
 import Foundation
 
 public final class WindowManager {
-  public static let shared = WindowManager()
-
-  private var workspace: Workspace?
+  private let workspace: Workspace
   private let resolver = RemoteWindowResolver()
 
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
 
-  init() {}
-
-  public func configure(workspace: Workspace) {
+  public init(workspace: Workspace) {
     self.workspace = workspace
   }
 
@@ -143,17 +139,19 @@ public final class WindowManager {
   }
 
   private func startManaging(_ process: Process) {
-    guard let workspace else {
-      preconditionFailure("WindowManager must be configured before managing processes")
-    }
-
     guard workspace.isObservable(process) else {
       log("application is not observable \(process)", level: .warn)
       workspace.observeActivationPolicy(process)
       return
     }
 
-    guard let application = Application(for: process) else {
+    guard
+      let application = Application(
+        for: process,
+        postEvent: EventManager.shared.post,
+        windowLookup: { [weak self] id in self?.window(by: id) }
+      )
+    else {
       log("could not create application for process \(process)", level: .warn)
       return
     }
