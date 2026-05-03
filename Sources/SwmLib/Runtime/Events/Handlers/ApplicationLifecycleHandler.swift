@@ -4,7 +4,6 @@ struct ApplicationLifecycleHandler {
   let workspace: Workspace
   let windowManager: WindowManager
   let processLookup: ProcessManager
-  let dispatcher: RuntimeEventDispatcher
   let postEvent: @Sendable (RuntimeEvent) -> Void
 
   func handle(_ event: ApplicationEvent) {
@@ -77,11 +76,7 @@ struct ApplicationLifecycleHandler {
     windowManager.add(application: application)
     _ = windowManager.addWindows(for: application)
 
-    dispatcher.emit(
-      .applicationLaunched,
-      payload: application,
-      message: "application launched \(application)"
-    )
+    log("application launched \(application)")
   }
 
   private func applicationTerminated(for process: Process) {
@@ -90,11 +85,7 @@ struct ApplicationLifecycleHandler {
 
     guard let application = windowManager.application(by: process.pid) else { return }
 
-    dispatcher.emit(
-      .applicationTerminated,
-      payload: application,
-      message: "application terminated \(application)"
-    )
+    log("application terminated \(application)")
 
     windowManager.remove(application: application)
 
@@ -112,10 +103,6 @@ struct ApplicationLifecycleHandler {
 
     windowManager.refreshWindows(for: application)
 
-    dispatcher.emit(
-      .applicationFrontSwitched,
-      payload: application,
-      message: "frontmost application switched \(application)"
-    )
+    log("frontmost application switched \(application)")
   }
 }

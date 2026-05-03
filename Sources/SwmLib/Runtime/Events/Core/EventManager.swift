@@ -5,8 +5,6 @@ public final class EventManager {
 
   private let queue = OperationQueue.main
 
-  private let dispatcher = RuntimeEventDispatcher()
-
   private var applicationHandler: ApplicationLifecycleHandler?
   private var windowHandler: WindowLifecycleHandler?
   private var spaceHandler: SpaceLifecycleHandler?
@@ -22,18 +20,15 @@ public final class EventManager {
       workspace: workspace,
       windowManager: windowManager,
       processLookup: processLookup,
-      dispatcher: dispatcher,
       postEvent: { [weak self] event in
         self?.post(event)
       }
     )
     windowHandler = WindowLifecycleHandler(
-      windowManager: windowManager,
-      dispatcher: dispatcher
+      windowManager: windowManager
     )
     spaceHandler = SpaceLifecycleHandler(
-      windowManager: windowManager,
-      dispatcher: dispatcher
+      windowManager: windowManager
     )
   }
 
