@@ -44,6 +44,7 @@ EventManager.shared.configure(
   processLookup: processManager,
   workspace: workspace,
   windowManager: windowManager,
+  spaceManager: spaceManager,
   displayManager: displayManager
 )
 

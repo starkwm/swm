@@ -6,7 +6,9 @@ import Testing
 struct IPCCommandDispatcherTests {
   @Test("dispatch: returns unsupported command for unsupported domains")
   func dispatchReturnsUnsupportedCommandForUnsupportedDomains() {
-    let dispatcher = IPCCommandDispatcher()
+    let dispatcher = IPCCommandDispatcher(
+      spaceManager: SpaceManager(activeSpaceIDResolver: { nil })
+    )
     let request = IPCRequest(
       id: "request-id",
       domain: .window,
@@ -24,7 +26,7 @@ struct IPCCommandDispatcherTests {
 
   @Test("dispatch: dispatches space commands")
   func dispatchDispatchesSpaceCommands() {
-    let spaceManager = SpaceManager()
+    let spaceManager = SpaceManager(activeSpaceIDResolver: { nil })
     let dispatcher = IPCCommandDispatcher(
       spaceManager: spaceManager,
       activeSpaceID: { 42 }

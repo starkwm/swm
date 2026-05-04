@@ -13,12 +13,14 @@ public final class EventManager {
     processLookup: ProcessManager,
     workspace: Workspace,
     windowManager: WindowManager,
+    spaceManager: SpaceManager,
     displayManager: DisplayManager
   ) {
     configuration = Configuration(
       processLookup: processLookup,
       workspace: workspace,
       windowManager: windowManager,
+      spaceManager: spaceManager,
       displayManager: displayManager
     )
   }
@@ -52,7 +54,8 @@ public final class EventManager {
 
     case .space(let event):
       SpaceLifecycleHandler(
-        windowManager: configuration.windowManager
+        windowManager: configuration.windowManager,
+        spaceManager: configuration.spaceManager
       ).handle(event)
 
     case .display(let event):
@@ -69,5 +72,6 @@ private struct Configuration {
   let processLookup: ProcessManager
   let workspace: Workspace
   let windowManager: WindowManager
+  let spaceManager: SpaceManager
   let displayManager: DisplayManager
 }
