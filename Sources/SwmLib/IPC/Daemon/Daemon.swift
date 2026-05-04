@@ -81,6 +81,7 @@ public class Daemon {
           let client = try listeningSocket.socket.acceptClientConnection()
           handle(socket: UncheckedSocket(socket: client))
         } catch {
+          guard running else { break }
           log("accepting incoming client connection failed: \(error)", level: .error)
         }
       } while running
