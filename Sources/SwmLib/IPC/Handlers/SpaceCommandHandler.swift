@@ -91,7 +91,7 @@ struct SpaceCommandHandler {
 
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-    guard parts.count == 5, let mode = SpaceSettingChangeMode(rawValue: parts[0]) else {
+    guard parts.count == 5, let mode = ChangeMode(rawValue: parts[0]) else {
       return nil
     }
 
@@ -112,7 +112,7 @@ struct SpaceCommandHandler {
 
   private func parseGapChange(_ argument: String) -> GapChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-    guard parts.count == 2, let mode = SpaceSettingChangeMode(rawValue: parts[0]),
+    guard parts.count == 2, let mode = ChangeMode(rawValue: parts[0]),
       let value = Int(parts[1])
     else {
       return nil
@@ -159,23 +159,18 @@ struct SpaceCommandHandler {
     }
   }
 
-  private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
+private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
     .failure(id: request.id, message: message, errorCode: .invalidRequest)
   }
 }
 
-private enum SpaceSettingChangeMode: String {
-  case absolute = "abs"
-  case relative = "rel"
-}
-
 private struct PaddingChange {
-  let mode: SpaceSettingChangeMode
+  let mode: ChangeMode
   let padding: SpacePadding
 }
 
 private struct GapChange {
-  let mode: SpaceSettingChangeMode
+  let mode: ChangeMode
   let value: Int
 }
 
