@@ -24,7 +24,7 @@ struct SpaceSettings: Equatable {
   var padding: SpacePadding
   var gap: Int
 
-  static let `default` = SpaceSettings(
+  static let defaults = SpaceSettings(
     paddingEnabled: true,
     gapEnabled: true,
     padding: .zero,
@@ -40,7 +40,7 @@ public final class SpaceManager {
 
   func settings(for spaceID: UInt64) -> SpaceSettings {
     lock.withLock {
-      settingsBySpaceID[spaceID] ?? .default
+      settingsBySpaceID[spaceID] ?? .defaults
     }
   }
 
@@ -97,7 +97,7 @@ public final class SpaceManager {
     transform: (inout SpaceSettings) -> Void
   ) -> SpaceSettings {
     lock.withLock {
-      var settings = settingsBySpaceID[spaceID] ?? .default
+      var settings = settingsBySpaceID[spaceID] ?? .defaults
       transform(&settings)
       settingsBySpaceID[spaceID] = settings
       return settings
