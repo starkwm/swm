@@ -40,7 +40,9 @@ enum QuerySelection: Equatable {
     try parseComponents(arguments: arguments).selection
   }
 
-  static func parseRequest(arguments: [String]) throws -> (command: String, selection: QuerySelection) {
+  static func parseRequest(arguments: [String]) throws -> (
+    command: String, selection: QuerySelection
+  ) {
     let (command, selection) = try parseComponents(arguments: arguments)
 
     if let command {
