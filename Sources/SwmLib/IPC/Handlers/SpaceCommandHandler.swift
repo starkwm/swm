@@ -159,19 +159,9 @@ struct SpaceCommandHandler {
     }
   }
 
-private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
+  private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
     .failure(id: request.id, message: message, errorCode: .invalidRequest)
   }
-}
-
-private struct PaddingChange {
-  let mode: ChangeMode
-  let padding: SpacePadding
-}
-
-private struct GapChange {
-  let mode: ChangeMode
-  let value: Int
 }
 
 private struct SpaceResultSerializer: Encodable {
