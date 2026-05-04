@@ -11,4 +11,11 @@ struct RuntimeEventTests {
 
     #expect(event.type == .spaceChanged)
   }
+
+  @Test("type: exposes nested display event type")
+  func typeExposesNestedDisplayEventType() {
+    let event = RuntimeEvent.display(.changed)
+
+    #expect(event.type == .displayChanged)
+  }
 }

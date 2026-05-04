@@ -27,6 +27,12 @@ struct EventManagerTests {
     EventManager.shared.post(.space(.changed(space)))
   }
 
+  @Test("post: accepts display events")
+  func postAcceptsDisplayEvents() {
+    configureEventManager()
+    EventManager.shared.post(.display(.changed))
+  }
+
   @Test("post: accepts window events")
   func postAcceptsWindowEvents() {
     configureEventManager()
