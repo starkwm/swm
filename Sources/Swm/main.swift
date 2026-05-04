@@ -39,10 +39,12 @@ let workspace = Workspace()
 let processManager = ProcessManager()
 let windowManager = WindowManager(workspace: workspace)
 let spaceManager = SpaceManager()
+let displayManager = DisplayManager()
 EventManager.shared.configure(
   processLookup: processManager,
   workspace: workspace,
-  windowManager: windowManager
+  windowManager: windowManager,
+  displayManager: displayManager
 )
 
 switch processManager.start() {

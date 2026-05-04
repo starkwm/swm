@@ -1,4 +1,6 @@
 struct DisplayLifecycleHandler {
+  let displayManager: DisplayManager
+
   func handle(_ event: DisplayEvent) {
     switch event {
     case .changed:
@@ -7,6 +9,9 @@ struct DisplayLifecycleHandler {
   }
 
   private func displayChanged() {
-    log("display changed")
+    displayManager.activeDisplayDidChange()
+    log(
+      "display changed current: \(displayManager.currentActiveDisplayID ?? "nil"), last: \(displayManager.lastActiveDisplayID ?? "nil")"
+    )
   }
 }

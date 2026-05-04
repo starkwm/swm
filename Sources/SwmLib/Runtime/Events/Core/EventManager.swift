@@ -12,12 +12,14 @@ public final class EventManager {
   public func configure(
     processLookup: ProcessManager,
     workspace: Workspace,
-    windowManager: WindowManager
+    windowManager: WindowManager,
+    displayManager: DisplayManager
   ) {
     configuration = Configuration(
       processLookup: processLookup,
       workspace: workspace,
-      windowManager: windowManager
+      windowManager: windowManager,
+      displayManager: displayManager
     )
   }
 
@@ -54,7 +56,9 @@ public final class EventManager {
       ).handle(event)
 
     case .display(let event):
-      DisplayLifecycleHandler().handle(event)
+      DisplayLifecycleHandler(
+        displayManager: configuration.displayManager
+      ).handle(event)
     }
   }
 }
@@ -65,4 +69,5 @@ private struct Configuration {
   let processLookup: ProcessManager
   let workspace: Workspace
   let windowManager: WindowManager
+  let displayManager: DisplayManager
 }
