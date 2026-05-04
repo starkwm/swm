@@ -2,6 +2,9 @@ import ArgumentParser
 import CoreGraphics
 
 enum QuerySelection: Equatable {
+  private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
+  private static let selectorFlags = Set(["--display", "--space", "--window"])
+
   case none
   case display(Int?)
   case space(Int?)
@@ -34,19 +37,43 @@ enum QuerySelection: Equatable {
   }
 
   static func parse(arguments: [String]) throws -> QuerySelection {
+    try parseComponents(arguments: arguments).selection
+  }
+
+  static func parseRequest(arguments: [String]) throws -> (command: String, selection: QuerySelection) {
+    let (command, selection) = try parseComponents(arguments: arguments)
+
+    if let command {
+      return (command, selection)
+    }
+
+    if let command = selection.defaultCommand {
+      return (command, selection)
+    }
+
+    throw ValidationError("exactly one query flag is required")
+  }
+
+  private static func parseComponents(
+    arguments: [String]
+  ) throws -> (command: String?, selection: QuerySelection) {
+    var command: String?
     var selection: QuerySelection = .none
     var index = 0
-    let targetFlags = Set(["--displays", "--spaces", "--windows"])
 
     while index < arguments.count {
       let argument = arguments[index]
 
-      if targetFlags.contains(argument) {
+      if commandFlags.contains(argument) {
+        guard command == nil else {
+          throw ValidationError("exactly one query flag is required")
+        }
+        command = argument
         index += 1
         continue
       }
 
-      guard ["--display", "--space", "--window"].contains(argument) else {
+      guard selectorFlags.contains(argument) else {
         throw ValidationError("unsupported query argument: \(argument)")
       }
 
@@ -75,7 +102,7 @@ enum QuerySelection: Equatable {
       index += values.count + 1
     }
 
-    return selection
+    return (command, selection)
   }
 
   private static func selectorValues(after index: Int, in arguments: [String]) -> [String] {

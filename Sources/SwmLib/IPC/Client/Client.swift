@@ -4,12 +4,7 @@ import Socket
 public enum Client {
   public static func send(message: MessageDomain, args: [String]) {
     do {
-      let request: IPCRequest
-      if message == .query {
-        request = try QueryArguments.makeRequest(arguments: args)
-      } else {
-        request = try IPCRequest.make(domain: message, arguments: args)
-      }
+      let request = try IPCRequest.make(domain: message, arguments: args)
       let socket = try Socket.create(family: .unix)
       defer {
         socket.close()

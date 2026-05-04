@@ -24,6 +24,11 @@ struct IPCRequest: Codable, Equatable {
   }
 
   static func make(domain: MessageDomain, arguments: [String]) throws -> IPCRequest {
+    if domain == .query {
+      let (command, selection) = try QuerySelection.parseRequest(arguments: arguments)
+      return IPCRequest(domain: .query, command: command, args: selection.requestArguments)
+    }
+
     guard let command = arguments.first else {
       throw IPCRequestError.missingCommand(domain)
     }

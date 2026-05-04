@@ -14,6 +14,15 @@ struct IPCRequestTests {
     #expect(request.args == ["main display"])
   }
 
+  @Test("make: builds query request")
+  func makeBuildsQueryRequest() throws {
+    let request = try IPCRequest.make(domain: .query, arguments: ["--display"])
+
+    #expect(request.domain == .query)
+    #expect(request.command == "--displays")
+    #expect(request.args == ["--display"])
+  }
+
   @Test("make: requires command")
   func makeRequiresCommand() {
     do {
