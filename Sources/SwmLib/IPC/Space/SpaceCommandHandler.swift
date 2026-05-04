@@ -126,11 +126,11 @@ struct SpaceCommandHandler {
     spaceID: UInt64,
     settings: SpaceSettings
   ) -> IPCResponse {
-    let result = SpaceCommandResult(
+    let result = SpaceResultSerializer(
       id: spaceID,
       paddingEnabled: settings.paddingEnabled,
       gapEnabled: settings.gapEnabled,
-      padding: SpaceCommandPadding(
+      padding: SpacePaddingSerializer(
         top: settings.padding.top,
         bottom: settings.padding.bottom,
         left: settings.padding.left,
@@ -177,27 +177,4 @@ private struct PaddingChange {
 private struct GapChange {
   let mode: SpaceSettingChangeMode
   let value: Int
-}
-
-private struct SpaceCommandResult: Encodable {
-  let id: UInt64
-  let paddingEnabled: Bool
-  let gapEnabled: Bool
-  let padding: SpaceCommandPadding
-  let gap: Int
-
-  enum CodingKeys: String, CodingKey {
-    case id
-    case paddingEnabled = "padding-enabled"
-    case gapEnabled = "gap-enabled"
-    case padding
-    case gap
-  }
-}
-
-private struct SpaceCommandPadding: Encodable {
-  let top: Int
-  let bottom: Int
-  let left: Int
-  let right: Int
 }
