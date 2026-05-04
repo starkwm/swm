@@ -5,6 +5,21 @@ import Foundation
 public final class WindowManager {
   private let workspace: Workspace
 
+  public var currentFocusedWindowID: CGWindowID? {
+    focusedWindowLock.withLock {
+      focusedWindowState.current
+    }
+  }
+
+  public var lastFocusedWindowID: CGWindowID? {
+    focusedWindowLock.withLock {
+      focusedWindowState.last
+    }
+  }
+
+  private let focusedWindowLock = NSLock()
+  private var focusedWindowState = FocusedWindowState(current: nil, last: nil)
+
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
@@ -41,6 +56,19 @@ public final class WindowManager {
 
   public func allWindows() -> [Window] {
     Array(windowsByID.values)
+  }
+
+  func focusedWindowDidChange(to windowID: CGWindowID) {
+    guard windowID != 0 else { return }
+
+    focusedWindowLock.withLock {
+      guard windowID != focusedWindowState.current else { return }
+
+      focusedWindowState = FocusedWindowState(
+        current: windowID,
+        last: focusedWindowState.current
+      )
+    }
   }
 
   public func refreshWindows() {
@@ -262,6 +290,11 @@ public final class WindowManager {
 }
 
 extension WindowManager: @unchecked Sendable {}
+
+private struct FocusedWindowState {
+  var current: CGWindowID?
+  var last: CGWindowID?
+}
 
 private enum WindowDiscoveryMode {
   case initialDiscovery

@@ -107,6 +107,12 @@ struct ApplicationLifecycleHandler {
 
     windowManager.refreshWindows(for: application)
 
-    log("frontmost application switched \(application)")
+    if let focusedWindowID = application.focusedWindowID() {
+      windowManager.focusedWindowDidChange(to: focusedWindowID)
+    }
+
+    log(
+      "frontmost application switched \(application) current focused window: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+    )
   }
 }

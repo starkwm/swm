@@ -53,9 +53,12 @@ struct WindowLifecycleHandler {
 
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
+    windowManager.focusedWindowDidChange(to: windowID)
     guard let window = windowManager.window(by: windowID) else { return }
 
-    log("window focused \(window)")
+    log(
+      "window focused \(window) current: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+    )
   }
 
   private func windowMoved(with windowID: CGWindowID) {

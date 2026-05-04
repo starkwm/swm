@@ -206,6 +206,14 @@ public final class Application: NSObject {
     AccessibilityClient.shared.windowElements(for: element)
   }
 
+  func focusedWindowID() -> CGWindowID? {
+    guard let element = AccessibilityClient.shared.focusedWindowElement(for: element) else {
+      return nil
+    }
+
+    return Window.validID(for: element)
+  }
+
   func enhancedUIWorkaround(callback: () -> Void) {
     let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
 
