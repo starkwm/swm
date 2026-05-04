@@ -1,26 +1,6 @@
 import AppKit
 
 struct WindowSerializer: Encodable, Equatable {
-  let id: CGWindowID
-  let pid: pid_t?
-  let app: String?
-  let title: String?
-  let frame: FrameSerializer?
-  let role: String?
-  let subrole: String?
-  let display: String?
-  let space: Int?
-  let layer: Int?
-  let subLayer: Int?
-  let canMove: Bool?
-  let canResize: Bool?
-  let hasFocus: Bool?
-  let hasAXReference: Bool
-  let isNativeFullscreen: Bool?
-  let isVisible: Bool?
-  let isMinimized: Bool?
-  let isFloating: Bool?
-
   enum CodingKeys: String, CodingKey {
     case id
     case pid
@@ -43,31 +23,6 @@ struct WindowSerializer: Encodable, Equatable {
     case isFloating = "is-floating"
   }
 
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
-    try container.encode(id, forKey: .id)
-    try container.encodeNilOrValue(pid, forKey: .pid)
-    try container.encodeNilOrValue(app, forKey: .app)
-    try container.encodeNilOrValue(title, forKey: .title)
-    try container.encodeNilOrValue(frame, forKey: .frame)
-    try container.encodeNilOrValue(role, forKey: .role)
-    try container.encodeNilOrValue(subrole, forKey: .subrole)
-    try container.encodeNilOrValue(display, forKey: .display)
-    try container.encodeNilOrValue(space, forKey: .space)
-    try container.encodeNilOrValue(layer, forKey: .layer)
-    try container.encodeNilOrValue(subLayer, forKey: .subLayer)
-    try container.encodeNilOrValue(canMove, forKey: .canMove)
-    try container.encodeNilOrValue(canResize, forKey: .canResize)
-    try container.encodeNilOrValue(hasFocus, forKey: .hasFocus)
-    try container.encode(hasAXReference, forKey: .hasAXReference)
-    try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
-    try container.encodeNilOrValue(isVisible, forKey: .isVisible)
-    try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
-    try container.encodeNilOrValue(isFloating, forKey: .isFloating)
-  }
-}
-
-extension WindowSerializer {
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
@@ -87,6 +42,68 @@ extension WindowSerializer {
 
   static func windowInfo() -> [[String: Any]] {
     CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
+  }
+
+  let id: CGWindowID
+  let pid: pid_t?
+  let app: String?
+  let title: String?
+  let frame: FrameSerializer?
+  let role: String?
+  let subrole: String?
+  let display: String?
+  let space: Int?
+  let layer: Int?
+  let subLayer: Int?
+  let canMove: Bool?
+  let canResize: Bool?
+  let hasFocus: Bool?
+  let hasAXReference: Bool
+  let isNativeFullscreen: Bool?
+  let isVisible: Bool?
+  let isMinimized: Bool?
+  let isFloating: Bool?
+
+  init(
+    id: CGWindowID,
+    pid: pid_t?,
+    app: String?,
+    title: String?,
+    frame: FrameSerializer?,
+    role: String?,
+    subrole: String?,
+    display: String?,
+    space: Int?,
+    layer: Int?,
+    subLayer: Int?,
+    canMove: Bool?,
+    canResize: Bool?,
+    hasFocus: Bool?,
+    hasAXReference: Bool,
+    isNativeFullscreen: Bool?,
+    isVisible: Bool?,
+    isMinimized: Bool?,
+    isFloating: Bool?
+  ) {
+    self.id = id
+    self.pid = pid
+    self.app = app
+    self.title = title
+    self.frame = frame
+    self.role = role
+    self.subrole = subrole
+    self.display = display
+    self.space = space
+    self.layer = layer
+    self.subLayer = subLayer
+    self.canMove = canMove
+    self.canResize = canResize
+    self.hasFocus = hasFocus
+    self.hasAXReference = hasAXReference
+    self.isNativeFullscreen = isNativeFullscreen
+    self.isVisible = isVisible
+    self.isMinimized = isMinimized
+    self.isFloating = isFloating
   }
 
   init(
@@ -158,6 +175,29 @@ extension WindowSerializer {
       AccessibilityClient.shared.boolAttribute(for: $0, attribute: kAXMinimizedAttribute as String)
     }
     isFloating = layer.map { $0 != 0 }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(id, forKey: .id)
+    try container.encodeNilOrValue(pid, forKey: .pid)
+    try container.encodeNilOrValue(app, forKey: .app)
+    try container.encodeNilOrValue(title, forKey: .title)
+    try container.encodeNilOrValue(frame, forKey: .frame)
+    try container.encodeNilOrValue(role, forKey: .role)
+    try container.encodeNilOrValue(subrole, forKey: .subrole)
+    try container.encodeNilOrValue(display, forKey: .display)
+    try container.encodeNilOrValue(space, forKey: .space)
+    try container.encodeNilOrValue(layer, forKey: .layer)
+    try container.encodeNilOrValue(subLayer, forKey: .subLayer)
+    try container.encodeNilOrValue(canMove, forKey: .canMove)
+    try container.encodeNilOrValue(canResize, forKey: .canResize)
+    try container.encodeNilOrValue(hasFocus, forKey: .hasFocus)
+    try container.encode(hasAXReference, forKey: .hasAXReference)
+    try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
+    try container.encodeNilOrValue(isVisible, forKey: .isVisible)
+    try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
+    try container.encodeNilOrValue(isFloating, forKey: .isFloating)
   }
 }
 

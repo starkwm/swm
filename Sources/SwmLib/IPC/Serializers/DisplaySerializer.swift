@@ -1,13 +1,6 @@
 import AppKit
 
 struct DisplaySerializer: Encodable, Equatable {
-  let id: String?
-  let uuid: String?
-  let index: Int
-  let frame: FrameSerializer
-  let spaces: [Int]
-  let hasFocus: Bool
-
   enum CodingKeys: String, CodingKey {
     case id
     case uuid
@@ -17,18 +10,6 @@ struct DisplaySerializer: Encodable, Equatable {
     case hasFocus = "has-focus"
   }
 
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
-    try container.encodeNilOrValue(id, forKey: .id)
-    try container.encodeNilOrValue(uuid, forKey: .uuid)
-    try container.encode(index, forKey: .index)
-    try container.encode(frame, forKey: .frame)
-    try container.encode(spaces, forKey: .spaces)
-    try container.encode(hasFocus, forKey: .hasFocus)
-  }
-}
-
-extension DisplaySerializer {
   static func all() -> [DisplaySerializer] {
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let indexedSpaces = Space.all().enumerated().map { (index: $0.offset, id: $0.element.id) }
@@ -52,6 +33,23 @@ extension DisplaySerializer {
         hasFocus: currentSpace == focusedSpace
       )
     }
+  }
+
+  let id: String?
+  let uuid: String?
+  let index: Int
+  let frame: FrameSerializer
+  let spaces: [Int]
+  let hasFocus: Bool
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeNilOrValue(id, forKey: .id)
+    try container.encodeNilOrValue(uuid, forKey: .uuid)
+    try container.encode(index, forKey: .index)
+    try container.encode(frame, forKey: .frame)
+    try container.encode(spaces, forKey: .spaces)
+    try container.encode(hasFocus, forKey: .hasFocus)
   }
 }
 

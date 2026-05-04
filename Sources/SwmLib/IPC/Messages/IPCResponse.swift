@@ -1,9 +1,4 @@
 struct IPCResponse: Codable, Equatable {
-  let id: String
-  let ok: Bool
-  let message: String
-  let errorCode: IPCErrorCode?
-
   static func success(id: String, message: String) -> IPCResponse {
     IPCResponse(id: id, ok: true, message: message, errorCode: nil)
   }
@@ -11,4 +6,9 @@ struct IPCResponse: Codable, Equatable {
   static func failure(id: String, message: String, errorCode: IPCErrorCode) -> IPCResponse {
     IPCResponse(id: id, ok: false, message: message, errorCode: errorCode)
   }
+
+  let id: String
+  let ok: Bool
+  let message: String
+  let errorCode: IPCErrorCode?
 }

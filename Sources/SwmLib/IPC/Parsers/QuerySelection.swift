@@ -10,32 +10,6 @@ enum QuerySelection: Equatable {
   case space(Int?)
   case window(CGWindowID?)
 
-  var requestArguments: [String] {
-    switch self {
-    case .none:
-      []
-    case .display(let value):
-      selectorArguments(flag: "--display", value: value.map(String.init))
-    case .space(let value):
-      selectorArguments(flag: "--space", value: value.map(String.init))
-    case .window(let value):
-      selectorArguments(flag: "--window", value: value.map(String.init))
-    }
-  }
-
-  var defaultCommand: String? {
-    switch self {
-    case .none:
-      nil
-    case .display:
-      "--displays"
-    case .space:
-      "--spaces"
-    case .window:
-      "--windows"
-    }
-  }
-
   static func parse(arguments: [String]) throws -> QuerySelection {
     try parseComponents(arguments: arguments).selection
   }
@@ -133,6 +107,32 @@ enum QuerySelection: Equatable {
     }
 
     return CGWindowID(id)
+  }
+
+  var requestArguments: [String] {
+    switch self {
+    case .none:
+      []
+    case .display(let value):
+      selectorArguments(flag: "--display", value: value.map(String.init))
+    case .space(let value):
+      selectorArguments(flag: "--space", value: value.map(String.init))
+    case .window(let value):
+      selectorArguments(flag: "--window", value: value.map(String.init))
+    }
+  }
+
+  var defaultCommand: String? {
+    switch self {
+    case .none:
+      nil
+    case .display:
+      "--displays"
+    case .space:
+      "--spaces"
+    case .window:
+      "--windows"
+    }
   }
 
   private func selectorArguments(flag: String, value: String?) -> [String] {
