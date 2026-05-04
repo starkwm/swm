@@ -1,5 +1,5 @@
-import Testing
 import Foundation
+import Testing
 
 @testable import SwmLib
 
@@ -39,7 +39,9 @@ struct SpaceCommandHandlerTests {
     #expect(padding["bottom"] == 20)
     #expect(padding["left"] == 15)
     #expect(padding["right"] == 15)
-    #expect(manager.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15))
+    #expect(
+      manager.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
+    )
   }
 
   @Test("dispatch: accepts gap commands")

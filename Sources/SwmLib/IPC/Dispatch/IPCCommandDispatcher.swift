@@ -24,12 +24,14 @@ struct IPCCommandDispatcher {
         activeSpaceID: activeSpaceID
       ).dispatch(request)
 
-    case .config, .display, .window:
-      return .failure(
-        id: request.id,
-        message: "unsupported \(request.domain.rawValue) command: \(request.command)",
-        errorCode: .unsupportedCommand
-      )
+    case .config:
+      return ConfigCommandHandler().dispatch(request)
+
+    case .display:
+      return DisplayCommandHandler().dispatch(request)
+
+    case .window:
+      return WindowCommandHandler().dispatch(request)
     }
   }
 }
