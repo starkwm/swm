@@ -1,12 +1,12 @@
 import Foundation
 
 struct SpacePadding: Equatable {
+  static let zero = SpacePadding(top: 0, bottom: 0, left: 0, right: 0)
+
   var top: Int
   var bottom: Int
   var left: Int
   var right: Int
-
-  static let zero = SpacePadding(top: 0, bottom: 0, left: 0, right: 0)
 
   func clamped() -> SpacePadding {
     SpacePadding(
@@ -19,17 +19,17 @@ struct SpacePadding: Equatable {
 }
 
 struct SpaceSettings: Equatable {
-  var paddingEnabled: Bool
-  var gapEnabled: Bool
-  var padding: SpacePadding
-  var gap: Int
-
   static let defaults = SpaceSettings(
     paddingEnabled: true,
     gapEnabled: true,
     padding: .zero,
     gap: 0
   )
+
+  var paddingEnabled: Bool
+  var gapEnabled: Bool
+  var padding: SpacePadding
+  var gap: Int
 }
 
 public final class SpaceManager {

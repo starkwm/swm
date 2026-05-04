@@ -31,6 +31,21 @@ public final class Window: NSObject {
   weak var application: Application?
   private(set) var id: CGWindowID
 
+  var subrole: String? {
+    guard let element else { return nil }
+    return AccessibilityClient.shared.subrole(for: element)
+  }
+
+  private var title: String {
+    guard let element else { return "" }
+
+    return AccessibilityClient.shared.stringAttribute(
+      for: element,
+      attribute: kAXTitleAttribute as String
+    )
+      ?? ""
+  }
+
   private var observedNotifications = WindowNotifications(rawValue: 0)
   private var observationContext: WindowObservationContext?
 
@@ -45,22 +60,17 @@ public final class Window: NSObject {
     log("window deinit \(self)")
   }
 
-  func invalidate() {
-    unobserve()
-    element = nil
-    application = nil
-    id = 0
-  }
-
   public override func isEqual(_ object: Any?) -> Bool {
     guard let window = object as? Self else { return false }
 
     return id == window.id
   }
 
-  var subrole: String? {
-    guard let element else { return nil }
-    return AccessibilityClient.shared.subrole(for: element)
+  func invalidate() {
+    unobserve()
+    element = nil
+    application = nil
+    id = 0
   }
 
   func observe() -> Bool {
@@ -106,16 +116,6 @@ public final class Window: NSObject {
     )
 
     observationContext = nil
-  }
-
-  private var title: String {
-    guard let element else { return "" }
-
-    return AccessibilityClient.shared.stringAttribute(
-      for: element,
-      attribute: kAXTitleAttribute as String
-    )
-      ?? ""
   }
 }
 

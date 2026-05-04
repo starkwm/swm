@@ -3,10 +3,12 @@ import Foundation
 public final class DisplayManager {
   typealias ActiveDisplayIDResolver = @Sendable () -> String?
 
-  private let lock = NSLock()
-  private let activeDisplayIDResolver: ActiveDisplayIDResolver
-
-  private var activeDisplayState: ActiveDisplayState
+  private static func resolveActiveDisplayID() -> String? {
+    WindowServerClient.shared.screenID(
+      forSpaceID: Space.active().id,
+      connectionID: Space.connection
+    )
+  }
 
   public var currentActiveDisplayID: String? {
     lock.withLock {
@@ -19,6 +21,11 @@ public final class DisplayManager {
       activeDisplayState.last
     }
   }
+
+  private let lock = NSLock()
+  private let activeDisplayIDResolver: ActiveDisplayIDResolver
+
+  private var activeDisplayState: ActiveDisplayState
 
   public convenience init() {
     self.init(activeDisplayIDResolver: Self.resolveActiveDisplayID)
@@ -43,13 +50,6 @@ public final class DisplayManager {
         last: activeDisplayState.current
       )
     }
-  }
-
-  private static func resolveActiveDisplayID() -> String? {
-    WindowServerClient.shared.screenID(
-      forSpaceID: Space.active().id,
-      connectionID: Space.connection
-    )
   }
 }
 

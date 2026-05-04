@@ -1,5 +1,17 @@
 import Carbon
 
+private func processEventHandler(
+  _: EventHandlerCallRef?,
+  event: EventRef?,
+  context: UnsafeMutableRawPointer?
+) -> OSStatus {
+  guard let event = event else { return noErr }
+  guard let context else { return noErr }
+
+  let processManager = Unmanaged<ProcessManager>.fromOpaque(context).takeUnretainedValue()
+  return processManager.handle(event: event)
+}
+
 public final class ProcessManager {
   private var processes = [UInt32: Process]()
 
@@ -44,19 +56,6 @@ public final class ProcessManager {
     Array(processes.values)
   }
 
-  private func addRunningProcesses() {
-    var psn = ProcessSerialNumber()
-
-    while GetNextProcess(&psn) == noErr {
-      guard let process = Process(psn: psn) else { continue }
-      processes[process.psn.lowLongOfPSN] = process
-    }
-  }
-}
-
-extension ProcessManager: @unchecked Sendable {}
-
-extension ProcessManager {
   func handle(event: EventRef) -> OSStatus {
     var psn = ProcessSerialNumber()
 
@@ -87,6 +86,15 @@ extension ProcessManager {
     return noErr
   }
 
+  private func addRunningProcesses() {
+    var psn = ProcessSerialNumber()
+
+    while GetNextProcess(&psn) == noErr {
+      guard let process = Process(psn: psn) else { continue }
+      processes[process.psn.lowLongOfPSN] = process
+    }
+  }
+
   private func applicationLaunched(with psn: ProcessSerialNumber) {
     guard processes[psn.lowLongOfPSN] == nil else { return }
     guard let process = Process(psn: psn) else { return }
@@ -112,14 +120,4 @@ extension ProcessManager {
   }
 }
 
-private func processEventHandler(
-  _: EventHandlerCallRef?,
-  event: EventRef?,
-  context: UnsafeMutableRawPointer?
-) -> OSStatus {
-  guard let event = event else { return noErr }
-  guard let context else { return noErr }
-
-  let processManager = Unmanaged<ProcessManager>.fromOpaque(context).takeUnretainedValue()
-  return processManager.handle(event: event)
-}
+extension ProcessManager: @unchecked Sendable {}

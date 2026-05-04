@@ -4,6 +4,13 @@ import Testing
 
 @testable import SwmLib
 
+private func testApplication(
+  policy: NSApplication.ActivationPolicy,
+  finishedLaunching: Bool
+) -> NSRunningApplication {
+  TestRunningApplication(policy: policy, finishedLaunching: finishedLaunching)
+}
+
 @Suite("Workspace")
 struct WorkspaceTests {
   @Test("isObservable: returns true for regular application")
@@ -63,13 +70,6 @@ struct WorkspaceTests {
       application: application
     )
   }
-}
-
-private func testApplication(
-  policy: NSApplication.ActivationPolicy,
-  finishedLaunching: Bool
-) -> NSRunningApplication {
-  TestRunningApplication(policy: policy, finishedLaunching: finishedLaunching)
 }
 
 private final class TestRunningApplication: NSRunningApplication, @unchecked Sendable {
