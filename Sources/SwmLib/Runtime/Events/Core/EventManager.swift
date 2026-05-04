@@ -52,6 +52,9 @@ public final class EventManager {
       SpaceLifecycleHandler(
         windowManager: configuration.windowManager
       ).handle(event)
+
+    case .display(let event):
+      DisplayLifecycleHandler().handle(event)
     }
   }
 }

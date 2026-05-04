@@ -12,4 +12,5 @@ enum EventType: String {
   case windowDeminimized
 
   case spaceChanged
+  case displayChanged
 }

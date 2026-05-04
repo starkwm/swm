@@ -17,6 +17,13 @@ public final class Workspace: NSObject {
       name: NSWorkspace.activeSpaceDidChangeNotification,
       object: nil
     )
+
+    NSWorkspace.shared.notificationCenter.addObserver(
+      self,
+      selector: #selector(activeDisplayDidChange(_:)),
+      name: .activeDisplayDidChange,
+      object: nil
+    )
   }
 
   func isObservable(_ process: Process) -> Bool {
@@ -55,6 +62,11 @@ public final class Workspace: NSObject {
   @objc
   func activeSpaceDidChange(_: Notification) {
     EventManager.shared.post(.space(.changed(Space.active())))
+  }
+
+  @objc
+  func activeDisplayDidChange(_: Notification) {
+    EventManager.shared.post(.display(.changed))
   }
 
   public override func observeValue(
@@ -107,6 +119,12 @@ public final class Workspace: NSObject {
 }
 
 extension Workspace: @unchecked Sendable {}
+
+extension Notification.Name {
+  fileprivate static let activeDisplayDidChange = Notification.Name(
+    "NSWorkspaceActiveDisplayDidChangeNotification"
+  )
+}
 
 private struct ProcessObservationToken {
   let keyPath: String
