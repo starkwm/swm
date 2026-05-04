@@ -1,29 +1,29 @@
 import CoreGraphics
 
 struct QueryResolver {
-  let displays: [QueryDisplay]
-  let spaces: [QuerySpace]
-  let windows: [QueryWindow]
+  let displays: [DisplaySerializer]
+  let spaces: [SpaceSerializer]
+  let windows: [WindowSerializer]
 
   init(windowManager: WindowManager) {
     self.init(
-      displays: QueryDisplay.all(),
-      spaces: QuerySpace.all(windowManager: windowManager),
-      windows: QueryWindow.all(windowManager: windowManager)
+      displays: DisplaySerializer.all(),
+      spaces: SpaceSerializer.all(windowManager: windowManager),
+      windows: WindowSerializer.all(windowManager: windowManager)
     )
   }
 
   init(
-    displays: [QueryDisplay] = QueryDisplay.all(),
-    spaces: [QuerySpace],
-    windows: [QueryWindow]
+    displays: [DisplaySerializer] = DisplaySerializer.all(),
+    spaces: [SpaceSerializer],
+    windows: [WindowSerializer]
   ) {
     self.displays = displays
     self.spaces = spaces
     self.windows = windows
   }
 
-  func displays(for selection: QuerySelection) -> QueryResult<QueryDisplay> {
+  func displays(for selection: QuerySelection) -> QueryResult<DisplaySerializer> {
     switch selection {
     case .none:
       return .many(displays)
@@ -36,7 +36,7 @@ struct QueryResolver {
     }
   }
 
-  func spaces(for selection: QuerySelection) -> QueryResult<QuerySpace> {
+  func spaces(for selection: QuerySelection) -> QueryResult<SpaceSerializer> {
     switch selection {
     case .none:
       return .many(spaces)
@@ -50,7 +50,7 @@ struct QueryResolver {
     }
   }
 
-  func windows(for selection: QuerySelection) -> QueryResult<QueryWindow> {
+  func windows(for selection: QuerySelection) -> QueryResult<WindowSerializer> {
     switch selection {
     case .none:
       return .many(windows)
@@ -65,7 +65,7 @@ struct QueryResolver {
     }
   }
 
-  private func display(for index: Int?) -> QueryDisplay? {
+  private func display(for index: Int?) -> DisplaySerializer? {
     if let index {
       displays.first { $0.index == index }
     } else {
@@ -73,7 +73,7 @@ struct QueryResolver {
     }
   }
 
-  private func space(for index: Int?) -> QuerySpace? {
+  private func space(for index: Int?) -> SpaceSerializer? {
     if let index {
       spaces.first { $0.index == index }
     } else {
@@ -81,7 +81,7 @@ struct QueryResolver {
     }
   }
 
-  private func window(for id: CGWindowID?) -> QueryWindow? {
+  private func window(for id: CGWindowID?) -> WindowSerializer? {
     if let id {
       windows.first { $0.id == id }
     } else {
@@ -89,16 +89,16 @@ struct QueryResolver {
     }
   }
 
-  private func display(containing space: QuerySpace) -> QueryDisplay? {
+  private func display(containing space: SpaceSerializer) -> DisplaySerializer? {
     displays.first { $0.id == space.display }
   }
 
-  private func display(containing window: QueryWindow) -> QueryDisplay? {
+  private func display(containing window: WindowSerializer) -> DisplaySerializer? {
     guard let displayID = window.display else { return nil }
     return displays.first { $0.id == displayID }
   }
 
-  private func space(containing window: QueryWindow) -> QuerySpace? {
+  private func space(containing window: WindowSerializer) -> SpaceSerializer? {
     guard let spaceIndex = window.space else { return nil }
     return spaces.first { $0.index == spaceIndex }
   }

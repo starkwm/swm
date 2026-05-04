@@ -3,11 +3,11 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("QueryWindow")
-struct QueryWindowTests {
+@Suite("WindowSerializer")
+struct WindowSerializerTests {
   @Test("encode: uses nullable kebab-case keys")
   func encodeUsesNullableKebabCaseKeys() throws {
-    let window = QueryWindow(
+    let window = WindowSerializer(
       id: 1,
       pid: nil,
       app: nil,

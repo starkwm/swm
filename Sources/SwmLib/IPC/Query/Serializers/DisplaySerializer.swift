@@ -1,10 +1,10 @@
 import AppKit
 
-struct QueryDisplay: Encodable, Equatable {
+struct DisplaySerializer: Encodable, Equatable {
   let id: String?
   let uuid: String?
   let index: Int
-  let frame: QueryFrame
+  let frame: FrameSerializer
   let spaces: [Int]
   let hasFocus: Bool
 
@@ -28,8 +28,8 @@ struct QueryDisplay: Encodable, Equatable {
   }
 }
 
-extension QueryDisplay {
-  static func all() -> [QueryDisplay] {
+extension DisplaySerializer {
+  static func all() -> [DisplaySerializer] {
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let indexedSpaces = Space.all().enumerated().map { (index: $0.offset, id: $0.element.id) }
     let focusedSpace = Space.active().id
@@ -43,11 +43,11 @@ extension QueryDisplay {
         screenID: display.id
       )
 
-      return QueryDisplay(
+      return DisplaySerializer(
         id: display.id,
         uuid: display.id,
         index: index,
-        frame: QueryFrame(screen?.frame ?? .zero),
+        frame: FrameSerializer(screen?.frame ?? .zero),
         spaces: spaces,
         hasFocus: currentSpace == focusedSpace
       )

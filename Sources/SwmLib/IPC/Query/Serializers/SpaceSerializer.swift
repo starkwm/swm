@@ -1,6 +1,6 @@
 import Foundation
 
-struct QuerySpace: Encodable, Equatable {
+struct SpaceSerializer: Encodable, Equatable {
   let id: UInt64
   let uuid: String?
   let index: Int
@@ -40,8 +40,8 @@ struct QuerySpace: Encodable, Equatable {
   }
 }
 
-extension QuerySpace {
-  static func all(windowManager: WindowManager) -> [QuerySpace] {
+extension SpaceSerializer {
+  static func all(windowManager: WindowManager) -> [SpaceSerializer] {
     let spaces = Space.all()
     let activeSpaceID = Space.active().id
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
@@ -57,7 +57,7 @@ extension QuerySpace {
         }
         .map(\.id)
 
-      return QuerySpace(
+      return SpaceSerializer(
         id: space.id,
         uuid: nil,
         index: index,

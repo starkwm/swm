@@ -48,7 +48,7 @@ struct QueryCommandHandlerTests {
   func responseEncodesSingularMissesAsNull() throws {
     let response = try QueryCommandHandler().response(
       id: "request-id",
-      result: QueryResult<QueryWindow>.one(nil)
+      result: QueryResult<WindowSerializer>.one(nil)
     )
 
     #expect(response.ok)

@@ -61,19 +61,19 @@ struct QueryResolverTests {
     )
   }
 
-  private func display(index: Int, id: String, hasFocus: Bool) -> QueryDisplay {
-    QueryDisplay(
+  private func display(index: Int, id: String, hasFocus: Bool) -> DisplaySerializer {
+    DisplaySerializer(
       id: id,
       uuid: nil,
       index: index,
-      frame: QueryFrame(.zero),
+      frame: FrameSerializer(.zero),
       spaces: [],
       hasFocus: hasFocus
     )
   }
 
-  private func space(index: Int, id: UInt64, display: String, hasFocus: Bool) -> QuerySpace {
-    QuerySpace(
+  private func space(index: Int, id: UInt64, display: String, hasFocus: Bool) -> SpaceSerializer {
+    SpaceSerializer(
       id: id,
       uuid: nil,
       index: index,
@@ -87,8 +87,8 @@ struct QueryResolverTests {
     )
   }
 
-  private func window(id: UInt32, display: String, space: Int, hasFocus: Bool) -> QueryWindow {
-    QueryWindow(
+  private func window(id: UInt32, display: String, space: Int, hasFocus: Bool) -> WindowSerializer {
+    WindowSerializer(
       id: id,
       pid: nil,
       app: nil,

@@ -1,11 +1,11 @@
 import AppKit
 
-struct QueryWindow: Encodable, Equatable {
+struct WindowSerializer: Encodable, Equatable {
   let id: CGWindowID
   let pid: pid_t?
   let app: String?
   let title: String?
-  let frame: QueryFrame?
+  let frame: FrameSerializer?
   let role: String?
   let subrole: String?
   let display: String?
@@ -67,15 +67,15 @@ struct QueryWindow: Encodable, Equatable {
   }
 }
 
-extension QueryWindow {
-  static func all(windowManager: WindowManager) -> [QueryWindow] {
+extension WindowSerializer {
+  static func all(windowManager: WindowManager) -> [WindowSerializer] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
     let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
     let spaces = Space.all()
 
     return windowManager.allWindows().map { window in
-      QueryWindow(
+      WindowSerializer(
         window: window,
         info: windowInfo.info(for: window.id),
         screens: screens,
@@ -117,7 +117,7 @@ extension QueryWindow {
           attribute: kAXTitleAttribute as String
         )
       } ?? (info?[kCGWindowName as String] as? String)
-    self.frame = frame.map(QueryFrame.init)
+    self.frame = frame.map(FrameSerializer.init)
     role = element.flatMap {
       AccessibilityClient.shared.stringAttribute(
         for: $0,

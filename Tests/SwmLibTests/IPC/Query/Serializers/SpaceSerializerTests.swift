@@ -3,11 +3,11 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("QuerySpace")
-struct QuerySpaceTests {
+@Suite("SpaceSerializer")
+struct SpaceSerializerTests {
   @Test("encode: uses window IDs")
   func encodeUsesWindowIDs() throws {
-    let space = QuerySpace(
+    let space = SpaceSerializer(
       id: 1,
       uuid: nil,
       index: 0,
@@ -32,7 +32,7 @@ struct QuerySpaceTests {
 
   @Test("encode: allows empty window array")
   func encodeAllowsEmptyWindowArray() throws {
-    let space = QuerySpace(
+    let space = SpaceSerializer(
       id: 1,
       uuid: nil,
       index: 0,

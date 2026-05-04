@@ -1,6 +1,6 @@
 import CoreGraphics
 
-struct QueryFrame: Codable, Equatable {
+struct FrameSerializer: Codable, Equatable {
   let x: Double
   let y: Double
   let width: Double

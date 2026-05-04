@@ -3,15 +3,15 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("QueryDisplay")
-struct QueryDisplayTests {
+@Suite("DisplaySerializer")
+struct DisplaySerializerTests {
   @Test("encode: uses kebab-case keys")
   func encodeUsesKebabCaseKeys() throws {
-    let display = QueryDisplay(
+    let display = DisplaySerializer(
       id: "display-id",
       uuid: nil,
       index: 0,
-      frame: QueryFrame(.zero),
+      frame: FrameSerializer(.zero),
       spaces: [1],
       hasFocus: true
     )
