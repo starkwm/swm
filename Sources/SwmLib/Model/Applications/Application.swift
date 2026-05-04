@@ -114,7 +114,6 @@ public final class Application: NSObject {
 
   deinit {
     unobserve()
-    log("application deinit \(self)")
   }
 
   func observe() -> Result<Void, AccessibilityClientError> {

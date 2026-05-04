@@ -62,10 +62,6 @@ public final class Process: CustomStringConvertible {
     self.application = application
     self.policy = policy
   }
-
-  deinit {
-    log("process deinit \(self)")
-  }
 }
 
 extension Process: @unchecked Sendable {}

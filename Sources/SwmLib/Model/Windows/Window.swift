@@ -56,7 +56,6 @@ public final class Window: NSObject {
 
   deinit {
     unobserve()
-    log("window deinit \(self)")
   }
 
   public override func isEqual(_ object: Any?) -> Bool {
