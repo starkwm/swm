@@ -28,6 +28,7 @@ struct ApplicationLifecycleHandler {
       workspace.observeFinishedLaunching(process)
 
       guard workspace.isFinishedLaunching(process) else { return }
+
       workspace.unobserveFinishedLaunching(process)
     }
 
@@ -36,6 +37,7 @@ struct ApplicationLifecycleHandler {
       workspace.observeActivationPolicy(process)
 
       guard workspace.isObservable(process) else { return }
+
       workspace.unobserveActivationPolicy(process)
     }
 
@@ -66,6 +68,7 @@ struct ApplicationLifecycleHandler {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
           guard let process = processLookup.find(by: psn) else { return }
+
           postEvent(.application(.launched(process)))
         }
       }
@@ -90,6 +93,7 @@ struct ApplicationLifecycleHandler {
     windowManager.remove(application: application)
 
     let windows = windowManager.allWindows(for: application)
+
     for window in windows {
       windowManager.remove(by: window.id)
       window.invalidate()

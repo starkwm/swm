@@ -7,7 +7,10 @@ struct ApplicationNotifications: OptionSet, Sendable {
   static let windowResized = ApplicationNotifications(rawValue: 1 << 3)
 
   static let all: ApplicationNotifications = [
-    .windowCreated, .windowFocused, .windowMoved, .windowResized,
+    .windowCreated,
+    .windowFocused,
+    .windowMoved,
+    .windowResized,
   ]
 
   let rawValue: Int8

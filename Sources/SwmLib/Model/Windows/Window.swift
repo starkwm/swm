@@ -42,8 +42,7 @@ public final class Window: NSObject {
     return AccessibilityClient.shared.stringAttribute(
       for: element,
       attribute: kAXTitleAttribute as String
-    )
-      ?? ""
+    ) ?? ""
   }
 
   private var observedNotifications = WindowNotifications(rawValue: 0)

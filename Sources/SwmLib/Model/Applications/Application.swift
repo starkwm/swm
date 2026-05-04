@@ -101,6 +101,7 @@ public final class Application: NSObject {
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {
       return nil
     }
+
     application = app
 
     if let connectionID = WindowServerClient.shared.connectionID(

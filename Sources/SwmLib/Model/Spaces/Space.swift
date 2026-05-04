@@ -18,7 +18,6 @@ public final class Space: NSObject {
   }
 
   var id: UInt64
-
   var type: SpaceType
 
   public convenience init(id: UInt64) {
@@ -37,7 +36,6 @@ public final class Space: NSObject {
     guard let space = object as? Self else { return false }
     return id == space.id
   }
-
 }
 
 extension Space: @unchecked Sendable {}

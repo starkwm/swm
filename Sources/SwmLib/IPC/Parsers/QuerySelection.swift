@@ -44,8 +44,10 @@ enum QuerySelection: Equatable {
         guard command == nil else {
           throw ValidationError("exactly one query flag is required")
         }
+
         command = argument
         index += 1
+
         continue
       }
 

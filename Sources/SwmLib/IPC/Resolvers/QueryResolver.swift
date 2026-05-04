@@ -95,11 +95,13 @@ struct QueryResolver {
 
   private func display(containing window: WindowSerializer) -> DisplaySerializer? {
     guard let displayID = window.display else { return nil }
+
     return displays.first { $0.id == displayID }
   }
 
   private func space(containing window: WindowSerializer) -> SpaceSerializer? {
     guard let spaceIndex = window.space else { return nil }
+
     return spaces.first { $0.index == spaceIndex }
   }
 }

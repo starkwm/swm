@@ -18,9 +18,7 @@ enum UnixSocket {
     }
 
     let socket = try Socket.create(family: .unix)
-    defer {
-      socket.close()
-    }
+    defer { socket.close() }
 
     do {
       try socket.connect(to: path)

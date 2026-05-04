@@ -56,6 +56,7 @@ public final class WindowManager {
 
   public func refreshWindows(for application: Application) {
     guard unresolvedApplicationIDs.contains(application.processID) else { return }
+
     log("application has windows that are not yet resolved \(application)", level: .info)
     _ = reconcileWindows(for: application, mode: .refreshAttempt)
   }
@@ -130,6 +131,7 @@ public final class WindowManager {
     }
 
     resolveRemoteWindows(&unresolvedWindowIDs, for: application)
+
     return updateRefreshTracking(
       for: application,
       unresolvedWindowIDs: unresolvedWindowIDs,

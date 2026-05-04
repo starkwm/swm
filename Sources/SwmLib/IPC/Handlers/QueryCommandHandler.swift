@@ -34,7 +34,9 @@ struct QueryCommandHandler {
   func response<T: Encodable>(id: String, payload: T) throws -> IPCResponse {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
+
     let data = try encoder.encode(payload)
+
     return .success(id: id, message: String(decoding: data, as: UTF8.self))
   }
 

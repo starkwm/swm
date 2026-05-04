@@ -9,7 +9,6 @@ public class Daemon {
   private let dispatcher: IPCCommandDispatcher
 
   private var isRunning = false
-
   private var running: Bool {
     get {
       lockQueue.sync { self.isRunning }

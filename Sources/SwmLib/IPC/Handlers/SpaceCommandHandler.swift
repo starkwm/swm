@@ -91,7 +91,11 @@ struct SpaceCommandHandler {
 
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-    guard parts.count == 5, let mode = ChangeMode(rawValue: parts[0]) else {
+
+    guard
+      parts.count == 5,
+      let mode = ChangeMode(rawValue: parts[0])
+    else {
       return nil
     }
 
@@ -112,7 +116,10 @@ struct SpaceCommandHandler {
 
   private func parseGapChange(_ argument: String) -> GapChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-    guard parts.count == 2, let mode = ChangeMode(rawValue: parts[0]),
+
+    guard
+      parts.count == 2,
+      let mode = ChangeMode(rawValue: parts[0]),
       let value = Int(parts[1])
     else {
       return nil
@@ -141,6 +148,7 @@ struct SpaceCommandHandler {
 
     do {
       let data = try JSONEncoder().encode(result)
+
       guard let message = String(data: data, encoding: .utf8) else {
         return .failure(
           id: request.id,

@@ -78,6 +78,7 @@ public final class Workspace: NSObject {
     guard let context else { return }
 
     let process = Unmanaged<Process>.fromOpaque(context).takeUnretainedValue()
+
     guard let registry = registry(for: keyPath) else { return }
     guard registry.kind.shouldRelaunch(process: process, change: change) else { return }
 
@@ -89,7 +90,9 @@ public final class Workspace: NSObject {
     guard process.application != nil else { return }
 
     let token = registry.register(process)
+
     log("adding observer for \(registry.kind.logName) \(process)")
+
     process.application?.addObserver(
       self,
       forKeyPath: token.keyPath,
@@ -103,6 +106,7 @@ public final class Workspace: NSObject {
     guard let token = registry.unregister(process) else { return }
 
     log("removing observer for \(registry.kind.logName) \(process)")
+
     process.application?.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
   }
 

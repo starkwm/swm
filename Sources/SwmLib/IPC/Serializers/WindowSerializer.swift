@@ -217,6 +217,7 @@ extension [Space] {
     )
 
     guard let spaceID = spaceIDs.first else { return nil }
+
     return firstIndex { $0.id == spaceID }
   }
 }

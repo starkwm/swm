@@ -16,6 +16,7 @@ public enum Config {
   private static func ensureOwnerExecutable(path: String) throws {
     do {
       let attributes = try FileManager.default.attributesOfItem(atPath: path)
+
       guard let permissions = attributes[.posixPermissions] as? NSNumber else {
         throw ConfigError.unableToMakeExecutable
       }
@@ -33,6 +34,7 @@ public enum Config {
       )
 
       let updatedAttributes = try FileManager.default.attributesOfItem(atPath: path)
+
       guard
         let updatedPermissions = updatedAttributes[.posixPermissions] as? NSNumber,
         updatedPermissions.uint16Value & ownerExecute == ownerExecute

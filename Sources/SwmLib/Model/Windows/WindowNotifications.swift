@@ -5,7 +5,11 @@ struct WindowNotifications: OptionSet, Sendable {
   static let windowMinimized = WindowNotifications(rawValue: 1 << 1)
   static let windowDeminimized = WindowNotifications(rawValue: 1 << 2)
 
-  static let all: WindowNotifications = [.windowDestroyed, .windowMinimized, .windowDeminimized]
+  static let all: WindowNotifications = [
+    .windowDestroyed,
+    .windowMinimized,
+    .windowDeminimized,
+  ]
 
   let rawValue: Int8
 }
