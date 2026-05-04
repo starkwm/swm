@@ -1,12 +1,19 @@
 import Foundation
 
+private let logLevelColumnWidth = LogLevel.allCases.map(\.rawValue.count).max()! + 1
+
 func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
-  let text = "\(Date().ISO8601Format()) \(level.rawValue): \(message())\n"
+  let label = "\(level.rawValue):".padding(
+    toLength: logLevelColumnWidth,
+    withPad: " ",
+    startingAt: 0
+  )
+  let text = "\(Date().ISO8601Format()) \(label) \(message())\n"
   fputs(text, stderr)
   fflush(stderr)
 }
 
-enum LogLevel: String {
+enum LogLevel: String, CaseIterable {
   case debug = "DEBUG"
   case info = "INFO"
   case warn = "WARN"
