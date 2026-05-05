@@ -26,7 +26,7 @@ struct IPCCommandDispatcherTests {
 
   @Test("dispatch: dispatches window commands")
   func dispatchDispatchesWindowCommands() {
-    let windowManager = WindowManager(workspace: Workspace())
+    let windowManager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
     windowManager.addKnownWindowID(42)
     let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
     let request = IPCRequest(
@@ -44,7 +44,7 @@ struct IPCCommandDispatcherTests {
 
   @Test("dispatch: dispatches window move commands")
   func dispatchDispatchesWindowMoveCommands() {
-    let windowManager = WindowManager(workspace: Workspace())
+    let windowManager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
     windowManager.focusedWindowDidChange(to: 42)
     let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
     let request = IPCRequest(
@@ -65,7 +65,7 @@ struct IPCCommandDispatcherTests {
 
   @Test("dispatch: dispatches selected window resize commands")
   func dispatchDispatchesSelectedWindowResizeCommands() {
-    let windowManager = WindowManager(workspace: Workspace())
+    let windowManager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
     windowManager.addKnownWindowID(100)
     let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
     let request = IPCRequest(

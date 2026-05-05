@@ -3,7 +3,25 @@ import Carbon
 import Foundation
 
 public final class WindowManager {
+  public typealias FocusedWindowIDResolver = @Sendable () -> CGWindowID?
+
   private let workspace: Workspace
+
+  private static func resolveFocusedWindowID() -> CGWindowID? {
+    guard let processID = WindowServerClient.shared.frontmostProcessID() else {
+      return nil
+    }
+
+    let applicationElement = AccessibilityClient.shared.applicationElement(for: processID)
+
+    guard let focusedWindowElement = AccessibilityClient.shared.focusedWindowElement(
+      for: applicationElement
+    ) else {
+      return nil
+    }
+
+    return Window.validID(for: focusedWindowElement)
+  }
 
   public var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
@@ -36,7 +54,7 @@ public final class WindowManager {
   }
 
   private let focusedWindowLock = NSLock()
-  private var focusedWindowState = FocusedWindowState(current: nil, last: nil)
+  private var focusedWindowState: FocusedWindowState
   private var focusWindowRequest: FocusWindowRequest?
   private var moveWindowRequest: MoveWindowRequest?
   private var resizeWindowRequest: ResizeWindowRequest?
@@ -46,8 +64,19 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
   private var knownWindowIDs = Set<CGWindowID>()
 
-  public init(workspace: Workspace) {
+  public convenience init(workspace: Workspace) {
+    self.init(workspace: workspace, focusedWindowIDResolver: Self.resolveFocusedWindowID)
+  }
+
+  init(
+    workspace: Workspace,
+    focusedWindowIDResolver: @escaping FocusedWindowIDResolver
+  ) {
     self.workspace = workspace
+    focusedWindowState = FocusedWindowState(
+      current: focusedWindowIDResolver(),
+      last: nil
+    )
   }
 
   public func start(processes: [Process]) {

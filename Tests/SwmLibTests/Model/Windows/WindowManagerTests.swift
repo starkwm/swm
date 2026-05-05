@@ -6,15 +6,23 @@ import Testing
 struct WindowManagerTests {
   @Test("init: starts without focused window")
   func initStartsWithoutFocusedWindow() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
 
     #expect(manager.currentFocusedWindowID == nil)
     #expect(manager.lastFocusedWindowID == nil)
   }
 
+  @Test("init: seeds current focused window")
+  func initSeedsCurrentFocusedWindow() {
+    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { 1 })
+
+    #expect(manager.currentFocusedWindowID == 1)
+    #expect(manager.lastFocusedWindowID == nil)
+  }
+
   @Test("focusedWindowDidChange: updates current and last window")
   func focusedWindowDidChangeUpdatesCurrentAndLastWindow() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
 
     manager.focusedWindowDidChange(to: 1)
     manager.focusedWindowDidChange(to: 2)
@@ -25,7 +33,7 @@ struct WindowManagerTests {
 
   @Test("focusedWindowDidChange: keeps last window for repeated focused window")
   func focusedWindowDidChangeKeepsLastWindowForRepeatedFocusedWindow() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
 
     manager.focusedWindowDidChange(to: 1)
     manager.focusedWindowDidChange(to: 2)
@@ -37,7 +45,7 @@ struct WindowManagerTests {
 
   @Test("focusedWindowDidChange: ignores zero window")
   func focusedWindowDidChangeIgnoresZeroWindow() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
 
     manager.focusedWindowDidChange(to: 1)
     manager.focusedWindowDidChange(to: 0)
