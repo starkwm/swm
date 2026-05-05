@@ -12,9 +12,11 @@ public final class WindowManager {
 
     let applicationElement = AccessibilityClient.shared.applicationElement(for: processID)
 
-    guard let focusedWindowElement = AccessibilityClient.shared.focusedWindowElement(
-      for: applicationElement
-    ) else {
+    guard
+      let focusedWindowElement = AccessibilityClient.shared.focusedWindowElement(
+        for: applicationElement
+      )
+    else {
       return nil
     }
 
