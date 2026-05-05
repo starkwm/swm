@@ -14,6 +14,18 @@ struct IPCRequest: Codable, Equatable {
       throw IPCRequestError.missingCommand(domain)
     }
 
+    if
+      domain == .window,
+      arguments.count >= 2,
+      arguments[1].hasPrefix("--")
+    {
+      return IPCRequest(
+        domain: domain,
+        command: arguments[1],
+        args: ["--window", command] + Array(arguments.dropFirst(2))
+      )
+    }
+
     return IPCRequest(
       domain: domain,
       command: command,

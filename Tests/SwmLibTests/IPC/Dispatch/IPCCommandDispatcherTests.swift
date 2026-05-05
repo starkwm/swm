@@ -42,6 +42,48 @@ struct IPCCommandDispatcherTests {
     #expect(windowManager.lastFocusWindowRequest == FocusWindowRequest(id: 42, source: "42"))
   }
 
+  @Test("dispatch: dispatches window move commands")
+  func dispatchDispatchesWindowMoveCommands() {
+    let windowManager = WindowManager(workspace: Workspace())
+    windowManager.focusedWindowDidChange(to: 42)
+    let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
+    let request = IPCRequest(
+      id: "request-id",
+      domain: .window,
+      command: "--move",
+      args: ["abs:100:200"]
+    )
+
+    let response = dispatcher.dispatch(request)
+
+    #expect(response.ok)
+    #expect(
+      windowManager.lastMoveWindowRequest
+        == MoveWindowRequest(id: 42, mode: .absolute, x: 100, y: 200)
+    )
+  }
+
+  @Test("dispatch: dispatches selected window resize commands")
+  func dispatchDispatchesSelectedWindowResizeCommands() {
+    let windowManager = WindowManager(workspace: Workspace())
+    windowManager.addKnownWindowID(100)
+    let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
+    let request = IPCRequest(
+      id: "request-id",
+      domain: .window,
+      command: "--resize",
+      args: ["--window", "100", "abs:500:800"]
+    )
+
+    let response = dispatcher.dispatch(request)
+
+    #expect(response.ok)
+    #expect(
+      windowManager.lastResizeWindowRequest
+        == ResizeWindowRequest(id: 100, mode: .absolute, width: 500, height: 800)
+    )
+  }
+
   @Test("dispatch: dispatches space commands")
   func dispatchDispatchesSpaceCommands() {
     let spaceManager = SpaceManager(activeSpaceIDResolver: { nil })

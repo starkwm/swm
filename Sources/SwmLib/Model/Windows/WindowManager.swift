@@ -23,9 +23,23 @@ public final class WindowManager {
     }
   }
 
+  var lastMoveWindowRequest: MoveWindowRequest? {
+    focusedWindowLock.withLock {
+      moveWindowRequest
+    }
+  }
+
+  var lastResizeWindowRequest: ResizeWindowRequest? {
+    focusedWindowLock.withLock {
+      resizeWindowRequest
+    }
+  }
+
   private let focusedWindowLock = NSLock()
   private var focusedWindowState = FocusedWindowState(current: nil, last: nil)
   private var focusWindowRequest: FocusWindowRequest?
+  private var moveWindowRequest: MoveWindowRequest?
+  private var resizeWindowRequest: ResizeWindowRequest?
 
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
@@ -89,6 +103,29 @@ public final class WindowManager {
     }
 
     log("focus window requested source: \(source), id: \(id)")
+  }
+
+  func moveWindow(id: CGWindowID, mode: ChangeMode, x: Int, y: Int) {
+    focusedWindowLock.withLock {
+      moveWindowRequest = MoveWindowRequest(id: id, mode: mode, x: x, y: y)
+    }
+
+    log("move window requested id: \(id), mode: \(mode.rawValue), x: \(x), y: \(y)")
+  }
+
+  func resizeWindow(id: CGWindowID, mode: ChangeMode, width: Int, height: Int) {
+    focusedWindowLock.withLock {
+      resizeWindowRequest = ResizeWindowRequest(
+        id: id,
+        mode: mode,
+        width: width,
+        height: height
+      )
+    }
+
+    log(
+      "resize window requested id: \(id), mode: \(mode.rawValue), width: \(width), height: \(height)"
+    )
   }
 
   public func refreshWindows() {
@@ -326,6 +363,20 @@ private struct FocusedWindowState {
 struct FocusWindowRequest: Equatable {
   let id: CGWindowID
   let source: String
+}
+
+struct MoveWindowRequest: Equatable {
+  let id: CGWindowID
+  let mode: ChangeMode
+  let x: Int
+  let y: Int
+}
+
+struct ResizeWindowRequest: Equatable {
+  let id: CGWindowID
+  let mode: ChangeMode
+  let width: Int
+  let height: Int
 }
 
 private enum WindowDiscoveryMode {
