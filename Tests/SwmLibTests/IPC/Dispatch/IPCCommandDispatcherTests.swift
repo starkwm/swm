@@ -38,8 +38,9 @@ struct IPCCommandDispatcherTests {
 
     let response = dispatcher.dispatch(request)
 
-    #expect(response.ok)
-    #expect(windowManager.lastFocusWindowRequest == FocusWindowRequest(id: 42, source: "42"))
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "window focus is not implemented")
   }
 
   @Test("dispatch: dispatches window move commands")
@@ -56,11 +57,9 @@ struct IPCCommandDispatcherTests {
 
     let response = dispatcher.dispatch(request)
 
-    #expect(response.ok)
-    #expect(
-      windowManager.lastMoveWindowRequest
-        == MoveWindowRequest(id: 42, mode: .absolute, x: 100, y: 200)
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "window move is not implemented")
   }
 
   @Test("dispatch: dispatches selected window resize commands")
@@ -77,11 +76,9 @@ struct IPCCommandDispatcherTests {
 
     let response = dispatcher.dispatch(request)
 
-    #expect(response.ok)
-    #expect(
-      windowManager.lastResizeWindowRequest
-        == ResizeWindowRequest(id: 100, mode: .absolute, width: 500, height: 800)
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "window resize is not implemented")
   }
 
   @Test("dispatch: dispatches space commands")
@@ -120,11 +117,9 @@ struct IPCCommandDispatcherTests {
 
     let response = dispatcher.dispatch(request)
 
-    #expect(response.ok)
-    #expect(
-      spaceManager.lastFocusSpaceRequest
-        == FocusSpaceRequest(id: 1, index: nil, source: "recent")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
   @Test("dispatch: dispatches display commands")
@@ -142,15 +137,9 @@ struct IPCCommandDispatcherTests {
 
     let response = dispatcher.dispatch(request)
 
-    #expect(response.ok)
-    #expect(
-      displayManager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-0",
-          index: nil,
-          source: "recent"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 }
 

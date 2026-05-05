@@ -62,8 +62,8 @@ struct SpaceCommandHandlerTests {
     #expect(manager.settings(for: 42).gap == 10)
   }
 
-  @Test("dispatch: accepts recent focus target")
-  func dispatchAcceptsRecentFocusTarget() {
+  @Test("dispatch: rejects recent focus target as unimplemented")
+  func dispatchRejectsRecentFocusTargetAsUnimplemented() {
     let manager = spaceManager(activeSpaceIDs: [1, 2])
     manager.activeSpaceDidChange()
     let handler = SpaceCommandHandler(
@@ -74,15 +74,13 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused space: 1")
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 1, index: nil, source: "recent")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
-  @Test("dispatch: accepts previous focus target")
-  func dispatchAcceptsPreviousFocusTarget() {
+  @Test("dispatch: rejects previous focus target as unimplemented")
+  func dispatchRejectsPreviousFocusTargetAsUnimplemented() {
     let manager = spaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
@@ -92,15 +90,13 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["prev"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused space: 100")
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 100, index: 0, source: "prev")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
-  @Test("dispatch: accepts next focus target")
-  func dispatchAcceptsNextFocusTarget() {
+  @Test("dispatch: rejects next focus target as unimplemented")
+  func dispatchRejectsNextFocusTargetAsUnimplemented() {
     let manager = spaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
@@ -110,11 +106,9 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["next"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused space: 102")
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 102, index: 2, source: "next")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
   @Test("dispatch: wraps previous focus target")
@@ -128,10 +122,9 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["prev"]))
 
-    #expect(response.ok)
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 102, index: 2, source: "prev")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
   @Test("dispatch: wraps next focus target")
@@ -145,14 +138,13 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["next"]))
 
-    #expect(response.ok)
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 100, index: 0, source: "next")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
-  @Test("dispatch: accepts indexed focus target")
-  func dispatchAcceptsIndexedFocusTarget() {
+  @Test("dispatch: rejects indexed focus target as unimplemented")
+  func dispatchRejectsIndexedFocusTargetAsUnimplemented() {
     let manager = spaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
@@ -162,11 +154,9 @@ struct SpaceCommandHandlerTests {
 
     let response = handler.dispatch(request(command: "--focus", args: ["2"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused space: 102")
-    #expect(
-      manager.lastFocusSpaceRequest == FocusSpaceRequest(id: 102, index: 2, source: "2")
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "space focus is not implemented")
   }
 
   @Test("dispatch: rejects malformed arguments")

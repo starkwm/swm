@@ -51,17 +51,10 @@ public final class SpaceManager {
     }
   }
 
-  var lastFocusSpaceRequest: FocusSpaceRequest? {
-    lock.withLock {
-      focusSpaceRequest
-    }
-  }
-
   private let lock = NSLock()
   private let activeSpaceIDResolver: ActiveSpaceIDResolver
 
   private var activeSpaceState: ActiveSpaceState
-  private var focusSpaceRequest: FocusSpaceRequest?
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
   public convenience init() {
@@ -87,16 +80,6 @@ public final class SpaceManager {
         last: activeSpaceState.current
       )
     }
-  }
-
-  func focusSpace(id: UInt64, index: Int?, source: String) {
-    lock.withLock {
-      focusSpaceRequest = FocusSpaceRequest(id: id, index: index, source: source)
-    }
-
-    log(
-      "focus space requested source: \(source), id: \(id), index: \(index.map(String.init) ?? "nil")"
-    )
   }
 
   func settings(for spaceID: UInt64) -> SpaceSettings {
@@ -171,10 +154,4 @@ extension SpaceManager: @unchecked Sendable {}
 private struct ActiveSpaceState {
   var current: UInt64?
   var last: UInt64?
-}
-
-struct FocusSpaceRequest: Equatable {
-  let id: UInt64
-  let index: Int?
-  let source: String
 }

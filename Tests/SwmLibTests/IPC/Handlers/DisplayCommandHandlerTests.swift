@@ -5,28 +5,21 @@ import Testing
 
 @Suite("DisplayCommandHandler")
 struct DisplayCommandHandlerTests {
-  @Test("dispatch: accepts recent focus target")
-  func dispatchAcceptsRecentFocusTarget() {
+  @Test("dispatch: rejects recent focus target as unimplemented")
+  func dispatchRejectsRecentFocusTargetAsUnimplemented() {
     let manager = displayManager(activeDisplayIDs: ["display-0", "display-1"])
     manager.activeDisplayDidChange()
     let handler = DisplayCommandHandler(displayManager: manager, displays: { [] })
 
     let response = handler.dispatch(request(args: ["recent"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused display: display-0")
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-0",
-          index: nil,
-          source: "recent"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
-  @Test("dispatch: accepts previous focus target")
-  func dispatchAcceptsPreviousFocusTarget() {
+  @Test("dispatch: rejects previous focus target as unimplemented")
+  func dispatchRejectsPreviousFocusTargetAsUnimplemented() {
     let manager = displayManager()
     let handler = DisplayCommandHandler(
       displayManager: manager,
@@ -35,20 +28,13 @@ struct DisplayCommandHandlerTests {
 
     let response = handler.dispatch(request(args: ["prev"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused display: display-0")
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-0",
-          index: 0,
-          source: "prev"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
-  @Test("dispatch: accepts next focus target")
-  func dispatchAcceptsNextFocusTarget() {
+  @Test("dispatch: rejects next focus target as unimplemented")
+  func dispatchRejectsNextFocusTargetAsUnimplemented() {
     let manager = displayManager()
     let handler = DisplayCommandHandler(
       displayManager: manager,
@@ -57,16 +43,9 @@ struct DisplayCommandHandlerTests {
 
     let response = handler.dispatch(request(args: ["next"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused display: display-2")
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-2",
-          index: 2,
-          source: "next"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
   @Test("dispatch: wraps previous focus target")
@@ -79,15 +58,9 @@ struct DisplayCommandHandlerTests {
 
     let response = handler.dispatch(request(args: ["prev"]))
 
-    #expect(response.ok)
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-2",
-          index: 2,
-          source: "prev"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
   @Test("dispatch: wraps next focus target")
@@ -100,19 +73,13 @@ struct DisplayCommandHandlerTests {
 
     let response = handler.dispatch(request(args: ["next"]))
 
-    #expect(response.ok)
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-0",
-          index: 0,
-          source: "next"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
-  @Test("dispatch: accepts indexed focus target")
-  func dispatchAcceptsIndexedFocusTarget() {
+  @Test("dispatch: rejects indexed focus target as unimplemented")
+  func dispatchRejectsIndexedFocusTargetAsUnimplemented() {
     let manager = displayManager()
     let handler = DisplayCommandHandler(
       displayManager: manager,
@@ -121,16 +88,9 @@ struct DisplayCommandHandlerTests {
 
     let response = handler.dispatch(request(args: ["2"]))
 
-    #expect(response.ok)
-    #expect(response.message == "focused display: display-2")
-    #expect(
-      manager.lastFocusDisplayRequest
-        == FocusDisplayRequest(
-          id: "display-2",
-          index: 2,
-          source: "2"
-        )
-    )
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "display focus is not implemented")
   }
 
   @Test("dispatch: rejects malformed focus arguments")

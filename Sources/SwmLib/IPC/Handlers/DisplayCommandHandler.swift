@@ -29,17 +29,12 @@ struct DisplayCommandHandler {
     }
 
     let target = request.args[0]
-    let displayID: String?
-    let displayIndex: Int?
 
     switch target {
     case "recent":
-      guard let recentDisplayID = displayManager.lastActiveDisplayID else {
+      guard displayManager.lastActiveDisplayID != nil else {
         return invalid(request, "no recent display")
       }
-
-      displayID = recentDisplayID
-      displayIndex = nil
 
     case "prev", "next":
       let arrangedDisplays = displays().sorted { $0.index < $1.index }
@@ -49,36 +44,29 @@ struct DisplayCommandHandler {
       }
 
       guard
-        let adjacentDisplay = adjacentDisplay(
+        adjacentDisplay(
           from: currentDisplay.index,
           direction: target,
           displays: arrangedDisplays
-        )
+        ) != nil
       else {
         return invalid(request, "no focused display")
       }
-
-      displayID = adjacentDisplay.id
-      displayIndex = adjacentDisplay.index
 
     default:
       guard let index = Int(target) else {
         return invalid(request, "invalid display focus target: \(target)")
       }
 
-      guard let indexedDisplay = displays().first(where: { $0.index == index }) else {
+      guard displays().contains(where: { $0.index == index }) else {
         return invalid(request, "display index not found: \(index)")
       }
-
-      displayID = indexedDisplay.id
-      displayIndex = indexedDisplay.index
     }
 
-    displayManager.focusDisplay(id: displayID, index: displayIndex, source: target)
-
-    return .success(
+    return .failure(
       id: request.id,
-      message: "focused display: \(displayID ?? displayIndex.map(String.init) ?? target)"
+      message: "display focus is not implemented",
+      errorCode: .unsupportedCommand
     )
   }
 

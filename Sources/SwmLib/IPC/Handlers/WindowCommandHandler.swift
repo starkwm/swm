@@ -30,31 +30,26 @@ struct WindowCommandHandler {
     }
 
     let target = request.args[0]
-    let windowID: CGWindowID
 
     switch target {
     case "recent":
-      guard let recentWindowID = windowManager.lastFocusedWindowID else {
+      guard windowManager.lastFocusedWindowID != nil else {
         return invalid(request, "no recent window")
       }
-
-      windowID = recentWindowID
 
     default:
       guard let id = UInt32(target), id != 0 else {
         return invalid(request, "invalid window focus target: \(target)")
       }
 
-      windowID = CGWindowID(id)
+      let windowID = CGWindowID(id)
 
       guard windowManager.knowsWindow(withID: windowID) else {
         return invalid(request, "window not found: \(windowID)")
       }
     }
 
-    windowManager.focusWindow(id: windowID, source: target)
-
-    return .success(id: request.id, message: "focused window: \(windowID)")
+    return unsupported(request, "window focus is not implemented")
   }
 
   private func move(_ request: IPCRequest) -> IPCResponse {
@@ -64,21 +59,18 @@ struct WindowCommandHandler {
       return invalid(request, "invalid window move arguments")
     }
 
-    let windowID: CGWindowID
     switch selectedWindowID(selection.selector, request: request) {
-    case .window(let id):
-      windowID = id
+    case .window:
+      break
     case .failure(let response):
       return response
     }
 
-    guard let change = parseGeometryChange(selection.arguments[0]) else {
+    guard parseGeometryChange(selection.arguments[0]) != nil else {
       return invalid(request, "invalid window move value: \(selection.arguments[0])")
     }
 
-    windowManager.moveWindow(id: windowID, mode: change.mode, x: change.first, y: change.second)
-
-    return .success(id: request.id, message: "moved window: \(windowID)")
+    return unsupported(request, "window move is not implemented")
   }
 
   private func resize(_ request: IPCRequest) -> IPCResponse {
@@ -88,26 +80,18 @@ struct WindowCommandHandler {
       return invalid(request, "invalid window resize arguments")
     }
 
-    let windowID: CGWindowID
     switch selectedWindowID(selection.selector, request: request) {
-    case .window(let id):
-      windowID = id
+    case .window:
+      break
     case .failure(let response):
       return response
     }
 
-    guard let change = parseGeometryChange(selection.arguments[0]) else {
+    guard parseGeometryChange(selection.arguments[0]) != nil else {
       return invalid(request, "invalid window resize value: \(selection.arguments[0])")
     }
 
-    windowManager.resizeWindow(
-      id: windowID,
-      mode: change.mode,
-      width: change.first,
-      height: change.second
-    )
-
-    return .success(id: request.id, message: "resized window: \(windowID)")
+    return unsupported(request, "window resize is not implemented")
   }
 
   private func parseSelection(_ args: [String]) -> WindowSelection {
@@ -170,6 +154,10 @@ struct WindowCommandHandler {
 
   private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
     .failure(id: request.id, message: message, errorCode: .invalidRequest)
+  }
+
+  private func unsupported(_ request: IPCRequest, _ message: String) -> IPCResponse {
+    .failure(id: request.id, message: message, errorCode: .unsupportedCommand)
   }
 }
 

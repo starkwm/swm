@@ -60,17 +60,12 @@ struct SpaceCommandHandler {
     }
 
     let target = request.args[0]
-    let spaceID: UInt64
-    let spaceIndex: Int?
 
     switch target {
     case "recent":
-      guard let recentSpaceID = spaceManager.lastActiveSpaceID else {
+      guard spaceManager.lastActiveSpaceID != nil else {
         return invalid(request, "no recent space")
       }
-
-      spaceID = recentSpaceID
-      spaceIndex = nil
 
     case "prev", "next":
       let arrangedSpaces = spaces().sorted { $0.index < $1.index }
@@ -80,34 +75,30 @@ struct SpaceCommandHandler {
       }
 
       guard
-        let adjacentSpace = adjacentSpace(
+        adjacentSpace(
           from: currentSpace.index,
           direction: target,
           spaces: arrangedSpaces
-        )
+        ) != nil
       else {
         return invalid(request, "no focused space")
       }
-
-      spaceID = adjacentSpace.id
-      spaceIndex = adjacentSpace.index
 
     default:
       guard let index = Int(target) else {
         return invalid(request, "invalid space focus target: \(target)")
       }
 
-      guard let indexedSpace = spaces().first(where: { $0.index == index }) else {
+      guard spaces().contains(where: { $0.index == index }) else {
         return invalid(request, "space index not found: \(index)")
       }
-
-      spaceID = indexedSpace.id
-      spaceIndex = indexedSpace.index
     }
 
-    spaceManager.focusSpace(id: spaceID, index: spaceIndex, source: target)
-
-    return .success(id: request.id, message: "focused space: \(spaceID)")
+    return .failure(
+      id: request.id,
+      message: "space focus is not implemented",
+      errorCode: .unsupportedCommand
+    )
   }
 
   private func padding(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {

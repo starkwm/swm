@@ -22,17 +22,10 @@ public final class DisplayManager {
     }
   }
 
-  var lastFocusDisplayRequest: FocusDisplayRequest? {
-    lock.withLock {
-      focusDisplayRequest
-    }
-  }
-
   private let lock = NSLock()
   private let activeDisplayIDResolver: ActiveDisplayIDResolver
 
   private var activeDisplayState: ActiveDisplayState
-  private var focusDisplayRequest: FocusDisplayRequest?
 
   public convenience init() {
     self.init(activeDisplayIDResolver: Self.resolveActiveDisplayID)
@@ -59,15 +52,6 @@ public final class DisplayManager {
     }
   }
 
-  func focusDisplay(id: String?, index: Int?, source: String) {
-    lock.withLock {
-      focusDisplayRequest = FocusDisplayRequest(id: id, index: index, source: source)
-    }
-
-    log(
-      "focus display requested source: \(source), id: \(id ?? "nil"), index: \(index.map(String.init) ?? "nil")"
-    )
-  }
 }
 
 extension DisplayManager: @unchecked Sendable {}
@@ -75,10 +59,4 @@ extension DisplayManager: @unchecked Sendable {}
 private struct ActiveDisplayState {
   var current: String?
   var last: String?
-}
-
-struct FocusDisplayRequest: Equatable {
-  let id: String?
-  let index: Int?
-  let source: String
 }
