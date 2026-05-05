@@ -34,7 +34,7 @@ struct IPCCommandDispatcher {
       return DisplayCommandHandler(displayManager: displayManager).dispatch(request)
 
     case .window:
-      return WindowCommandHandler().dispatch(request)
+      return WindowCommandHandler(windowManager: windowManager).dispatch(request)
     }
   }
 }

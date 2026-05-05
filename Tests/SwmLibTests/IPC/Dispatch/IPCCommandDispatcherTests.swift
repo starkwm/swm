@@ -24,6 +24,24 @@ struct IPCCommandDispatcherTests {
     #expect(response.message == "unsupported window command: focus")
   }
 
+  @Test("dispatch: dispatches window commands")
+  func dispatchDispatchesWindowCommands() {
+    let windowManager = WindowManager(workspace: Workspace())
+    windowManager.addKnownWindowID(42)
+    let dispatcher = IPCCommandDispatcher(windowManager: windowManager)
+    let request = IPCRequest(
+      id: "request-id",
+      domain: .window,
+      command: "--focus",
+      args: ["42"]
+    )
+
+    let response = dispatcher.dispatch(request)
+
+    #expect(response.ok)
+    #expect(windowManager.lastFocusWindowRequest == FocusWindowRequest(id: 42, source: "42"))
+  }
+
   @Test("dispatch: dispatches space commands")
   func dispatchDispatchesSpaceCommands() {
     let spaceManager = SpaceManager(activeSpaceIDResolver: { nil })

@@ -17,12 +17,20 @@ public final class WindowManager {
     }
   }
 
+  var lastFocusWindowRequest: FocusWindowRequest? {
+    focusedWindowLock.withLock {
+      focusWindowRequest
+    }
+  }
+
   private let focusedWindowLock = NSLock()
   private var focusedWindowState = FocusedWindowState(current: nil, last: nil)
+  private var focusWindowRequest: FocusWindowRequest?
 
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
+  private var knownWindowIDs = Set<CGWindowID>()
 
   public init(workspace: Workspace) {
     self.workspace = workspace
@@ -58,6 +66,10 @@ public final class WindowManager {
     Array(windowsByID.values)
   }
 
+  func knowsWindow(withID windowID: CGWindowID) -> Bool {
+    windowsByID[windowID] != nil || knownWindowIDs.contains(windowID)
+  }
+
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
@@ -69,6 +81,14 @@ public final class WindowManager {
         last: focusedWindowState.current
       )
     }
+  }
+
+  func focusWindow(id: CGWindowID, source: String) {
+    focusedWindowLock.withLock {
+      focusWindowRequest = FocusWindowRequest(id: id, source: source)
+    }
+
+    log("focus window requested source: \(source), id: \(id)")
   }
 
   public func refreshWindows() {
@@ -134,6 +154,13 @@ public final class WindowManager {
 
   func remove(by windowID: CGWindowID) {
     windowsByID.removeValue(forKey: windowID)
+    knownWindowIDs.remove(windowID)
+  }
+
+  func addKnownWindowID(_ windowID: CGWindowID) {
+    guard windowID != 0 else { return }
+
+    knownWindowIDs.insert(windowID)
   }
 
   @discardableResult
@@ -294,6 +321,11 @@ extension WindowManager: @unchecked Sendable {}
 private struct FocusedWindowState {
   var current: CGWindowID?
   var last: CGWindowID?
+}
+
+struct FocusWindowRequest: Equatable {
+  let id: CGWindowID
+  let source: String
 }
 
 private enum WindowDiscoveryMode {
