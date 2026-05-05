@@ -45,6 +45,28 @@ struct IPCCommandDispatcherTests {
     #expect(spaceManager.settings(for: 42).gap == 10)
   }
 
+  @Test("dispatch: dispatches space focus commands")
+  func dispatchDispatchesSpaceFocusCommands() {
+    let activeSpaceIDResolver = ActiveSpaceIDSequence([1, 2])
+    let spaceManager = SpaceManager(activeSpaceIDResolver: activeSpaceIDResolver.next)
+    spaceManager.activeSpaceDidChange()
+    let dispatcher = IPCCommandDispatcher(spaceManager: spaceManager, activeSpaceID: { 2 })
+    let request = IPCRequest(
+      id: "request-id",
+      domain: .space,
+      command: "--focus",
+      args: ["recent"]
+    )
+
+    let response = dispatcher.dispatch(request)
+
+    #expect(response.ok)
+    #expect(
+      spaceManager.lastFocusSpaceRequest
+        == FocusSpaceRequest(id: 1, index: nil, source: "recent")
+    )
+  }
+
   @Test("dispatch: dispatches display commands")
   func dispatchDispatchesDisplayCommands() {
     let displayIDResolver = ActiveDisplayIDSequence(["display-0", "display-1"])
@@ -80,6 +102,20 @@ private final class ActiveDisplayIDSequence: @unchecked Sendable {
   }
 
   func next() -> String? {
+    guard !values.isEmpty else { return nil }
+
+    return values.removeFirst()
+  }
+}
+
+private final class ActiveSpaceIDSequence: @unchecked Sendable {
+  private var values: [UInt64?]
+
+  init(_ values: [UInt64?]) {
+    self.values = values
+  }
+
+  func next() -> UInt64? {
     guard !values.isEmpty else { return nil }
 
     return values.removeFirst()

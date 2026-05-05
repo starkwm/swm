@@ -3,25 +3,30 @@ import Foundation
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
   private let activeSpaceID: () -> UInt64
+  private let spaces: () -> [SpaceSerializer]
 
   init(
     spaceManager: SpaceManager = SpaceManager(),
-    activeSpaceID: @escaping () -> UInt64 = { Space.active().id }
+    activeSpaceID: @escaping () -> UInt64 = { Space.active().id },
+    spaces: @escaping () -> [SpaceSerializer] = {
+      SpaceSerializer.all(windowManager: WindowManager(workspace: Workspace()))
+    }
   ) {
     self.spaceManager = spaceManager
     self.activeSpaceID = activeSpaceID
+    self.spaces = spaces
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
-    let spaceID = activeSpaceID()
-
     switch request.command {
     case "--toggle":
-      return toggle(request, spaceID: spaceID)
+      return toggle(request, spaceID: activeSpaceID())
     case "--padding":
-      return padding(request, spaceID: spaceID)
+      return padding(request, spaceID: activeSpaceID())
     case "--gap":
-      return gap(request, spaceID: spaceID)
+      return gap(request, spaceID: activeSpaceID())
+    case "--focus":
+      return focus(request)
     default:
       return .failure(
         id: request.id,
@@ -47,6 +52,62 @@ struct SpaceCommandHandler {
     }
 
     return success(request, spaceID: spaceID, settings: settings)
+  }
+
+  private func focus(_ request: IPCRequest) -> IPCResponse {
+    guard request.args.count == 1 else {
+      return invalid(request, "invalid space focus arguments")
+    }
+
+    let target = request.args[0]
+    let spaceID: UInt64
+    let spaceIndex: Int?
+
+    switch target {
+    case "recent":
+      guard let recentSpaceID = spaceManager.lastActiveSpaceID else {
+        return invalid(request, "no recent space")
+      }
+
+      spaceID = recentSpaceID
+      spaceIndex = nil
+
+    case "prev", "next":
+      let arrangedSpaces = spaces().sorted { $0.index < $1.index }
+
+      guard let currentSpace = arrangedSpaces.first(where: \.hasFocus) else {
+        return invalid(request, "no focused space")
+      }
+
+      guard
+        let adjacentSpace = adjacentSpace(
+          from: currentSpace.index,
+          direction: target,
+          spaces: arrangedSpaces
+        )
+      else {
+        return invalid(request, "no focused space")
+      }
+
+      spaceID = adjacentSpace.id
+      spaceIndex = adjacentSpace.index
+
+    default:
+      guard let index = Int(target) else {
+        return invalid(request, "invalid space focus target: \(target)")
+      }
+
+      guard let indexedSpace = spaces().first(where: { $0.index == index }) else {
+        return invalid(request, "space index not found: \(index)")
+      }
+
+      spaceID = indexedSpace.id
+      spaceIndex = indexedSpace.index
+    }
+
+    spaceManager.focusSpace(id: spaceID, index: spaceIndex, source: target)
+
+    return .success(id: request.id, message: "focused space: \(spaceID)")
   }
 
   private func padding(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
@@ -126,6 +187,24 @@ struct SpaceCommandHandler {
     }
 
     return GapChange(mode: mode, value: value)
+  }
+
+  private func adjacentSpace(
+    from currentIndex: Int,
+    direction: String,
+    spaces arrangedSpaces: [SpaceSerializer]
+  ) -> SpaceSerializer? {
+    guard
+      !arrangedSpaces.isEmpty,
+      let currentPosition = arrangedSpaces.firstIndex(where: { $0.index == currentIndex })
+    else {
+      return nil
+    }
+
+    let offset = direction == "prev" ? -1 : 1
+    let nextPosition = (currentPosition + offset + arrangedSpaces.count) % arrangedSpaces.count
+
+    return arrangedSpaces[nextPosition]
   }
 
   private func success(
