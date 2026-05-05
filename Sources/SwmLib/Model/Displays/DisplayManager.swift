@@ -10,45 +10,32 @@ public final class DisplayManager {
 
   public var currentActiveDisplayID: String? {
     lock.withLock {
-      activeDisplayState.current
+      activeDisplay.current
     }
   }
 
   public var lastActiveDisplayID: String? {
     lock.withLock {
-      activeDisplayState.last
+      activeDisplay.last
     }
   }
 
   private let lock = NSLock()
 
-  private var activeDisplayState: ActiveDisplayState
+  private var activeDisplay: TrackedState<String>
 
   public init() {
-    activeDisplayState = ActiveDisplayState(
-      current: Self.resolveActiveDisplayID(),
-      last: nil
-    )
+    activeDisplay = TrackedState(current: Self.resolveActiveDisplayID())
   }
 
   func activeDisplayDidChange() {
     guard let activeDisplayID = Self.resolveActiveDisplayID() else { return }
 
     lock.withLock {
-      guard activeDisplayID != activeDisplayState.current else { return }
-
-      activeDisplayState = ActiveDisplayState(
-        current: activeDisplayID,
-        last: activeDisplayState.current
-      )
+      activeDisplay.update(to: activeDisplayID)
     }
   }
 
 }
 
 extension DisplayManager: @unchecked Sendable {}
-
-private struct ActiveDisplayState {
-  var current: String?
-  var last: String?
-}

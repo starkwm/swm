@@ -23,18 +23,18 @@ public final class WindowManager {
 
   public var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
-      focusedWindowState.current
+      focusedWindow.current
     }
   }
 
   public var lastFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
-      focusedWindowState.last
+      focusedWindow.last
     }
   }
 
   private let focusedWindowLock = NSLock()
-  private var focusedWindowState: FocusedWindowState
+  private var focusedWindow: TrackedState<CGWindowID>
 
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
@@ -43,10 +43,7 @@ public final class WindowManager {
 
   public init(workspace: Workspace) {
     self.workspace = workspace
-    focusedWindowState = FocusedWindowState(
-      current: Self.resolveFocusedWindowID(),
-      last: nil
-    )
+    focusedWindow = TrackedState(current: Self.resolveFocusedWindowID())
   }
 
   public func start(processes: [Process]) {
@@ -87,12 +84,7 @@ public final class WindowManager {
     guard windowID != 0 else { return }
 
     focusedWindowLock.withLock {
-      guard windowID != focusedWindowState.current else { return }
-
-      focusedWindowState = FocusedWindowState(
-        current: windowID,
-        last: focusedWindowState.current
-      )
+      focusedWindow.update(to: windowID)
     }
   }
 
@@ -322,11 +314,6 @@ public final class WindowManager {
 }
 
 extension WindowManager: @unchecked Sendable {}
-
-private struct FocusedWindowState {
-  var current: CGWindowID?
-  var last: CGWindowID?
-}
 
 private enum WindowDiscoveryMode {
   case initialDiscovery
