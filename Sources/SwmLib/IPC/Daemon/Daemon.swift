@@ -102,7 +102,6 @@ public class Daemon {
     queue.async { [client] in
       let socket = client.socket
 
-      log("socket connected: \(socket.remotePath ?? "unknown")", level: .info)
       defer {
         socket.close()
       }

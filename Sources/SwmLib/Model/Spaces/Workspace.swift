@@ -91,8 +91,6 @@ public final class Workspace: NSObject {
 
     let token = registry.register(process)
 
-    log("adding observer for \(registry.kind.logName) \(process)")
-
     process.application?.addObserver(
       self,
       forKeyPath: token.keyPath,
@@ -104,8 +102,6 @@ public final class Workspace: NSObject {
   private func unobserve(_ process: Process, registry: ProcessObservationRegistry) {
     guard process.application != nil else { return }
     guard let token = registry.unregister(process) else { return }
-
-    log("removing observer for \(registry.kind.logName) \(process)")
 
     process.application?.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
   }

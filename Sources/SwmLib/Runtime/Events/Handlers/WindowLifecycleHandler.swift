@@ -63,16 +63,10 @@ struct WindowLifecycleHandler {
 
   private func windowMoved(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
-    guard let window = windowManager.window(by: windowID) else { return }
-
-    log("window moved \(window)")
   }
 
   private func windowResized(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
-    guard let window = windowManager.window(by: windowID) else { return }
-
-    log("window resized \(window)")
   }
 
   private func windowMinimized(with window: Window) {
