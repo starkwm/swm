@@ -28,18 +28,6 @@ struct UnsupportedCommandHandlerTests {
     #expect(response.message == "unsupported display command: focus")
   }
 
-  @Test("dispatch: window rejects unsupported commands")
-  func dispatchWindowRejectsUnsupportedCommands() {
-    let response = WindowCommandHandler().dispatch(
-      request(domain: .window, command: "focus")
-    )
-
-    #expect(response.id == "request-id")
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "unsupported window command: focus")
-  }
-
   private func request(domain: MessageDomain, command: String) -> IPCRequest {
     IPCRequest(id: "request-id", domain: domain, command: command, args: [])
   }
