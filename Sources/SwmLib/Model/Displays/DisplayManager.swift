@@ -1,8 +1,6 @@
 import Foundation
 
 public final class DisplayManager {
-  typealias ActiveDisplayIDResolver = @Sendable () -> String?
-
   private static func resolveActiveDisplayID() -> String? {
     WindowServerClient.shared.screenID(
       forSpaceID: Space.active().id,
@@ -23,24 +21,18 @@ public final class DisplayManager {
   }
 
   private let lock = NSLock()
-  private let activeDisplayIDResolver: ActiveDisplayIDResolver
 
   private var activeDisplayState: ActiveDisplayState
 
-  public convenience init() {
-    self.init(activeDisplayIDResolver: Self.resolveActiveDisplayID)
-  }
-
-  init(activeDisplayIDResolver: @escaping ActiveDisplayIDResolver) {
-    self.activeDisplayIDResolver = activeDisplayIDResolver
+  public init() {
     activeDisplayState = ActiveDisplayState(
-      current: activeDisplayIDResolver(),
+      current: Self.resolveActiveDisplayID(),
       last: nil
     )
   }
 
   func activeDisplayDidChange() {
-    guard let activeDisplayID = activeDisplayIDResolver() else { return }
+    guard let activeDisplayID = Self.resolveActiveDisplayID() else { return }
 
     lock.withLock {
       guard activeDisplayID != activeDisplayState.current else { return }

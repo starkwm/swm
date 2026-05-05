@@ -15,8 +15,8 @@ struct EventManagerTests {
       processLookup: ProcessManager(),
       workspace: workspace,
       windowManager: WindowManager(workspace: workspace),
-      spaceManager: SpaceManager(activeSpaceIDResolver: { nil }),
-      displayManager: DisplayManager(activeDisplayIDResolver: { nil })
+      spaceManager: SpaceManager(),
+      displayManager: DisplayManager()
     )
     EventManager.shared.post(.application(.launched(process)))
   }
@@ -50,8 +50,8 @@ struct EventManagerTests {
       processLookup: ProcessManager(),
       workspace: workspace,
       windowManager: WindowManager(workspace: workspace),
-      spaceManager: SpaceManager(activeSpaceIDResolver: { nil }),
-      displayManager: DisplayManager(activeDisplayIDResolver: { nil })
+      spaceManager: SpaceManager(),
+      displayManager: DisplayManager()
     )
   }
 }

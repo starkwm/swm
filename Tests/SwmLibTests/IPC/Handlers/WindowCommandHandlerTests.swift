@@ -6,7 +6,7 @@ import Testing
 struct WindowCommandHandlerTests {
   @Test("dispatch: rejects recent focus target as unimplemented")
   func dispatchRejectsRecentFocusTargetAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 1)
     manager.focusedWindowDidChange(to: 2)
     let handler = WindowCommandHandler(windowManager: manager)
@@ -20,7 +20,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects window ID focus target as unimplemented")
   func dispatchRejectsWindowIDFocusTargetAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.addKnownWindowID(42)
     let handler = WindowCommandHandler(windowManager: manager)
 
@@ -33,7 +33,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects malformed focus arguments")
   func dispatchRejectsMalformedFocusArguments() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     let handler = WindowCommandHandler(windowManager: manager)
 
     let responses = [
@@ -51,7 +51,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects move commands as unimplemented")
   func dispatchRejectsMoveCommandsAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 42)
     let handler = WindowCommandHandler(windowManager: manager)
 
@@ -66,7 +66,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects selected window move commands as unimplemented")
   func dispatchRejectsSelectedWindowMoveCommandsAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 41)
     manager.focusedWindowDidChange(to: 42)
     let handler = WindowCommandHandler(windowManager: manager)
@@ -82,7 +82,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects resize commands as unimplemented")
   func dispatchRejectsResizeCommandsAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 42)
     let handler = WindowCommandHandler(windowManager: manager)
 
@@ -97,7 +97,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects selected window resize commands as unimplemented")
   func dispatchRejectsSelectedWindowResizeCommandsAsUnimplemented() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 41)
     manager.addKnownWindowID(100)
     let handler = WindowCommandHandler(windowManager: manager)
@@ -113,7 +113,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects malformed move and resize arguments")
   func dispatchRejectsMalformedMoveAndResizeArguments() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     manager.focusedWindowDidChange(to: 42)
     let handler = WindowCommandHandler(windowManager: manager)
 
@@ -131,11 +131,11 @@ struct WindowCommandHandlerTests {
       handler.dispatch(request(command: "--move", args: ["--window", "missing", "abs:100:200"])),
       handler.dispatch(request(command: "--move", args: ["--window", "0", "abs:100:200"])),
       handler.dispatch(request(command: "--move", args: ["--window", "100", "abs:100:200"])),
-      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil }))
+      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
         .dispatch(request(command: "--move", args: ["abs:100:200"])),
-      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil }))
+      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
         .dispatch(request(command: "--resize", args: ["abs:500:800"])),
-      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil }))
+      WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
         .dispatch(request(command: "--resize", args: ["--window", "recent", "abs:500:800"])),
     ]
 
@@ -144,7 +144,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects unsupported window commands")
   func dispatchRejectsUnsupportedWindowCommands() {
-    let response = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil }))
+    let response = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
       .dispatch(IPCRequest(id: "request-id", domain: .window, command: "--unknown", args: []))
 
     #expect(response.ok == false)

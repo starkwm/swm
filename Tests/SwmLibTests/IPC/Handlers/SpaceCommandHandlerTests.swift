@@ -7,7 +7,7 @@ import Testing
 struct SpaceCommandHandlerTests {
   @Test("dispatch: accepts toggle commands")
   func dispatchAcceptsToggleCommands() throws {
-    let manager = SpaceManager(activeSpaceIDResolver: { nil })
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
 
     let padding = handler.dispatch(request(command: "--toggle", args: ["padding"]))
@@ -22,7 +22,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: accepts padding commands")
   func dispatchAcceptsPaddingCommands() throws {
-    let manager = SpaceManager(activeSpaceIDResolver: { nil })
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
 
     let absolute = handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
@@ -46,7 +46,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: accepts gap commands")
   func dispatchAcceptsGapCommands() throws {
-    let manager = SpaceManager(activeSpaceIDResolver: { nil })
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
 
     let absolute = handler.dispatch(request(command: "--gap", args: ["abs:0"]))
@@ -62,26 +62,9 @@ struct SpaceCommandHandlerTests {
     #expect(manager.settings(for: 42).gap == 10)
   }
 
-  @Test("dispatch: rejects recent focus target as unimplemented")
-  func dispatchRejectsRecentFocusTargetAsUnimplemented() {
-    let manager = spaceManager(activeSpaceIDs: [1, 2])
-    manager.activeSpaceDidChange()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { [] }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
   @Test("dispatch: rejects previous focus target as unimplemented")
   func dispatchRejectsPreviousFocusTargetAsUnimplemented() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -97,7 +80,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects next focus target as unimplemented")
   func dispatchRejectsNextFocusTargetAsUnimplemented() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -113,7 +96,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: wraps previous focus target")
   func dispatchWrapsPreviousFocusTarget() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -129,7 +112,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: wraps next focus target")
   func dispatchWrapsNextFocusTarget() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -145,7 +128,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects indexed focus target as unimplemented")
   func dispatchRejectsIndexedFocusTargetAsUnimplemented() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -162,7 +145,7 @@ struct SpaceCommandHandlerTests {
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
     let handler = SpaceCommandHandler(
-      spaceManager: SpaceManager(activeSpaceIDResolver: { nil }),
+      spaceManager: SpaceManager(),
       activeSpaceID: { 42 }
     )
 
@@ -180,7 +163,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects malformed focus arguments")
   func dispatchRejectsMalformedFocusArguments() {
-    let manager = spaceManager()
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(
       spaceManager: manager,
       activeSpaceID: { 2 },
@@ -194,7 +177,7 @@ struct SpaceCommandHandlerTests {
       handler.dispatch(request(command: "--focus", args: ["10"])),
       SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 2 }, spaces: { [] })
         .dispatch(request(command: "--focus", args: ["next"])),
-      SpaceCommandHandler(spaceManager: spaceManager(), activeSpaceID: { 2 }, spaces: { [] })
+      SpaceCommandHandler(spaceManager: SpaceManager(), activeSpaceID: { 2 }, spaces: { [] })
         .dispatch(request(command: "--focus", args: ["recent"])),
     ]
 
@@ -204,7 +187,7 @@ struct SpaceCommandHandlerTests {
   @Test("dispatch: rejects unsupported space commands")
   func dispatchRejectsUnsupportedSpaceCommands() {
     let handler = SpaceCommandHandler(
-      spaceManager: SpaceManager(activeSpaceIDResolver: { nil }),
+      spaceManager: SpaceManager(),
       activeSpaceID: { 42 }
     )
     let response = handler.dispatch(request(command: "--unknown", args: []))
@@ -216,7 +199,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
-    let manager = SpaceManager(activeSpaceIDResolver: { nil })
+    let manager = SpaceManager()
     let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 2 })
 
     _ = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
@@ -235,11 +218,6 @@ struct SpaceCommandHandlerTests {
     return try #require(object as? [String: Any])
   }
 
-  private func spaceManager(activeSpaceIDs: [UInt64?] = [nil]) -> SpaceManager {
-    let resolver = ActiveSpaceIDSequence(activeSpaceIDs)
-    return SpaceManager(activeSpaceIDResolver: resolver.next)
-  }
-
   private func spaces(focusedIndex: Int?) -> [SpaceSerializer] {
     (0..<3).map { index in
       SpaceSerializer(
@@ -255,19 +233,5 @@ struct SpaceCommandHandlerTests {
         isNativeFullscreen: false
       )
     }
-  }
-}
-
-private final class ActiveSpaceIDSequence: @unchecked Sendable {
-  private var values: [UInt64?]
-
-  init(_ values: [UInt64?]) {
-    self.values = values
-  }
-
-  func next() -> UInt64? {
-    guard !values.isEmpty else { return nil }
-
-    return values.removeFirst()
   }
 }

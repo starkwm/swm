@@ -3,8 +3,6 @@ import Carbon
 import Foundation
 
 public final class WindowManager {
-  public typealias FocusedWindowIDResolver = @Sendable () -> CGWindowID?
-
   private let workspace: Workspace
 
   private static func resolveFocusedWindowID() -> CGWindowID? {
@@ -43,17 +41,10 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
   private var knownWindowIDs = Set<CGWindowID>()
 
-  public convenience init(workspace: Workspace) {
-    self.init(workspace: workspace, focusedWindowIDResolver: Self.resolveFocusedWindowID)
-  }
-
-  init(
-    workspace: Workspace,
-    focusedWindowIDResolver: @escaping FocusedWindowIDResolver
-  ) {
+  public init(workspace: Workspace) {
     self.workspace = workspace
     focusedWindowState = FocusedWindowState(
-      current: focusedWindowIDResolver(),
+      current: Self.resolveFocusedWindowID(),
       last: nil
     )
   }

@@ -33,8 +33,6 @@ struct SpaceSettings: Equatable {
 }
 
 public final class SpaceManager {
-  typealias ActiveSpaceIDResolver = @Sendable () -> UInt64?
-
   private static func resolveActiveSpaceID() -> UInt64? {
     Space.active().id
   }
@@ -52,25 +50,19 @@ public final class SpaceManager {
   }
 
   private let lock = NSLock()
-  private let activeSpaceIDResolver: ActiveSpaceIDResolver
 
   private var activeSpaceState: ActiveSpaceState
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
-  public convenience init() {
-    self.init(activeSpaceIDResolver: Self.resolveActiveSpaceID)
-  }
-
-  init(activeSpaceIDResolver: @escaping ActiveSpaceIDResolver) {
-    self.activeSpaceIDResolver = activeSpaceIDResolver
+  public init() {
     activeSpaceState = ActiveSpaceState(
-      current: activeSpaceIDResolver(),
+      current: Self.resolveActiveSpaceID(),
       last: nil
     )
   }
 
   func activeSpaceDidChange() {
-    guard let activeSpaceID = activeSpaceIDResolver() else { return }
+    guard let activeSpaceID = Self.resolveActiveSpaceID() else { return }
 
     lock.withLock {
       guard activeSpaceID != activeSpaceState.current else { return }
