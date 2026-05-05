@@ -14,7 +14,7 @@ struct QueryResolver {
   }
 
   init(
-    displays: [DisplaySerializer] = DisplaySerializer.all(),
+    displays: [DisplaySerializer],
     spaces: [SpaceSerializer],
     windows: [WindowSerializer]
   ) {
