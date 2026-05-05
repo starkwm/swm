@@ -58,7 +58,11 @@ case .failure(let error):
 
 windowManager.start(processes: processManager.all())
 
-let daemon = Daemon(windowManager: windowManager, spaceManager: spaceManager)
+let daemon = Daemon(
+  windowManager: windowManager,
+  spaceManager: spaceManager,
+  displayManager: displayManager
+)
 
 do {
   try daemon.run()

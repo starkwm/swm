@@ -1,15 +1,18 @@
 struct IPCCommandDispatcher {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
+  private let displayManager: DisplayManager
   private let activeSpaceID: () -> UInt64
 
   init(
     windowManager: WindowManager = WindowManager(workspace: Workspace()),
     spaceManager: SpaceManager = SpaceManager(),
+    displayManager: DisplayManager = DisplayManager(),
     activeSpaceID: @escaping () -> UInt64 = { Space.active().id }
   ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
+    self.displayManager = displayManager
     self.activeSpaceID = activeSpaceID
   }
 
@@ -28,7 +31,7 @@ struct IPCCommandDispatcher {
       return ConfigCommandHandler().dispatch(request)
 
     case .display:
-      return DisplayCommandHandler().dispatch(request)
+      return DisplayCommandHandler(displayManager: displayManager).dispatch(request)
 
     case .window:
       return WindowCommandHandler().dispatch(request)
