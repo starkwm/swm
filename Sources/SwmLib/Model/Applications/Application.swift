@@ -10,29 +10,21 @@ private func accessibilityObserverCallback(
 ) {
   switch notification as String {
   case kAXCreatedNotification:
-    guard let context else { return }
-    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let pid = Window.pid(for: element) else { return }
     guard let windowID = Window.validID(for: element) else { return }
-    application.post(.window(.created(pid, windowID)))
+    EventManager.shared.post(.window(.created(pid, windowID)))
 
   case kAXFocusedWindowChangedNotification:
-    guard let context else { return }
-    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    application.post(.window(.focused(windowID)))
+    EventManager.shared.post(.window(.focused(windowID)))
 
   case kAXWindowMovedNotification:
-    guard let context else { return }
-    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    application.post(.window(.moved(windowID)))
+    EventManager.shared.post(.window(.moved(windowID)))
 
   case kAXWindowResizedNotification:
-    guard let context else { return }
-    let application = Unmanaged<Application>.fromOpaque(context).takeUnretainedValue()
     guard let windowID = Window.validID(for: element) else { return }
-    application.post(.window(.resized(windowID)))
+    EventManager.shared.post(.window(.resized(windowID)))
 
   case kAXWindowMiniaturizedNotification:
     guard let context else { return }
@@ -86,14 +78,9 @@ public final class Application: NSObject {
   private var connection: Int32 = -1
   private var observedNotifications = ApplicationNotifications(rawValue: 0)
   private var observing = false
-  private let postEvent: (RuntimeEvent) -> Void
 
-  init?(
-    for process: Process,
-    postEvent: @escaping (RuntimeEvent) -> Void
-  ) {
+  init?(for process: Process) {
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
-    self.postEvent = postEvent
 
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {
       return nil
@@ -235,11 +222,6 @@ public final class Application: NSObject {
       )
     }
   }
-
-  func post(_ event: RuntimeEvent) {
-    postEvent(event)
-  }
-
   private func isEnhancedUIEnabled() -> Bool {
     AccessibilityClient.shared.enhancedUIEnabled(
       for: element,

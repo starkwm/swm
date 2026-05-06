@@ -192,12 +192,7 @@ public final class WindowManager {
       return
     }
 
-    guard
-      let application = Application(
-        for: process,
-        postEvent: EventManager.shared.post
-      )
-    else {
+    guard let application = Application(for: process) else {
       log("could not create application for process \(process)", level: .warn)
       return
     }

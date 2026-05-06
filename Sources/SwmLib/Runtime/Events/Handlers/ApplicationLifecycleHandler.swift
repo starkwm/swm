@@ -5,8 +5,6 @@ struct ApplicationLifecycleHandler {
   let processManager: ProcessManager
   let windowManager: WindowManager
 
-  let postEvent: @Sendable (RuntimeEvent) -> Void
-
   func handle(_ event: ApplicationEvent) {
     switch event {
     case .launched(let process):
@@ -40,12 +38,7 @@ struct ApplicationLifecycleHandler {
 
     guard windowManager.application(by: process.pid) == nil else { return }
 
-    guard
-      let application = Application(
-        for: process,
-        postEvent: postEvent
-      )
-    else {
+    guard let application = Application(for: process) else {
       log("could not create application for process \(process)", level: .warn)
       return
     }
@@ -59,9 +52,9 @@ struct ApplicationLifecycleHandler {
 
       if application.retryObserving {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-          [processManager, postEvent, psn = process.psn] in
+          [processManager, psn = process.psn] in
           guard let process = processManager.find(by: psn) else { return }
-          postEvent(.application(.launched(process)))
+          EventManager.shared.post(.application(.launched(process)))
         }
       }
 
