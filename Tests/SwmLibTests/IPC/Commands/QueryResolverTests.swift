@@ -75,9 +75,7 @@ struct QueryResolverTests {
   private func space(index: Int, id: UInt64, display: String, hasFocus: Bool) -> SpaceSerializer {
     SpaceSerializer(
       id: id,
-      uuid: nil,
       index: index,
-      label: nil,
       type: "normal",
       display: display,
       windows: [],

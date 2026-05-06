@@ -9,9 +9,7 @@ struct SpaceSerializerTests {
   func encodeUsesWindowIDs() throws {
     let space = SpaceSerializer(
       id: 1,
-      uuid: nil,
       index: 0,
-      label: nil,
       type: "normal",
       display: nil,
       windows: [1],
@@ -34,9 +32,7 @@ struct SpaceSerializerTests {
   func encodeAllowsEmptyWindowArray() throws {
     let space = SpaceSerializer(
       id: 1,
-      uuid: nil,
       index: 0,
-      label: nil,
       type: "normal",
       display: nil,
       windows: [],

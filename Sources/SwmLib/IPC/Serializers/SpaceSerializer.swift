@@ -32,9 +32,7 @@ struct SpaceSerializer: Encodable, Equatable {
 
       return SpaceSerializer(
         id: space.id,
-        uuid: nil,
         index: index,
-        label: nil,
         type: space.type.description,
         display: display,
         windows: windowIDs,
@@ -48,9 +46,7 @@ struct SpaceSerializer: Encodable, Equatable {
   }
 
   let id: UInt64
-  let uuid: String?
   let index: Int
-  let label: String?
   let type: String
   let display: String?
   let windows: [UInt32]
@@ -61,9 +57,7 @@ struct SpaceSerializer: Encodable, Equatable {
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
-    try container.encodeNilOrValue(uuid, forKey: .uuid)
     try container.encode(index, forKey: .index)
-    try container.encodeNilOrValue(label, forKey: .label)
     try container.encode(type, forKey: .type)
     try container.encodeNilOrValue(display, forKey: .display)
     try container.encode(windows, forKey: .windows)
