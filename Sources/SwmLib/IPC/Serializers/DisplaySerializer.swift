@@ -11,18 +11,17 @@ struct DisplaySerializer: Encodable, Equatable {
   }
 
   static func all() -> [DisplaySerializer] {
-    let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
-    let indexedSpaces = Space.all().enumerated().map { (index: $0.offset, id: $0.element.id) }
-    let focusedSpace = Space.active().id
+    let displaySpaces = WindowServerClient.shared.displaySpaces()
+    let indexedSpaces = SpaceManager.all()
+      .enumerated()
+      .map { (index: $0.offset, id: $0.element.id) }
+    let focusedSpace = SpaceManager.active().id
 
     return displaySpaces.enumerated().map { index, display in
       let screen = NSScreen.screen(for: display.id) ?? NSScreen.screens[safe: index]
       let spaceIDs = display.spaces
       let spaces = indexedSpaces.compactMap { spaceIDs.contains($0.id) ? $0.index : nil }
-      let currentSpace = WindowServerClient.shared.currentSpace(
-        connectionID: Space.connection,
-        screenID: display.id
-      )
+      let currentSpace = WindowServerClient.shared.currentSpace(screenID: display.id)
 
       return DisplaySerializer(
         id: display.id,

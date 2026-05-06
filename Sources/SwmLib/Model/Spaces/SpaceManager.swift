@@ -33,8 +33,14 @@ struct SpaceSettings: Equatable {
 }
 
 public final class SpaceManager {
-  private static func resolveActiveSpaceID() -> UInt64? {
-    Space.active().id
+  private static let windowServerClient = WindowServerClient.shared
+
+  public static func all() -> [Space] {
+    windowServerClient.allSpaceIDs().map(Space.init(id:))
+  }
+
+  public static func active() -> Space {
+    Space(id: windowServerClient.activeSpace())
   }
 
   public var currentActiveSpaceID: UInt64? {
@@ -55,7 +61,7 @@ public final class SpaceManager {
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
   public convenience init() {
-    self.init(activeSpaceID: Self.resolveActiveSpaceID())
+    self.init(activeSpaceID: Self.active().id)
   }
 
   init(activeSpaceID: UInt64?) {
@@ -63,10 +69,8 @@ public final class SpaceManager {
   }
 
   func activeSpaceDidChange() {
-    guard let activeSpaceID = Self.resolveActiveSpaceID() else { return }
-
     lock.withLock {
-      activeSpace.update(to: activeSpaceID)
+      activeSpace.update(to: Self.active().id)
     }
   }
 

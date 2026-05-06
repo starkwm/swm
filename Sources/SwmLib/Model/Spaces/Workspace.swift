@@ -61,7 +61,7 @@ public final class Workspace: NSObject {
 
   @objc
   func activeSpaceDidChange(_: Notification) {
-    EventManager.shared.post(.space(.changed(Space.active())))
+    EventManager.shared.post(.space(.changed(SpaceManager.active())))
   }
 
   @objc

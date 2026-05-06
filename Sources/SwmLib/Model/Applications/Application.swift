@@ -90,7 +90,6 @@ public final class Application: NSObject {
 
     if let connectionID = WindowServerClient.shared.connectionID(
       for: process.psn,
-      mainConnectionID: Space.connection
     ) {
       connection = connectionID
     }
@@ -179,9 +178,8 @@ public final class Application: NSObject {
 
   func windowIdentifiers() -> [CGWindowID] {
     WindowServerClient.shared.windowIdentifiers(
-      connectionID: Space.connection,
       applicationConnectionID: connection,
-      spaceIDs: Space.all().map(\.id)
+      spaceIDs: SpaceManager.all().map(\.id)
     )
   }
 
@@ -222,6 +220,7 @@ public final class Application: NSObject {
       )
     }
   }
+
   private func isEnhancedUIEnabled() -> Bool {
     AccessibilityClient.shared.enhancedUIEnabled(
       for: element,

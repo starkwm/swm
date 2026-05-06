@@ -15,9 +15,9 @@ struct SpaceSerializer: Encodable, Equatable {
   }
 
   static func all(windowManager: WindowManager) -> [SpaceSerializer] {
-    let spaces = Space.all()
-    let activeSpaceID = Space.active().id
-    let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
+    let spaces = SpaceManager.all()
+    let activeSpaceID = SpaceManager.active().id
+    let displaySpaces = WindowServerClient.shared.displaySpaces()
     let windows = windowManager.allWindows()
 
     return spaces.enumerated().map { index, space in
@@ -25,7 +25,7 @@ struct SpaceSerializer: Encodable, Equatable {
       let windowIDs =
         windows
         .filter { window in
-          WindowServerClient.shared.spaceIDs(containing: window.id, connectionID: Space.connection)
+          WindowServerClient.shared.spaceIDs(containing: window.id)
             .contains(space.id)
         }
         .map(\.id)
@@ -40,8 +40,7 @@ struct SpaceSerializer: Encodable, Equatable {
         windows: windowIDs,
         hasFocus: space.id == activeSpaceID,
         isVisible: display.map { screenID in
-          WindowServerClient.shared.currentSpace(connectionID: Space.connection, screenID: screenID)
-            == space.id
+          WindowServerClient.shared.currentSpace(screenID: screenID) == space.id
         } ?? false,
         isNativeFullscreen: space.type == .fullscreen
       )

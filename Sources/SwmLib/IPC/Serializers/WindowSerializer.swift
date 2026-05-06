@@ -26,8 +26,8 @@ struct WindowSerializer: Encodable, Equatable {
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
-    let displaySpaces = WindowServerClient.shared.displaySpaces(connectionID: Space.connection)
-    let spaces = Space.all()
+    let displaySpaces = WindowServerClient.shared.displaySpaces()
+    let spaces = SpaceManager.all()
 
     return windowManager.allWindows().map { window in
       WindowSerializer(
@@ -110,17 +110,12 @@ struct WindowSerializer: Encodable, Equatable {
     window: Window,
     info: [String: Any]?,
     screens: [NSScreen] = NSScreen.screens,
-    displaySpaces: [WindowServerDisplaySpaces] = WindowServerClient.shared.displaySpaces(
-      connectionID: Space.connection
-    ),
+    displaySpaces: [WindowServerDisplaySpaces] = WindowServerClient.shared.displaySpaces(),
     spaceIndex: Int? = nil
   ) {
     let element = window.element
     let frame = element.flatMap { AccessibilityClient.shared.frame(for: $0) }
-    let spaceIDs = WindowServerClient.shared.spaceIDs(
-      containing: window.id,
-      connectionID: Space.connection
-    )
+    let spaceIDs = WindowServerClient.shared.spaceIDs(containing: window.id)
 
     id = window.id
     pid = window.application?.processID ?? element.flatMap { Window.pid(for: $0) }
@@ -167,8 +162,7 @@ struct WindowSerializer: Encodable, Equatable {
     hasFocus = element.map { AccessibilityClient.shared.isMainWindow($0) }
     hasAXReference = element != nil
     isNativeFullscreen = spaceIDs.first.map {
-      WindowServerClient.shared.spaceType(connectionID: Space.connection, spaceID: $0)
-        == .fullscreen
+      WindowServerClient.shared.spaceType(for: $0) == .fullscreen
     }
     isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue
     isMinimized = element.flatMap {
@@ -211,10 +205,7 @@ extension [[String: Any]] {
 
 extension [Space] {
   func spaceIndex(containing windowID: CGWindowID) -> Int? {
-    let spaceIDs = WindowServerClient.shared.spaceIDs(
-      containing: windowID,
-      connectionID: Space.connection
-    )
+    let spaceIDs = WindowServerClient.shared.spaceIDs(containing: windowID)
 
     guard let spaceID = spaceIDs.first else { return nil }
 

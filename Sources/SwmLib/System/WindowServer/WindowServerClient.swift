@@ -28,34 +28,34 @@ final class WindowServerClient {
     return pid
   }
 
-  func connectionID(for psn: ProcessSerialNumber, mainConnectionID: Int32) -> Int32? {
+  func connectionID(for psn: ProcessSerialNumber) -> Int32? {
     var psn = psn
     var connectionID: Int32 = -1
 
-    guard SLSGetConnectionIDForPSN(mainConnectionID, &psn, &connectionID) == .success else {
+    guard SLSGetConnectionIDForPSN(mainConnectionID(), &psn, &connectionID) == .success else {
       return nil
     }
 
     return connectionID
   }
 
-  func activeSpace(connectionID: Int32) -> UInt64 {
-    SLSGetActiveSpace(connectionID)
+  func activeSpace() -> UInt64 {
+    SLSGetActiveSpace(mainConnectionID())
   }
 
-  func currentSpace(connectionID: Int32, screenID: String) -> UInt64 {
-    SLSManagedDisplayGetCurrentSpace(connectionID, screenID as CFString)
+  func currentSpace(screenID: String) -> UInt64 {
+    SLSManagedDisplayGetCurrentSpace(mainConnectionID(), screenID as CFString)
   }
 
-  func allSpaceIDs(connectionID: Int32) -> [UInt64] {
-    managedDisplaySpaces(connectionID: connectionID).flatMap { info -> [UInt64] in
+  func allSpaceIDs() -> [UInt64] {
+    managedDisplaySpaces().flatMap { info -> [UInt64] in
       guard let spacesInfo = info[spacesKey] as? [[String: AnyObject]] else { return [] }
       return spacesInfo.compactMap { managedSpaceID(from: $0[spaceIDKey]) }
     }
   }
 
-  func displaySpaces(connectionID: Int32) -> [WindowServerDisplaySpaces] {
-    managedDisplaySpaces(connectionID: connectionID).compactMap { info in
+  func displaySpaces() -> [WindowServerDisplaySpaces] {
+    managedDisplaySpaces().compactMap { info in
       guard let screenID = info[screenIDKey] as? String else { return nil }
       let spaces =
         (info[spacesKey] as? [[String: AnyObject]])?.compactMap {
@@ -66,8 +66,8 @@ final class WindowServerClient {
     }
   }
 
-  func screenID(forSpaceID spaceID: UInt64, connectionID: Int32) -> String? {
-    for info in managedDisplaySpaces(connectionID: connectionID) {
+  func screenID(forSpaceID spaceID: UInt64) -> String? {
+    for info in managedDisplaySpaces() {
       guard let screenID = info[screenIDKey] as? String,
         let spacesInfo = info[spacesKey] as? [[String: AnyObject]]
       else {
@@ -82,17 +82,16 @@ final class WindowServerClient {
     return nil
   }
 
-  func spaceIDs(containing windowID: CGWindowID, connectionID: Int32) -> [UInt64] {
-    let identifiers = SLSCopySpacesForWindows(connectionID, 0x7, [windowID] as CFArray) as NSArray
+  func spaceIDs(containing windowID: CGWindowID) -> [UInt64] {
+    let identifiers = SLSCopySpacesForWindows(mainConnectionID(), 0x7, [windowID] as CFArray) as NSArray
     return identifiers.compactMap { managedSpaceID(from: $0) }
   }
 
-  func spaceType(connectionID: Int32, spaceID: UInt64) -> SpaceType {
-    SpaceType(rawValue: SLSSpaceGetType(connectionID, spaceID)) ?? .unknown
+  func spaceType(for spaceID: UInt64) -> SpaceType {
+    SpaceType(rawValue: SLSSpaceGetType(mainConnectionID(), spaceID)) ?? .unknown
   }
 
   func windowIdentifiers(
-    connectionID: Int32,
     applicationConnectionID: Int32,
     spaceIDs: [UInt64]
   ) -> [CGWindowID] {
@@ -102,7 +101,7 @@ final class WindowServerClient {
     var clearTags: UInt64 = 0
 
     let windows = SLSCopyWindowsWithOptionsAndTags(
-      connectionID,
+      mainConnectionID(),
       UInt32(applicationConnectionID),
       spaces,
       options,
@@ -110,7 +109,7 @@ final class WindowServerClient {
       &clearTags
     )
 
-    let query = SLSWindowQueryWindows(connectionID, windows, Int32(CFArrayGetCount(windows)))
+    let query = SLSWindowQueryWindows(mainConnectionID(), windows, Int32(CFArrayGetCount(windows)))
     let iterator = SLSWindowQueryResultCopyWindows(query)
 
     var windowIDs = [CGWindowID]()
@@ -132,8 +131,8 @@ final class WindowServerClient {
     return windowIDs
   }
 
-  private func managedDisplaySpaces(connectionID: Int32) -> [[String: AnyObject]] {
-    let info = SLSCopyManagedDisplaySpaces(connectionID) as NSArray
+  private func managedDisplaySpaces() -> [[String: AnyObject]] {
+    let info = SLSCopyManagedDisplaySpaces(mainConnectionID()) as NSArray
     return info.compactMap { $0 as? [String: AnyObject] }
   }
 

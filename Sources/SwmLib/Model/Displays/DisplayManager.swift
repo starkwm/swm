@@ -2,10 +2,7 @@ import Foundation
 
 public final class DisplayManager {
   private static func resolveActiveDisplayID() -> String? {
-    WindowServerClient.shared.screenID(
-      forSpaceID: Space.active().id,
-      connectionID: Space.connection
-    )
+    WindowServerClient.shared.screenID(forSpaceID: SpaceManager.active().id)
   }
 
   public var currentActiveDisplayID: String? {

@@ -1,18 +1,6 @@
 import AppKit
 
 public final class Space: NSObject {
-  static let connection = windowServerClient.mainConnectionID()
-
-  private static let windowServerClient = WindowServerClient.shared
-
-  public static func all() -> [Space] {
-    windowServerClient.allSpaceIDs(connectionID: connection).map(Space.init(id:))
-  }
-
-  public static func active() -> Space {
-    Space(id: windowServerClient.activeSpace(connectionID: connection))
-  }
-
   public override var description: String {
     "<Space id: \(id), type: \(type)>"
   }
@@ -23,7 +11,7 @@ public final class Space: NSObject {
   public convenience init(id: UInt64) {
     self.init(
       id: id,
-      type: Self.windowServerClient.spaceType(connectionID: Space.connection, spaceID: id)
+      type: WindowServerClient.shared.spaceType(for: id)
     )
   }
 
