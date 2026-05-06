@@ -18,31 +18,25 @@ struct SpaceCommandHandler {
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
-    switch request.command {
-    case "--toggle":
-      return toggle(request, spaceID: activeSpaceID())
-    case "--padding":
-      return padding(request, spaceID: activeSpaceID())
-    case "--gap":
-      return gap(request, spaceID: activeSpaceID())
-    case "--focus":
-      return focus(request)
-    default:
-      return .failure(
-        id: request.id,
-        message: "unsupported space command: \(request.command)",
-        errorCode: .unsupportedCommand
-      )
+    IPCCommandError.catching(id: request.id) {
+      switch request.command {
+      case "--toggle":
+        return try toggle(request, spaceID: activeSpaceID())
+      case "--padding":
+        return try padding(request, spaceID: activeSpaceID())
+      case "--gap":
+        return try gap(request, spaceID: activeSpaceID())
+      case "--focus":
+        return try focus(request)
+      default:
+        throw IPCCommandError.unsupportedCommand("unsupported space command: \(request.command)")
+      }
     }
   }
 
-  private func toggle(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
+  private func toggle(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     guard request.args.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid space toggle arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space toggle arguments")
     }
 
     let settings: SpaceSettings
@@ -52,23 +46,15 @@ struct SpaceCommandHandler {
     case "gap":
       settings = spaceManager.toggleGap(for: spaceID)
     default:
-      return .failure(
-        id: request.id,
-        message: "invalid space toggle target: \(request.args[0])",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space toggle target: \(request.args[0])")
     }
 
-    return success(request, spaceID: spaceID, settings: settings)
+    return try success(request, spaceID: spaceID, settings: settings)
   }
 
-  private func focus(_ request: IPCRequest) -> IPCResponse {
+  private func focus(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid space focus arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space focus arguments")
     }
 
     let target = request.args[0]
@@ -78,31 +64,19 @@ struct SpaceCommandHandler {
       hasRecent: spaceManager.lastActiveSpaceID != nil,
       subject: "space"
     ) {
-      return .failure(id: request.id, message: message, errorCode: .invalidRequest)
+      throw IPCCommandError.invalidRequest(message)
     }
 
-    return .failure(
-      id: request.id,
-      message: "space focus is not implemented",
-      errorCode: .unsupportedCommand
-    )
+    throw IPCCommandError.unsupportedCommand("space focus is not implemented")
   }
 
-  private func padding(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
+  private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     guard request.args.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid space padding arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space padding arguments")
     }
 
     guard let change = parsePaddingChange(request.args[0]) else {
-      return .failure(
-        id: request.id,
-        message: "invalid space padding value: \(request.args[0])",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space padding value: \(request.args[0])")
     }
 
     let settings =
@@ -113,24 +87,16 @@ struct SpaceCommandHandler {
         spaceManager.adjustPadding(change.padding, for: spaceID)
       }
 
-    return success(request, spaceID: spaceID, settings: settings)
+    return try success(request, spaceID: spaceID, settings: settings)
   }
 
-  private func gap(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
+  private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     guard request.args.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid space gap arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space gap arguments")
     }
 
     guard let change = parseGapChange(request.args[0]) else {
-      return .failure(
-        id: request.id,
-        message: "invalid space gap value: \(request.args[0])",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid space gap value: \(request.args[0])")
     }
 
     let settings =
@@ -141,7 +107,7 @@ struct SpaceCommandHandler {
         spaceManager.adjustGap(change.value, for: spaceID)
       }
 
-    return success(request, spaceID: spaceID, settings: settings)
+    return try success(request, spaceID: spaceID, settings: settings)
   }
 
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {
@@ -187,7 +153,7 @@ struct SpaceCommandHandler {
     _ request: IPCRequest,
     spaceID: UInt64,
     settings: SpaceSettings
-  ) -> IPCResponse {
+  ) throws -> IPCResponse {
     let result = SpaceResultSerializer(
       id: spaceID,
       paddingEnabled: settings.paddingEnabled,
@@ -201,25 +167,18 @@ struct SpaceCommandHandler {
       gap: settings.gap
     )
 
+    let data: Data
     do {
-      let data = try JSONEncoder().encode(result)
-
-      guard let message = String(data: data, encoding: .utf8) else {
-        return .failure(
-          id: request.id,
-          message: "could not encode space settings",
-          errorCode: .internalError
-        )
-      }
-
-      return .success(id: request.id, message: message)
+      data = try JSONEncoder().encode(result)
     } catch {
-      return .failure(
-        id: request.id,
-        message: "could not encode space settings: \(error)",
-        errorCode: .internalError
-      )
+      throw IPCCommandError.internalError("could not encode space settings: \(error)")
     }
+
+    guard let message = String(data: data, encoding: .utf8) else {
+      throw IPCCommandError.internalError("could not encode space settings")
+    }
+
+    return .success(id: request.id, message: message)
   }
 
 }

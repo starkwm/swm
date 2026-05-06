@@ -11,7 +11,7 @@ struct IPCRequest: Codable, Equatable {
     }
 
     guard let command = arguments.first else {
-      throw IPCRequestError.missingCommand(domain)
+      throw IPCCommandError.invalidRequest("missing command for \(domain.rawValue)")
     }
 
     if domain == .window,

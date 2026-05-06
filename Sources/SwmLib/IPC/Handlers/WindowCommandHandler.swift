@@ -8,177 +8,104 @@ struct WindowCommandHandler {
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
-    switch request.command {
-    case "--focus":
-      focus(request)
-    case "--minimize":
-      minimize(request)
-    case "--unminimize":
-      unminimize(request)
-    case "--move":
-      move(request)
-    case "--resize":
-      resize(request)
-    default:
-      .failure(
-        id: request.id,
-        message: "unsupported window command: \(request.command)",
-        errorCode: .unsupportedCommand
-      )
-    }
-  }
-
-  private func focus(_ request: IPCRequest) -> IPCResponse {
-    switch selectedWindow(request, action: "focus") {
-    case .window(let window):
-      guard window.focus() else {
-        return .failure(
-          id: request.id,
-          message: "could not focus window: \(window.id)",
-          errorCode: .internalError
-        )
+    IPCCommandError.catching(id: request.id) {
+      switch request.command {
+      case "--focus":
+        return try focus(request)
+      case "--minimize":
+        return try minimize(request)
+      case "--unminimize":
+        return try unminimize(request)
+      case "--move":
+        return try move(request)
+      case "--resize":
+        return try resize(request)
+      default:
+        throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
-
-      return .success(id: request.id, message: "ok")
-
-    case .failure(let response):
-      return response
     }
   }
 
-  private func minimize(_ request: IPCRequest) -> IPCResponse {
-    switch selectedWindow(request, action: "minimize") {
-    case .window(let window):
-      guard window.minimize() else {
-        return .failure(
-          id: request.id,
-          message: "could not minimize window: \(window.id)",
-          errorCode: .internalError
-        )
-      }
+  private func focus(_ request: IPCRequest) throws -> IPCResponse {
+    let window = try selectedWindow(request, action: "focus")
 
-      return .success(id: request.id, message: "ok")
-
-    case .failure(let response):
-      return response
+    guard window.focus() else {
+      throw IPCCommandError.internalError("could not focus window: \(window.id)")
     }
+
+    return .success(id: request.id, message: "ok")
   }
 
-  private func unminimize(_ request: IPCRequest) -> IPCResponse {
-    switch selectedWindow(request, action: "unminimize") {
-    case .window(let window):
-      guard window.unminimize() else {
-        return .failure(
-          id: request.id,
-          message: "could not unminimize window: \(window.id)",
-          errorCode: .internalError
-        )
-      }
+  private func minimize(_ request: IPCRequest) throws -> IPCResponse {
+    let window = try selectedWindow(request, action: "minimize")
 
-      return .success(id: request.id, message: "ok")
-
-    case .failure(let response):
-      return response
+    guard window.minimize() else {
+      throw IPCCommandError.internalError("could not minimize window: \(window.id)")
     }
+
+    return .success(id: request.id, message: "ok")
   }
 
-  private func selectedWindow(_ request: IPCRequest, action: String) -> SelectedWindow {
+  private func unminimize(_ request: IPCRequest) throws -> IPCResponse {
+    let window = try selectedWindow(request, action: "unminimize")
+
+    guard window.unminimize() else {
+      throw IPCCommandError.internalError("could not unminimize window: \(window.id)")
+    }
+
+    return .success(id: request.id, message: "ok")
+  }
+
+  private func selectedWindow(_ request: IPCRequest, action: String) throws -> Window {
     guard request.args.count == 1 else {
-      return .failure(
-        .failure(
-          id: request.id,
-          message: "invalid window \(action) arguments",
-          errorCode: .invalidRequest
-        )
-      )
+      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
     }
 
-    switch selectedWindowID(request.args[0], request: request, action: action) {
-    case .window(let windowID):
-      guard let window = windowManager.window(by: windowID) else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "window not found: \(windowID)",
-            errorCode: .invalidRequest
-          )
-        )
-      }
+    let windowID = try selectedWindowID(request.args[0], action: action)
 
-      return .window(window)
-
-    case .failure(let response):
-      return .failure(response)
+    guard let window = windowManager.window(by: windowID) else {
+      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
     }
+
+    return window
   }
 
   private func selectedWindowID(
     _ target: String,
-    request: IPCRequest,
     action: String
-  ) -> SelectedWindowID {
+  ) throws -> CGWindowID {
     guard target != "recent" else {
       guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "no recent window",
-            errorCode: .invalidRequest
-          )
-        )
+        throw IPCCommandError.invalidRequest("no recent window")
       }
 
-      return .window(recentWindowID)
+      return recentWindowID
     }
 
     guard let id = UInt32(target), id != 0 else {
-      return .failure(
-        .failure(
-          id: request.id,
-          message: "invalid window \(action) target: \(target)",
-          errorCode: .invalidRequest
-        )
-      )
+      throw IPCCommandError.invalidRequest("invalid window \(action) target: \(target)")
     }
 
     let windowID = CGWindowID(id)
 
-    return .window(windowID)
+    return windowID
   }
 
-  private func move(_ request: IPCRequest) -> IPCResponse {
+  private func move(_ request: IPCRequest) throws -> IPCResponse {
     let selection = parseSelection(request.args)
 
     guard selection.arguments.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid window move arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid window move arguments")
     }
 
     guard let change = parseGeometryChange(selection.arguments[0]) else {
-      return .failure(
-        id: request.id,
-        message: "invalid window move value: \(selection.arguments[0])",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid window move value: \(selection.arguments[0])")
     }
 
-    let windowID: CGWindowID
-    switch selectedWindowID(selection.selector, request: request) {
-    case .window(let selectedWindowID):
-      windowID = selectedWindowID
-    case .failure(let response):
-      return response
-    }
+    let windowID = try selectedWindowID(selection.selector)
 
     guard let window = windowManager.window(by: windowID) else {
-      return .failure(
-        id: request.id,
-        message: "window not found: \(windowID)",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
     }
 
     let moved =
@@ -190,49 +117,27 @@ struct WindowCommandHandler {
       }
 
     guard moved else {
-      return .failure(
-        id: request.id,
-        message: "could not move window: \(windowID)",
-        errorCode: .internalError
-      )
+      throw IPCCommandError.internalError("could not move window: \(windowID)")
     }
 
     return .success(id: request.id, message: "ok")
   }
 
-  private func resize(_ request: IPCRequest) -> IPCResponse {
+  private func resize(_ request: IPCRequest) throws -> IPCResponse {
     let selection = parseSelection(request.args)
 
     guard selection.arguments.count == 1 else {
-      return .failure(
-        id: request.id,
-        message: "invalid window resize arguments",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid window resize arguments")
     }
 
     guard let change = parseGeometryChange(selection.arguments[0]) else {
-      return .failure(
-        id: request.id,
-        message: "invalid window resize value: \(selection.arguments[0])",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("invalid window resize value: \(selection.arguments[0])")
     }
 
-    let windowID: CGWindowID
-    switch selectedWindowID(selection.selector, request: request) {
-    case .window(let selectedWindowID):
-      windowID = selectedWindowID
-    case .failure(let response):
-      return response
-    }
+    let windowID = try selectedWindowID(selection.selector)
 
     guard let window = windowManager.window(by: windowID) else {
-      return .failure(
-        id: request.id,
-        message: "window not found: \(windowID)",
-        errorCode: .invalidRequest
-      )
+      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
     }
 
     let resized =
@@ -244,11 +149,7 @@ struct WindowCommandHandler {
       }
 
     guard resized else {
-      return .failure(
-        id: request.id,
-        message: "could not resize window: \(windowID)",
-        errorCode: .internalError
-      )
+      throw IPCCommandError.internalError("could not resize window: \(windowID)")
     }
 
     return .success(id: request.id, message: "ok")
@@ -263,61 +164,36 @@ struct WindowCommandHandler {
   }
 
   private func selectedWindowID(
-    _ selector: String?,
-    request: IPCRequest
-  ) -> SelectedWindowID {
+    _ selector: String?
+  ) throws -> CGWindowID {
     guard let selector else {
       guard let windowID = windowManager.currentFocusedWindowID else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "no focused window",
-            errorCode: .invalidRequest
-          )
-        )
+        throw IPCCommandError.invalidRequest("no focused window")
       }
 
-      return .window(windowID)
+      return windowID
     }
 
     switch selector {
     case "recent":
       guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "no recent window",
-            errorCode: .invalidRequest
-          )
-        )
+        throw IPCCommandError.invalidRequest("no recent window")
       }
 
-      return .window(recentWindowID)
+      return recentWindowID
 
     default:
       guard let id = UInt32(selector), id != 0 else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "invalid window selector: \(selector)",
-            errorCode: .invalidRequest
-          )
-        )
+        throw IPCCommandError.invalidRequest("invalid window selector: \(selector)")
       }
 
       let windowID = CGWindowID(id)
 
       guard windowManager.knowsWindow(withID: windowID) else {
-        return .failure(
-          .failure(
-            id: request.id,
-            message: "window not found: \(windowID)",
-            errorCode: .invalidRequest
-          )
-        )
+        throw IPCCommandError.invalidRequest("window not found: \(windowID)")
       }
 
-      return .window(windowID)
+      return windowID
     }
   }
 
@@ -347,14 +223,4 @@ private struct WindowGeometryChange {
 private struct WindowSelection {
   let selector: String?
   let arguments: [String]
-}
-
-private enum SelectedWindowID {
-  case window(CGWindowID)
-  case failure(IPCResponse)
-}
-
-private enum SelectedWindow {
-  case window(Window)
-  case failure(IPCResponse)
 }

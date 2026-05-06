@@ -1,4 +1,3 @@
-import ArgumentParser
 import CoreGraphics
 
 enum QuerySelection: Equatable {
@@ -27,7 +26,7 @@ enum QuerySelection: Equatable {
       return (command, selection)
     }
 
-    throw ValidationError("exactly one query flag is required")
+    throw IPCCommandError.invalidRequest("exactly one query flag is required")
   }
 
   private static func parseComponents(
@@ -42,7 +41,7 @@ enum QuerySelection: Equatable {
 
       if commandFlags.contains(argument) {
         guard command == nil else {
-          throw ValidationError("exactly one query flag is required")
+          throw IPCCommandError.invalidRequest("exactly one query flag is required")
         }
 
         command = argument
@@ -52,16 +51,16 @@ enum QuerySelection: Equatable {
       }
 
       guard selectorFlags.contains(argument) else {
-        throw ValidationError("unsupported query argument: \(argument)")
+        throw IPCCommandError.invalidRequest("unsupported query argument: \(argument)")
       }
 
       guard selection == .none else {
-        throw ValidationError("only one query selector is allowed")
+        throw IPCCommandError.invalidRequest("only one query selector is allowed")
       }
 
       let values = selectorValues(after: index, in: arguments)
       guard values.count <= 1 else {
-        throw ValidationError("query selector accepts at most one value")
+        throw IPCCommandError.invalidRequest("query selector accepts at most one value")
       }
 
       let value = values.first
@@ -97,7 +96,7 @@ enum QuerySelection: Equatable {
 
   private static func parseIndex(_ value: String) throws -> Int {
     guard let index = Int(value), index >= 0 else {
-      throw ValidationError("query selector value must be a non-negative integer")
+      throw IPCCommandError.invalidRequest("query selector value must be a non-negative integer")
     }
 
     return index
@@ -105,7 +104,7 @@ enum QuerySelection: Equatable {
 
   private static func parseWindowID(_ value: String) throws -> CGWindowID {
     guard let id = UInt32(value) else {
-      throw ValidationError("query window selector value must be a window id")
+      throw IPCCommandError.invalidRequest("query window selector value must be a window id")
     }
 
     return CGWindowID(id)

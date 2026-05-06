@@ -45,8 +45,9 @@ struct IPCRequestTests {
     do {
       _ = try IPCRequest.make(domain: .config, arguments: [])
       Issue.record("Expected missing command error")
-    } catch let error as IPCRequestError {
+    } catch let error as IPCCommandError {
       #expect(error.description == "missing command for config")
+      #expect(error.errorCode == .invalidRequest)
     } catch {
       Issue.record("Unexpected error: \(error)")
     }

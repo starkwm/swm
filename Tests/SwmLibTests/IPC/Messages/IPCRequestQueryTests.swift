@@ -1,4 +1,3 @@
-import ArgumentParser
 import Testing
 
 @testable import SwmLib
@@ -104,8 +103,9 @@ struct IPCRequestQueryTests {
     do {
       _ = try IPCRequest.make(domain: .query, arguments: ["displays"])
       Issue.record("Expected bare query command to fail")
-    } catch let error as ValidationError {
+    } catch let error as IPCCommandError {
       #expect(error.message == "unsupported query argument: displays")
+      #expect(error.errorCode == .invalidRequest)
     } catch {}
   }
 
@@ -114,8 +114,9 @@ struct IPCRequestQueryTests {
     do {
       _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--display", "--space"])
       Issue.record("Expected multiple selectors to fail")
-    } catch let error as ValidationError {
+    } catch let error as IPCCommandError {
       #expect(error.message == "only one query selector is allowed")
+      #expect(error.errorCode == .invalidRequest)
     } catch {}
   }
 
@@ -124,8 +125,9 @@ struct IPCRequestQueryTests {
     do {
       _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--display", "1", "2"])
       Issue.record("Expected multiple selector values to fail")
-    } catch let error as ValidationError {
+    } catch let error as IPCCommandError {
       #expect(error.message == "query selector accepts at most one value")
+      #expect(error.errorCode == .invalidRequest)
     } catch {}
   }
 
@@ -134,15 +136,17 @@ struct IPCRequestQueryTests {
     do {
       _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--space", "-1"])
       Issue.record("Expected invalid selector value to fail")
-    } catch let error as ValidationError {
+    } catch let error as IPCCommandError {
       #expect(error.message == "query selector value must be a non-negative integer")
+      #expect(error.errorCode == .invalidRequest)
     } catch {}
 
     do {
       _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--window", "abc"])
       Issue.record("Expected invalid window selector value to fail")
-    } catch let error as ValidationError {
+    } catch let error as IPCCommandError {
       #expect(error.message == "query window selector value must be a window id")
+      #expect(error.errorCode == .invalidRequest)
     } catch {}
   }
 }

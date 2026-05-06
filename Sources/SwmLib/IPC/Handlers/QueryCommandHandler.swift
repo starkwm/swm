@@ -8,7 +8,7 @@ struct QueryCommandHandler {
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
-    do {
+    IPCCommandError.catching(id: request.id) {
       let selection = try QuerySelection.parse(arguments: request.args)
       let resolver = QueryResolver(windowManager: windowManager)
 
@@ -20,14 +20,8 @@ struct QueryCommandHandler {
       case "--spaces":
         return try response(id: request.id, result: resolver.spaces(for: selection))
       default:
-        return .failure(
-          id: request.id,
-          message: "unsupported query command: \(request.command)",
-          errorCode: .unsupportedCommand
-        )
+        throw IPCCommandError.unsupportedCommand("unsupported query command: \(request.command)")
       }
-    } catch {
-      return .failure(id: request.id, message: "error: \(error)", errorCode: .internalError)
     }
   }
 
