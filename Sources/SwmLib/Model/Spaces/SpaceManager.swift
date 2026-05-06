@@ -54,8 +54,12 @@ public final class SpaceManager {
   private var activeSpace: TrackedState<UInt64>
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
-  public init() {
-    activeSpace = TrackedState(current: Self.resolveActiveSpaceID())
+  public convenience init() {
+    self.init(activeSpaceID: Self.resolveActiveSpaceID())
+  }
+
+  init(activeSpaceID: UInt64?) {
+    activeSpace = TrackedState(current: activeSpaceID)
   }
 
   func activeSpaceDidChange() {

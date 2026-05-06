@@ -1,17 +1,14 @@
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
-  private let activeSpaceID: () -> UInt64
   private let spaces: () -> [SpaceSerializer]
 
   init(
     spaceManager: SpaceManager,
-    activeSpaceID: @escaping () -> UInt64 = { Space.active().id },
     spaces: @escaping () -> [SpaceSerializer] = {
       SpaceSerializer.all(windowManager: WindowManager(workspace: Workspace()))
     }
   ) {
     self.spaceManager = spaceManager
-    self.activeSpaceID = activeSpaceID
     self.spaces = spaces
   }
 
@@ -19,11 +16,11 @@ struct SpaceCommandHandler {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
       case "--toggle":
-        return try toggle(request, spaceID: activeSpaceID())
+        return try toggle(request)
       case "--padding":
-        return try padding(request, spaceID: activeSpaceID())
+        return try padding(request)
       case "--gap":
-        return try gap(request, spaceID: activeSpaceID())
+        return try gap(request)
       case "--focus":
         return try focus(request)
       default:
@@ -32,24 +29,28 @@ struct SpaceCommandHandler {
     }
   }
 
-  private func toggle(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
+  private func toggle(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space toggle arguments")
     }
 
-    switch request.args[0] {
+    let target = request.args[0]
+
+    switch target {
     case "padding":
+      let spaceID = try currentSpaceID()
       spaceManager.togglePadding(for: spaceID)
     case "gap":
+      let spaceID = try currentSpaceID()
       spaceManager.toggleGap(for: spaceID)
     default:
-      throw IPCCommandError.invalidRequest("invalid space toggle target: \(request.args[0])")
+      throw IPCCommandError.invalidRequest("invalid space toggle target: \(target)")
     }
 
     return .success(id: request.id, message: "ok")
   }
 
-  private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
+  private func padding(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space padding arguments")
     }
@@ -57,6 +58,8 @@ struct SpaceCommandHandler {
     guard let change = parsePaddingChange(request.args[0]) else {
       throw IPCCommandError.invalidRequest("invalid space padding value: \(request.args[0])")
     }
+
+    let spaceID = try currentSpaceID()
 
     switch change.mode {
     case .absolute:
@@ -68,7 +71,7 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
+  private func gap(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space gap arguments")
     }
@@ -76,6 +79,8 @@ struct SpaceCommandHandler {
     guard let change = parseGapChange(request.args[0]) else {
       throw IPCCommandError.invalidRequest("invalid space gap value: \(request.args[0])")
     }
+
+    let spaceID = try currentSpaceID()
 
     switch change.mode {
     case .absolute:
@@ -103,6 +108,14 @@ struct SpaceCommandHandler {
     }
 
     throw IPCCommandError.unsupportedCommand("space focus is not implemented")
+  }
+
+  private func currentSpaceID() throws -> UInt64 {
+    guard let id = spaceManager.currentActiveSpaceID else {
+      throw IPCCommandError.invalidRequest("no active space")
+    }
+
+    return id
   }
 
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {

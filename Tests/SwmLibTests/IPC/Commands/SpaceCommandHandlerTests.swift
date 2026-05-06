@@ -6,8 +6,8 @@ import Testing
 struct SpaceCommandHandlerTests {
   @Test("dispatch: accepts toggle commands")
   func dispatchAcceptsToggleCommands() throws {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
+    let manager = SpaceManager(activeSpaceID: 42)
+    let handler = SpaceCommandHandler(spaceManager: manager)
 
     let padding = handler.dispatch(request(command: "--toggle", args: ["padding"]))
     let gap = handler.dispatch(request(command: "--toggle", args: ["gap"]))
@@ -22,8 +22,8 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: accepts padding commands")
   func dispatchAcceptsPaddingCommands() throws {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
+    let manager = SpaceManager(activeSpaceID: 42)
+    let handler = SpaceCommandHandler(spaceManager: manager)
 
     let absolute = handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
     let relative = handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
@@ -40,8 +40,8 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: accepts gap commands")
   func dispatchAcceptsGapCommands() throws {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 42 })
+    let manager = SpaceManager(activeSpaceID: 42)
+    let handler = SpaceCommandHandler(spaceManager: manager)
 
     let absolute = handler.dispatch(request(command: "--gap", args: ["abs:0"]))
     let relative = handler.dispatch(request(command: "--gap", args: ["rel:10"]))
@@ -56,10 +56,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
-    let handler = SpaceCommandHandler(
-      spaceManager: SpaceManager(),
-      activeSpaceID: { 42 }
-    )
+    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
 
     let responses = [
       handler.dispatch(request(command: "--toggle", args: [])),
@@ -75,10 +72,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects unsupported space commands")
   func dispatchRejectsUnsupportedSpaceCommands() {
-    let handler = SpaceCommandHandler(
-      spaceManager: SpaceManager(),
-      activeSpaceID: { 42 }
-    )
+    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
     let response = handler.dispatch(request(command: "--unknown", args: []))
 
     #expect(response.ok == false)
@@ -88,13 +82,23 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 2 })
+    let manager = SpaceManager(activeSpaceID: 2)
+    let handler = SpaceCommandHandler(spaceManager: manager)
 
     _ = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
     #expect(manager.settings(for: 1).gap == 0)
     #expect(manager.settings(for: 2).gap == 10)
+  }
+
+  @Test("dispatch: rejects active-space mutation without active space")
+  func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() {
+    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let response = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "no active space")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {
