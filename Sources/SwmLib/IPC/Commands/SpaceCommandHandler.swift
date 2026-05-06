@@ -52,24 +52,6 @@ struct SpaceCommandHandler {
     return try success(request, spaceID: spaceID, settings: settings)
   }
 
-  private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space focus arguments")
-    }
-
-    let target = request.args[0]
-    if let message = FocusTargetValidator.validate(
-      target: target,
-      items: spaces(),
-      hasRecent: spaceManager.lastActiveSpaceID != nil,
-      subject: "space"
-    ) {
-      throw IPCCommandError.invalidRequest(message)
-    }
-
-    throw IPCCommandError.unsupportedCommand("space focus is not implemented")
-  }
-
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space padding arguments")
@@ -108,6 +90,24 @@ struct SpaceCommandHandler {
       }
 
     return try success(request, spaceID: spaceID, settings: settings)
+  }
+
+  private func focus(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid space focus arguments")
+    }
+
+    let target = request.args[0]
+    if let message = FocusTargetValidator.validate(
+      target: target,
+      items: spaces(),
+      hasRecent: spaceManager.lastActiveSpaceID != nil,
+      subject: "space"
+    ) {
+      throw IPCCommandError.invalidRequest(message)
+    }
+
+    throw IPCCommandError.unsupportedCommand("space focus is not implemented")
   }
 
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {
@@ -180,7 +180,6 @@ struct SpaceCommandHandler {
 
     return .success(id: request.id, message: message)
   }
-
 }
 
 private struct SpaceResultSerializer: Encodable {

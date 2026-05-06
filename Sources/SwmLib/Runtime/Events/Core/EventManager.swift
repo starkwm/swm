@@ -42,7 +42,7 @@ public final class EventManager {
         workspace: configuration.workspace,
         processManager: configuration.processManager,
         windowManager: configuration.windowManager,
-        postEvent: { [weak self] event in self?.post(event)}
+        postEvent: { [weak self] event in self?.post(event) }
       ).handle(event)
 
     case .window(let event):

@@ -59,7 +59,8 @@ struct ApplicationLifecycleHandler {
       application.unobserve()
 
       if application.retryObserving {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [processManager, postEvent, psn = process.psn] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+          [processManager, postEvent, psn = process.psn] in
           guard let process = processManager.find(by: psn) else { return }
           postEvent(.application(.launched(process)))
         }
