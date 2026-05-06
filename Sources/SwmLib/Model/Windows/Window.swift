@@ -120,6 +120,36 @@ public final class Window: NSObject {
     )
   }
 
+  @discardableResult
+  func move(to point: CGPoint) -> Bool {
+    guard let application else { return false }
+
+    var moved = false
+    application.enhancedUIWorkaround {
+      guard let element else { return }
+      moved = AccessibilityClient.shared.setPoint(
+        point,
+        for: element,
+        attribute: kAXPositionAttribute as String
+      )
+    }
+
+    return moved
+  }
+
+  @discardableResult
+  func move(by offset: CGVector) -> Bool {
+    guard let element else { return false }
+    guard let frame = AccessibilityClient.shared.frame(for: element) else { return false }
+
+    return move(
+      to: CGPoint(
+        x: frame.origin.x + offset.dx,
+        y: frame.origin.y + offset.dy
+      )
+    )
+  }
+
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }

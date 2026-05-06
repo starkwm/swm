@@ -117,18 +117,35 @@ struct WindowCommandHandler {
       return invalid(request, "invalid window move arguments")
     }
 
+    guard let change = parseGeometryChange(selection.arguments[0]) else {
+      return invalid(request, "invalid window move value: \(selection.arguments[0])")
+    }
+
+    let windowID: CGWindowID
     switch selectedWindowID(selection.selector, request: request) {
-    case .window:
-      break
+    case .window(let selectedWindowID):
+      windowID = selectedWindowID
     case .failure(let response):
       return response
     }
 
-    guard parseGeometryChange(selection.arguments[0]) != nil else {
-      return invalid(request, "invalid window move value: \(selection.arguments[0])")
+    guard let window = windowManager.window(by: windowID) else {
+      return invalid(request, "window not found: \(windowID)")
     }
 
-    return unsupported(request, "window move is not implemented")
+    let moved =
+      switch change.mode {
+      case .absolute:
+        window.move(to: CGPoint(x: change.first, y: change.second))
+      case .relative:
+        window.move(by: CGVector(dx: change.first, dy: change.second))
+      }
+
+    guard moved else {
+      return internalError(request, "could not move window: \(windowID)")
+    }
+
+    return .success(id: request.id, message: "ok")
   }
 
   private func resize(_ request: IPCRequest) -> IPCResponse {
