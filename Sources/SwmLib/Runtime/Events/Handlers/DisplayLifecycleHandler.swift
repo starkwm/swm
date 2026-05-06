@@ -10,6 +10,7 @@ struct DisplayLifecycleHandler {
 
   private func displayChanged() {
     displayManager.activeDisplayDidChange()
+
     log(
       "display changed current: \(displayManager.currentActiveDisplayID ?? "nil"), last: \(displayManager.lastActiveDisplayID ?? "nil")"
     )
