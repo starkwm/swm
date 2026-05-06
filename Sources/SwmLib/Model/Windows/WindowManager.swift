@@ -43,9 +43,13 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
   private var knownWindowIDs = Set<CGWindowID>()
 
-  public init(workspace: Workspace) {
+  public convenience init(workspace: Workspace) {
+    self.init(workspace: workspace, focusedWindowID: Self.resolveFocusedWindowID())
+  }
+
+  init(workspace: Workspace, focusedWindowID: CGWindowID?) {
     self.workspace = workspace
-    focusedWindow = TrackedState(current: Self.resolveFocusedWindowID())
+    focusedWindow = TrackedState(current: focusedWindowID)
   }
 
   public func start(processes: [Process]) {

@@ -6,7 +6,7 @@ import Testing
 struct WindowCommandHandlerTests {
   @Test("dispatch: rejects malformed single-target action arguments")
   func dispatchRejectsMalformedSingleTargetActionArguments() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
       let missing = handler.dispatch(request(command: "--\(action)", args: []))
@@ -23,7 +23,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects invalid single-target action target")
   func dispatchRejectsInvalidSingleTargetActionTarget() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
       let response = handler.dispatch(request(command: "--\(action)", args: ["nope"]))
@@ -36,7 +36,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects missing recent single-target action target")
   func dispatchRejectsMissingRecentSingleTargetActionTarget() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
       let response = handler.dispatch(request(command: "--\(action)", args: ["recent"]))
@@ -49,7 +49,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects missing numeric single-target action target")
   func dispatchRejectsMissingNumericSingleTargetActionTarget() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
       let response = handler.dispatch(request(command: "--\(action)", args: ["42"]))
@@ -62,7 +62,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects malformed geometry action arguments")
   func dispatchRejectsMalformedGeometryActionArguments() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["move", "resize"] {
       let missing = handler.dispatch(request(command: "--\(action)", args: []))
@@ -79,7 +79,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects invalid geometry action value")
   func dispatchRejectsInvalidGeometryActionValue() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["move", "resize"] {
       let response = handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
@@ -92,7 +92,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects geometry action without focused window")
   func dispatchRejectsGeometryActionWithoutFocusedWindow() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["move", "resize"] {
       let response = handler.dispatch(request(command: "--\(action)", args: ["abs:100:200"]))
@@ -105,7 +105,7 @@ struct WindowCommandHandlerTests {
 
   @Test("dispatch: rejects geometry action with invalid window selector")
   func dispatchRejectsGeometryActionWithInvalidWindowSelector() {
-    let handler = WindowCommandHandler(windowManager: WindowManager(workspace: Workspace()))
+    let handler = handler()
 
     for action in ["move", "resize"] {
       let response = handler.dispatch(
@@ -120,5 +120,11 @@ struct WindowCommandHandlerTests {
 
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .window, command: command, args: args)
+  }
+
+  private func handler() -> WindowCommandHandler {
+    WindowCommandHandler(
+      windowManager: WindowManager(workspace: Workspace(), focusedWindowID: nil)
+    )
   }
 }
