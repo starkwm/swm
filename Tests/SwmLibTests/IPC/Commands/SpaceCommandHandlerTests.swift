@@ -1,4 +1,3 @@
-import Foundation
 import Testing
 
 @testable import SwmLib
@@ -15,7 +14,8 @@ struct SpaceCommandHandlerTests {
 
     #expect(padding.ok)
     #expect(gap.ok)
-    #expect(try jsonObject(gap.message)["gap-enabled"] as? Bool == false)
+    #expect(padding.message == "ok")
+    #expect(gap.message == "ok")
     #expect(manager.settings(for: 42).paddingEnabled == false)
     #expect(manager.settings(for: 42).gapEnabled == false)
   }
@@ -30,15 +30,9 @@ struct SpaceCommandHandlerTests {
 
     #expect(absolute.ok)
     #expect(relative.ok)
-    let object = try jsonObject(relative.message)
-    let padding = try #require(object["padding"] as? [String: Int])
+    #expect(absolute.message == "ok")
+    #expect(relative.message == "ok")
 
-    #expect(object["id"] as? Int == 42)
-    #expect(object["padding-enabled"] as? Bool == true)
-    #expect(padding["top"] == 30)
-    #expect(padding["bottom"] == 20)
-    #expect(padding["left"] == 15)
-    #expect(padding["right"] == 15)
     #expect(
       manager.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
     )
@@ -54,11 +48,9 @@ struct SpaceCommandHandlerTests {
 
     #expect(absolute.ok)
     #expect(relative.ok)
-    let object = try jsonObject(relative.message)
+    #expect(absolute.message == "ok")
+    #expect(relative.message == "ok")
 
-    #expect(object["id"] as? Int == 42)
-    #expect(object["gap-enabled"] as? Bool == true)
-    #expect(object["gap"] as? Int == 10)
     #expect(manager.settings(for: 42).gap == 10)
   }
 
@@ -107,11 +99,5 @@ struct SpaceCommandHandlerTests {
 
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .space, command: command, args: args)
-  }
-
-  private func jsonObject(_ string: String) throws -> [String: Any] {
-    let data = try #require(string.data(using: .utf8))
-    let object = try JSONSerialization.jsonObject(with: data)
-    return try #require(object as? [String: Any])
   }
 }

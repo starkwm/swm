@@ -1,5 +1,3 @@
-import Foundation
-
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
   private let activeSpaceID: () -> UInt64
@@ -39,17 +37,16 @@ struct SpaceCommandHandler {
       throw IPCCommandError.invalidRequest("invalid space toggle arguments")
     }
 
-    let settings: SpaceSettings
     switch request.args[0] {
     case "padding":
-      settings = spaceManager.togglePadding(for: spaceID)
+      spaceManager.togglePadding(for: spaceID)
     case "gap":
-      settings = spaceManager.toggleGap(for: spaceID)
+      spaceManager.toggleGap(for: spaceID)
     default:
       throw IPCCommandError.invalidRequest("invalid space toggle target: \(request.args[0])")
     }
 
-    return try success(request, spaceID: spaceID, settings: settings)
+    return .success(id: request.id, message: "ok")
   }
 
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
@@ -61,15 +58,14 @@ struct SpaceCommandHandler {
       throw IPCCommandError.invalidRequest("invalid space padding value: \(request.args[0])")
     }
 
-    let settings =
-      switch change.mode {
-      case .absolute:
-        spaceManager.setPadding(change.padding, for: spaceID)
-      case .relative:
-        spaceManager.adjustPadding(change.padding, for: spaceID)
-      }
+    switch change.mode {
+    case .absolute:
+      spaceManager.setPadding(change.padding, for: spaceID)
+    case .relative:
+      spaceManager.adjustPadding(change.padding, for: spaceID)
+    }
 
-    return try success(request, spaceID: spaceID, settings: settings)
+    return .success(id: request.id, message: "ok")
   }
 
   private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
@@ -81,15 +77,14 @@ struct SpaceCommandHandler {
       throw IPCCommandError.invalidRequest("invalid space gap value: \(request.args[0])")
     }
 
-    let settings =
-      switch change.mode {
-      case .absolute:
-        spaceManager.setGap(change.value, for: spaceID)
-      case .relative:
-        spaceManager.adjustGap(change.value, for: spaceID)
-      }
+    switch change.mode {
+    case .absolute:
+      spaceManager.setGap(change.value, for: spaceID)
+    case .relative:
+      spaceManager.adjustGap(change.value, for: spaceID)
+    }
 
-    return try success(request, spaceID: spaceID, settings: settings)
+    return .success(id: request.id, message: "ok")
   }
 
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
@@ -148,61 +143,6 @@ struct SpaceCommandHandler {
 
     return GapChange(mode: mode, value: value)
   }
-
-  private func success(
-    _ request: IPCRequest,
-    spaceID: UInt64,
-    settings: SpaceSettings
-  ) throws -> IPCResponse {
-    let result = SpaceResultSerializer(
-      id: spaceID,
-      paddingEnabled: settings.paddingEnabled,
-      gapEnabled: settings.gapEnabled,
-      padding: SpacePaddingSerializer(
-        top: settings.padding.top,
-        bottom: settings.padding.bottom,
-        left: settings.padding.left,
-        right: settings.padding.right
-      ),
-      gap: settings.gap
-    )
-
-    let data: Data
-    do {
-      data = try JSONEncoder().encode(result)
-    } catch {
-      throw IPCCommandError.internalError("could not encode space settings: \(error)")
-    }
-
-    guard let message = String(data: data, encoding: .utf8) else {
-      throw IPCCommandError.internalError("could not encode space settings")
-    }
-
-    return .success(id: request.id, message: message)
-  }
-}
-
-private struct SpaceResultSerializer: Encodable {
-  enum CodingKeys: String, CodingKey {
-    case id
-    case paddingEnabled = "padding-enabled"
-    case gapEnabled = "gap-enabled"
-    case padding
-    case gap
-  }
-
-  let id: UInt64
-  let paddingEnabled: Bool
-  let gapEnabled: Bool
-  let padding: SpacePaddingSerializer
-  let gap: Int
-}
-
-private struct SpacePaddingSerializer: Encodable {
-  let top: Int
-  let bottom: Int
-  let left: Int
-  let right: Int
 }
 
 private struct GapChange {
