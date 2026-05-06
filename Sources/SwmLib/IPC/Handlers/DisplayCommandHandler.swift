@@ -25,7 +25,11 @@ struct DisplayCommandHandler {
 
   private func focus(_ request: IPCRequest) -> IPCResponse {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid display focus arguments")
+      return .failure(
+        id: request.id,
+        message: "invalid display focus arguments",
+        errorCode: .invalidRequest
+      )
     }
 
     let target = request.args[0]
@@ -35,7 +39,7 @@ struct DisplayCommandHandler {
       hasRecent: displayManager.lastActiveDisplayID != nil,
       subject: "display"
     ) {
-      return invalid(request, message)
+      return .failure(id: request.id, message: message, errorCode: .invalidRequest)
     }
 
     return .failure(
@@ -43,9 +47,5 @@ struct DisplayCommandHandler {
       message: "display focus is not implemented",
       errorCode: .unsupportedCommand
     )
-  }
-
-  private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
-    .failure(id: request.id, message: message, errorCode: .invalidRequest)
   }
 }

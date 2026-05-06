@@ -38,7 +38,11 @@ struct SpaceCommandHandler {
 
   private func toggle(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid space toggle arguments")
+      return .failure(
+        id: request.id,
+        message: "invalid space toggle arguments",
+        errorCode: .invalidRequest
+      )
     }
 
     let settings: SpaceSettings
@@ -48,7 +52,11 @@ struct SpaceCommandHandler {
     case "gap":
       settings = spaceManager.toggleGap(for: spaceID)
     default:
-      return invalid(request, "invalid space toggle target: \(request.args[0])")
+      return .failure(
+        id: request.id,
+        message: "invalid space toggle target: \(request.args[0])",
+        errorCode: .invalidRequest
+      )
     }
 
     return success(request, spaceID: spaceID, settings: settings)
@@ -56,7 +64,11 @@ struct SpaceCommandHandler {
 
   private func focus(_ request: IPCRequest) -> IPCResponse {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid space focus arguments")
+      return .failure(
+        id: request.id,
+        message: "invalid space focus arguments",
+        errorCode: .invalidRequest
+      )
     }
 
     let target = request.args[0]
@@ -66,7 +78,7 @@ struct SpaceCommandHandler {
       hasRecent: spaceManager.lastActiveSpaceID != nil,
       subject: "space"
     ) {
-      return invalid(request, message)
+      return .failure(id: request.id, message: message, errorCode: .invalidRequest)
     }
 
     return .failure(
@@ -78,11 +90,19 @@ struct SpaceCommandHandler {
 
   private func padding(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid space padding arguments")
+      return .failure(
+        id: request.id,
+        message: "invalid space padding arguments",
+        errorCode: .invalidRequest
+      )
     }
 
     guard let change = parsePaddingChange(request.args[0]) else {
-      return invalid(request, "invalid space padding value: \(request.args[0])")
+      return .failure(
+        id: request.id,
+        message: "invalid space padding value: \(request.args[0])",
+        errorCode: .invalidRequest
+      )
     }
 
     let settings =
@@ -98,11 +118,19 @@ struct SpaceCommandHandler {
 
   private func gap(_ request: IPCRequest, spaceID: UInt64) -> IPCResponse {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid space gap arguments")
+      return .failure(
+        id: request.id,
+        message: "invalid space gap arguments",
+        errorCode: .invalidRequest
+      )
     }
 
     guard let change = parseGapChange(request.args[0]) else {
-      return invalid(request, "invalid space gap value: \(request.args[0])")
+      return .failure(
+        id: request.id,
+        message: "invalid space gap value: \(request.args[0])",
+        errorCode: .invalidRequest
+      )
     }
 
     let settings =
@@ -194,9 +222,6 @@ struct SpaceCommandHandler {
     }
   }
 
-  private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {
-    .failure(id: request.id, message: message, errorCode: .invalidRequest)
-  }
 }
 
 private struct SpaceResultSerializer: Encodable {
