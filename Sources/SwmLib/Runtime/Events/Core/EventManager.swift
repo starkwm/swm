@@ -10,15 +10,15 @@ public final class EventManager {
   private init() {}
 
   public func configure(
-    processLookup: ProcessManager,
     workspace: Workspace,
+    processManager: ProcessManager,
     windowManager: WindowManager,
     spaceManager: SpaceManager,
     displayManager: DisplayManager
   ) {
     configuration = Configuration(
-      processLookup: processLookup,
       workspace: workspace,
+      processManager: processManager,
       windowManager: windowManager,
       spaceManager: spaceManager,
       displayManager: displayManager
@@ -40,11 +40,9 @@ public final class EventManager {
     case .application(let event):
       ApplicationLifecycleHandler(
         workspace: configuration.workspace,
+        processManager: configuration.processManager,
         windowManager: configuration.windowManager,
-        processLookup: configuration.processLookup,
-        postEvent: { [weak self] event in
-          self?.post(event)
-        }
+        postEvent: { [weak self] event in self?.post(event)}
       ).handle(event)
 
     case .window(let event):
@@ -62,8 +60,8 @@ public final class EventManager {
 extension EventManager: @unchecked Sendable {}
 
 private struct Configuration {
-  let processLookup: ProcessManager
   let workspace: Workspace
+  let processManager: ProcessManager
   let windowManager: WindowManager
   let spaceManager: SpaceManager
   let displayManager: DisplayManager

@@ -41,8 +41,8 @@ let windowManager = WindowManager(workspace: workspace)
 let spaceManager = SpaceManager()
 let displayManager = DisplayManager()
 EventManager.shared.configure(
-  processLookup: processManager,
   workspace: workspace,
+  processManager: processManager,
   windowManager: windowManager,
   spaceManager: spaceManager,
   displayManager: displayManager

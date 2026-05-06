@@ -2,8 +2,9 @@ import Foundation
 
 struct ApplicationLifecycleHandler {
   let workspace: Workspace
+  let processManager: ProcessManager
   let windowManager: WindowManager
-  let processLookup: ProcessManager
+
   let postEvent: @Sendable (RuntimeEvent) -> Void
 
   func handle(_ event: ApplicationEvent) {
