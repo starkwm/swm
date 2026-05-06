@@ -56,41 +56,6 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  private func selectedWindow(_ request: IPCRequest, action: String) throws -> Window {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
-    }
-
-    let windowID = try selectedWindowID(request.args[0], action: action)
-
-    guard let window = windowManager.window(by: windowID) else {
-      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
-    }
-
-    return window
-  }
-
-  private func selectedWindowID(
-    _ target: String,
-    action: String
-  ) throws -> CGWindowID {
-    guard target != "recent" else {
-      guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        throw IPCCommandError.invalidRequest("no recent window")
-      }
-
-      return recentWindowID
-    }
-
-    guard let id = UInt32(target), id != 0 else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) target: \(target)")
-    }
-
-    let windowID = CGWindowID(id)
-
-    return windowID
-  }
-
   private func move(_ request: IPCRequest) throws -> IPCResponse {
     let selection = parseSelection(request.args)
 
@@ -155,12 +120,39 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  private func parseSelection(_ args: [String]) -> WindowSelection {
-    guard args.count >= 2, args[0] == "--window" else {
-      return WindowSelection(selector: nil, arguments: args)
+  private func selectedWindow(_ request: IPCRequest, action: String) throws -> Window {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
     }
 
-    return WindowSelection(selector: args[1], arguments: Array(args.dropFirst(2)))
+    let windowID = try selectedWindowID(request.args[0], action: action)
+
+    guard let window = windowManager.window(by: windowID) else {
+      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
+    }
+
+    return window
+  }
+
+  private func selectedWindowID(
+    _ target: String,
+    action: String
+  ) throws -> CGWindowID {
+    guard target != "recent" else {
+      guard let recentWindowID = windowManager.lastFocusedWindowID else {
+        throw IPCCommandError.invalidRequest("no recent window")
+      }
+
+      return recentWindowID
+    }
+
+    guard let id = UInt32(target), id != 0 else {
+      throw IPCCommandError.invalidRequest("invalid window \(action) target: \(target)")
+    }
+
+    let windowID = CGWindowID(id)
+
+    return windowID
   }
 
   private func selectedWindowID(
@@ -197,6 +189,14 @@ struct WindowCommandHandler {
     }
   }
 
+  private func parseSelection(_ args: [String]) -> WindowSelection {
+    guard args.count >= 2, args[0] == "--window" else {
+      return WindowSelection(selector: nil, arguments: args)
+    }
+
+    return WindowSelection(selector: args[1], arguments: Array(args.dropFirst(2)))
+  }
+
   private func parseGeometryChange(_ argument: String) -> WindowGeometryChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
@@ -211,7 +211,6 @@ struct WindowCommandHandler {
 
     return WindowGeometryChange(mode: mode, first: first, second: second)
   }
-
 }
 
 private struct WindowGeometryChange {
