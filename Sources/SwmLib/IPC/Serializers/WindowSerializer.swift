@@ -143,9 +143,9 @@ struct WindowSerializer: Encodable, Equatable {
       }
     }
     display = displayIndex.flatMap { index in
-      displaySpaces.first { $0.id == screens[index].id }?.id
+      displaySpaces.first { $0.id == screens[index].uuid }?.id
         ?? displaySpaces[safe: index]?.id
-        ?? screens[index].id
+        ?? screens[index].uuid
     }
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue

@@ -47,8 +47,8 @@ struct QueryResolverTests {
   private func queryResolver() -> QueryResolver {
     QueryResolver(
       displays: [
-        display(index: 0, id: "display-0", hasFocus: true),
-        display(index: 1, id: "display-1", hasFocus: false),
+        display(index: 0, id: 1, uuid: "display-0", hasFocus: true),
+        display(index: 1, id: 2, uuid: "display-1", hasFocus: false),
       ],
       spaces: [
         space(index: 0, id: 10, display: "display-0", hasFocus: true),
@@ -61,10 +61,10 @@ struct QueryResolverTests {
     )
   }
 
-  private func display(index: Int, id: String, hasFocus: Bool) -> DisplaySerializer {
+  private func display(index: Int, id: UInt32, uuid: String, hasFocus: Bool) -> DisplaySerializer {
     DisplaySerializer(
       id: id,
-      uuid: nil,
+      uuid: uuid,
       index: index,
       frame: FrameSerializer(.zero),
       spaces: [],

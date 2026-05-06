@@ -83,7 +83,8 @@ final class WindowServerClient {
   }
 
   func spaceIDs(containing windowID: CGWindowID) -> [UInt64] {
-    let identifiers = SLSCopySpacesForWindows(mainConnectionID(), 0x7, [windowID] as CFArray) as NSArray
+    let identifiers =
+      SLSCopySpacesForWindows(mainConnectionID(), 0x7, [windowID] as CFArray) as NSArray
     return identifiers.compactMap { managedSpaceID(from: $0) }
   }
 

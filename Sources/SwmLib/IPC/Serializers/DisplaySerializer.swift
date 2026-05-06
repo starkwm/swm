@@ -17,24 +17,23 @@ struct DisplaySerializer: Encodable, Equatable {
       .map { (index: $0.offset, id: $0.element.id) }
     let focusedSpace = SpaceManager.active().id
 
-    return displaySpaces.enumerated().map { index, display in
-      let screen = NSScreen.screen(for: display.id) ?? NSScreen.screens[safe: index]
-      let spaceIDs = display.spaces
-      let spaces = indexedSpaces.compactMap { spaceIDs.contains($0.id) ? $0.index : nil }
-      let currentSpace = WindowServerClient.shared.currentSpace(screenID: display.id)
+    return displaySpaces.enumerated().compactMap { index, display in
+      guard let screen = NSScreen.screen(for: display.id) else {
+        return nil
+      }
 
       return DisplaySerializer(
-        id: display.id,
-        uuid: display.id,
+        id: screen.id,
+        uuid: screen.uuid,
         index: index,
-        frame: FrameSerializer(screen?.frame ?? .zero),
-        spaces: spaces,
-        hasFocus: currentSpace == focusedSpace
+        frame: FrameSerializer(screen.frame),
+        spaces: indexedSpaces.compactMap { display.spaces.contains($0.id) ? $0.index : nil },
+        hasFocus: WindowServerClient.shared.currentSpace(screenID: screen.uuid) == focusedSpace
       )
     }
   }
 
-  let id: String?
+  let id: UInt32?
   let uuid: String?
   let index: Int
   let frame: FrameSerializer
@@ -49,11 +48,5 @@ struct DisplaySerializer: Encodable, Equatable {
     try container.encode(frame, forKey: .frame)
     try container.encode(spaces, forKey: .spaces)
     try container.encode(hasFocus, forKey: .hasFocus)
-  }
-}
-
-extension [NSScreen] {
-  fileprivate subscript(safe index: Int) -> NSScreen? {
-    indices.contains(index) ? self[index] : nil
   }
 }

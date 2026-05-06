@@ -1,15 +1,19 @@
 import AppKit
 
 extension NSScreen {
-  static func screen(for id: String) -> NSScreen? {
-    screens.first { $0.id == id }
+  static func screen(for uuid: String) -> NSScreen? {
+    screens.first { $0.uuid == uuid }
   }
 
-  var id: String {
-    guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-    else { return "" }
+  var id: UInt32? {
+    let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+    return number?.uint32Value
+  }
 
-    let uuid = CGDisplayCreateUUIDFromDisplayID(number.uint32Value).takeRetainedValue()
+  var uuid: String {
+    guard let id = id else { return "" }
+
+    let uuid = CGDisplayCreateUUIDFromDisplayID(id).takeRetainedValue()
     return CFUUIDCreateString(nil, uuid) as String
   }
 }
