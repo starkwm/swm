@@ -1,15 +1,8 @@
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
-  private let spaces: () -> [SpaceSerializer]
 
-  init(
-    spaceManager: SpaceManager,
-    spaces: @escaping () -> [SpaceSerializer] = {
-      SpaceSerializer.all(windowManager: WindowManager(workspace: Workspace()))
-    }
-  ) {
+  init(spaceManager: SpaceManager) {
     self.spaceManager = spaceManager
-    self.spaces = spaces
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
@@ -21,8 +14,6 @@ struct SpaceCommandHandler {
         return try padding(request)
       case "--gap":
         return try gap(request)
-      case "--focus":
-        return try focus(request)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported space command: \(request.command)")
       }
@@ -90,24 +81,6 @@ struct SpaceCommandHandler {
     }
 
     return .success(id: request.id, message: "ok")
-  }
-
-  private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space focus arguments")
-    }
-
-    let target = request.args[0]
-    if let message = FocusTargetValidator.validate(
-      target: target,
-      items: spaces(),
-      hasRecent: spaceManager.lastActiveSpaceID != nil,
-      subject: "space"
-    ) {
-      throw IPCCommandError.invalidRequest(message)
-    }
-
-    throw IPCCommandError.unsupportedCommand("space focus is not implemented")
   }
 
   private func currentSpaceID() throws -> UInt64 {

@@ -80,6 +80,16 @@ struct SpaceCommandHandlerTests {
     #expect(response.message == "unsupported space command: --unknown")
   }
 
+  @Test("dispatch: rejects focus command as unsupported")
+  func dispatchRejectsFocusCommandAsUnsupported() {
+    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
+    let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "unsupported space command: --focus")
+  }
+
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
     let manager = SpaceManager(activeSpaceID: 2)
