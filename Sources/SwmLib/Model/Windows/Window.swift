@@ -186,9 +186,8 @@ public final class Window: NSObject {
     guard let element else { return false }
 
     let observationContext = WindowObservationContext(
-      windowID: id,
-      postEvent: application.post,
-      windowLookup: application.window
+      window: self,
+      postEvent: application.post
     )
     self.observationContext = observationContext
     let context = Unmanaged.passUnretained(observationContext).toOpaque()
@@ -229,18 +228,15 @@ public final class Window: NSObject {
 extension Window: @unchecked Sendable {}
 
 final class WindowObservationContext {
-  private let windowID: CGWindowID
+  private weak var observedWindow: Window?
   private let postEvent: (RuntimeEvent) -> Void
-  private let windowLookup: (CGWindowID) -> Window?
 
   init(
-    windowID: CGWindowID,
-    postEvent: @escaping (RuntimeEvent) -> Void,
-    windowLookup: @escaping (CGWindowID) -> Window?
+    window: Window,
+    postEvent: @escaping (RuntimeEvent) -> Void
   ) {
-    self.windowID = windowID
+    observedWindow = window
     self.postEvent = postEvent
-    self.windowLookup = windowLookup
   }
 
   func post(_ event: RuntimeEvent) {
@@ -248,6 +244,6 @@ final class WindowObservationContext {
   }
 
   func window() -> Window? {
-    windowLookup(windowID)
+    observedWindow
   }
 }

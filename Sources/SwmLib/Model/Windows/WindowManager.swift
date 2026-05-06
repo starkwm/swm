@@ -195,8 +195,7 @@ public final class WindowManager {
     guard
       let application = Application(
         for: process,
-        postEvent: EventManager.shared.post,
-        windowLookup: { [weak self] id in self?.window(by: id) }
+        postEvent: EventManager.shared.post
       )
     else {
       log("could not create application for process \(process)", level: .warn)

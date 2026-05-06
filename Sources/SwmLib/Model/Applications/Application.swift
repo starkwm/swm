@@ -87,16 +87,13 @@ public final class Application: NSObject {
   private var observedNotifications = ApplicationNotifications(rawValue: 0)
   private var observing = false
   private let postEvent: (RuntimeEvent) -> Void
-  private let windowLookup: (CGWindowID) -> Window?
 
   init?(
     for process: Process,
-    postEvent: @escaping (RuntimeEvent) -> Void,
-    windowLookup: @escaping (CGWindowID) -> Window?
+    postEvent: @escaping (RuntimeEvent) -> Void
   ) {
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
     self.postEvent = postEvent
-    self.windowLookup = windowLookup
 
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {
       return nil
@@ -241,10 +238,6 @@ public final class Application: NSObject {
 
   func post(_ event: RuntimeEvent) {
     postEvent(event)
-  }
-
-  func window(by id: CGWindowID) -> Window? {
-    windowLookup(id)
   }
 
   private func isEnhancedUIEnabled() -> Bool {
