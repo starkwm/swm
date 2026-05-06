@@ -18,7 +18,7 @@ struct UnsupportedCommandHandlerTests {
 
   @Test("dispatch: display rejects unsupported commands")
   func dispatchDisplayRejectsUnsupportedCommands() {
-    let response = DisplayCommandHandler(displayManager: DisplayManager()).dispatch(
+    let response = DisplayCommandHandler().dispatch(
       request(domain: .display, command: "focus")
     )
 

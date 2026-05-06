@@ -28,8 +28,7 @@ public class Daemon {
     self.init(
       dispatcher: IPCCommandDispatcher(
         windowManager: windowManager,
-        spaceManager: SpaceManager(),
-        displayManager: DisplayManager()
+        spaceManager: SpaceManager()
       )
     )
   }
@@ -38,8 +37,7 @@ public class Daemon {
     self.init(
       dispatcher: IPCCommandDispatcher(
         windowManager: windowManager,
-        spaceManager: spaceManager,
-        displayManager: DisplayManager()
+        spaceManager: spaceManager
       )
     )
   }
@@ -52,8 +50,7 @@ public class Daemon {
     self.init(
       dispatcher: IPCCommandDispatcher(
         windowManager: windowManager,
-        spaceManager: spaceManager,
-        displayManager: displayManager
+        spaceManager: spaceManager
       )
     )
   }

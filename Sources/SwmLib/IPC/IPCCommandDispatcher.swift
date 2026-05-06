@@ -1,16 +1,13 @@
 struct IPCCommandDispatcher {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
-  private let displayManager: DisplayManager
 
   init(
     windowManager: WindowManager = WindowManager(workspace: Workspace()),
-    spaceManager: SpaceManager = SpaceManager(),
-    displayManager: DisplayManager = DisplayManager()
+    spaceManager: SpaceManager = SpaceManager()
   ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
-    self.displayManager = displayManager
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
@@ -25,7 +22,7 @@ struct IPCCommandDispatcher {
       return ConfigCommandHandler().dispatch(request)
 
     case .display:
-      return DisplayCommandHandler(displayManager: displayManager).dispatch(request)
+      return DisplayCommandHandler().dispatch(request)
 
     case .window:
       return WindowCommandHandler(windowManager: windowManager).dispatch(request)
