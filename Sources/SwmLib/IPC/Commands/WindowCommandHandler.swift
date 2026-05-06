@@ -3,7 +3,7 @@ import CoreGraphics
 struct WindowCommandHandler {
   private let windowManager: WindowManager
 
-  init(windowManager: WindowManager = WindowManager(workspace: Workspace())) {
+  init(windowManager: WindowManager) {
     self.windowManager = windowManager
   }
 

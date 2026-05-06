@@ -4,7 +4,7 @@ struct SpaceCommandHandler {
   private let spaces: () -> [SpaceSerializer]
 
   init(
-    spaceManager: SpaceManager = SpaceManager(),
+    spaceManager: SpaceManager,
     activeSpaceID: @escaping () -> UInt64 = { Space.active().id },
     spaces: @escaping () -> [SpaceSerializer] = {
       SpaceSerializer.all(windowManager: WindowManager(workspace: Workspace()))

@@ -3,7 +3,7 @@ struct DisplayCommandHandler {
   private let displays: () -> [DisplaySerializer]
 
   init(
-    displayManager: DisplayManager = DisplayManager(),
+    displayManager: DisplayManager,
     displays: @escaping () -> [DisplaySerializer] = DisplaySerializer.all
   ) {
     self.displayManager = displayManager
