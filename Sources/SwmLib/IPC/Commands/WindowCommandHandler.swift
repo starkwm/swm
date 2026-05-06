@@ -27,7 +27,8 @@ struct WindowCommandHandler {
   }
 
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    let window = try selectedWindow(request, action: "focus")
+    let selector = try parseSelector(request.args, action: "focus")
+    let window = try selectedWindow(selector: selector)
 
     guard window.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(window.id)")
@@ -37,7 +38,8 @@ struct WindowCommandHandler {
   }
 
   private func minimize(_ request: IPCRequest) throws -> IPCResponse {
-    let window = try selectedWindow(request, action: "minimize")
+    let selector = try parseSelector(request.args, action: "minimize")
+    let window = try selectedWindow(selector: selector)
 
     guard window.minimize() else {
       throw IPCCommandError.internalError("could not minimize window: \(window.id)")
@@ -47,7 +49,8 @@ struct WindowCommandHandler {
   }
 
   private func unminimize(_ request: IPCRequest) throws -> IPCResponse {
-    let window = try selectedWindow(request, action: "unminimize")
+    let selector = try parseSelector(request.args, action: "unminimize")
+    let window = try selectedWindow(selector: selector)
 
     guard window.unminimize() else {
       throw IPCCommandError.internalError("could not unminimize window: \(window.id)")
@@ -57,21 +60,13 @@ struct WindowCommandHandler {
   }
 
   private func move(_ request: IPCRequest) throws -> IPCResponse {
-    let selection = parseSelection(request.args)
+    let selection = try parseGeometrySelection(request.args, action: "move")
 
-    guard selection.arguments.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window move arguments")
+    guard let change = parseGeometryChange(selection.geometry) else {
+      throw IPCCommandError.invalidRequest("invalid window move value: \(selection.geometry)")
     }
 
-    guard let change = parseGeometryChange(selection.arguments[0]) else {
-      throw IPCCommandError.invalidRequest("invalid window move value: \(selection.arguments[0])")
-    }
-
-    let windowID = try selectedWindowID(selection.selector)
-
-    guard let window = windowManager.window(by: windowID) else {
-      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
-    }
+    let window = try selectedWindow(selector: selection.selector)
 
     let moved =
       switch change.mode {
@@ -82,28 +77,20 @@ struct WindowCommandHandler {
       }
 
     guard moved else {
-      throw IPCCommandError.internalError("could not move window: \(windowID)")
+      throw IPCCommandError.internalError("could not move window: \(window.id)")
     }
 
     return .success(id: request.id, message: "ok")
   }
 
   private func resize(_ request: IPCRequest) throws -> IPCResponse {
-    let selection = parseSelection(request.args)
+    let selection = try parseGeometrySelection(request.args, action: "resize")
 
-    guard selection.arguments.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window resize arguments")
+    guard let change = parseGeometryChange(selection.geometry) else {
+      throw IPCCommandError.invalidRequest("invalid window resize value: \(selection.geometry)")
     }
 
-    guard let change = parseGeometryChange(selection.arguments[0]) else {
-      throw IPCCommandError.invalidRequest("invalid window resize value: \(selection.arguments[0])")
-    }
-
-    let windowID = try selectedWindowID(selection.selector)
-
-    guard let window = windowManager.window(by: windowID) else {
-      throw IPCCommandError.invalidRequest("window not found: \(windowID)")
-    }
+    let window = try selectedWindow(selector: selection.selector)
 
     let resized =
       switch change.mode {
@@ -114,18 +101,42 @@ struct WindowCommandHandler {
       }
 
     guard resized else {
-      throw IPCCommandError.internalError("could not resize window: \(windowID)")
+      throw IPCCommandError.internalError("could not resize window: \(window.id)")
     }
 
     return .success(id: request.id, message: "ok")
   }
 
-  private func selectedWindow(_ request: IPCRequest, action: String) throws -> Window {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
-    }
+  private func selectedWindow(selector: String?) throws -> Window {
+    let windowID: CGWindowID
 
-    let windowID = try selectedWindowID(request.args[0], action: action)
+    if let selector {
+      switch selector {
+      case "recent":
+        guard let recentWindowID = windowManager.lastFocusedWindowID else {
+          throw IPCCommandError.invalidRequest("no recent window")
+        }
+
+        windowID = recentWindowID
+
+      default:
+        guard let id = UInt32(selector), id != 0 else {
+          throw IPCCommandError.invalidRequest("invalid window selector: \(selector)")
+        }
+
+        windowID = CGWindowID(id)
+      }
+    } else {
+      guard let windowID = windowManager.currentFocusedWindowID else {
+        throw IPCCommandError.invalidRequest("no focused window")
+      }
+
+      guard let window = windowManager.window(by: windowID) else {
+        throw IPCCommandError.invalidRequest("window not found: \(windowID)")
+      }
+
+      return window
+    }
 
     guard let window = windowManager.window(by: windowID) else {
       throw IPCCommandError.invalidRequest("window not found: \(windowID)")
@@ -134,67 +145,27 @@ struct WindowCommandHandler {
     return window
   }
 
-  private func selectedWindowID(
-    _ target: String,
+  private func parseSelector(_ args: [String], action: String) throws -> String? {
+    guard args.count <= 1 else {
+      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
+    }
+
+    return args.first
+  }
+
+  private func parseGeometrySelection(
+    _ args: [String],
     action: String
-  ) throws -> CGWindowID {
-    guard target != "recent" else {
-      guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        throw IPCCommandError.invalidRequest("no recent window")
-      }
-
-      return recentWindowID
+  ) throws -> WindowGeometrySelection {
+    guard (1...2).contains(args.count) else {
+      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
     }
 
-    guard let id = UInt32(target), id != 0 else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) target: \(target)")
+    if args.count == 1 {
+      return WindowGeometrySelection(selector: nil, geometry: args[0])
     }
 
-    let windowID = CGWindowID(id)
-
-    return windowID
-  }
-
-  private func selectedWindowID(
-    _ selector: String?
-  ) throws -> CGWindowID {
-    guard let selector else {
-      guard let windowID = windowManager.currentFocusedWindowID else {
-        throw IPCCommandError.invalidRequest("no focused window")
-      }
-
-      return windowID
-    }
-
-    switch selector {
-    case "recent":
-      guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        throw IPCCommandError.invalidRequest("no recent window")
-      }
-
-      return recentWindowID
-
-    default:
-      guard let id = UInt32(selector), id != 0 else {
-        throw IPCCommandError.invalidRequest("invalid window selector: \(selector)")
-      }
-
-      let windowID = CGWindowID(id)
-
-      guard windowManager.window(by: windowID) != nil else {
-        throw IPCCommandError.invalidRequest("window not found: \(windowID)")
-      }
-
-      return windowID
-    }
-  }
-
-  private func parseSelection(_ args: [String]) -> WindowSelection {
-    guard args.count >= 2, args[0] == "--window" else {
-      return WindowSelection(selector: nil, arguments: args)
-    }
-
-    return WindowSelection(selector: args[1], arguments: Array(args.dropFirst(2)))
+    return WindowGeometrySelection(selector: args[0], geometry: args[1])
   }
 
   private func parseGeometryChange(_ argument: String) -> WindowGeometryChange? {
@@ -219,7 +190,7 @@ private struct WindowGeometryChange {
   let second: Int
 }
 
-private struct WindowSelection {
+private struct WindowGeometrySelection {
   let selector: String?
-  let arguments: [String]
+  let geometry: String
 }

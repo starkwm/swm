@@ -9,12 +9,8 @@ struct WindowCommandHandlerTests {
     let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
-      let missing = handler.dispatch(request(command: "--\(action)", args: []))
       let extra = handler.dispatch(request(command: "--\(action)", args: ["1", "2"]))
 
-      #expect(missing.ok == false)
-      #expect(missing.errorCode == .invalidRequest)
-      #expect(missing.message == "invalid window \(action) arguments")
       #expect(extra.ok == false)
       #expect(extra.errorCode == .invalidRequest)
       #expect(extra.message == "invalid window \(action) arguments")
@@ -30,7 +26,20 @@ struct WindowCommandHandlerTests {
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "invalid window \(action) target: nope")
+      #expect(response.message == "invalid window selector: nope")
+    }
+  }
+
+  @Test("dispatch: rejects single-target action without focused window")
+  func dispatchRejectsSingleTargetActionWithoutFocusedWindow() {
+    let handler = handler()
+
+    for action in ["focus", "minimize", "unminimize"] {
+      let response = handler.dispatch(request(command: "--\(action)", args: []))
+
+      #expect(response.ok == false)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "no focused window")
     }
   }
 
@@ -66,7 +75,9 @@ struct WindowCommandHandlerTests {
 
     for action in ["move", "resize"] {
       let missing = handler.dispatch(request(command: "--\(action)", args: []))
-      let extra = handler.dispatch(request(command: "--\(action)", args: ["abs:1:2", "extra"]))
+      let extra = handler.dispatch(
+        request(command: "--\(action)", args: ["1", "abs:1:2", "extra"])
+      )
 
       #expect(missing.ok == false)
       #expect(missing.errorCode == .invalidRequest)
@@ -109,7 +120,7 @@ struct WindowCommandHandlerTests {
 
     for action in ["move", "resize"] {
       let response = handler.dispatch(
-        request(command: "--\(action)", args: ["--window", "nope", "rel:100:-200"])
+        request(command: "--\(action)", args: ["nope", "rel:100:-200"])
       )
 
       #expect(response.ok == false)

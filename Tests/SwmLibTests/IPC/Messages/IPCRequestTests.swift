@@ -14,21 +14,21 @@ struct IPCRequestTests {
     #expect(request.args == ["main display"])
   }
 
-  @Test("make: parses window selector before command")
-  func makeParsesWindowSelectorBeforeCommand() throws {
+  @Test("make: parses command-first window selector arguments")
+  func makeParsesCommandFirstWindowSelectorArguments() throws {
     let recent = try IPCRequest.make(
       domain: .window,
-      arguments: ["recent", "--move", "abs:100:200"]
+      arguments: ["--move", "recent", "abs:100:200"]
     )
     let windowID = try IPCRequest.make(
       domain: .window,
-      arguments: ["100", "--resize", "abs:500:800"]
+      arguments: ["--resize", "100", "abs:500:800"]
     )
 
     #expect(recent.command == "--move")
-    #expect(recent.args == ["--window", "recent", "abs:100:200"])
+    #expect(recent.args == ["recent", "abs:100:200"])
     #expect(windowID.command == "--resize")
-    #expect(windowID.args == ["--window", "100", "abs:500:800"])
+    #expect(windowID.args == ["100", "abs:500:800"])
   }
 
   @Test("make: builds query request")
