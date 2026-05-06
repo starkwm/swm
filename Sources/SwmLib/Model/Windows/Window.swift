@@ -150,6 +150,36 @@ public final class Window: NSObject {
     )
   }
 
+  @discardableResult
+  func resize(to size: CGSize) -> Bool {
+    guard let application else { return false }
+
+    var resized = false
+    application.enhancedUIWorkaround {
+      guard let element else { return }
+      resized = AccessibilityClient.shared.setSize(
+        size,
+        for: element,
+        attribute: kAXSizeAttribute as String
+      )
+    }
+
+    return resized
+  }
+
+  @discardableResult
+  func resize(by offset: CGVector) -> Bool {
+    guard let element else { return false }
+    guard let frame = AccessibilityClient.shared.frame(for: element) else { return false }
+
+    return resize(
+      to: CGSize(
+        width: frame.size.width + offset.dx,
+        height: frame.size.height + offset.dy
+      )
+    )
+  }
+
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }
