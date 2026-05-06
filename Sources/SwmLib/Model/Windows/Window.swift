@@ -71,6 +71,33 @@ public final class Window: NSObject {
     id = 0
   }
 
+  @discardableResult
+  func focus() -> Bool {
+    guard let element else { return false }
+    guard let application else { return false }
+    guard application.activate() else { return false }
+
+    AccessibilityClient.shared.setAttributeValue(
+      element,
+      for: application.element,
+      attribute: kAXFocusedWindowAttribute as String
+    )
+
+    guard
+      AccessibilityClient.shared.setAttributeValue(
+        kCFBooleanTrue,
+        for: element,
+        attribute: kAXMainAttribute as String
+      )
+    else {
+      return false
+    }
+
+    AccessibilityClient.shared.performAction(kAXRaiseAction as String, for: element)
+
+    return true
+  }
+
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }

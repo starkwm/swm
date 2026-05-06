@@ -213,6 +213,10 @@ public final class Application: NSObject {
     return Window.validID(for: element)
   }
 
+  func activate() -> Bool {
+    application.activate(options: .activateAllWindows)
+  }
+
   func enhancedUIWorkaround(callback: () -> Void) {
     let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
 

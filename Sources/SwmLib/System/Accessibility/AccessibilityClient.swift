@@ -107,6 +107,11 @@ final class AccessibilityClient {
     AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
   }
 
+  @discardableResult
+  func performAction(_ action: String, for element: AXUIElement) -> Bool {
+    AXUIElementPerformAction(element, action as CFString) == .success
+  }
+
   func windowElements(for element: AXUIElement) -> [AXUIElement] {
     var values: AnyObject?
 

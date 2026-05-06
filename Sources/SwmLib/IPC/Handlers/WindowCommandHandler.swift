@@ -30,26 +30,33 @@ struct WindowCommandHandler {
     }
 
     let target = request.args[0]
+    let windowID: CGWindowID
 
     switch target {
     case "recent":
-      guard windowManager.lastFocusedWindowID != nil else {
+      guard let recentWindowID = windowManager.lastFocusedWindowID else {
         return invalid(request, "no recent window")
       }
+
+      windowID = recentWindowID
 
     default:
       guard let id = UInt32(target), id != 0 else {
         return invalid(request, "invalid window focus target: \(target)")
       }
 
-      let windowID = CGWindowID(id)
-
-      guard windowManager.knowsWindow(withID: windowID) else {
-        return invalid(request, "window not found: \(windowID)")
-      }
+      windowID = CGWindowID(id)
     }
 
-    return unsupported(request, "window focus is not implemented")
+    guard let window = windowManager.window(by: windowID) else {
+      return invalid(request, "window not found: \(windowID)")
+    }
+
+    guard window.focus() else {
+      return internalError(request, "could not focus window: \(windowID)")
+    }
+
+    return .success(id: request.id, message: "ok")
   }
 
   private func move(_ request: IPCRequest) -> IPCResponse {
@@ -158,6 +165,10 @@ struct WindowCommandHandler {
 
   private func unsupported(_ request: IPCRequest, _ message: String) -> IPCResponse {
     .failure(id: request.id, message: message, errorCode: .unsupportedCommand)
+  }
+
+  private func internalError(_ request: IPCRequest, _ message: String) -> IPCResponse {
+    .failure(id: request.id, message: message, errorCode: .internalError)
   }
 }
 
