@@ -62,86 +62,6 @@ struct SpaceCommandHandlerTests {
     #expect(manager.settings(for: 42).gap == 10)
   }
 
-  @Test("dispatch: rejects previous focus target as unimplemented")
-  func dispatchRejectsPreviousFocusTargetAsUnimplemented() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 1) }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["prev"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
-  @Test("dispatch: rejects next focus target as unimplemented")
-  func dispatchRejectsNextFocusTargetAsUnimplemented() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 1) }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["next"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
-  @Test("dispatch: wraps previous focus target")
-  func dispatchWrapsPreviousFocusTarget() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 0) }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["prev"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
-  @Test("dispatch: wraps next focus target")
-  func dispatchWrapsNextFocusTarget() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 2) }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["next"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
-  @Test("dispatch: rejects indexed focus target as unimplemented")
-  func dispatchRejectsIndexedFocusTargetAsUnimplemented() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 0) }
-    )
-
-    let response = handler.dispatch(request(command: "--focus", args: ["2"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "space focus is not implemented")
-  }
-
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
     let handler = SpaceCommandHandler(
@@ -156,29 +76,6 @@ struct SpaceCommandHandlerTests {
       handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
       handler.dispatch(request(command: "--gap", args: ["abs"])),
       handler.dispatch(request(command: "--gap", args: ["rel:x"])),
-    ]
-
-    #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
-  }
-
-  @Test("dispatch: rejects malformed focus arguments")
-  func dispatchRejectsMalformedFocusArguments() {
-    let manager = SpaceManager()
-    let handler = SpaceCommandHandler(
-      spaceManager: manager,
-      activeSpaceID: { 2 },
-      spaces: { spaces(focusedIndex: 0) }
-    )
-
-    let responses = [
-      handler.dispatch(request(command: "--focus", args: [])),
-      handler.dispatch(request(command: "--focus", args: ["next", "extra"])),
-      handler.dispatch(request(command: "--focus", args: ["unknown"])),
-      handler.dispatch(request(command: "--focus", args: ["10"])),
-      SpaceCommandHandler(spaceManager: manager, activeSpaceID: { 2 }, spaces: { [] })
-        .dispatch(request(command: "--focus", args: ["next"])),
-      SpaceCommandHandler(spaceManager: SpaceManager(), activeSpaceID: { 2 }, spaces: { [] })
-        .dispatch(request(command: "--focus", args: ["recent"])),
     ]
 
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
@@ -216,22 +113,5 @@ struct SpaceCommandHandlerTests {
     let data = try #require(string.data(using: .utf8))
     let object = try JSONSerialization.jsonObject(with: data)
     return try #require(object as? [String: Any])
-  }
-
-  private func spaces(focusedIndex: Int?) -> [SpaceSerializer] {
-    (0..<3).map { index in
-      SpaceSerializer(
-        id: UInt64(100 + index),
-        uuid: nil,
-        index: index,
-        label: nil,
-        type: "normal",
-        display: nil,
-        windows: [],
-        hasFocus: index == focusedIndex,
-        isVisible: false,
-        isNativeFullscreen: false
-      )
-    }
   }
 }

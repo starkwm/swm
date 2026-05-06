@@ -29,38 +29,13 @@ struct DisplayCommandHandler {
     }
 
     let target = request.args[0]
-
-    switch target {
-    case "recent":
-      guard displayManager.lastActiveDisplayID != nil else {
-        return invalid(request, "no recent display")
-      }
-
-    case "prev", "next":
-      let arrangedDisplays = displays().sorted { $0.index < $1.index }
-
-      guard let currentDisplay = arrangedDisplays.first(where: \.hasFocus) else {
-        return invalid(request, "no focused display")
-      }
-
-      guard
-        adjacentDisplay(
-          from: currentDisplay.index,
-          direction: target,
-          displays: arrangedDisplays
-        ) != nil
-      else {
-        return invalid(request, "no focused display")
-      }
-
-    default:
-      guard let index = Int(target) else {
-        return invalid(request, "invalid display focus target: \(target)")
-      }
-
-      guard displays().contains(where: { $0.index == index }) else {
-        return invalid(request, "display index not found: \(index)")
-      }
+    if let message = FocusTargetValidator.validate(
+      target: target,
+      items: displays(),
+      hasRecent: displayManager.lastActiveDisplayID != nil,
+      subject: "display"
+    ) {
+      return invalid(request, message)
     }
 
     return .failure(
@@ -68,24 +43,6 @@ struct DisplayCommandHandler {
       message: "display focus is not implemented",
       errorCode: .unsupportedCommand
     )
-  }
-
-  private func adjacentDisplay(
-    from currentIndex: Int,
-    direction: String,
-    displays arrangedDisplays: [DisplaySerializer]
-  ) -> DisplaySerializer? {
-    guard
-      !arrangedDisplays.isEmpty,
-      let currentPosition = arrangedDisplays.firstIndex(where: { $0.index == currentIndex })
-    else {
-      return nil
-    }
-
-    let offset = direction == "prev" ? -1 : 1
-    let nextPosition = (currentPosition + offset + arrangedDisplays.count) % arrangedDisplays.count
-
-    return arrangedDisplays[nextPosition]
   }
 
   private func invalid(_ request: IPCRequest, _ message: String) -> IPCResponse {

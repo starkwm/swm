@@ -60,38 +60,13 @@ struct SpaceCommandHandler {
     }
 
     let target = request.args[0]
-
-    switch target {
-    case "recent":
-      guard spaceManager.lastActiveSpaceID != nil else {
-        return invalid(request, "no recent space")
-      }
-
-    case "prev", "next":
-      let arrangedSpaces = spaces().sorted { $0.index < $1.index }
-
-      guard let currentSpace = arrangedSpaces.first(where: \.hasFocus) else {
-        return invalid(request, "no focused space")
-      }
-
-      guard
-        adjacentSpace(
-          from: currentSpace.index,
-          direction: target,
-          spaces: arrangedSpaces
-        ) != nil
-      else {
-        return invalid(request, "no focused space")
-      }
-
-    default:
-      guard let index = Int(target) else {
-        return invalid(request, "invalid space focus target: \(target)")
-      }
-
-      guard spaces().contains(where: { $0.index == index }) else {
-        return invalid(request, "space index not found: \(index)")
-      }
+    if let message = FocusTargetValidator.validate(
+      target: target,
+      items: spaces(),
+      hasRecent: spaceManager.lastActiveSpaceID != nil,
+      subject: "space"
+    ) {
+      return invalid(request, message)
     }
 
     return .failure(
@@ -178,24 +153,6 @@ struct SpaceCommandHandler {
     }
 
     return GapChange(mode: mode, value: value)
-  }
-
-  private func adjacentSpace(
-    from currentIndex: Int,
-    direction: String,
-    spaces arrangedSpaces: [SpaceSerializer]
-  ) -> SpaceSerializer? {
-    guard
-      !arrangedSpaces.isEmpty,
-      let currentPosition = arrangedSpaces.firstIndex(where: { $0.index == currentIndex })
-    else {
-      return nil
-    }
-
-    let offset = direction == "prev" ? -1 : 1
-    let nextPosition = (currentPosition + offset + arrangedSpaces.count) % arrangedSpaces.count
-
-    return arrangedSpaces[nextPosition]
   }
 
   private func success(
