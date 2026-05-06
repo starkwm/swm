@@ -26,18 +26,14 @@ struct ApplicationLifecycleHandler {
     if !workspace.isFinishedLaunching(process) {
       log("application has not finished launching \(process)", level: .info)
       workspace.observeFinishedLaunching(process)
-
       guard workspace.isFinishedLaunching(process) else { return }
-
       workspace.unobserveFinishedLaunching(process)
     }
 
     if !workspace.isObservable(process) {
       log("application is not observable \(process)", level: .warn)
       workspace.observeActivationPolicy(process)
-
       guard workspace.isObservable(process) else { return }
-
       workspace.unobserveActivationPolicy(process)
     }
 
@@ -62,13 +58,8 @@ struct ApplicationLifecycleHandler {
       application.unobserve()
 
       if application.retryObserving {
-        let processLookup = processLookup
-        let postEvent = postEvent
-        let psn = process.psn
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-          guard let process = processLookup.find(by: psn) else { return }
-
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [processManager, postEvent, psn = process.psn] in
+          guard let process = processManager.find(by: psn) else { return }
           postEvent(.application(.launched(process)))
         }
       }
@@ -112,7 +103,7 @@ struct ApplicationLifecycleHandler {
     }
 
     log(
-      "frontmost application switched \(application) current focused window: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+      "frontmost application switched \(application), current focused window: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
     )
   }
 }
