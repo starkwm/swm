@@ -189,7 +189,7 @@ struct WindowCommandHandler {
 
       let windowID = CGWindowID(id)
 
-      guard windowManager.knowsWindow(withID: windowID) else {
+      guard windowManager.window(by: windowID) != nil else {
         throw IPCCommandError.invalidRequest("window not found: \(windowID)")
       }
 

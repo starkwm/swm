@@ -41,7 +41,6 @@ public final class WindowManager {
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
-  private var knownWindowIDs = Set<CGWindowID>()
 
   public convenience init(workspace: Workspace) {
     self.init(workspace: workspace, focusedWindowID: Self.resolveFocusedWindowID())
@@ -80,10 +79,6 @@ public final class WindowManager {
 
   public func allWindows() -> [Window] {
     Array(windowsByID.values)
-  }
-
-  func knowsWindow(withID windowID: CGWindowID) -> Bool {
-    windowsByID[windowID] != nil || knownWindowIDs.contains(windowID)
   }
 
   func focusedWindowDidChange(to windowID: CGWindowID) {
@@ -157,13 +152,6 @@ public final class WindowManager {
 
   func remove(by windowID: CGWindowID) {
     windowsByID.removeValue(forKey: windowID)
-    knownWindowIDs.remove(windowID)
-  }
-
-  func addKnownWindowID(_ windowID: CGWindowID) {
-    guard windowID != 0 else { return }
-
-    knownWindowIDs.insert(windowID)
   }
 
   @discardableResult
