@@ -149,7 +149,7 @@ public class Daemon {
         log("could not receive data from socket: \(error)", level: .error)
         let response = IPCResponse.failure(
           id: "",
-          message: "error: \(error)",
+          message: "\(error)",
           errorCode: .invalidRequest
         )
         do {

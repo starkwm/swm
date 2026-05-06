@@ -7,6 +7,14 @@ struct IPCResponse: Codable, Equatable {
     IPCResponse(id: id, ok: false, message: message, errorCode: errorCode)
   }
 
+  var outputMessage: String {
+    if ok || message.hasPrefix("error: ") {
+      return message
+    }
+
+    return "error: \(message)"
+  }
+
   let id: String
   let ok: Bool
   let message: String

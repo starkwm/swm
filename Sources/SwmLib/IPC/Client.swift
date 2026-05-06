@@ -18,13 +18,18 @@ public enum Client {
         let response = try IPCMessage.decode(IPCResponse.self, from: data)
         let stream = response.ok ? stdout : stderr
 
-        fputs("\(response.message)\n", stream)
+        fputs("\(response.outputMessage)\n", stream)
         exit(response.ok ? EXIT_SUCCESS : EXIT_FAILURE)
       }
 
       exit(EXIT_SUCCESS)
+    } catch let error as IPCCommandError {
+      let response = error.response(id: "")
+      fputs("\(response.outputMessage)\n", stderr)
+      exit(EXIT_FAILURE)
     } catch {
-      fputs("error: \(error)\n", stderr)
+      let response = IPCCommandError.internalError("\(error)").response(id: "")
+      fputs("\(response.outputMessage)\n", stderr)
       exit(EXIT_FAILURE)
     }
   }

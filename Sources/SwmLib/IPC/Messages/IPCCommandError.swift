@@ -20,7 +20,7 @@ struct IPCCommandError: Error, Equatable, CustomStringConvertible {
     } catch let error as IPCCommandError {
       return error.response(id: id)
     } catch {
-      return IPCCommandError.internalError("error: \(error)").response(id: id)
+      return IPCCommandError.internalError("\(error)").response(id: id)
     }
   }
 
