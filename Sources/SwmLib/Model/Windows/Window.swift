@@ -98,6 +98,28 @@ public final class Window: NSObject {
     return true
   }
 
+  @discardableResult
+  func minimize() -> Bool {
+    guard let element else { return false }
+
+    return AccessibilityClient.shared.setAttributeValue(
+      kCFBooleanTrue,
+      for: element,
+      attribute: kAXMinimizedAttribute as String
+    )
+  }
+
+  @discardableResult
+  func unminimize() -> Bool {
+    guard let element else { return false }
+
+    return AccessibilityClient.shared.setAttributeValue(
+      kCFBooleanFalse,
+      for: element,
+      attribute: kAXMinimizedAttribute as String
+    )
+  }
+
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }

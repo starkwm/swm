@@ -11,6 +11,10 @@ struct WindowCommandHandler {
     switch request.command {
     case "--focus":
       focus(request)
+    case "--minimize":
+      minimize(request)
+    case "--unminimize":
+      unminimize(request)
     case "--move":
       move(request)
     case "--resize":
@@ -25,38 +29,85 @@ struct WindowCommandHandler {
   }
 
   private func focus(_ request: IPCRequest) -> IPCResponse {
+    switch selectedWindow(request, action: "focus") {
+    case .window(let window):
+      guard window.focus() else {
+        return internalError(request, "could not focus window: \(window.id)")
+      }
+
+      return .success(id: request.id, message: "ok")
+
+    case .failure(let response):
+      return response
+    }
+  }
+
+  private func minimize(_ request: IPCRequest) -> IPCResponse {
+    switch selectedWindow(request, action: "minimize") {
+    case .window(let window):
+      guard window.minimize() else {
+        return internalError(request, "could not minimize window: \(window.id)")
+      }
+
+      return .success(id: request.id, message: "ok")
+
+    case .failure(let response):
+      return response
+    }
+  }
+
+  private func unminimize(_ request: IPCRequest) -> IPCResponse {
+    switch selectedWindow(request, action: "unminimize") {
+    case .window(let window):
+      guard window.unminimize() else {
+        return internalError(request, "could not unminimize window: \(window.id)")
+      }
+
+      return .success(id: request.id, message: "ok")
+
+    case .failure(let response):
+      return response
+    }
+  }
+
+  private func selectedWindow(_ request: IPCRequest, action: String) -> SelectedWindow {
     guard request.args.count == 1 else {
-      return invalid(request, "invalid window focus arguments")
+      return .failure(invalid(request, "invalid window \(action) arguments"))
     }
 
-    let target = request.args[0]
-    let windowID: CGWindowID
+    switch selectedWindowID(request.args[0], request: request, action: action) {
+    case .window(let windowID):
+      guard let window = windowManager.window(by: windowID) else {
+        return .failure(invalid(request, "window not found: \(windowID)"))
+      }
 
-    switch target {
-    case "recent":
+      return .window(window)
+
+    case .failure(let response):
+      return .failure(response)
+    }
+  }
+
+  private func selectedWindowID(
+    _ target: String,
+    request: IPCRequest,
+    action: String
+  ) -> SelectedWindowID {
+    guard target != "recent" else {
       guard let recentWindowID = windowManager.lastFocusedWindowID else {
-        return invalid(request, "no recent window")
+        return .failure(invalid(request, "no recent window"))
       }
 
-      windowID = recentWindowID
-
-    default:
-      guard let id = UInt32(target), id != 0 else {
-        return invalid(request, "invalid window focus target: \(target)")
-      }
-
-      windowID = CGWindowID(id)
+      return .window(recentWindowID)
     }
 
-    guard let window = windowManager.window(by: windowID) else {
-      return invalid(request, "window not found: \(windowID)")
+    guard let id = UInt32(target), id != 0 else {
+      return .failure(invalid(request, "invalid window \(action) target: \(target)"))
     }
 
-    guard window.focus() else {
-      return internalError(request, "could not focus window: \(windowID)")
-    }
+    let windowID = CGWindowID(id)
 
-    return .success(id: request.id, message: "ok")
+    return .window(windowID)
   }
 
   private func move(_ request: IPCRequest) -> IPCResponse {
@@ -185,5 +236,10 @@ private struct WindowSelection {
 
 private enum SelectedWindowID {
   case window(CGWindowID)
+  case failure(IPCResponse)
+}
+
+private enum SelectedWindow {
+  case window(Window)
   case failure(IPCResponse)
 }
