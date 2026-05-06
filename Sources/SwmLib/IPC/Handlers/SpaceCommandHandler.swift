@@ -246,3 +246,13 @@ private struct SpacePaddingSerializer: Encodable {
   let left: Int
   let right: Int
 }
+
+private struct GapChange {
+  let mode: ChangeMode
+  let value: Int
+}
+
+private struct PaddingChange {
+  let mode: ChangeMode
+  let padding: SpacePadding
+}
