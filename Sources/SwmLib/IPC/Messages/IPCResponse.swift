@@ -7,6 +7,11 @@ struct IPCResponse: Codable, Equatable {
     IPCResponse(id: id, ok: false, message: message, errorCode: errorCode)
   }
 
+  let id: String
+  let ok: Bool
+  let message: String
+  let errorCode: IPCErrorCode?
+
   var outputMessage: String {
     if ok || message.hasPrefix("error: ") {
       return message
@@ -14,9 +19,4 @@ struct IPCResponse: Codable, Equatable {
 
     return "error: \(message)"
   }
-
-  let id: String
-  let ok: Bool
-  let message: String
-  let errorCode: IPCErrorCode?
 }

@@ -23,13 +23,13 @@ final class Window: NSObject {
     AccessibilityClient.shared.processID(for: element)
   }
 
-  override var description: String {
-    "<Window id: \(id), title: \(title)>"
-  }
-
   private(set) var element: AXUIElement?
   weak var application: Application?
   private(set) var id: CGWindowID
+
+  override var description: String {
+    "<Window id: \(id), title: \(title)>"
+  }
 
   var subrole: String? {
     guard let element else { return nil }

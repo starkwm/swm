@@ -1,12 +1,12 @@
 import AppKit
 
 final class Space: NSObject {
+  var id: UInt64
+  var type: SpaceType
+
   override var description: String {
     "<Space id: \(id), type: \(type)>"
   }
-
-  var id: UInt64
-  var type: SpaceType
 
   convenience init(id: UInt64) {
     self.init(

@@ -20,6 +20,19 @@ public class Daemon {
 
   private var listen: Socket?
 
+  public convenience init(
+    windowManager: WindowManager,
+    spaceManager: SpaceManager,
+    displayManager: DisplayManager
+  ) {
+    self.init(
+      dispatcher: IPCCommandDispatcher(
+        windowManager: windowManager,
+        spaceManager: spaceManager
+      )
+    )
+  }
+
   convenience init() {
     self.init(dispatcher: IPCCommandDispatcher())
   }
@@ -34,19 +47,6 @@ public class Daemon {
   }
 
   convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
-    self.init(
-      dispatcher: IPCCommandDispatcher(
-        windowManager: windowManager,
-        spaceManager: spaceManager
-      )
-    )
-  }
-
-  public convenience init(
-    windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    displayManager: DisplayManager
-  ) {
     self.init(
       dispatcher: IPCCommandDispatcher(
         windowManager: windowManager,

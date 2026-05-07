@@ -1,7 +1,4 @@
 struct IPCCommandError: Error, Equatable, CustomStringConvertible {
-  let message: String
-  let errorCode: IPCErrorCode
-
   static func invalidRequest(_ message: String) -> IPCCommandError {
     IPCCommandError(message: message, errorCode: .invalidRequest)
   }
@@ -23,6 +20,9 @@ struct IPCCommandError: Error, Equatable, CustomStringConvertible {
       return IPCCommandError.internalError("\(error)").response(id: id)
     }
   }
+
+  let message: String
+  let errorCode: IPCErrorCode
 
   var description: String {
     message

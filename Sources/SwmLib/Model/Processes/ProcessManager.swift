@@ -48,12 +48,12 @@ public final class ProcessManager {
       ? .success(()) : .failure(.accessFailed("failed to install event handler"))
   }
 
-  func find(by psn: ProcessSerialNumber) -> Process? {
-    processes[psn.lowLongOfPSN]
-  }
-
   public func all() -> [Process] {
     Array(processes.values)
+  }
+
+  func find(by psn: ProcessSerialNumber) -> Process? {
+    processes[psn.lowLongOfPSN]
   }
 
   func handle(event: EventRef) -> OSStatus {

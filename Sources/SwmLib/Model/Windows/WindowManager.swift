@@ -3,8 +3,6 @@ import Carbon
 import Foundation
 
 public final class WindowManager {
-  private let workspace: Workspace
-
   private static func resolveFocusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {
       return nil
@@ -35,6 +33,7 @@ public final class WindowManager {
     }
   }
 
+  private let workspace: Workspace
   private let focusedWindowLock = NSLock()
   private var focusedWindow: TrackedState<CGWindowID>
 

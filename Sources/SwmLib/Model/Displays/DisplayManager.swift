@@ -32,7 +32,6 @@ public final class DisplayManager {
       activeDisplay.update(to: activeDisplayID)
     }
   }
-
 }
 
 extension DisplayManager: @unchecked Sendable {}
