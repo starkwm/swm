@@ -6,23 +6,6 @@ final class Window: NSObject {
     allNotifications: .all
   )
 
-  static func id(for element: AXUIElement) -> CGWindowID {
-    AccessibilityClient.shared.windowID(for: element)
-  }
-
-  static func validID(for element: AXUIElement) -> CGWindowID? {
-    let windowID = id(for: element)
-    return windowID != 0 ? windowID : nil
-  }
-
-  static func isWindow(_ element: AXUIElement) -> Bool {
-    AccessibilityClient.shared.isWindow(element)
-  }
-
-  static func pid(for element: AXUIElement) -> pid_t? {
-    AccessibilityClient.shared.processID(for: element)
-  }
-
   private(set) var element: AXUIElement?
   weak var application: Application?
   private(set) var id: CGWindowID
@@ -51,7 +34,7 @@ final class Window: NSObject {
   init(with element: AXUIElement, for application: Application) {
     self.element = element
     self.application = application
-    id = Window.id(for: element)
+    id = AccessibilityClient.shared.windowID(for: element)
   }
 
   deinit {

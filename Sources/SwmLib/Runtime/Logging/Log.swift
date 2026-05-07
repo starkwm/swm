@@ -1,5 +1,5 @@
-import Foundation
 import ArgumentParser
+import Foundation
 
 private let logLevelColumnWidth = LogLevel.allCases.map(\.label.count).max()! + 2
 private let logConfiguration = LogConfiguration()

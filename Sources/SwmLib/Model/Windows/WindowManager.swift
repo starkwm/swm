@@ -18,7 +18,7 @@ public final class WindowManager {
       return nil
     }
 
-    return Window.validID(for: focusedWindowElement)
+    return AccessibilityClient.shared.optionalWindowID(for: focusedWindowElement)
   }
 
   var currentFocusedWindowID: CGWindowID? {
@@ -137,7 +137,10 @@ public final class WindowManager {
     var windows = [Window]()
 
     for element in elements {
-      guard let windowID = Window.validID(for: element), windowsByID[windowID] == nil else {
+      guard
+        let windowID = AccessibilityClient.shared.optionalWindowID(for: element),
+        windowsByID[windowID] == nil
+      else {
         continue
       }
 
@@ -216,7 +219,9 @@ public final class WindowManager {
     var resolvedWindowCount = 0
 
     for element in elements {
-      guard let windowID = Window.validID(for: element) else { continue }
+      guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else {
+        continue
+      }
 
       resolvedWindowCount += 1
 
@@ -251,8 +256,8 @@ public final class WindowManager {
 
       guard
         let element = _AXUIElementCreateWithRemoteToken(token)?.takeRetainedValue(),
-        Window.isWindow(element),
-        let windowID = Window.validID(for: element)
+        AccessibilityClient.shared.isWindow(element),
+        let windowID = AccessibilityClient.shared.optionalWindowID(for: element)
       else {
         continue
       }

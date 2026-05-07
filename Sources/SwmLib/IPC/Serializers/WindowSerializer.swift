@@ -111,7 +111,9 @@ struct WindowSerializer: Encodable, Equatable {
     let spaceIDs = WindowServerClient.shared.spaceIDs(containing: window.id)
 
     id = window.id
-    pid = window.application?.processID ?? element.flatMap { Window.pid(for: $0) }
+    pid =
+      window.application?.processID
+      ?? element.flatMap { AccessibilityClient.shared.processID(for: $0) }
     app =
       window.application?.name
       ?? (info?[kCGWindowOwnerName as String] as? String)

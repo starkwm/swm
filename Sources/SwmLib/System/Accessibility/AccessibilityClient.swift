@@ -163,6 +163,11 @@ final class AccessibilityClient {
     }
   }
 
+  func optionalWindowID(for element: AXUIElement) -> CGWindowID? {
+    let windowID = windowID(for: element)
+    return windowID != 0 ? windowID : nil
+  }
+
   func processID(for element: AXUIElement) -> pid_t? {
     var pid: pid_t = 0
     guard AXUIElementGetPid(element, &pid) == .success else { return nil }

@@ -87,8 +87,12 @@ struct ConfigCommandHandlerTests {
 
     #expect(response.ok)
     #expect(response.message == "ok")
-    #expect(manager.settings(for: 1).padding == SpacePadding(top: 10, bottom: 20, left: 30, right: 40))
-    #expect(manager.settings(for: 2).padding == SpacePadding(top: 10, bottom: 20, left: 30, right: 40))
+    #expect(
+      manager.settings(for: 1).padding == SpacePadding(top: 10, bottom: 20, left: 30, right: 40)
+    )
+    #expect(
+      manager.settings(for: 2).padding == SpacePadding(top: 10, bottom: 20, left: 30, right: 40)
+    )
   }
 
   @Test("dispatch: padding commands preserve other sides")

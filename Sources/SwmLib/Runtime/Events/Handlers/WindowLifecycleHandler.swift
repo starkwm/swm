@@ -27,7 +27,9 @@ struct WindowLifecycleHandler {
     guard windowManager.window(by: windowID) == nil else { return }
     guard let application = windowManager.application(by: pid) else { return }
 
-    let element = application.windowElements().first { Window.validID(for: $0) == windowID }
+    let element = application.windowElements().first {
+      AccessibilityClient.shared.optionalWindowID(for: $0) == windowID
+    }
     let window: Window?
 
     if let element {

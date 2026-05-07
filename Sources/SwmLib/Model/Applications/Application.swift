@@ -10,20 +10,20 @@ private func accessibilityObserverCallback(
 ) {
   switch notification as String {
   case kAXCreatedNotification:
-    guard let pid = Window.pid(for: element) else { return }
-    guard let windowID = Window.validID(for: element) else { return }
+    guard let pid = AccessibilityClient.shared.processID(for: element) else { return }
+    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     EventManager.shared.post(.window(.created(pid, windowID)))
 
   case kAXFocusedWindowChangedNotification:
-    guard let windowID = Window.validID(for: element) else { return }
+    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     EventManager.shared.post(.window(.focused(windowID)))
 
   case kAXWindowMovedNotification:
-    guard let windowID = Window.validID(for: element) else { return }
+    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     EventManager.shared.post(.window(.moved(windowID)))
 
   case kAXWindowResizedNotification:
-    guard let windowID = Window.validID(for: element) else { return }
+    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     EventManager.shared.post(.window(.resized(windowID)))
 
   case kAXWindowMiniaturizedNotification:
@@ -192,7 +192,7 @@ final class Application: NSObject {
       return nil
     }
 
-    return Window.validID(for: element)
+    return AccessibilityClient.shared.optionalWindowID(for: element)
   }
 
   func activate() -> Bool {
