@@ -13,15 +13,15 @@ struct ConfigCommandHandler {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
-      case "window_gap":
+      case "window-gap":
         return try windowGap(request)
-      case "top_padding":
+      case "top-padding":
         return try padding(request, side: .top)
-      case "bottom_padding":
+      case "bottom-padding":
         return try padding(request, side: .bottom)
-      case "left_padding":
+      case "left-padding":
         return try padding(request, side: .left)
-      case "right_padding":
+      case "right-padding":
         return try padding(request, side: .right)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
@@ -31,11 +31,11 @@ struct ConfigCommandHandler {
 
   private func windowGap(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config window_gap arguments")
+      throw IPCCommandError.invalidRequest("invalid config window-gap arguments")
     }
 
     guard let gap = Int(request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid config window_gap value: \(request.args[0])")
+      throw IPCCommandError.invalidRequest("invalid config window-gap value: \(request.args[0])")
     }
 
     for space in spaces() {
