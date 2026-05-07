@@ -66,7 +66,7 @@ final class WindowServerClient {
     }
   }
 
-  func screenID(forSpaceID spaceID: UInt64) -> String? {
+  func screenID(for spaceID: UInt64) -> String? {
     for info in managedDisplaySpaces() {
       guard let screenID = info[screenIDKey] as? String,
         let spacesInfo = info[spacesKey] as? [[String: AnyObject]]

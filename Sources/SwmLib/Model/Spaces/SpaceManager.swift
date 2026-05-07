@@ -11,6 +11,10 @@ public final class SpaceManager {
     Space(id: windowServerClient.activeSpace())
   }
 
+  static func display(for space: Space) -> String? {
+    WindowServerClient.shared.screenID(for: space.id)
+  }
+
   var currentActiveSpaceID: UInt64? {
     lock.withLock {
       activeSpace.current

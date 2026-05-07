@@ -1,10 +1,6 @@
 import Foundation
 
 public final class DisplayManager {
-  private static func resolveActiveDisplayID() -> String? {
-    WindowServerClient.shared.screenID(forSpaceID: SpaceManager.active().id)
-  }
-
   var currentActiveDisplayID: String? {
     lock.withLock {
       activeDisplay.current
@@ -22,11 +18,11 @@ public final class DisplayManager {
   private var activeDisplay: TrackedState<String>
 
   public init() {
-    activeDisplay = TrackedState(current: Self.resolveActiveDisplayID())
+    activeDisplay = TrackedState(current: SpaceManager.display(for: SpaceManager.active()))
   }
 
   func activeDisplayDidChange() {
-    guard let activeDisplayID = Self.resolveActiveDisplayID() else { return }
+    guard let activeDisplayID = SpaceManager.display(for: SpaceManager.active()) else { return }
 
     lock.withLock {
       activeDisplay.update(to: activeDisplayID)
