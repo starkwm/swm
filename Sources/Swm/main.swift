@@ -29,7 +29,14 @@ if arguments.version {
 }
 
 if let message = arguments.message {
-  Client.send(message: message, args: arguments.args)
+  let result = Client.send(message: message, args: arguments.args)
+
+  if let outputMessage = result.outputMessage {
+    let stream = result.ok ? stdout : stderr
+    fputs("\(outputMessage)\n", stream)
+  }
+
+  exit(result.ok ? EXIT_SUCCESS : EXIT_FAILURE)
 }
 
 if getuid() == 0 || geteuid() == 0 {
