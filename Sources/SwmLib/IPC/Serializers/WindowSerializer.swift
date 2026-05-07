@@ -20,7 +20,6 @@ struct WindowSerializer: Encodable, Equatable {
     case isNativeFullscreen = "is-native-fullscreen"
     case isVisible = "is-visible"
     case isMinimized = "is-minimized"
-    case isFloating = "is-floating"
   }
 
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
@@ -51,17 +50,16 @@ struct WindowSerializer: Encodable, Equatable {
   let frame: FrameSerializer?
   let role: String?
   let subrole: String?
-  let display: String?
+  let display: UInt32?
   let space: Int?
   let layer: Int?
   let canMove: Bool?
   let canResize: Bool?
   let hasFocus: Bool?
   let hasAXReference: Bool
-  let isNativeFullscreen: Bool?
-  let isVisible: Bool?
-  let isMinimized: Bool?
-  let isFloating: Bool?
+  let isNativeFullscreen: Bool
+  let isVisible: Bool
+  let isMinimized: Bool
 
   init(
     id: CGWindowID,
@@ -71,17 +69,16 @@ struct WindowSerializer: Encodable, Equatable {
     frame: FrameSerializer?,
     role: String?,
     subrole: String?,
-    display: String?,
+    display: UInt32?,
     space: Int?,
     layer: Int?,
     canMove: Bool?,
     canResize: Bool?,
     hasFocus: Bool?,
     hasAXReference: Bool,
-    isNativeFullscreen: Bool?,
-    isVisible: Bool?,
-    isMinimized: Bool?,
-    isFloating: Bool?
+    isNativeFullscreen: Bool,
+    isVisible: Bool,
+    isMinimized: Bool,
   ) {
     self.id = id
     self.pid = pid
@@ -100,7 +97,6 @@ struct WindowSerializer: Encodable, Equatable {
     self.isNativeFullscreen = isNativeFullscreen
     self.isVisible = isVisible
     self.isMinimized = isMinimized
-    self.isFloating = isFloating
   }
 
   init(
@@ -139,11 +135,7 @@ struct WindowSerializer: Encodable, Equatable {
         rect.intersection(screens[a].frame).area < rect.intersection(screens[b].frame).area
       }
     }
-    display = displayIndex.flatMap { index in
-      displaySpaces.first { $0.id == screens[index].uuid }?.id
-        ?? displaySpaces[safe: index]?.id
-        ?? screens[index].uuid
-    }
+    display = displayIndex.flatMap { screens[$0].id }
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
     canMove = element.map {
@@ -159,12 +151,11 @@ struct WindowSerializer: Encodable, Equatable {
     hasAXReference = element != nil
     isNativeFullscreen = spaceIDs.first.map {
       WindowServerClient.shared.spaceType(for: $0) == .fullscreen
-    }
-    isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue
+    } ?? false
+    isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
     isMinimized = element.flatMap {
       AccessibilityClient.shared.boolAttribute(for: $0, attribute: kAXMinimizedAttribute as String)
-    }
-    isFloating = layer.map { $0 != 0 }
+    } ?? false
   }
 
   func encode(to encoder: Encoder) throws {
@@ -186,7 +177,6 @@ struct WindowSerializer: Encodable, Equatable {
     try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
     try container.encodeNilOrValue(isVisible, forKey: .isVisible)
     try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
-    try container.encodeNilOrValue(isFloating, forKey: .isFloating)
   }
 }
 

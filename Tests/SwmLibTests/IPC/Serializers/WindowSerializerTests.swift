@@ -15,33 +15,36 @@ struct WindowSerializerTests {
       frame: nil,
       role: nil,
       subrole: nil,
-      display: "display-0",
+      display: 1,
       space: 0,
       layer: nil,
       canMove: nil,
       canResize: nil,
       hasFocus: nil,
       hasAXReference: false,
-      isNativeFullscreen: nil,
-      isVisible: nil,
-      isMinimized: nil,
-      isFloating: nil
+      isNativeFullscreen: false,
+      isVisible: false,
+      isMinimized: false,
     )
 
     let object = try encodedObject(window)
 
+    #expect(object["id"] as? Int == 1)
+    #expect(object["pid"] is NSNull)
+    #expect(object["app"] is NSNull)
+    #expect(object["title"] is NSNull)
+    #expect(object["frame"] is NSNull)
+    #expect(object["role"] is NSNull)
+    #expect(object["subrole"] is NSNull)
+    #expect(object["layer"] is NSNull)
+    #expect(object["can-move"] is NSNull)
+    #expect(object["can-resize"] is NSNull)
+    #expect(object["has-focus"] is NSNull)
     #expect(object["has-ax-reference"] as? Bool == false)
-    #expect(object["display"] as? String == "display-0")
+    #expect(object["display"] as? Int == 1)
     #expect(object["space"] as? Int == 0)
-    #expect(object["is-native-fullscreen"] is NSNull)
-    #expect(object["root-window"] == nil)
-    #expect(object["level"] == nil)
-    #expect(object["sub-level"] == nil)
-    #expect(object["opacity"] == nil)
-    #expect(object["has-shadow"] == nil)
-    #expect(object["has-parent-zoom"] == nil)
-    #expect(object["has-fullscreen-zoom"] == nil)
-    #expect(object["is-hidden"] == nil)
-    #expect(object["is-sticky"] == nil)
+    #expect(object["is-native-fullscreen"] as? Bool == false)
+    #expect(object["is-visible"] as? Bool == false)
+    #expect(object["is-minimized"] as? Bool == false)
   }
 }

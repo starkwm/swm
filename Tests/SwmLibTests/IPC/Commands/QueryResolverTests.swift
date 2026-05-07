@@ -55,8 +55,8 @@ struct QueryResolverTests {
         space(index: 1, id: 20, display: 2, hasFocus: false),
       ],
       windows: [
-        window(id: 100, display: "display-0", space: 0, hasFocus: true),
-        window(id: 200, display: "display-1", space: 1, hasFocus: false),
+        window(id: 100, display: 1, space: 0, hasFocus: true),
+        window(id: 200, display: 2, space: 1, hasFocus: false),
       ]
     )
   }
@@ -85,7 +85,7 @@ struct QueryResolverTests {
     )
   }
 
-  private func window(id: UInt32, display: String, space: Int, hasFocus: Bool) -> WindowSerializer {
+  private func window(id: UInt32, display: UInt32, space: Int, hasFocus: Bool) -> WindowSerializer {
     WindowSerializer(
       id: id,
       pid: nil,
@@ -102,9 +102,8 @@ struct QueryResolverTests {
       hasFocus: hasFocus,
       hasAXReference: false,
       isNativeFullscreen: false,
-      isVisible: nil,
-      isMinimized: nil,
-      isFloating: nil
+      isVisible: false,
+      isMinimized: false
     )
   }
 

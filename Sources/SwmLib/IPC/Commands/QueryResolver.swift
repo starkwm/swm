@@ -55,7 +55,7 @@ struct QueryResolver {
     case .none:
       return .many(windows)
     case .display(let index):
-      guard let displayID = display(for: index)?.uuid else { return .many([]) }
+      guard let displayID = display(for: index)?.id else { return .many([]) }
       return .many(windows.filter { $0.display == displayID })
     case .space(let index):
       guard let spaceIndex = space(for: index)?.index else { return .many([]) }
@@ -96,7 +96,7 @@ struct QueryResolver {
   private func display(containing window: WindowSerializer) -> DisplaySerializer? {
     guard let displayID = window.display else { return nil }
 
-    return displays.first { $0.uuid == displayID }
+    return displays.first { $0.id == displayID }
   }
 
   private func space(containing window: WindowSerializer) -> SpaceSerializer? {
