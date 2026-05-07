@@ -19,7 +19,7 @@ struct IPCCommandDispatcher {
       return SpaceCommandHandler(spaceManager: spaceManager).dispatch(request)
 
     case .config:
-      return ConfigCommandHandler().dispatch(request)
+      return ConfigCommandHandler(spaceManager: spaceManager).dispatch(request)
 
     case .display:
       return DisplayCommandHandler().dispatch(request)

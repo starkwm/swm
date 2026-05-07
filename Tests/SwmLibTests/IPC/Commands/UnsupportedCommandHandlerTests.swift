@@ -6,7 +6,7 @@ import Testing
 struct UnsupportedCommandHandlerTests {
   @Test("dispatch: config rejects unsupported commands")
   func dispatchConfigRejectsUnsupportedCommands() {
-    let response = ConfigCommandHandler().dispatch(
+    let response = ConfigCommandHandler(spaceManager: SpaceManager()).dispatch(
       request(domain: .config, command: "set")
     )
 
