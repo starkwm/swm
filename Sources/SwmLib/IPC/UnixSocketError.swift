@@ -4,7 +4,7 @@ enum UnixSocketError: Error {
 }
 
 extension UnixSocketError: CustomStringConvertible {
-  public var description: String {
+  var description: String {
     switch self {
     case .frameTooLarge(let maxBytes):
       return "IPC frame exceeded maximum size of \(maxBytes) bytes"

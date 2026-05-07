@@ -49,13 +49,13 @@ private func accessibilityObserverCallback(
   }
 }
 
-public final class Application: NSObject {
+final class Application: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
     notifications: applicationNotifications,
     allNotifications: .all
   )
 
-  public override var description: String {
+  override var description: String {
     """
     <Application pid: \(application.processIdentifier), name: \(application.localizedName ?? "-"), \
     bundle: \(application.bundleIdentifier ?? "-")>

@@ -23,13 +23,13 @@ public final class WindowManager {
     return Window.validID(for: focusedWindowElement)
   }
 
-  public var currentFocusedWindowID: CGWindowID? {
+  var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindow.current
     }
   }
 
-  public var lastFocusedWindowID: CGWindowID? {
+  var lastFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindow.last
     }
@@ -57,27 +57,27 @@ public final class WindowManager {
     }
   }
 
-  public func application(by pid: pid_t) -> Application? {
+  func application(by pid: pid_t) -> Application? {
     applicationsByPID[pid]
   }
 
-  public func application(by name: String) -> Application? {
+  func application(by name: String) -> Application? {
     applicationsByPID.values.first { $0.name == name }
   }
 
-  public func allApplications() -> [Application] {
+  func allApplications() -> [Application] {
     Array(applicationsByPID.values)
   }
 
-  public func window(by id: CGWindowID) -> Window? {
+  func window(by id: CGWindowID) -> Window? {
     windowsByID[id]
   }
 
-  public func allWindows(for application: Application) -> [Window] {
+  func allWindows(for application: Application) -> [Window] {
     windowsByID.values.filter { $0.application == application }
   }
 
-  public func allWindows() -> [Window] {
+  func allWindows() -> [Window] {
     Array(windowsByID.values)
   }
 
@@ -89,7 +89,7 @@ public final class WindowManager {
     }
   }
 
-  public func refreshWindows() {
+  func refreshWindows() {
     for processID in Array(unresolvedApplicationIDs) {
       guard let application = applicationsByPID[processID] else {
         unresolvedApplicationIDs.remove(processID)
@@ -100,7 +100,7 @@ public final class WindowManager {
     }
   }
 
-  public func refreshWindows(for application: Application) {
+  func refreshWindows(for application: Application) {
     guard unresolvedApplicationIDs.contains(application.processID) else { return }
 
     log("application has windows that are not yet resolved \(application)", level: .info)

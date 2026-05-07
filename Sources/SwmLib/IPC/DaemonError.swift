@@ -6,7 +6,7 @@ enum DaemonError: Error {
 }
 
 extension DaemonError: CustomStringConvertible {
-  public var description: String {
+  var description: String {
     switch self {
     case .unableToPrepareSocket(let error):
       return "unable to prepare listening socket - \(error)"

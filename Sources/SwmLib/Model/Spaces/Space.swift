@@ -1,14 +1,14 @@
 import AppKit
 
-public final class Space: NSObject {
-  public override var description: String {
+final class Space: NSObject {
+  override var description: String {
     "<Space id: \(id), type: \(type)>"
   }
 
   var id: UInt64
   var type: SpaceType
 
-  public convenience init(id: UInt64) {
+  convenience init(id: UInt64) {
     self.init(
       id: id,
       type: WindowServerClient.shared.spaceType(for: id)
@@ -20,7 +20,7 @@ public final class Space: NSObject {
     self.type = type
   }
 
-  public override func isEqual(_ object: Any?) -> Bool {
+  override func isEqual(_ object: Any?) -> Bool {
     guard let space = object as? Self else { return false }
     return id == space.id
   }

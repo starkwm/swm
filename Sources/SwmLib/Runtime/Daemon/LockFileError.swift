@@ -4,7 +4,7 @@ enum LockFileError: Error {
 }
 
 extension LockFileError: CustomStringConvertible {
-  public var description: String {
+  var description: String {
     switch self {
     case .failedToOpenFile:
       return "failed to open lockfile"

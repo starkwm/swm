@@ -1,6 +1,6 @@
 import AppKit
 
-public final class Window: NSObject {
+final class Window: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
     notifications: windowNotifications,
     allNotifications: .all
@@ -23,7 +23,7 @@ public final class Window: NSObject {
     AccessibilityClient.shared.processID(for: element)
   }
 
-  public override var description: String {
+  override var description: String {
     "<Window id: \(id), title: \(title)>"
   }
 
@@ -58,7 +58,7 @@ public final class Window: NSObject {
     unobserve()
   }
 
-  public override func isEqual(_ object: Any?) -> Bool {
+  override func isEqual(_ object: Any?) -> Bool {
     guard let window = object as? Self else { return false }
 
     return id == window.id

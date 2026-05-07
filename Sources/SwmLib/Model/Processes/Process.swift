@@ -14,14 +14,14 @@ public final class Process: CustomStringConvertible {
     "<Process pid: \(pid), name: \(name)>"
   }
 
-  public var psn: ProcessSerialNumber
-  public var pid: pid_t
-  public var name: String
-  public var terminated: Bool
-  public var application: NSRunningApplication?
-  public var policy: NSApplication.ActivationPolicy?
+  var psn: ProcessSerialNumber
+  var pid: pid_t
+  var name: String
+  var terminated: Bool
+  var application: NSRunningApplication?
+  var policy: NSApplication.ActivationPolicy?
 
-  public init?(psn: ProcessSerialNumber) {
+  init?(psn: ProcessSerialNumber) {
     self.psn = psn
 
     var info = ProcessInfoRec()
@@ -46,7 +46,7 @@ public final class Process: CustomStringConvertible {
     }
   }
 
-  public init(
+  init(
     psn: ProcessSerialNumber,
     pid: pid_t,
     name: String,

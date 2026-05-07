@@ -6,7 +6,7 @@ enum ConfigError: Error {
 }
 
 extension ConfigError: CustomStringConvertible {
-  public var description: String {
+  var description: String {
     switch self {
     case .fileDoesNotExist:
       return "configuration file does not exist"

@@ -5,13 +5,13 @@ public final class DisplayManager {
     WindowServerClient.shared.screenID(forSpaceID: SpaceManager.active().id)
   }
 
-  public var currentActiveDisplayID: String? {
+  var currentActiveDisplayID: String? {
     lock.withLock {
       activeDisplay.current
     }
   }
 
-  public var lastActiveDisplayID: String? {
+  var lastActiveDisplayID: String? {
     lock.withLock {
       activeDisplay.last
     }

@@ -35,21 +35,21 @@ struct SpaceSettings: Equatable {
 public final class SpaceManager {
   private static let windowServerClient = WindowServerClient.shared
 
-  public static func all() -> [Space] {
+  static func all() -> [Space] {
     windowServerClient.allSpaceIDs().map(Space.init(id:))
   }
 
-  public static func active() -> Space {
+  static func active() -> Space {
     Space(id: windowServerClient.activeSpace())
   }
 
-  public var currentActiveSpaceID: UInt64? {
+  var currentActiveSpaceID: UInt64? {
     lock.withLock {
       activeSpace.current
     }
   }
 
-  public var lastActiveSpaceID: UInt64? {
+  var lastActiveSpaceID: UInt64? {
     lock.withLock {
       activeSpace.last
     }
