@@ -28,7 +28,7 @@ struct DisplaySerializer: Encodable, Equatable {
         index: index,
         frame: FrameSerializer(screen.frame),
         spaces: indexedSpaces.compactMap { display.spaces.contains($0.id) ? $0.index : nil },
-        hasFocus: WindowServerClient.shared.currentSpace(screenID: screen.uuid) == focusedSpace
+        hasFocus: WindowServerClient.shared.currentSpace(for: screen.uuid) == focusedSpace
       )
     }
   }

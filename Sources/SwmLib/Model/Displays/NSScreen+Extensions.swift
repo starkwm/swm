@@ -1,7 +1,7 @@
 import AppKit
 
 extension NSScreen {
-  static func screen(for uuid: String) -> NSScreen? {
+  static func screen(for uuid: String?) -> NSScreen? {
     screens.first { $0.uuid == uuid }
   }
 

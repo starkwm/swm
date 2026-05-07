@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 struct SpaceSerializer: Encodable, Equatable {
   enum CodingKeys: String, CodingKey {
@@ -34,11 +34,11 @@ struct SpaceSerializer: Encodable, Equatable {
         id: space.id,
         index: index,
         type: space.type.description,
-        display: display,
+        display: NSScreen.screen(for: display)?.id,
         windows: windowIDs,
         hasFocus: space.id == activeSpaceID,
         isVisible: display.map { screenID in
-          WindowServerClient.shared.currentSpace(screenID: screenID) == space.id
+          WindowServerClient.shared.currentSpace(for: screenID) == space.id
         } ?? false,
         isNativeFullscreen: space.type == .fullscreen
       )
@@ -48,7 +48,7 @@ struct SpaceSerializer: Encodable, Equatable {
   let id: UInt64
   let index: Int
   let type: String
-  let display: String?
+  let display: UInt32?
   let windows: [UInt32]
   let hasFocus: Bool
   let isVisible: Bool

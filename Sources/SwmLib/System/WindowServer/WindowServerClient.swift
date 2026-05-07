@@ -43,8 +43,8 @@ final class WindowServerClient {
     SLSGetActiveSpace(mainConnectionID())
   }
 
-  func currentSpace(screenID: String) -> UInt64 {
-    SLSManagedDisplayGetCurrentSpace(mainConnectionID(), screenID as CFString)
+  func currentSpace(for screenUUID: String) -> UInt64 {
+    SLSManagedDisplayGetCurrentSpace(mainConnectionID(), screenUUID as CFString)
   }
 
   func allSpaceIDs() -> [UInt64] {

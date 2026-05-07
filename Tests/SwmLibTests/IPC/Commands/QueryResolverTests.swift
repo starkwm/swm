@@ -51,8 +51,8 @@ struct QueryResolverTests {
         display(index: 1, id: 2, uuid: "display-1", hasFocus: false),
       ],
       spaces: [
-        space(index: 0, id: 10, display: "display-0", hasFocus: true),
-        space(index: 1, id: 20, display: "display-1", hasFocus: false),
+        space(index: 0, id: 10, display: 1, hasFocus: true),
+        space(index: 1, id: 20, display: 2, hasFocus: false),
       ],
       windows: [
         window(id: 100, display: "display-0", space: 0, hasFocus: true),
@@ -72,7 +72,7 @@ struct QueryResolverTests {
     )
   }
 
-  private func space(index: Int, id: UInt64, display: String, hasFocus: Bool) -> SpaceSerializer {
+  private func space(index: Int, id: UInt64, display: UInt32, hasFocus: Bool) -> SpaceSerializer {
     SpaceSerializer(
       id: id,
       index: index,
