@@ -22,6 +22,9 @@ let package = Package(
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
       exclude: ["Version.swift.tmpl"],
+      swiftSettings: [
+        .unsafeFlags(["-g"], .when(configuration: .release))
+      ],
       linkerSettings: [
         .unsafeFlags([
           "-Xlinker", "-F",
@@ -36,6 +39,9 @@ let package = Package(
       dependencies: [
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
         .product(name: "Socket", package: "BlueSocket"),
+      ],
+      swiftSettings: [
+        .unsafeFlags(["-g"], .when(configuration: .release))
       ],
       linkerSettings: [
         .unsafeFlags([

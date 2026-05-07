@@ -30,6 +30,7 @@ build: $(SRC)
 
 release: clean
 	@swift build --configuration release --disable-sandbox
+	@dsymutil .build/release/swm -o .build/release/swm.dSYM
 
 bump_version:
 ifneq ($(strip $(shell git status --untracked-files=no --porcelain 2>/dev/null)),)
