@@ -2,6 +2,19 @@ import AppKit
 import ArgumentParser
 import SwmLib
 
+func fail(_ message: String) -> Never {
+  fputs("error: \(message)\n", stderr)
+  exit(EXIT_FAILURE)
+}
+
+func runOrFail(_ message: String, _ operation: () throws -> Void) {
+  do {
+    try operation()
+  } catch {
+    fail("\(message) - \(error)")
+  }
+}
+
 let arguments = Swm.parseOrExit()
 setMinimumLogLevel(arguments.logLevel)
 
@@ -20,20 +33,15 @@ if let message = arguments.message {
 }
 
 if getuid() == 0 || geteuid() == 0 {
-  fputs("error: running as root is not allowed\n", stderr)
-  exit(EXIT_FAILURE)
+  fail("running as root is not allowed")
 }
 
 if !Accessibility.askForAccessibilityIfNeeded() {
-  fputs("error: could not access accessbility features\n", stderr)
-  exit(EXIT_FAILURE)
+  fail("could not access accessibility features")
 }
 
-do {
+runOrFail("unable to create lock file") {
   try LockFile.acquire()
-} catch {
-  fputs("error: unable to create lock file - \(error)\n", stderr)
-  exit(EXIT_FAILURE)
 }
 
 let workspace = Workspace()
@@ -41,6 +49,7 @@ let processManager = ProcessManager()
 let windowManager = WindowManager(workspace: workspace)
 let spaceManager = SpaceManager()
 let displayManager = DisplayManager()
+
 EventManager.shared.configure(
   workspace: workspace,
   processManager: processManager,
@@ -49,12 +58,8 @@ EventManager.shared.configure(
   displayManager: displayManager
 )
 
-switch processManager.start() {
-case .success:
-  break
-case .failure(let error):
-  fputs("error: unable to start process manager - \(error)\n", stderr)
-  exit(EXIT_FAILURE)
+if case .failure(let error) = processManager.start() {
+  fail("unable to start process manager - \(error)")
 }
 
 windowManager.start(processes: processManager.all())
@@ -65,18 +70,12 @@ let daemon = Daemon(
   displayManager: displayManager
 )
 
-do {
+runOrFail("unable to run messaging daemon") {
   try daemon.run()
-} catch {
-  fputs("error: unable to run messaging daemon - \(error)\n", stderr)
-  exit(EXIT_FAILURE)
 }
 
-do {
+runOrFail("could not execute the configuration file") {
   try Config.exec(path: arguments.config)
-} catch {
-  fputs("error: could not execute the configuration file - \(error)\n", stderr)
-  exit(EXIT_FAILURE)
 }
 
 signal(SIGINT) { _ in
