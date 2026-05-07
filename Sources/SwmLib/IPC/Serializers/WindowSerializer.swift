@@ -54,7 +54,6 @@ struct WindowSerializer: Encodable, Equatable {
   let display: String?
   let space: Int?
   let layer: Int?
-  let subLayer: Int?
   let canMove: Bool?
   let canResize: Bool?
   let hasFocus: Bool?
@@ -75,7 +74,6 @@ struct WindowSerializer: Encodable, Equatable {
     display: String?,
     space: Int?,
     layer: Int?,
-    subLayer: Int?,
     canMove: Bool?,
     canResize: Bool?,
     hasFocus: Bool?,
@@ -95,7 +93,6 @@ struct WindowSerializer: Encodable, Equatable {
     self.display = display
     self.space = space
     self.layer = layer
-    self.subLayer = subLayer
     self.canMove = canMove
     self.canResize = canResize
     self.hasFocus = hasFocus
@@ -149,7 +146,6 @@ struct WindowSerializer: Encodable, Equatable {
     }
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
-    subLayer = nil
     canMove = element.map {
       AccessibilityClient.shared.isAttributeSettable(
         kAXPositionAttribute as String,
@@ -183,7 +179,6 @@ struct WindowSerializer: Encodable, Equatable {
     try container.encodeNilOrValue(display, forKey: .display)
     try container.encodeNilOrValue(space, forKey: .space)
     try container.encodeNilOrValue(layer, forKey: .layer)
-    try container.encodeNilOrValue(subLayer, forKey: .subLayer)
     try container.encodeNilOrValue(canMove, forKey: .canMove)
     try container.encodeNilOrValue(canResize, forKey: .canResize)
     try container.encodeNilOrValue(hasFocus, forKey: .hasFocus)

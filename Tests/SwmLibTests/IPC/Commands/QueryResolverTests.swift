@@ -97,7 +97,6 @@ struct QueryResolverTests {
       display: display,
       space: space,
       layer: nil,
-      subLayer: nil,
       canMove: nil,
       canResize: nil,
       hasFocus: hasFocus,

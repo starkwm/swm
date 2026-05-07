@@ -18,7 +18,6 @@ struct WindowSerializerTests {
       display: "display-0",
       space: 0,
       layer: nil,
-      subLayer: nil,
       canMove: nil,
       canResize: nil,
       hasFocus: nil,
