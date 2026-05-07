@@ -1,10 +1,12 @@
-import CoreGraphics
+import AppKit
 
 struct WindowCommandHandler {
   private let windowManager: WindowManager
+  private let spaceManager: SpaceManager
 
-  init(windowManager: WindowManager) {
+  init(windowManager: WindowManager, spaceManager: SpaceManager) {
     self.windowManager = windowManager
+    self.spaceManager = spaceManager
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
@@ -20,6 +22,8 @@ struct WindowCommandHandler {
         return try move(request)
       case "--resize":
         return try resize(request)
+      case "--grid":
+        return try grid(request)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
@@ -102,6 +106,38 @@ struct WindowCommandHandler {
 
     guard resized else {
       throw IPCCommandError.internalError("could not resize window: \(window.id)")
+    }
+
+    return .success(id: request.id, message: "ok")
+  }
+
+  private func grid(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseGeometrySelection(request.args, action: "grid")
+
+    guard let grid = WindowGrid(argument: selection.geometry) else {
+      throw IPCCommandError.invalidRequest("invalid window grid value: \(selection.geometry)")
+    }
+
+    let window = try selectedWindow(selector: selection.selector)
+
+    guard let frame = window.frame() else {
+      throw IPCCommandError.internalError("could not grid window: \(window.id)")
+    }
+
+    guard let screen = NSScreen.screen(containingLargestIntersectionWith: frame) else {
+      throw IPCCommandError.internalError("could not grid window: \(window.id)")
+    }
+
+    guard let spaceID = WindowServerClient.shared.spaceIDs(containing: window.id).first else {
+      throw IPCCommandError.internalError("could not grid window: \(window.id)")
+    }
+
+    let settings = spaceManager.settings(for: spaceID)
+    let bounds = screen.axVisibleFrame
+    let targetFrame = grid.frame(in: bounds, settings: settings)
+
+    guard window.move(to: targetFrame.origin), window.resize(to: targetFrame.size) else {
+      throw IPCCommandError.internalError("could not grid window: \(window.id)")
     }
 
     return .success(id: request.id, message: "ok")
@@ -193,4 +229,93 @@ private struct WindowGeometryChange {
 private struct WindowGeometrySelection {
   let selector: String?
   let geometry: String
+}
+
+struct WindowGrid: Equatable {
+  private let rows: Int
+  private let columns: Int
+  private let x: Int
+  private let y: Int
+  private let width: Int
+  private let height: Int
+
+  init?(
+    rows: Int,
+    columns: Int,
+    x: Int,
+    y: Int,
+    width: Int,
+    height: Int
+  ) {
+    guard rows > 0, columns > 0 else { return nil }
+
+    let x = min(max(0, x), columns - 1)
+    let y = min(max(0, y), rows - 1)
+    let width = min(max(1, width), columns - x)
+    let height = min(max(1, height), rows - y)
+
+    self.rows = rows
+    self.columns = columns
+    self.x = x
+    self.y = y
+    self.width = width
+    self.height = height
+  }
+
+  init?(argument: String) {
+    let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
+
+    guard
+      parts.count == 6,
+      let columns = Int(parts[0]),
+      let rows = Int(parts[1]),
+      let x = Int(parts[2]),
+      let y = Int(parts[3]),
+      let width = Int(parts[4]),
+      let height = Int(parts[5])
+    else {
+      return nil
+    }
+
+    self.init(rows: rows, columns: columns, x: x, y: y, width: width, height: height)
+  }
+
+  func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
+    let padding = settings.paddingEnabled ? settings.padding : .zero
+    let gap = settings.gapEnabled ? CGFloat(settings.gap) : 0
+
+    var bounds = bounds
+    bounds.origin.x += CGFloat(padding.left)
+    bounds.size.width -= CGFloat(padding.left + padding.right)
+    bounds.origin.y += CGFloat(padding.top)
+    bounds.size.height -= CGFloat(padding.top + padding.bottom)
+
+    if x > 0 {
+      bounds.origin.x += gap
+      bounds.size.width -= gap
+    }
+
+    if y > 0 {
+      bounds.origin.y += gap
+      bounds.size.height -= gap
+    }
+
+    if columns > x + width {
+      bounds.size.width -= gap
+    }
+
+    if rows > y + height {
+      bounds.size.height -= gap
+    }
+
+    let cellWidth = bounds.width / CGFloat(columns)
+    let cellHeight = bounds.height / CGFloat(rows)
+
+    return CGRect(
+      x: bounds.minX + bounds.width - cellWidth * CGFloat(columns - x),
+      y: bounds.minY + bounds.height - cellHeight * CGFloat(rows - y),
+      width: cellWidth * CGFloat(width),
+      height: cellHeight * CGFloat(height)
+    )
+  }
 }

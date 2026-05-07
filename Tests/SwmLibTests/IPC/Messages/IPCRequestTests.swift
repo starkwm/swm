@@ -24,11 +24,23 @@ struct IPCRequestTests {
       domain: .window,
       arguments: ["--resize", "100", "abs:500:800"]
     )
+    let gridFocused = try IPCRequest.make(
+      domain: .window,
+      arguments: ["--grid", "3:1:0:0:2:1"]
+    )
+    let gridRecent = try IPCRequest.make(
+      domain: .window,
+      arguments: ["--grid", "recent", "3:1:0:0:2:1"]
+    )
 
     #expect(recent.command == "--move")
     #expect(recent.args == ["recent", "abs:100:200"])
     #expect(windowID.command == "--resize")
     #expect(windowID.args == ["100", "abs:500:800"])
+    #expect(gridFocused.command == "--grid")
+    #expect(gridFocused.args == ["3:1:0:0:2:1"])
+    #expect(gridRecent.command == "--grid")
+    #expect(gridRecent.args == ["recent", "3:1:0:0:2:1"])
   }
 
   @Test("make: builds query request")

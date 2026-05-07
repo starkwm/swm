@@ -149,13 +149,18 @@ struct WindowSerializer: Encodable, Equatable {
     }
     hasFocus = element.map { AccessibilityClient.shared.isMainWindow($0) }
     hasAXReference = element != nil
-    isNativeFullscreen = spaceIDs.first.map {
-      WindowServerClient.shared.spaceType(for: $0) == .fullscreen
-    } ?? false
+    isNativeFullscreen =
+      spaceIDs.first.map {
+        WindowServerClient.shared.spaceType(for: $0) == .fullscreen
+      } ?? false
     isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
-    isMinimized = element.flatMap {
-      AccessibilityClient.shared.boolAttribute(for: $0, attribute: kAXMinimizedAttribute as String)
-    } ?? false
+    isMinimized =
+      element.flatMap {
+        AccessibilityClient.shared.boolAttribute(
+          for: $0,
+          attribute: kAXMinimizedAttribute as String
+        )
+      } ?? false
   }
 
   func encode(to encoder: Encoder) throws {

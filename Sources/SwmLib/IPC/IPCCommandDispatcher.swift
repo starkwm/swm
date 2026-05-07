@@ -25,7 +25,10 @@ struct IPCCommandDispatcher {
       return DisplayCommandHandler().dispatch(request)
 
     case .window:
-      return WindowCommandHandler(windowManager: windowManager).dispatch(request)
+      return WindowCommandHandler(
+        windowManager: windowManager,
+        spaceManager: spaceManager
+      ).dispatch(request)
     }
   }
 }

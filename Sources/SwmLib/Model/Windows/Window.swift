@@ -139,8 +139,7 @@ public final class Window: NSObject {
 
   @discardableResult
   func move(by offset: CGVector) -> Bool {
-    guard let element else { return false }
-    guard let frame = AccessibilityClient.shared.frame(for: element) else { return false }
+    guard let frame = frame() else { return false }
 
     return move(
       to: CGPoint(
@@ -169,8 +168,7 @@ public final class Window: NSObject {
 
   @discardableResult
   func resize(by offset: CGVector) -> Bool {
-    guard let element else { return false }
-    guard let frame = AccessibilityClient.shared.frame(for: element) else { return false }
+    guard let frame = frame() else { return false }
 
     return resize(
       to: CGSize(
@@ -178,6 +176,11 @@ public final class Window: NSObject {
         height: frame.size.height + offset.dy
       )
     )
+  }
+
+  func frame() -> CGRect? {
+    guard let element else { return nil }
+    return AccessibilityClient.shared.frame(for: element)
   }
 
   func observe() -> Bool {
