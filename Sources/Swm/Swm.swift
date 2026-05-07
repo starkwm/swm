@@ -22,6 +22,9 @@ struct Swm: ParsableArguments {
   @Option(name: .shortAndLong)
   var message: MessageDomain?
 
+  @Option(name: .long, help: "Minimum log level: debug, info, warn, or error.")
+  var logLevel: LogLevel = .info
+
   @Argument(parsing: .captureForPassthrough)
   var args: [String] = []
 }

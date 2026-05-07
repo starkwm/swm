@@ -1,9 +1,17 @@
 import Foundation
+import ArgumentParser
 
-private let logLevelColumnWidth = LogLevel.allCases.map(\.rawValue.count).max()! + 2
+private let logLevelColumnWidth = LogLevel.allCases.map(\.label.count).max()! + 2
+private let logConfiguration = LogConfiguration()
+
+public func setMinimumLogLevel(_ level: LogLevel) {
+  logConfiguration.setMinimumLevel(level)
+}
 
 func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
-  let label = "[\(level.rawValue)]".padding(
+  guard level >= logConfiguration.minimumLevel() else { return }
+
+  let label = "[\(level.label)]".padding(
     toLength: logLevelColumnWidth,
     withPad: " ",
     startingAt: 0
@@ -13,9 +21,47 @@ func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
   fflush(stderr)
 }
 
-enum LogLevel: String, CaseIterable {
-  case debug = "DEBUG"
-  case info = "INFO"
-  case warn = "WARN"
-  case error = "ERROR"
+public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, Sendable {
+  case debug
+  case info
+  case warn
+  case error
+
+  public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+    lhs.priority < rhs.priority
+  }
+
+  var label: String {
+    rawValue.uppercased()
+  }
+
+  private var priority: Int {
+    switch self {
+    case .debug:
+      0
+    case .info:
+      1
+    case .warn:
+      2
+    case .error:
+      3
+    }
+  }
+}
+
+private final class LogConfiguration: @unchecked Sendable {
+  private let lock = NSLock()
+  private var level = LogLevel.info
+
+  func setMinimumLevel(_ level: LogLevel) {
+    lock.withLock {
+      self.level = level
+    }
+  }
+
+  func minimumLevel() -> LogLevel {
+    lock.withLock {
+      level
+    }
+  }
 }

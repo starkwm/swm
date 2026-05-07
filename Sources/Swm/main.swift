@@ -3,6 +3,7 @@ import ArgumentParser
 import SwmLib
 
 let arguments = Swm.parseOrExit()
+setMinimumLogLevel(arguments.logLevel)
 
 if arguments.help {
   fputs(Swm.helpMessage(), stderr)
