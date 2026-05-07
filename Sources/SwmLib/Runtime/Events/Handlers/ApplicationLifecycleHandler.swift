@@ -18,6 +18,7 @@ struct ApplicationLifecycleHandler {
 
   private func applicationLaunched(for process: Process) {
     if process.terminated {
+      windowManager.removeLostFrontSwitchedEvent(for: process.pid)
       log("application terminated during launch \(process)", level: .info)
       return
     }
@@ -64,12 +65,17 @@ struct ApplicationLifecycleHandler {
     windowManager.add(application: application)
     _ = windowManager.addWindows(for: application)
 
+    if windowManager.removeLostFrontSwitchedEvent(for: process.pid) {
+      EventManager.shared.post(.application(.frontSwitched(process)))
+    }
+
     log("application launched \(application)")
   }
 
   private func applicationTerminated(for process: Process) {
     workspace.unobserveActivationPolicy(process)
     workspace.unobserveFinishedLaunching(process)
+    windowManager.removeLostFrontSwitchedEvent(for: process.pid)
 
     guard let application = windowManager.application(by: process.pid) else { return }
 
@@ -88,7 +94,11 @@ struct ApplicationLifecycleHandler {
   }
 
   private func applicationFrontSwitched(for process: Process) {
-    guard let application = windowManager.application(by: process.pid) else { return }
+    guard let application = windowManager.application(by: process.pid) else {
+      windowManager.addLostFrontSwitchedEvent(for: process.pid)
+      log("frontmost application switched before launch completed \(process)", level: .info)
+      return
+    }
 
     windowManager.refreshWindows(for: application)
 

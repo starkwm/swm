@@ -38,6 +38,7 @@ public final class WindowManager {
   private var focusedWindow: TrackedState<CGWindowID>
 
   private var applicationsByPID = [pid_t: Application]()
+  private var lostFrontSwitchedProcessIDs = Set<pid_t>()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
 
@@ -106,11 +107,21 @@ public final class WindowManager {
     _ = reconcileWindows(for: application, mode: .refreshAttempt)
   }
 
+  func addLostFrontSwitchedEvent(for processID: pid_t) {
+    lostFrontSwitchedProcessIDs.insert(processID)
+  }
+
+  @discardableResult
+  func removeLostFrontSwitchedEvent(for processID: pid_t) -> Bool {
+    lostFrontSwitchedProcessIDs.remove(processID) != nil
+  }
+
   func add(application: Application) {
     applicationsByPID[application.processID] = application
   }
 
   func remove(application: Application) {
+    lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
     applicationsByPID.removeValue(forKey: application.processID)
   }
