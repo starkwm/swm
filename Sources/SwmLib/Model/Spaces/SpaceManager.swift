@@ -1,14 +1,12 @@
 import Foundation
 
 public final class SpaceManager {
-  private static let windowServerClient = WindowServerClient.shared
-
   static func all() -> [Space] {
-    windowServerClient.allSpaceIDs().map(Space.init(id:))
+    WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))
   }
 
   static func active() -> Space {
-    Space(id: windowServerClient.activeSpace())
+    Space(id: WindowServerClient.shared.activeSpace())
   }
 
   static func display(for space: Space) -> String? {
