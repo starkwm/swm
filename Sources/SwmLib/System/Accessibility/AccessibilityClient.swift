@@ -85,6 +85,10 @@ final class AccessibilityClient {
   }
 
   @discardableResult
+  func setAttributeValue(_ value: CFTypeRef, for element: AXUIElement, attribute: String) -> Bool {
+    AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
+  }
+
   func setPoint(_ point: CGPoint, for element: AXUIElement, attribute: String) -> Bool {
     var pointValue = point
 
@@ -93,18 +97,12 @@ final class AccessibilityClient {
     return AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
   }
 
-  @discardableResult
   func setSize(_ size: CGSize, for element: AXUIElement, attribute: String) -> Bool {
     var sizeValue = size
 
     guard let value = AXValueCreate(.cgSize, &sizeValue) else { return false }
 
     return AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
-  }
-
-  @discardableResult
-  func setAttributeValue(_ value: CFTypeRef, for element: AXUIElement, attribute: String) -> Bool {
-    AXUIElementSetAttributeValue(element, attribute as CFString, value) == .success
   }
 
   @discardableResult
@@ -139,28 +137,13 @@ final class AccessibilityClient {
     return (value as! AXUIElement)
   }
 
-  func subrole(for element: AXUIElement) -> String? {
-    stringAttribute(for: element, attribute: kAXSubroleAttribute as String)
-  }
-
-  func isMainWindow(_ element: AXUIElement) -> Bool {
-    boolAttribute(for: element, attribute: kAXMainAttribute as String) ?? false
-  }
-
-  func isWindow(_ element: AXUIElement) -> Bool {
-    stringAttribute(for: element, attribute: kAXRoleAttribute as String) == kAXWindowRole
-  }
-
   func windowID(for element: AXUIElement) -> CGWindowID {
-    if Thread.isMainThread {
-      return unsafeWindowID(for: element)
-    }
+    var identifier: CGWindowID = 0
+    let result: ApplicationServices.AXError = _AXUIElementGetWindow(element, &identifier)
 
-    let uncheckedElement = UncheckedAXUIElement(element: element)
+    guard result == .success else { return 0 }
 
-    return DispatchQueue.main.sync { [uncheckedElement] in
-      unsafeWindowID(for: uncheckedElement.element)
-    }
+    return identifier
   }
 
   func optionalWindowID(for element: AXUIElement) -> CGWindowID? {
@@ -172,6 +155,18 @@ final class AccessibilityClient {
     var pid: pid_t = 0
     guard AXUIElementGetPid(element, &pid) == .success else { return nil }
     return pid
+  }
+
+  func subrole(for element: AXUIElement) -> String? {
+    stringAttribute(for: element, attribute: kAXSubroleAttribute as String)
+  }
+
+  func isMainWindow(_ element: AXUIElement) -> Bool {
+    boolAttribute(for: element, attribute: kAXMainAttribute as String) ?? false
+  }
+
+  func isWindow(_ element: AXUIElement) -> Bool {
+    stringAttribute(for: element, attribute: kAXRoleAttribute as String) == kAXWindowRole
   }
 
   func enhancedUIEnabled(for element: AXUIElement, attribute: String) -> Bool {
@@ -214,19 +209,6 @@ final class AccessibilityClient {
   func removeNotification(observer: AXObserver, element: AXUIElement, notification: String) {
     AXObserverRemoveNotification(observer, element, notification as CFString)
   }
-
-  private func unsafeWindowID(for element: AXUIElement) -> CGWindowID {
-    var identifier: CGWindowID = 0
-    let result: ApplicationServices.AXError = _AXUIElementGetWindow(element, &identifier)
-
-    guard result == .success else { return 0 }
-
-    return identifier
-  }
 }
 
 extension AccessibilityClient: @unchecked Sendable {}
-
-private struct UncheckedAXUIElement: @unchecked Sendable {
-  let element: AXUIElement
-}
