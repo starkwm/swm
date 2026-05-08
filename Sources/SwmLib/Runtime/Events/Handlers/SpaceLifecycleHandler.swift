@@ -1,5 +1,6 @@
 struct SpaceLifecycleHandler {
   let spaceManager: SpaceManager
+  let windowManager: WindowManager
 
   func handle(_ event: SpaceEvent) {
     switch event {
@@ -10,6 +11,7 @@ struct SpaceLifecycleHandler {
 
   private func spaceChanged(with space: Space) {
     spaceManager.activeSpaceDidChange()
+    windowManager.refreshWindows()
 
     log(
       "space changed \(space) current: \(spaceManager.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaceManager.lastActiveSpaceID.map(String.init) ?? "nil")"
