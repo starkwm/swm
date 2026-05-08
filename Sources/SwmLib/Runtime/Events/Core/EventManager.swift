@@ -48,7 +48,10 @@ public final class EventManager {
       WindowLifecycleHandler(windowManager: configuration.windowManager).handle(event)
 
     case .space(let event):
-      SpaceLifecycleHandler(spaceManager: configuration.spaceManager).handle(event)
+      SpaceLifecycleHandler(
+        spaceManager: configuration.spaceManager,
+        windowManager: configuration.windowManager
+      ).handle(event)
 
     case .display(let event):
       DisplayLifecycleHandler(displayManager: configuration.displayManager).handle(event)

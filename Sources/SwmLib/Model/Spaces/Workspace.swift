@@ -145,15 +145,6 @@ private enum ProcessObservationKind {
     }
   }
 
-  var logName: String {
-    switch self {
-    case .activationPolicy:
-      "activation policy"
-    case .finishedLaunching:
-      "finished launching"
-    }
-  }
-
   func shouldRelaunch(process: Process, change: [NSKeyValueChangeKey: Any]?) -> Bool {
     switch self {
     case .activationPolicy:

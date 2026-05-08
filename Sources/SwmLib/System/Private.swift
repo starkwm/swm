@@ -46,11 +46,6 @@ func SLSMainConnectionID() -> Int32
 @_silgen_name("SLSManagedDisplayGetCurrentSpace") @discardableResult
 func SLSManagedDisplayGetCurrentSpace(_ connectionID: Int32, _ screenID: CFString) -> UInt64
 
-/// Move windows to a space.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSMoveWindowsToManagedSpace")
-func SLSMoveWindowsToManagedSpace(_ connectionID: Int32, _ windows: CFArray, _ spaceID: UInt64)
-
 /// Get the type of space.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSSpaceGetType") @discardableResult
@@ -96,21 +91,6 @@ func SLSWindowQueryResultCopyWindows(_ query: CFTypeRef) -> CFTypeRef
 @_silgen_name("SLSWindowQueryWindows") @discardableResult
 func SLSWindowQueryWindows(_ connectionID: Int32, _ windows: CFArray, _ count: Int32) -> CFTypeRef
 
-/// Set the compat ID for the given space.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSSpaceSetCompatID") @discardableResult
-func SLSSpaceSetCompatID(_ connectionID: Int32, _ spaceID: UInt64, _ workspace: Int32) -> CGError
-
-/// Set the window list for the given workspace.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSSetWindowListWorkspace") @discardableResult
-func SLSSetWindowListWorkspace(
-  _ connectionID: Int32,
-  _ windows: UnsafePointer<UInt32>,
-  _ window_count: Int32,
-  _ workspace: Int32
-) -> CGError
-
 /// Get the window ID for the given accessibility UI element.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("_AXUIElementGetWindow") @discardableResult
@@ -120,11 +100,6 @@ func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout UInt32) -
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("_AXUIElementCreateWithRemoteToken") @discardableResult
 func _AXUIElementCreateWithRemoteToken(_ data: CFData) -> Unmanaged<AXUIElement>?
-
-/// Copy the process name.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("CopyProcessName") @discardableResult
-func CopyProcessName(_ psn: inout ProcessSerialNumber, _ name: inout CFString) -> OSStatus
 
 /// Iterate over the running processes.
 // swift-format-ignore: AlwaysUseLowerCamelCase

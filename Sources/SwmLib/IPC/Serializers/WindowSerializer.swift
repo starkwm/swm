@@ -25,7 +25,6 @@ struct WindowSerializer: Encodable, Equatable {
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
-    let displaySpaces = WindowServerClient.shared.displaySpaces()
     let spaces = SpaceManager.all()
 
     return windowManager.allWindows().map { window in
@@ -33,7 +32,6 @@ struct WindowSerializer: Encodable, Equatable {
         window: window,
         info: windowInfo.info(for: window.id),
         screens: screens,
-        displaySpaces: displaySpaces,
         spaceIndex: spaces.spaceIndex(containing: window.id)
       )
     }
@@ -103,7 +101,6 @@ struct WindowSerializer: Encodable, Equatable {
     window: Window,
     info: [String: Any]?,
     screens: [NSScreen] = NSScreen.screens,
-    displaySpaces: [WindowServerDisplaySpaces] = WindowServerClient.shared.displaySpaces(),
     spaceIndex: Int? = nil
   ) {
     let element = window.element
@@ -202,12 +199,6 @@ extension [Space] {
     guard let spaceID = spaceIDs.first else { return nil }
 
     return firstIndex { $0.id == spaceID }
-  }
-}
-
-extension Array {
-  fileprivate subscript(safe index: Int) -> Element? {
-    indices.contains(index) ? self[index] : nil
   }
 }
 

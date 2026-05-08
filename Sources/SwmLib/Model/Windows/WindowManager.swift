@@ -61,14 +61,6 @@ public final class WindowManager {
     applicationsByPID[pid]
   }
 
-  func application(by name: String) -> Application? {
-    applicationsByPID.values.first { $0.name == name }
-  }
-
-  func allApplications() -> [Application] {
-    Array(applicationsByPID.values)
-  }
-
   func window(by id: CGWindowID) -> Window? {
     windowsByID[id]
   }
