@@ -2,6 +2,7 @@ import AppKit
 
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
+/// Forward accessibility window notifications into swm's event manager.
 private func accessibilityObserverCallback(
   _ observer: AXObserver,
   _ element: AXUIElement,
@@ -49,12 +50,14 @@ private func accessibilityObserverCallback(
   }
 }
 
+/// Runtime model for a single running application.
 final class Application: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
     notifications: applicationNotifications,
     allNotifications: .all
   )
 
+  /// Debug description including process, app name, and bundle identifier.
   override var description: String {
     """
     <Application pid: \(application.processIdentifier), name: \(application.localizedName ?? "-"), \
@@ -62,16 +65,23 @@ final class Application: NSObject {
     """
   }
 
+  /// Localized application name when available.
   var name: String? {
     application.localizedName
   }
 
+  /// Process identifier for the running application.
   var processID: pid_t {
     application.processIdentifier
   }
 
+  /// Accessibility observer currently registered for this application.
   private(set) var observer: AXObserver?
+
+  /// Whether notification registration should be retried later.
   private(set) var retryObserving = false
+
+  /// Accessibility element for the application process.
   private(set) var element: AXUIElement
 
   private var application: NSRunningApplication
@@ -79,6 +89,7 @@ final class Application: NSObject {
   private var observedNotifications = ApplicationNotifications(rawValue: 0)
   private var observing = false
 
+  /// Create an application model for a process discovered by the process manager.
   init?(for process: Process) {
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
 
@@ -99,6 +110,7 @@ final class Application: NSObject {
     unobserve()
   }
 
+  /// Register accessibility notifications for this application.
   func observe() -> Result<Void, AccessibilityClientError> {
     switch AccessibilityClient.shared.createObserver(
       processID: application.processIdentifier,
@@ -155,6 +167,7 @@ final class Application: NSObject {
     return .success(())
   }
 
+  /// Remove registered accessibility notifications and invalidate the observer source.
   func unobserve() {
     guard let observer else { return }
     Self.notificationRegistrar.unobserve(
@@ -176,6 +189,7 @@ final class Application: NSObject {
     self.observer = nil
   }
 
+  /// Return window IDs owned by this application on known spaces.
   func windowIdentifiers() -> [CGWindowID] {
     WindowServerClient.shared.windowIdentifiers(
       applicationConnectionID: connection,
@@ -183,10 +197,12 @@ final class Application: NSObject {
     )
   }
 
+  /// Return accessibility elements for this application's windows.
   func windowElements() -> [AXUIElement] {
     AccessibilityClient.shared.windowElements(for: element)
   }
 
+  /// Return the focused window ID for this application.
   func focusedWindowID() -> CGWindowID? {
     guard let element = AccessibilityClient.shared.focusedWindowElement(for: element) else {
       return nil
@@ -195,10 +211,12 @@ final class Application: NSObject {
     return AccessibilityClient.shared.optionalWindowID(for: element)
   }
 
+  /// Activate the application and all of its windows.
   func activate() -> Bool {
     application.activate(options: .activateAllWindows)
   }
 
+  /// Temporarily disable enhanced accessibility UI while running a window operation.
   func enhancedUIWorkaround(callback: () -> Void) {
     let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
 
@@ -221,6 +239,7 @@ final class Application: NSObject {
     }
   }
 
+  /// Return whether the app has enhanced accessibility UI enabled.
   private func isEnhancedUIEnabled() -> Bool {
     AccessibilityClient.shared.enhancedUIEnabled(
       for: element,

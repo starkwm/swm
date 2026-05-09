@@ -2,7 +2,9 @@ import ApplicationServices
 import Carbon
 import Foundation
 
+/// Tracks observable applications, windows, and focused-window state.
 public final class WindowManager {
+  /// Resolve the currently focused window ID from the frontmost process.
   private static func resolveFocusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {
       return nil
@@ -21,12 +23,14 @@ public final class WindowManager {
     return AccessibilityClient.shared.optionalWindowID(for: focusedWindowElement)
   }
 
+  /// ID of the currently focused window.
   var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindowState.current
     }
   }
 
+  /// ID of the previously focused window.
   var lastFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindowState.last
@@ -44,10 +48,12 @@ public final class WindowManager {
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
 
+  /// Create a window manager for a workspace.
   public convenience init(workspace: Workspace) {
     self.init(workspace: workspace, focusedWindowIDResolver: Self.resolveFocusedWindowID)
   }
 
+  /// Create a window manager with an explicit focused-window resolver.
   init(
     workspace: Workspace,
     focusedWindowIDResolver: @escaping () -> CGWindowID? = WindowManager.resolveFocusedWindowID
@@ -57,29 +63,35 @@ public final class WindowManager {
     focusedWindowState = TrackedState(current: focusedWindowIDResolver())
   }
 
+  /// Start managing all supplied processes.
   public func start(processes: [Process]) {
     for process in processes {
       startManaging(process)
     }
   }
 
+  /// Return a managed application by process ID.
   func application(by pid: pid_t) -> Application? {
     applicationsByPID[pid]
   }
 
+  /// Return a managed window by Core Graphics window ID.
   func window(by id: CGWindowID) -> Window? {
     windowsByID[id]
   }
 
+  /// Resolve the currently focused window ID.
   func focusedWindowID() -> CGWindowID? {
     focusedWindowIDResolver()
   }
 
+  /// Return the currently focused managed window.
   func focusedWindow() -> Window? {
     guard let windowID = focusedWindowID() else { return nil }
     return focusedWindow(by: windowID)
   }
 
+  /// Return a focused managed window and update focused-window tracking.
   func focusedWindow(by windowID: CGWindowID) -> Window? {
     guard let window = window(by: windowID) else { return nil }
 
@@ -88,14 +100,17 @@ public final class WindowManager {
     return window
   }
 
+  /// Return all managed windows owned by an application.
   func allWindows(for application: Application) -> [Window] {
     windowsByID.values.filter { $0.application == application }
   }
 
+  /// Return all managed windows.
   func allWindows() -> [Window] {
     Array(windowsByID.values)
   }
 
+  /// Update focused-window tracking.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
@@ -104,6 +119,7 @@ public final class WindowManager {
     }
   }
 
+  /// Retry discovery for applications with unresolved windows.
   func refreshWindows() {
     for processID in Array(unresolvedApplicationIDs) {
       guard let application = applicationsByPID[processID] else {
@@ -115,6 +131,7 @@ public final class WindowManager {
     }
   }
 
+  /// Retry window discovery for one application if it has unresolved windows.
   func refreshWindows(for application: Application) {
     guard unresolvedApplicationIDs.contains(application.processID) else { return }
 
@@ -122,43 +139,52 @@ public final class WindowManager {
     _ = reconcileWindows(for: application, mode: .refreshAttempt)
   }
 
+  /// Record a front-switched event that arrived before its application was managed.
   func addLostFrontSwitchedEvent(for processID: pid_t) {
     lostFrontSwitchedProcessIDs.insert(processID)
   }
 
+  /// Remove a recorded lost front-switched event.
   @discardableResult
   func removeLostFrontSwitchedEvent(for processID: pid_t) -> Bool {
     lostFrontSwitchedProcessIDs.remove(processID) != nil
   }
 
+  /// Record a focused-window event that arrived before its window was managed.
   func addLostFocusedEvent(for windowID: CGWindowID) {
     guard windowID != 0 else { return }
     lostFocusedWindowIDs.insert(windowID)
   }
 
+  /// Return whether a focused-window event is waiting for a window.
   func containsLostFocusedEvent(for windowID: CGWindowID) -> Bool {
     lostFocusedWindowIDs.contains(windowID)
   }
 
+  /// Return a snapshot of window IDs with lost focused-window events.
   func lostFocusedWindowIDsSnapshot() -> [CGWindowID] {
     Array(lostFocusedWindowIDs)
   }
 
+  /// Remove a recorded lost focused-window event.
   @discardableResult
   func removeLostFocusedEvent(for windowID: CGWindowID) -> Bool {
     lostFocusedWindowIDs.remove(windowID) != nil
   }
 
+  /// Add a managed application.
   func add(application: Application) {
     applicationsByPID[application.processID] = application
   }
 
+  /// Remove a managed application and associated pending event state.
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
     applicationsByPID.removeValue(forKey: application.processID)
   }
 
+  /// Create, observe, and store one managed window for an application.
   @discardableResult
   func addWindow(for application: Application, with element: AXUIElement) -> Window? {
     let window = Window(with: element, for: application)
@@ -175,6 +201,7 @@ public final class WindowManager {
     return window
   }
 
+  /// Add all currently accessible windows for an application.
   @discardableResult
   func addWindows(for application: Application) -> [Window] {
     let elements = application.windowElements()
@@ -196,11 +223,13 @@ public final class WindowManager {
     return windows
   }
 
+  /// Remove a managed window by ID.
   func remove(by windowID: CGWindowID) {
     lostFocusedWindowIDs.remove(windowID)
     windowsByID.removeValue(forKey: windowID)
   }
 
+  /// Reconcile WindowServer IDs with accessibility window elements for an application.
   @discardableResult
   private func reconcileWindows(
     for application: Application,
@@ -232,6 +261,7 @@ public final class WindowManager {
     )
   }
 
+  /// Start managing one observable process and discover its windows.
   private func startManaging(_ process: Process) {
     guard workspace.isObservable(process) else {
       log("application is not observable \(process)", level: .warn)
@@ -257,6 +287,7 @@ public final class WindowManager {
     _ = reconcileWindows(for: application, mode: .initialDiscovery)
   }
 
+  /// Register windows that already have accessibility elements.
   private func registerAccessibleWindows(
     for application: Application,
     elements: [AXUIElement]
@@ -278,6 +309,7 @@ public final class WindowManager {
     return resolvedWindowCount
   }
 
+  /// Finish a refresh attempt when all windows are resolved.
   private func finishResolution(for application: Application, mode: WindowDiscoveryMode) -> Bool {
     guard mode == .refreshAttempt else { return false }
     log("all windows resolved \(application)", level: .info)
@@ -285,6 +317,7 @@ public final class WindowManager {
     return true
   }
 
+  /// Attempt to resolve missing windows by creating accessibility elements from remote tokens.
   private func resolveRemoteWindows(
     _ unresolvedWindowIDs: inout [CGWindowID],
     for application: Application
@@ -315,6 +348,7 @@ public final class WindowManager {
     }
   }
 
+  /// Create the private accessibility remote token for a process-local window index.
   private func createRemoteToken(for pid: pid_t, with id: Int) -> CFData {
     var token = Data()
 
@@ -326,6 +360,7 @@ public final class WindowManager {
     return token as CFData
   }
 
+  /// Update unresolved-application tracking after a discovery pass.
   private func updateRefreshTracking(
     for application: Application,
     unresolvedWindowIDs: [CGWindowID],
@@ -352,6 +387,7 @@ public final class WindowManager {
 
 extension WindowManager: @unchecked Sendable {}
 
+/// Identifies whether discovery is initial or a retry for unresolved windows.
 private enum WindowDiscoveryMode {
   case initialDiscovery
   case refreshAttempt

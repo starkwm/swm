@@ -1,24 +1,33 @@
 import AppKit
 
+/// Runtime model for an accessibility-backed window.
 final class Window: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
     notifications: windowNotifications,
     allNotifications: .all
   )
 
+  /// Accessibility element for the window when still valid.
   private(set) var element: AXUIElement?
+
+  /// Owning application, held weakly to avoid a retain cycle.
   weak var application: Application?
+
+  /// Core Graphics window ID.
   private(set) var id: CGWindowID
 
+  /// Debug description including window ID and title.
   override var description: String {
     "<Window id: \(id), title: \(title)>"
   }
 
+  /// Accessibility subrole for the window.
   var subrole: String? {
     guard let element else { return nil }
     return AccessibilityClient.shared.subrole(for: element)
   }
 
+  /// Whether accessibility reports the window as minimized.
   var isMinimized: Bool {
     guard let element else { return false }
     return AccessibilityClient.shared.boolAttribute(
@@ -27,6 +36,7 @@ final class Window: NSObject {
     ) ?? false
   }
 
+  /// Accessibility title for the window.
   private var title: String {
     guard let element else { return "" }
 
@@ -39,6 +49,7 @@ final class Window: NSObject {
   private var observedNotifications = WindowNotifications(rawValue: 0)
   private var observationContext: WindowObservationContext?
 
+  /// Create a window model from an accessibility element and owning application.
   init(with element: AXUIElement, for application: Application) {
     self.element = element
     self.application = application
@@ -49,12 +60,14 @@ final class Window: NSObject {
     unobserve()
   }
 
+  /// Compare windows by Core Graphics window ID.
   override func isEqual(_ object: Any?) -> Bool {
     guard let window = object as? Self else { return false }
 
     return id == window.id
   }
 
+  /// Stop observing and clear references to invalid window state.
   func invalidate() {
     unobserve()
     element = nil
@@ -62,6 +75,7 @@ final class Window: NSObject {
     id = 0
   }
 
+  /// Focus and raise the window through accessibility.
   @discardableResult
   func focus() -> Bool {
     guard let element else { return false }
@@ -89,6 +103,7 @@ final class Window: NSObject {
     return true
   }
 
+  /// Minimize the window through accessibility.
   @discardableResult
   func minimize() -> Bool {
     guard let element else { return false }
@@ -100,6 +115,7 @@ final class Window: NSObject {
     )
   }
 
+  /// Restore the window from a minimized state through accessibility.
   @discardableResult
   func unminimize() -> Bool {
     guard let element else { return false }
@@ -111,6 +127,7 @@ final class Window: NSObject {
     )
   }
 
+  /// Move the window to an absolute point.
   @discardableResult
   func move(to point: CGPoint) -> Bool {
     guard let application else { return false }
@@ -128,6 +145,7 @@ final class Window: NSObject {
     return moved
   }
 
+  /// Move the window by a relative offset.
   @discardableResult
   func move(by offset: CGVector) -> Bool {
     guard let frame = frame() else { return false }
@@ -140,6 +158,7 @@ final class Window: NSObject {
     )
   }
 
+  /// Resize the window to an absolute size.
   @discardableResult
   func resize(to size: CGSize) -> Bool {
     guard let application else { return false }
@@ -157,6 +176,7 @@ final class Window: NSObject {
     return resized
   }
 
+  /// Resize the window by a relative offset.
   @discardableResult
   func resize(by offset: CGVector) -> Bool {
     guard let frame = frame() else { return false }
@@ -169,11 +189,13 @@ final class Window: NSObject {
     )
   }
 
+  /// Return the window frame from accessibility.
   func frame() -> CGRect? {
     guard let element else { return nil }
     return AccessibilityClient.shared.frame(for: element)
   }
 
+  /// Register window-specific accessibility notifications.
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }
@@ -197,6 +219,7 @@ final class Window: NSObject {
     )
   }
 
+  /// Remove registered window-specific accessibility notifications.
   func unobserve() {
     guard let observer = application?.observer else { return }
     guard let element else { return }
@@ -218,17 +241,21 @@ final class Window: NSObject {
 
 extension Window: @unchecked Sendable {}
 
+/// Weak observation context passed through accessibility notification callbacks.
 final class WindowObservationContext {
   private weak var observedWindow: Window?
 
+  /// Create a context for an observed window.
   init(window: Window) {
     observedWindow = window
   }
 
+  /// Post a runtime event for the observed window.
   func post(_ event: RuntimeEvent) {
     EventManager.shared.post(event)
   }
 
+  /// Return the observed window if it is still alive.
   func window() -> Window? {
     observedWindow
   }

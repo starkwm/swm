@@ -1,5 +1,6 @@
 import Carbon
 
+/// Forward Carbon process events to a process manager instance.
 private func processEventHandler(
   _: EventHandlerCallRef?,
   event: EventRef?,
@@ -12,11 +13,14 @@ private func processEventHandler(
   return processManager.handle(event: event)
 }
 
+/// Tracks running application processes and publishes process lifecycle events.
 public final class ProcessManager {
   private var processes = [UInt32: Process]()
 
+  /// Create an empty process manager.
   public init() {}
 
+  /// Seed the process list and start observing Carbon application events.
   public func start() -> Result<Void, ProcessManagerError> {
     addRunningProcesses()
 
@@ -48,14 +52,17 @@ public final class ProcessManager {
       ? .success(()) : .failure(.accessFailed("failed to install event handler"))
   }
 
+  /// Return all currently tracked processes.
   public func all() -> [Process] {
     Array(processes.values)
   }
 
+  /// Find a tracked process by process serial number.
   func find(by psn: ProcessSerialNumber) -> Process? {
     processes[psn.lowLongOfPSN]
   }
 
+  /// Handle a Carbon application event.
   func handle(event: EventRef) -> OSStatus {
     var psn = ProcessSerialNumber()
 
@@ -86,6 +93,7 @@ public final class ProcessManager {
     return noErr
   }
 
+  /// Add all currently running processes to the tracked process map.
   private func addRunningProcesses() {
     var psn = ProcessSerialNumber()
 
@@ -95,6 +103,7 @@ public final class ProcessManager {
     }
   }
 
+  /// Track a newly launched process and publish an application launch event.
   private func applicationLaunched(with psn: ProcessSerialNumber) {
     guard processes[psn.lowLongOfPSN] == nil else { return }
     guard let process = Process(psn: psn) else { return }
@@ -104,6 +113,7 @@ public final class ProcessManager {
     EventManager.shared.post(.application(.launched(process)))
   }
 
+  /// Mark a tracked process as terminated and publish an application termination event.
   private func applicationTerminated(with psn: ProcessSerialNumber) {
     guard let process = processes[psn.lowLongOfPSN] else { return }
 
@@ -113,6 +123,7 @@ public final class ProcessManager {
     EventManager.shared.post(.application(.terminated(process)))
   }
 
+  /// Publish a frontmost-application change event for a tracked process.
   private func applicationFrontSwitched(to psn: ProcessSerialNumber) {
     guard let process = processes[psn.lowLongOfPSN] else { return }
 

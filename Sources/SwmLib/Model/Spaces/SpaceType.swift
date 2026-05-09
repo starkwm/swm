@@ -1,10 +1,17 @@
+/// WindowServer space type.
 enum SpaceType: Int32 {
+  /// A standard desktop space.
   case normal = 0
+
+  /// A native fullscreen app space.
   case fullscreen = 4
+
+  /// A space type not recognized by swm.
   case unknown
 }
 
 extension SpaceType: CustomStringConvertible {
+  /// Human-readable space type.
   var description: String {
     switch self {
     case .normal:

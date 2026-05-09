@@ -9,18 +9,32 @@ private let processIgnoreList = [
   "Slack Helper (Renderer)",
 ]
 
+/// Runtime model for an application process known to swm.
 public final class Process: CustomStringConvertible {
+  /// Debug description including process ID and name.
   public var description: String {
     "<Process pid: \(pid), name: \(name)>"
   }
 
+  /// Carbon process serial number.
   var psn: ProcessSerialNumber
+
+  /// Unix process identifier.
   var pid: pid_t
+
+  /// Localized process name.
   var name: String
+
+  /// Whether the process has terminated since being tracked.
   var terminated: Bool
+
+  /// AppKit running-application model for the process when available.
   var application: NSRunningApplication?
+
+  /// AppKit activation policy when known.
   var policy: NSApplication.ActivationPolicy?
 
+  /// Create a process model from a Carbon process serial number.
   init?(psn: ProcessSerialNumber) {
     self.psn = psn
 
@@ -46,6 +60,7 @@ public final class Process: CustomStringConvertible {
     }
   }
 
+  /// Create a process model from explicit process fields.
   init(
     psn: ProcessSerialNumber,
     pid: pid_t,
