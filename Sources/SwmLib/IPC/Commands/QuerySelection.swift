@@ -1,18 +1,28 @@
 import CoreGraphics
 
+/// A selector that narrows query results to a display, space, or window.
 enum QuerySelection: Equatable {
   private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
   private static let selectorFlags = Set(["--display", "--space", "--window"])
 
+  /// No selector; query all items for the requested command.
   case none
+
+  /// Select a display by index, or the focused display when the index is absent.
   case display(Int?)
+
+  /// Select a space by index, or the focused space when the index is absent.
   case space(Int?)
+
+  /// Select a window by ID, or the focused window when the ID is absent.
   case window(CGWindowID?)
 
+  /// Parse selector arguments from an IPC request.
   static func parse(arguments: [String]) throws -> QuerySelection {
     try parseComponents(arguments: arguments).selection
   }
 
+  /// Parse a query command and selector from command-line style arguments.
   static func parseRequest(arguments: [String]) throws -> (
     command: String, selection: QuerySelection
   ) {
@@ -29,6 +39,7 @@ enum QuerySelection: Equatable {
     throw IPCCommandError.invalidRequest("exactly one query flag is required")
   }
 
+  /// Parse query command and selector flags while enforcing one of each.
   private static func parseComponents(
     arguments: [String]
   ) throws -> (command: String?, selection: QuerySelection) {
@@ -82,6 +93,7 @@ enum QuerySelection: Equatable {
     return (command, selection)
   }
 
+  /// Return non-flag values following a selector flag.
   private static func selectorValues(after index: Int, in arguments: [String]) -> [String] {
     var values = [String]()
     var next = index + 1
@@ -94,6 +106,7 @@ enum QuerySelection: Equatable {
     return values
   }
 
+  /// Parse a non-negative display or space index.
   private static func parseIndex(_ value: String) throws -> Int {
     guard let index = Int(value), index >= 0 else {
       throw IPCCommandError.invalidRequest("query selector value must be a non-negative integer")
@@ -102,6 +115,7 @@ enum QuerySelection: Equatable {
     return index
   }
 
+  /// Parse a Core Graphics window ID.
   private static func parseWindowID(_ value: String) throws -> CGWindowID {
     guard let id = UInt32(value) else {
       throw IPCCommandError.invalidRequest("query window selector value must be a window id")
@@ -110,6 +124,7 @@ enum QuerySelection: Equatable {
     return CGWindowID(id)
   }
 
+  /// Command-line arguments that reproduce this selector.
   var requestArguments: [String] {
     switch self {
     case .none:
@@ -123,6 +138,7 @@ enum QuerySelection: Equatable {
     }
   }
 
+  /// The query command implied by this selector when no explicit command is supplied.
   var defaultCommand: String? {
     switch self {
     case .none:
@@ -136,6 +152,7 @@ enum QuerySelection: Equatable {
     }
   }
 
+  /// Build command-line style arguments for a selector flag and optional value.
   private func selectorArguments(flag: String, value: String?) -> [String] {
     if let value {
       [flag, value]

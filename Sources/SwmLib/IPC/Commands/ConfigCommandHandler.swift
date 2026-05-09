@@ -1,7 +1,9 @@
+/// Handles IPC commands that update global configuration for every known space.
 struct ConfigCommandHandler {
   private let spaceManager: SpaceManager
   private let spaces: () -> [Space]
 
+  /// Create a config command handler backed by a space manager and space source.
   init(
     spaceManager: SpaceManager,
     spaces: @escaping () -> [Space] = SpaceManager.all
@@ -10,6 +12,7 @@ struct ConfigCommandHandler {
     self.spaces = spaces
   }
 
+  /// Dispatch a config IPC request to the matching setting update.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
@@ -29,6 +32,7 @@ struct ConfigCommandHandler {
     }
   }
 
+  /// Set the window gap for every known space.
   private func windowGap(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid config window-gap arguments")
@@ -45,6 +49,7 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Set one padding side for every known space.
   private func padding(_ request: IPCRequest, side: PaddingSide) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid config \(request.command) arguments")
@@ -77,6 +82,7 @@ struct ConfigCommandHandler {
   }
 }
 
+/// A single side of a space padding setting.
 private enum PaddingSide {
   case top
   case bottom

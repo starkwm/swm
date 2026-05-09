@@ -1,10 +1,13 @@
+/// Handles IPC commands that update the active space.
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
 
+  /// Create a space command handler backed by a space manager.
   init(spaceManager: SpaceManager) {
     self.spaceManager = spaceManager
   }
 
+  /// Dispatch a space IPC request to the matching active-space update.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
@@ -20,6 +23,7 @@ struct SpaceCommandHandler {
     }
   }
 
+  /// Toggle padding or gap behavior for the active space.
   private func toggle(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space toggle arguments")
@@ -41,6 +45,7 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Set or adjust padding for the active space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space padding arguments")
@@ -62,6 +67,7 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Set or adjust the window gap for the active space.
   private func gap(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space gap arguments")
@@ -83,6 +89,7 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Return the currently active space ID.
   private func currentSpaceID() throws -> UInt64 {
     guard let id = spaceManager.currentActiveSpaceID else {
       throw IPCCommandError.invalidRequest("no active space")
@@ -91,6 +98,7 @@ struct SpaceCommandHandler {
     return id
   }
 
+  /// Parse a padding change in `mode:top:bottom:left:right` format.
   private func parsePaddingChange(_ argument: String) -> PaddingChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
@@ -116,6 +124,7 @@ struct SpaceCommandHandler {
     )
   }
 
+  /// Parse a gap change in `mode:value` format.
   private func parseGapChange(_ argument: String) -> GapChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
@@ -131,11 +140,13 @@ struct SpaceCommandHandler {
   }
 }
 
+/// A parsed gap command argument.
 private struct GapChange {
   let mode: ChangeMode
   let value: Int
 }
 
+/// A parsed padding command argument.
 private struct PaddingChange {
   let mode: ChangeMode
   let padding: SpacePadding

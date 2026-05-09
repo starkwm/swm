@@ -1,10 +1,17 @@
 import CoreGraphics
 
+/// Resolves query selections against serialized display, space, and window state.
 struct QueryResolver {
+  /// Displays available to query.
   let displays: [DisplaySerializer]
+
+  /// Spaces available to query.
   let spaces: [SpaceSerializer]
+
+  /// Windows available to query.
   let windows: [WindowSerializer]
 
+  /// Snapshot the current display, space, and window state for querying.
   init(windowManager: WindowManager) {
     self.init(
       displays: DisplaySerializer.all(),
@@ -13,6 +20,7 @@ struct QueryResolver {
     )
   }
 
+  /// Create a resolver from pre-serialized state.
   init(
     displays: [DisplaySerializer],
     spaces: [SpaceSerializer],
@@ -23,6 +31,7 @@ struct QueryResolver {
     self.windows = windows
   }
 
+  /// Resolve displays matching a query selection.
   func displays(for selection: QuerySelection) -> QueryResult<DisplaySerializer> {
     switch selection {
     case .none:
@@ -36,6 +45,7 @@ struct QueryResolver {
     }
   }
 
+  /// Resolve spaces matching a query selection.
   func spaces(for selection: QuerySelection) -> QueryResult<SpaceSerializer> {
     switch selection {
     case .none:
@@ -50,6 +60,7 @@ struct QueryResolver {
     }
   }
 
+  /// Resolve windows matching a query selection.
   func windows(for selection: QuerySelection) -> QueryResult<WindowSerializer> {
     switch selection {
     case .none:
@@ -65,6 +76,7 @@ struct QueryResolver {
     }
   }
 
+  /// Return the display at an index, or the focused display when no index is supplied.
   private func display(for index: Int?) -> DisplaySerializer? {
     if let index {
       displays.first { $0.index == index }
@@ -73,6 +85,7 @@ struct QueryResolver {
     }
   }
 
+  /// Return the space at an index, or the focused space when no index is supplied.
   private func space(for index: Int?) -> SpaceSerializer? {
     if let index {
       spaces.first { $0.index == index }
@@ -81,6 +94,7 @@ struct QueryResolver {
     }
   }
 
+  /// Return the window with an ID, or the focused window when no ID is supplied.
   private func window(for id: CGWindowID?) -> WindowSerializer? {
     if let id {
       windows.first { $0.id == id }
@@ -89,16 +103,19 @@ struct QueryResolver {
     }
   }
 
+  /// Return the display that owns a space.
   private func display(containing space: SpaceSerializer) -> DisplaySerializer? {
     displays.first { $0.id == space.display }
   }
 
+  /// Return the display that owns a window.
   private func display(containing window: WindowSerializer) -> DisplaySerializer? {
     guard let displayID = window.display else { return nil }
 
     return displays.first { $0.id == displayID }
   }
 
+  /// Return the space that owns a window.
   private func space(containing window: WindowSerializer) -> SpaceSerializer? {
     guard let spaceIndex = window.space else { return nil }
 

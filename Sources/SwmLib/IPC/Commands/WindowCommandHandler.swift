@@ -1,14 +1,17 @@
 import AppKit
 
+/// Handles IPC commands that focus, minimize, move, resize, and grid windows.
 struct WindowCommandHandler {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
 
+  /// Create a window command handler backed by window and space managers.
   init(windowManager: WindowManager, spaceManager: SpaceManager) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
   }
 
+  /// Dispatch a window IPC request to the matching window operation.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
@@ -30,6 +33,7 @@ struct WindowCommandHandler {
     }
   }
 
+  /// Focus the selected window, or the focused window when no selector is supplied.
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "focus")
     let window = try selectedWindow(selector: selector)
@@ -41,6 +45,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Minimize the selected window, or the focused window when no selector is supplied.
   private func minimize(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "minimize")
     let window = try selectedWindow(selector: selector)
@@ -52,6 +57,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Unminimize the selected window, or the focused window when no selector is supplied.
   private func unminimize(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "unminimize")
     let window = try selectedWindow(selector: selector)
@@ -63,6 +69,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Move the selected window using `mode:x:y` geometry arguments.
   private func move(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseGeometrySelection(request.args, action: "move")
 
@@ -87,6 +94,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Resize the selected window using `mode:width:height` geometry arguments.
   private func resize(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseGeometrySelection(request.args, action: "resize")
 
@@ -111,6 +119,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Move and resize the selected window into a grid cell span.
   private func grid(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseGeometrySelection(request.args, action: "grid")
 
@@ -143,6 +152,7 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
+  /// Resolve a window selector to a concrete window.
   private func selectedWindow(selector: String?) throws -> Window {
     let windowID: CGWindowID
 
@@ -181,6 +191,7 @@ struct WindowCommandHandler {
     return window
   }
 
+  /// Parse an optional single window selector argument.
   private func parseSelector(_ args: [String], action: String) throws -> String? {
     guard args.count <= 1 else {
       throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
@@ -189,6 +200,7 @@ struct WindowCommandHandler {
     return args.first
   }
 
+  /// Parse optional selector and required geometry arguments.
   private func parseGeometrySelection(
     _ args: [String],
     action: String
@@ -204,6 +216,7 @@ struct WindowCommandHandler {
     return WindowGeometrySelection(selector: args[0], geometry: args[1])
   }
 
+  /// Parse a geometry change in `mode:first:second` format.
   private func parseGeometryChange(_ argument: String) -> WindowGeometryChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
@@ -220,17 +233,20 @@ struct WindowCommandHandler {
   }
 }
 
+/// A parsed two-axis window geometry change.
 private struct WindowGeometryChange {
   let mode: ChangeMode
   let first: Int
   let second: Int
 }
 
+/// A parsed window selector and geometry argument pair.
 private struct WindowGeometrySelection {
   let selector: String?
   let geometry: String
 }
 
+/// A grid placement for resizing a window within visible screen bounds.
 struct WindowGrid: Equatable {
   private let rows: Int
   private let columns: Int
@@ -239,6 +255,7 @@ struct WindowGrid: Equatable {
   private let width: Int
   private let height: Int
 
+  /// Create a clamped grid placement.
   init?(
     rows: Int,
     columns: Int,
@@ -262,6 +279,7 @@ struct WindowGrid: Equatable {
     self.height = height
   }
 
+  /// Parse a grid placement in `columns:rows:x:y:width:height` format.
   init?(argument: String) {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
@@ -280,6 +298,7 @@ struct WindowGrid: Equatable {
     self.init(rows: rows, columns: columns, x: x, y: y, width: width, height: height)
   }
 
+  /// Calculate the target frame inside screen bounds using space padding and gap settings.
   func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
     let padding = settings.paddingEnabled ? settings.padding : .zero
     let gap = settings.gapEnabled ? CGFloat(settings.gap) : 0

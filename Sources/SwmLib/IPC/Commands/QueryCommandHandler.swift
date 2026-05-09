@@ -1,12 +1,15 @@
 import Foundation
 
+/// Handles IPC requests that query displays, spaces, and windows.
 struct QueryCommandHandler {
   private let windowManager: WindowManager
 
+  /// Create a query command handler backed by a window manager.
   init(windowManager: WindowManager = WindowManager(workspace: Workspace())) {
     self.windowManager = windowManager
   }
 
+  /// Dispatch a query IPC request and encode the selected result as JSON.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       let selection = try QuerySelection.parse(arguments: request.args)
@@ -25,6 +28,7 @@ struct QueryCommandHandler {
     }
   }
 
+  /// Encode a query payload as sorted-key JSON in the response message.
   func response<T: Encodable>(id: String, payload: T) throws -> IPCResponse {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]
@@ -34,6 +38,7 @@ struct QueryCommandHandler {
     return .success(id: id, message: String(decoding: data, as: UTF8.self))
   }
 
+  /// Encode either a single query value or a list of query values.
   func response<T: Encodable>(id: String, result: QueryResult<T>) throws -> IPCResponse {
     switch result {
     case .many(let values):
