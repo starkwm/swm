@@ -11,18 +11,4 @@ enum RuntimeEvent: Sendable {
 
   /// Display lifecycle event.
   case display(DisplayEvent)
-
-  /// Flat event type for this runtime event.
-  var type: EventType {
-    switch self {
-    case .application(let event):
-      event.type
-    case .window(let event):
-      event.type
-    case .space(let event):
-      event.type
-    case .display(let event):
-      event.type
-    }
-  }
 }

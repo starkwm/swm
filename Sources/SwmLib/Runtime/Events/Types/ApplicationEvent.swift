@@ -8,16 +8,4 @@ enum ApplicationEvent: Sendable {
 
   /// The frontmost process changed.
   case frontSwitched(Process)
-
-  /// Generic event type for logging and routing.
-  var type: EventType {
-    switch self {
-    case .launched:
-      .applicationLaunched
-    case .terminated:
-      .applicationTerminated
-    case .frontSwitched:
-      .applicationFrontSwitched
-    }
-  }
 }
