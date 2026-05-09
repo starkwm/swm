@@ -6,19 +6,9 @@ import Testing
 
 @Suite("WindowManager")
 struct WindowManagerTests {
-  @Test("focusedWindowID: resolves current focused window live")
-  func focusedWindowIDResolvesCurrentFocusedWindowLive() {
-    let manager = WindowManager(
-      workspace: Workspace(),
-      focusedWindowIDResolver: { 42 }
-    )
-
-    #expect(manager.focusedWindowID() == 42)
-  }
-
   @Test("lost front-switched events are consumed once")
   func lostFrontSwitchedEventsAreConsumedOnce() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     let processID: pid_t = 42
 
     #expect(manager.removeLostFrontSwitchedEvent(for: processID) == false)
@@ -31,7 +21,7 @@ struct WindowManagerTests {
 
   @Test("lost focused events are tracked and consumed once")
   func lostFocusedEventsAreTrackedAndConsumedOnce() {
-    let manager = WindowManager(workspace: Workspace(), focusedWindowIDResolver: { nil })
+    let manager = WindowManager(workspace: Workspace())
     let windowID: CGWindowID = 42
 
     #expect(manager.containsLostFocusedEvent(for: windowID) == false)

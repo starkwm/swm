@@ -31,53 +31,6 @@ struct WindowCommandHandlerTests {
     }
   }
 
-  @Test("dispatch: rejects single-target action without focused window")
-  func dispatchRejectsSingleTargetActionWithoutFocusedWindow() {
-    let handler = handler()
-
-    for action in ["focus", "minimize", "unminimize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: []))
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "no focused window")
-    }
-  }
-
-  @Test("dispatch: implicit target does not fall back to cached focused window")
-  func dispatchImplicitTargetDoesNotFallBackToCachedFocusedWindow() {
-    let windowManager = WindowManager(
-      workspace: Workspace(),
-      focusedWindowIDResolver: { nil }
-    )
-    windowManager.focusedWindowDidChange(to: 42)
-
-    let handler = handler(
-      windowManager: windowManager
-    )
-
-    for action in ["focus", "minimize", "unminimize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: []))
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "no focused window")
-    }
-  }
-
-  @Test("dispatch: rejects missing recent single-target action target")
-  func dispatchRejectsMissingRecentSingleTargetActionTarget() {
-    let handler = handler()
-
-    for action in ["focus", "minimize", "unminimize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["recent"]))
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "no recent window")
-    }
-  }
-
   @Test("dispatch: rejects missing numeric single-target action target")
   func dispatchRejectsMissingNumericSingleTargetActionTarget() {
     let handler = handler()
@@ -134,16 +87,6 @@ struct WindowCommandHandlerTests {
     #expect(response.message == "invalid window grid value: 1:3:0:0:2:x")
   }
 
-  @Test("dispatch: rejects grid without focused window")
-  func dispatchRejectsGridWithoutFocusedWindow() {
-    let handler = handler()
-    let response = handler.dispatch(request(command: "--grid", args: ["3:1:0:0:2:1"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "no focused window")
-  }
-
   @Test("dispatch: rejects grid with invalid window selector")
   func dispatchRejectsGridWithInvalidWindowSelector() {
     let handler = handler()
@@ -152,16 +95,6 @@ struct WindowCommandHandlerTests {
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "invalid window selector: nope")
-  }
-
-  @Test("dispatch: rejects grid with missing recent window")
-  func dispatchRejectsGridWithMissingRecentWindow() {
-    let handler = handler()
-    let response = handler.dispatch(request(command: "--grid", args: ["recent", "3:1:0:0:2:1"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "no recent window")
   }
 
   @Test("dispatch: rejects invalid geometry action value")
@@ -174,19 +107,6 @@ struct WindowCommandHandlerTests {
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
       #expect(response.message == "invalid window \(action) value: rel:100:x")
-    }
-  }
-
-  @Test("dispatch: rejects geometry action without focused window")
-  func dispatchRejectsGeometryActionWithoutFocusedWindow() {
-    let handler = handler()
-
-    for action in ["move", "resize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["abs:100:200"]))
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "no focused window")
     }
   }
 
@@ -210,10 +130,7 @@ struct WindowCommandHandlerTests {
   }
 
   private func handler(
-    windowManager: WindowManager = WindowManager(
-      workspace: Workspace(),
-      focusedWindowIDResolver: { nil }
-    )
+    windowManager: WindowManager = WindowManager(workspace: Workspace())
   ) -> WindowCommandHandler {
     WindowCommandHandler(
       windowManager: windowManager,

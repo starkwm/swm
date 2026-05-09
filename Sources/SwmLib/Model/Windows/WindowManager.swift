@@ -38,7 +38,6 @@ public final class WindowManager {
   }
 
   private let workspace: Workspace
-  private let focusedWindowIDResolver: () -> CGWindowID?
   private let focusedWindowLock = NSLock()
   private var focusedWindowState: TrackedState<CGWindowID>
 
@@ -49,18 +48,9 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
 
   /// Create a window manager for a workspace.
-  public convenience init(workspace: Workspace) {
-    self.init(workspace: workspace, focusedWindowIDResolver: Self.resolveFocusedWindowID)
-  }
-
-  /// Create a window manager with an explicit focused-window resolver.
-  init(
-    workspace: Workspace,
-    focusedWindowIDResolver: @escaping () -> CGWindowID? = WindowManager.resolveFocusedWindowID
-  ) {
+  public init(workspace: Workspace) {
     self.workspace = workspace
-    self.focusedWindowIDResolver = focusedWindowIDResolver
-    focusedWindowState = TrackedState(current: focusedWindowIDResolver())
+    focusedWindowState = TrackedState(current: Self.resolveFocusedWindowID())
   }
 
   /// Start managing all supplied processes.
@@ -82,7 +72,7 @@ public final class WindowManager {
 
   /// Resolve the currently focused window ID.
   func focusedWindowID() -> CGWindowID? {
-    focusedWindowIDResolver()
+    Self.resolveFocusedWindowID()
   }
 
   /// Return the currently focused managed window.

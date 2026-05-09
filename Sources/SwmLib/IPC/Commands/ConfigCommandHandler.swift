@@ -1,15 +1,10 @@
 /// Handles IPC commands that update global configuration for every known space.
 struct ConfigCommandHandler {
   private let spaceManager: SpaceManager
-  private let spaces: () -> [Space]
 
-  /// Create a config command handler backed by a space manager and space source.
-  init(
-    spaceManager: SpaceManager,
-    spaces: @escaping () -> [Space] = SpaceManager.all
-  ) {
+  /// Create a config command handler backed by a space manager.
+  init(spaceManager: SpaceManager) {
     self.spaceManager = spaceManager
-    self.spaces = spaces
   }
 
   /// Dispatch a config IPC request to the matching setting update.
@@ -42,7 +37,7 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("invalid config window-gap value: \(request.args[0])")
     }
 
-    for space in spaces() {
+    for space in SpaceManager.all() {
       spaceManager.setGap(gap, for: space.id)
     }
 
@@ -61,7 +56,7 @@ struct ConfigCommandHandler {
       )
     }
 
-    for space in spaces() {
+    for space in SpaceManager.all() {
       var padding = spaceManager.settings(for: space.id).padding
 
       switch side {
