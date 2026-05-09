@@ -23,19 +23,20 @@ public final class WindowManager {
 
   var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
-      focusedWindow.current
+      focusedWindowState.current
     }
   }
 
   var lastFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
-      focusedWindow.last
+      focusedWindowState.last
     }
   }
 
   private let workspace: Workspace
+  private let focusedWindowIDResolver: () -> CGWindowID?
   private let focusedWindowLock = NSLock()
-  private var focusedWindow: TrackedState<CGWindowID>
+  private var focusedWindowState: TrackedState<CGWindowID>
 
   private var applicationsByPID = [pid_t: Application]()
   private var lostFrontSwitchedProcessIDs = Set<pid_t>()
@@ -44,12 +45,16 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
 
   public convenience init(workspace: Workspace) {
-    self.init(workspace: workspace, focusedWindowID: Self.resolveFocusedWindowID())
+    self.init(workspace: workspace, focusedWindowIDResolver: Self.resolveFocusedWindowID)
   }
 
-  init(workspace: Workspace, focusedWindowID: CGWindowID?) {
+  init(
+    workspace: Workspace,
+    focusedWindowIDResolver: @escaping () -> CGWindowID? = WindowManager.resolveFocusedWindowID
+  ) {
     self.workspace = workspace
-    focusedWindow = TrackedState(current: focusedWindowID)
+    self.focusedWindowIDResolver = focusedWindowIDResolver
+    focusedWindowState = TrackedState(current: focusedWindowIDResolver())
   }
 
   public func start(processes: [Process]) {
@@ -66,6 +71,23 @@ public final class WindowManager {
     windowsByID[id]
   }
 
+  func focusedWindowID() -> CGWindowID? {
+    focusedWindowIDResolver()
+  }
+
+  func focusedWindow() -> Window? {
+    guard let windowID = focusedWindowID() else { return nil }
+    return focusedWindow(by: windowID)
+  }
+
+  func focusedWindow(by windowID: CGWindowID) -> Window? {
+    guard let window = window(by: windowID) else { return nil }
+
+    focusedWindowDidChange(to: windowID)
+
+    return window
+  }
+
   func allWindows(for application: Application) -> [Window] {
     windowsByID.values.filter { $0.application == application }
   }
@@ -78,7 +100,7 @@ public final class WindowManager {
     guard windowID != 0 else { return }
 
     focusedWindowLock.withLock {
-      focusedWindow.update(to: windowID)
+      focusedWindowState.update(to: windowID)
     }
   }
 

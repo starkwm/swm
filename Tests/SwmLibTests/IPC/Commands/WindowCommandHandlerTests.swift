@@ -44,6 +44,27 @@ struct WindowCommandHandlerTests {
     }
   }
 
+  @Test("dispatch: implicit target does not fall back to cached focused window")
+  func dispatchImplicitTargetDoesNotFallBackToCachedFocusedWindow() {
+    let windowManager = WindowManager(
+      workspace: Workspace(),
+      focusedWindowIDResolver: { nil }
+    )
+    windowManager.focusedWindowDidChange(to: 42)
+
+    let handler = handler(
+      windowManager: windowManager
+    )
+
+    for action in ["focus", "minimize", "unminimize"] {
+      let response = handler.dispatch(request(command: "--\(action)", args: []))
+
+      #expect(response.ok == false)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "no focused window")
+    }
+  }
+
   @Test("dispatch: rejects missing recent single-target action target")
   func dispatchRejectsMissingRecentSingleTargetActionTarget() {
     let handler = handler()
@@ -188,9 +209,14 @@ struct WindowCommandHandlerTests {
     IPCRequest(id: "request-id", domain: .window, command: command, args: args)
   }
 
-  private func handler() -> WindowCommandHandler {
+  private func handler(
+    windowManager: WindowManager = WindowManager(
+      workspace: Workspace(),
+      focusedWindowIDResolver: { nil }
+    )
+  ) -> WindowCommandHandler {
     WindowCommandHandler(
-      windowManager: WindowManager(workspace: Workspace(), focusedWindowID: nil),
+      windowManager: windowManager,
       spaceManager: SpaceManager(activeSpaceID: nil)
     )
   }
