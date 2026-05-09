@@ -2,10 +2,10 @@ import ApplicationServices
 import Carbon
 import Foundation
 
-/// Tracks observable applications, windows, and focused-window state.
+/// Tracks observable applications, managed windows, and focus history.
 public final class WindowManager {
   /// Resolve the currently focused window ID from the frontmost process.
-  private static func resolveFocusedWindowID() -> CGWindowID? {
+  static func focusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {
       return nil
     }
@@ -23,14 +23,14 @@ public final class WindowManager {
     return AccessibilityClient.shared.optionalWindowID(for: focusedWindowElement)
   }
 
-  /// ID of the currently focused window.
+  /// Tracked ID of the current focused window.
   var currentFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindowState.current
     }
   }
 
-  /// ID of the previously focused window.
+  /// Tracked ID of the previously focused window.
   var lastFocusedWindowID: CGWindowID? {
     focusedWindowLock.withLock {
       focusedWindowState.last
@@ -50,7 +50,7 @@ public final class WindowManager {
   /// Create a window manager for a workspace.
   public init(workspace: Workspace) {
     self.workspace = workspace
-    focusedWindowState = TrackedState(current: Self.resolveFocusedWindowID())
+    focusedWindowState = TrackedState(current: Self.focusedWindowID())
   }
 
   /// Start managing all supplied processes.
@@ -70,26 +70,6 @@ public final class WindowManager {
     windowsByID[id]
   }
 
-  /// Resolve the currently focused window ID.
-  func focusedWindowID() -> CGWindowID? {
-    Self.resolveFocusedWindowID()
-  }
-
-  /// Return the currently focused managed window.
-  func focusedWindow() -> Window? {
-    guard let windowID = focusedWindowID() else { return nil }
-    return focusedWindow(by: windowID)
-  }
-
-  /// Return a focused managed window and update focused-window tracking.
-  func focusedWindow(by windowID: CGWindowID) -> Window? {
-    guard let window = window(by: windowID) else { return nil }
-
-    focusedWindowDidChange(to: windowID)
-
-    return window
-  }
-
   /// Return all managed windows owned by an application.
   func allWindows(for application: Application) -> [Window] {
     windowsByID.values.filter { $0.application == application }
@@ -100,7 +80,7 @@ public final class WindowManager {
     Array(windowsByID.values)
   }
 
-  /// Update focused-window tracking.
+  /// Update tracked focused-window state.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
