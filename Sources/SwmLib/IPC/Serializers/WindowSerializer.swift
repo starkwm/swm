@@ -25,7 +25,8 @@ struct WindowSerializer: Encodable, Equatable {
 
   /// Snapshot all manageable windows.
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
-    let windowInfo = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
+    let windowInfo =
+      CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
     let screens = NSScreen.screens
     let spaces = SpaceManager.all()
 
