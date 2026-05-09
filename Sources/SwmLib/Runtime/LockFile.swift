@@ -1,7 +1,9 @@
 import Darwin
 import Foundation
 
+/// Per-user lock file used to prevent multiple swm daemon instances.
 public enum LockFile {
+  /// Create and lock the current user's runtime lock file.
   public static func acquire() throws {
     let handle = open(lockFilePath(), O_CREAT | O_WRONLY, 0o600)
 
@@ -21,6 +23,7 @@ public enum LockFile {
     }
   }
 
+  /// Return the current user's lock-file path in the temporary directory.
   private static func lockFilePath() -> String {
     return FileManager
       .default
