@@ -1,5 +1,7 @@
 # swm
 
+[![CI](https://github.com/starkwm/swm/actions/workflows/ci.yml/badge.svg)](https://github.com/starkwm/swm/actions/workflows/ci.yml)
+
 **Stark Window Manager for macOS**
 
 `swm` is inspired by [Yabai][yabai] as a client and daemon program for managing windows on macOS. While `swm` doesn't do the tiling window management, it uses similar methods for maintaining state for managing windows.
