@@ -2,11 +2,13 @@ import AppKit
 import ArgumentParser
 import SwmLib
 
+/// Print an error message and terminate with failure.
 func fail(_ message: String) -> Never {
   fputs("error: \(message)\n", stderr)
   exit(EXIT_FAILURE)
 }
 
+/// Run a throwing operation and terminate with a prefixed error on failure.
 func runOrFail(_ message: String, _ operation: () throws -> Void) {
   do {
     try operation()
@@ -15,6 +17,7 @@ func runOrFail(_ message: String, _ operation: () throws -> Void) {
   }
 }
 
+/// Parsed command-line arguments for this invocation.
 let arguments = Swm.parseOrExit()
 setMinimumLogLevel(arguments.logLevel)
 
@@ -39,6 +42,7 @@ if let message = arguments.message {
   exit(result.ok ? EXIT_SUCCESS : EXIT_FAILURE)
 }
 
+// Daemon mode starts here.
 if getuid() == 0 || geteuid() == 0 {
   fail("running as root is not allowed")
 }
@@ -91,4 +95,5 @@ signal(SIGINT) { _ in
   exit(EXIT_SUCCESS)
 }
 
+// Run the AppKit event loop used by accessibility and workspace callbacks.
 NSApplication.shared.run()
