@@ -25,7 +25,7 @@ struct WindowSerializer: Encodable, Equatable {
 
   /// Snapshot all manageable windows.
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
-    let windowInfo = windowInfo()
+    let windowInfo = CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
     let screens = NSScreen.screens
     let spaces = SpaceManager.all()
 
@@ -37,11 +37,6 @@ struct WindowSerializer: Encodable, Equatable {
         spaceIndex: spaces.spaceIndex(containing: window.id)
       )
     }
-  }
-
-  /// Return raw Core Graphics window-list metadata.
-  static func windowInfo() -> [[String: Any]] {
-    CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
   }
 
   /// Core Graphics window ID.
