@@ -17,10 +17,6 @@ lint:
 test:
 	@swift test --parallel --enable-code-coverage --disable-xctest --quiet
 
-ci:
-	@mkdir -p .build/reports
-	@swift test --parallel --enable-code-coverage --disable-xctest --quiet --xunit-output .build/reports/swift-test-results.xml
-
 clean:
 	@swift package clean
 
@@ -28,4 +24,4 @@ bump_version:
 	@sed 's/__VERSION__/$(NEW_VERSION)/g' $(VERSION_TMPL) > $(VERSION_FILE)
 
 .DEFAULT_GOAL := build
-.PHONY: build release format lint test ci clean bump_version
+.PHONY: build release format lint test clean bump_version
