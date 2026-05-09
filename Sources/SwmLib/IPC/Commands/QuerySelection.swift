@@ -2,9 +2,6 @@ import CoreGraphics
 
 /// Selector that narrows query results to a display, space, or window.
 enum QuerySelection: Equatable {
-  private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
-  private static let selectorFlags = Set(["--display", "--space", "--window"])
-
   /// No selector; query all items for the requested command.
   case none
 
@@ -16,6 +13,9 @@ enum QuerySelection: Equatable {
 
   /// Select a window by ID, or the focused window when the ID is absent.
   case window(CGWindowID?)
+
+  private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
+  private static let selectorFlags = Set(["--display", "--space", "--window"])
 
   /// Parse selector arguments from an IPC request.
   static func parse(arguments: [String]) throws -> QuerySelection {

@@ -28,6 +28,24 @@ public final class Workspace: NSObject {
     )
   }
 
+  /// Handle process KVO updates that make a process ready to manage.
+  public override func observeValue(
+    forKeyPath keyPath: String?,
+    of object: Any?,
+    change: [NSKeyValueChangeKey: Any]?,
+    context: UnsafeMutableRawPointer?
+  ) {
+    guard let context else { return }
+
+    let process = Unmanaged<Process>.fromOpaque(context).takeUnretainedValue()
+
+    guard let registry = registry(for: keyPath) else { return }
+    guard registry.kind.shouldRelaunch(process: process, change: change) else { return }
+
+    unobserve(process, registry: registry)
+    EventManager.shared.post(.application(.launched(process)))
+  }
+
   /// Return whether a process is currently observable as a regular application.
   func isObservable(_ process: Process) -> Bool {
     guard let application = process.application else {
@@ -77,24 +95,6 @@ public final class Workspace: NSObject {
   @objc
   func activeDisplayDidChange(_: Notification) {
     EventManager.shared.post(.display(.changed))
-  }
-
-  /// Handle process KVO updates that make a process ready to manage.
-  public override func observeValue(
-    forKeyPath keyPath: String?,
-    of object: Any?,
-    change: [NSKeyValueChangeKey: Any]?,
-    context: UnsafeMutableRawPointer?
-  ) {
-    guard let context else { return }
-
-    let process = Unmanaged<Process>.fromOpaque(context).takeUnretainedValue()
-
-    guard let registry = registry(for: keyPath) else { return }
-    guard registry.kind.shouldRelaunch(process: process, change: change) else { return }
-
-    unobserve(process, registry: registry)
-    EventManager.shared.post(.application(.launched(process)))
   }
 
   /// Start observing one KVO-backed process readiness condition.

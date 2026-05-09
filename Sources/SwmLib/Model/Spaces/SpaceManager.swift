@@ -32,7 +32,6 @@ public final class SpaceManager {
   }
 
   private let lock = NSLock()
-
   private var activeSpace: TrackedState<UInt64>
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 

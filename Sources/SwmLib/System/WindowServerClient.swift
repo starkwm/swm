@@ -2,15 +2,6 @@ import AppKit
 import Carbon
 import CoreGraphics
 
-/// WindowServer display identifier and the spaces assigned to it.
-struct WindowServerDisplaySpaces: Equatable {
-  /// WindowServer display UUID.
-  let id: String
-
-  /// WindowServer space IDs assigned to the display.
-  let spaces: [UInt64]
-}
-
 /// Thin wrapper around private WindowServer APIs used by swm.
 final class WindowServerClient {
   /// Shared WindowServer client.
@@ -181,6 +172,15 @@ final class WindowServerClient {
 
     return false
   }
+}
+
+/// WindowServer display identifier and the spaces assigned to it.
+struct WindowServerDisplaySpaces: Equatable {
+  /// WindowServer display UUID.
+  let id: String
+
+  /// WindowServer space IDs assigned to the display.
+  let spaces: [UInt64]
 }
 
 extension WindowServerClient: @unchecked Sendable {}

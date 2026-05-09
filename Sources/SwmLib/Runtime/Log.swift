@@ -4,11 +4,6 @@ import Foundation
 private let logLevelColumnWidth = LogLevel.allCases.map(\.label.count).max()! + 2
 private let logConfiguration = LogConfiguration()
 
-/// Set the minimum log level written by `log`.
-public func setMinimumLogLevel(_ level: LogLevel) {
-  logConfiguration.setMinimumLevel(level)
-}
-
 /// Write a timestamped log line to standard error when the level is enabled.
 func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
   guard level >= logConfiguration.minimumLevel() else { return }
@@ -21,6 +16,11 @@ func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
   let text = "\(Date().ISO8601Format()) \(label) \(message())\n"
   fputs(text, stderr)
   fflush(stderr)
+}
+
+/// Set the minimum log level written by `log`.
+public func setMinimumLogLevel(_ level: LogLevel) {
+  logConfiguration.setMinimumLevel(level)
 }
 
 /// Runtime logging severity.

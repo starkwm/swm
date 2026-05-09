@@ -6,7 +6,6 @@ public final class EventManager {
   public static let shared = EventManager()
 
   private let queue = OperationQueue.main
-
   private var configuration: Configuration?
 
   private init() {}

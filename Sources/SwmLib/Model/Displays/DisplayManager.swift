@@ -17,7 +17,6 @@ public final class DisplayManager {
   }
 
   private let lock = NSLock()
-
   private var activeDisplay: TrackedState<String>
 
   /// Create a display manager seeded from the active space.

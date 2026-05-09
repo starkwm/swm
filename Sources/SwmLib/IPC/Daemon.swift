@@ -2,44 +2,12 @@ import Darwin
 import Foundation
 import Socket
 
-/// Errors raised while starting the IPC daemon.
-enum DaemonError: Error {
-  /// The daemon could not remove or validate the socket path before listening.
-  case unableToPrepareSocket(String)
-
-  /// The daemon could not create a Unix socket.
-  case unableToCreateSocket
-
-  /// The listening socket was unexpectedly unavailable after creation.
-  case unableToUnwrapSocket
-
-  /// The daemon could not listen on the Unix socket path.
-  case unableToListenOnSocket
-}
-
-extension DaemonError: CustomStringConvertible {
-  /// Human-readable daemon startup failure description.
-  var description: String {
-    switch self {
-    case .unableToPrepareSocket(let error):
-      return "unable to prepare listening socket - \(error)"
-    case .unableToCreateSocket:
-      return "unable to create listening socket"
-    case .unableToUnwrapSocket:
-      return "unable to unwrap listening socket"
-    case .unableToListenOnSocket:
-      return "unable to listen on listening socket"
-    }
-  }
-}
-
 /// Unix socket IPC server for swm commands.
 public class Daemon {
   private static let socketTimeout: UInt = 5_000
 
   private let lockQueue = DispatchQueue(label: "app.usestark.swm")
   private let dispatcher: IPCCommandDispatcher
-
   private var isRunning = false
   private var running: Bool {
     get {
@@ -49,7 +17,6 @@ public class Daemon {
       lockQueue.sync { self.isRunning = newValue }
     }
   }
-
   private var listen: Socket?
 
   /// Create a daemon using the runtime managers that handle command side effects.
@@ -181,6 +148,37 @@ public class Daemon {
     }
 
     return uid == getuid()
+  }
+}
+
+/// Errors raised while starting the IPC daemon.
+enum DaemonError: Error {
+  /// The daemon could not remove or validate the socket path before listening.
+  case unableToPrepareSocket(String)
+
+  /// The daemon could not create a Unix socket.
+  case unableToCreateSocket
+
+  /// The listening socket was unexpectedly unavailable after creation.
+  case unableToUnwrapSocket
+
+  /// The daemon could not listen on the Unix socket path.
+  case unableToListenOnSocket
+}
+
+extension DaemonError: CustomStringConvertible {
+  /// Human-readable daemon startup failure description.
+  var description: String {
+    switch self {
+    case .unableToPrepareSocket(let error):
+      return "unable to prepare listening socket - \(error)"
+    case .unableToCreateSocket:
+      return "unable to create listening socket"
+    case .unableToUnwrapSocket:
+      return "unable to unwrap listening socket"
+    case .unableToListenOnSocket:
+      return "unable to listen on listening socket"
+    }
   }
 }
 

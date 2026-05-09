@@ -40,12 +40,11 @@ public final class WindowManager {
   private let workspace: Workspace
   private let focusedWindowLock = NSLock()
   private var focusedWindowState: TrackedState<CGWindowID>
-
   private var applicationsByPID = [pid_t: Application]()
-  private var lostFrontSwitchedProcessIDs = Set<pid_t>()
-  private var lostFocusedWindowIDs = Set<CGWindowID>()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
+  private var lostFrontSwitchedProcessIDs = Set<pid_t>()
+  private var lostFocusedWindowIDs = Set<CGWindowID>()
 
   /// Create a window manager for a workspace.
   public init(workspace: Workspace) {

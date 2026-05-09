@@ -1,27 +1,5 @@
 import AppKit
 
-/// Accessibility notifications observed for an individual window.
-struct WindowNotifications: OptionSet, Sendable {
-  /// Observe window destruction.
-  static let windowDestroyed = WindowNotifications(rawValue: 1 << 0)
-
-  /// Observe window minimization.
-  static let windowMinimized = WindowNotifications(rawValue: 1 << 1)
-
-  /// Observe restoration from a minimized state.
-  static let windowDeminimized = WindowNotifications(rawValue: 1 << 2)
-
-  /// All window-level notifications currently used by swm.
-  static let all: WindowNotifications = [
-    .windowDestroyed,
-    .windowMinimized,
-    .windowDeminimized,
-  ]
-
-  /// Backing option-set bit field.
-  let rawValue: Int8
-}
-
 /// Accessibility notification names matching `WindowNotifications`.
 let windowNotifications = [
   kAXUIElementDestroyedNotification,
@@ -36,14 +14,8 @@ final class Window: NSObject {
     allNotifications: .all
   )
 
-  /// Accessibility element for the window when still valid.
-  private(set) var element: AXUIElement?
-
   /// Owning application, held weakly to avoid a retain cycle.
   weak var application: Application?
-
-  /// Core Graphics window ID.
-  private(set) var id: CGWindowID
 
   /// Debug description including window ID and title.
   override var description: String {
@@ -64,6 +36,12 @@ final class Window: NSObject {
       attribute: kAXMinimizedAttribute as String
     ) ?? false
   }
+
+  /// Accessibility element for the window when still valid.
+  private(set) var element: AXUIElement?
+
+  /// Core Graphics window ID.
+  private(set) var id: CGWindowID
 
   /// Accessibility title for the window.
   private var title: String {
@@ -266,6 +244,28 @@ final class Window: NSObject {
 
     observationContext = nil
   }
+}
+
+/// Accessibility notifications observed for an individual window.
+struct WindowNotifications: OptionSet, Sendable {
+  /// Observe window destruction.
+  static let windowDestroyed = WindowNotifications(rawValue: 1 << 0)
+
+  /// Observe window minimization.
+  static let windowMinimized = WindowNotifications(rawValue: 1 << 1)
+
+  /// Observe restoration from a minimized state.
+  static let windowDeminimized = WindowNotifications(rawValue: 1 << 2)
+
+  /// All window-level notifications currently used by swm.
+  static let all: WindowNotifications = [
+    .windowDestroyed,
+    .windowMinimized,
+    .windowDeminimized,
+  ]
+
+  /// Backing option-set bit field.
+  let rawValue: Int8
 }
 
 extension Window: @unchecked Sendable {}
