@@ -1,6 +1,9 @@
+/// Handles display lifecycle events.
 struct DisplayLifecycleHandler {
+  /// Display manager updated by display events.
   let displayManager: DisplayManager
 
+  /// Handle one display lifecycle event.
   func handle(_ event: DisplayEvent) {
     switch event {
     case .changed:
@@ -8,6 +11,7 @@ struct DisplayLifecycleHandler {
     }
   }
 
+  /// Update active-display tracking.
   private func displayChanged() {
     displayManager.activeDisplayDidChange()
 

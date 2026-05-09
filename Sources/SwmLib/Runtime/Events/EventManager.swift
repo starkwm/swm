@@ -1,6 +1,8 @@
 import Foundation
 
+/// Main-thread dispatcher for runtime events.
 public final class EventManager {
+  /// Shared event manager used by model callbacks.
   public static let shared = EventManager()
 
   private let queue = OperationQueue.main
@@ -9,6 +11,7 @@ public final class EventManager {
 
   private init() {}
 
+  /// Configure the managers used to handle runtime events.
   public func configure(
     workspace: Workspace,
     processManager: ProcessManager,
@@ -25,12 +28,14 @@ public final class EventManager {
     )
   }
 
+  /// Enqueue a runtime event for main-thread handling.
   func post(_ event: RuntimeEvent) {
     queue.addOperation {
       self.handle(event)
     }
   }
 
+  /// Dispatch an event to its domain-specific lifecycle handler.
   private func handle(_ event: RuntimeEvent) {
     guard let configuration else {
       preconditionFailure("EventManager must be configured before handling events")
@@ -61,6 +66,7 @@ public final class EventManager {
 
 extension EventManager: @unchecked Sendable {}
 
+/// Manager dependencies required by the event dispatcher.
 private struct Configuration {
   let workspace: Workspace
   let processManager: ProcessManager

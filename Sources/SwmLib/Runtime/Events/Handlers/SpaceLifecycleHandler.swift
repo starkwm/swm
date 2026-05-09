@@ -1,7 +1,12 @@
+/// Handles space lifecycle events.
 struct SpaceLifecycleHandler {
+  /// Space manager updated by space events.
   let spaceManager: SpaceManager
+
+  /// Window manager refreshed after space changes.
   let windowManager: WindowManager
 
+  /// Handle one space lifecycle event.
   func handle(_ event: SpaceEvent) {
     switch event {
     case .changed(let space):
@@ -9,6 +14,7 @@ struct SpaceLifecycleHandler {
     }
   }
 
+  /// Update active-space tracking, refresh windows, and replay deferred focus.
   private func spaceChanged(with space: Space) {
     spaceManager.activeSpaceDidChange()
     windowManager.refreshWindows()
@@ -19,6 +25,7 @@ struct SpaceLifecycleHandler {
     )
   }
 
+  /// Replay focused-window events that arrived before their windows were manageable.
   private func replayLostFocusedEvent() {
     for windowID in windowManager.lostFocusedWindowIDsSnapshot() {
       guard let window = windowManager.window(by: windowID) else { continue }

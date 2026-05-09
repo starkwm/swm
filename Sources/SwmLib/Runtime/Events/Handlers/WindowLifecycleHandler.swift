@@ -1,8 +1,11 @@
 import ApplicationServices
 
+/// Handles window lifecycle and focus events.
 struct WindowLifecycleHandler {
+  /// Window manager updated by window events.
   let windowManager: WindowManager
 
+  /// Handle one window lifecycle event.
   func handle(_ event: WindowEvent) {
     switch event {
     case .created(let pid, let windowID):
@@ -22,6 +25,7 @@ struct WindowLifecycleHandler {
     }
   }
 
+  /// Add a newly created window and replay any deferred focus event for it.
   private func windowCreated(for pid: pid_t, with windowID: CGWindowID) {
     guard windowID != 0 else { return }
     guard windowManager.window(by: windowID) == nil else { return }
@@ -48,6 +52,7 @@ struct WindowLifecycleHandler {
     }
   }
 
+  /// Remove and invalidate a destroyed managed window.
   private func windowDestroyed(with window: Window) {
     guard window.id != 0 else { return }
 
@@ -57,6 +62,7 @@ struct WindowLifecycleHandler {
     window.invalidate()
   }
 
+  /// Update focus tracking or defer the focus event until the window is manageable.
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
@@ -80,18 +86,22 @@ struct WindowLifecycleHandler {
     )
   }
 
+  /// Handle a window move notification.
   private func windowMoved(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
   }
 
+  /// Handle a window resize notification.
   private func windowResized(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
   }
 
+  /// Handle a window minimization notification.
   private func windowMinimized(with window: Window) {
     log("window minimized \(window)")
   }
 
+  /// Handle a window restore notification and replay deferred focus.
   private func windowDeminimized(with window: Window) {
     log("window deminimized \(window)")
 

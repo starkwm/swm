@@ -1,10 +1,17 @@
 import Foundation
 
+/// Handles application lifecycle events and starts or stops application/window management.
 struct ApplicationLifecycleHandler {
+  /// Workspace bridge used for AppKit readiness and observability checks.
   let workspace: Workspace
+
+  /// Process manager used to retry launch handling.
   let processManager: ProcessManager
+
+  /// Window manager updated by application lifecycle changes.
   let windowManager: WindowManager
 
+  /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
     switch event {
     case .launched(let process):
@@ -16,6 +23,7 @@ struct ApplicationLifecycleHandler {
     }
   }
 
+  /// Make a launched process observable and discover its windows.
   private func applicationLaunched(for process: Process) {
     if process.terminated {
       windowManager.removeLostFrontSwitchedEvent(for: process.pid)
@@ -72,6 +80,7 @@ struct ApplicationLifecycleHandler {
     log("application launched \(application)")
   }
 
+  /// Stop observing a terminated application and remove its windows.
   private func applicationTerminated(for process: Process) {
     workspace.unobserveActivationPolicy(process)
     workspace.unobserveFinishedLaunching(process)
@@ -93,6 +102,7 @@ struct ApplicationLifecycleHandler {
     application.unobserve()
   }
 
+  /// Refresh windows and publish focused-window events after a frontmost app switch.
   private func applicationFrontSwitched(for process: Process) {
     guard let application = windowManager.application(by: process.pid) else {
       windowManager.addLostFrontSwitchedEvent(for: process.pid)
