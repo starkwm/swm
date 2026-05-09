@@ -103,7 +103,7 @@ struct ApplicationLifecycleHandler {
     windowManager.refreshWindows(for: application)
 
     if let focusedWindowID = application.focusedWindowID() {
-      windowManager.focusedWindowDidChange(to: focusedWindowID)
+      EventManager.shared.post(.window(.focused(focusedWindowID)))
     }
 
     log(

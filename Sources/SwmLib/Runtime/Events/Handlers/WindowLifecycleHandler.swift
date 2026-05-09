@@ -42,6 +42,10 @@ struct WindowLifecycleHandler {
     guard let window else { return }
 
     log("window created \(window)")
+
+    if windowManager.removeLostFocusedEvent(for: window.id) {
+      EventManager.shared.post(.window(.focused(window.id)))
+    }
   }
 
   private func windowDestroyed(with window: Window) {
@@ -55,8 +59,21 @@ struct WindowLifecycleHandler {
 
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
+
+    guard let window = windowManager.window(by: windowID) else {
+      windowManager.addLostFocusedEvent(for: windowID)
+      log("window focused before it was managed id: \(windowID)", level: .info)
+      return
+    }
+
+    guard !window.isMinimized else {
+      windowManager.addLostFocusedEvent(for: windowID)
+      log("window focused while minimized \(window)", level: .info)
+      return
+    }
+
+    windowManager.removeLostFocusedEvent(for: windowID)
     windowManager.focusedWindowDidChange(to: windowID)
-    guard let window = windowManager.window(by: windowID) else { return }
 
     log(
       "window focused \(window) current: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
@@ -77,5 +94,9 @@ struct WindowLifecycleHandler {
 
   private func windowDeminimized(with window: Window) {
     log("window deminimized \(window)")
+
+    if windowManager.removeLostFocusedEvent(for: window.id) {
+      EventManager.shared.post(.window(.focused(window.id)))
+    }
   }
 }

@@ -39,6 +39,7 @@ public final class WindowManager {
 
   private var applicationsByPID = [pid_t: Application]()
   private var lostFrontSwitchedProcessIDs = Set<pid_t>()
+  private var lostFocusedWindowIDs = Set<CGWindowID>()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
 
@@ -108,6 +109,24 @@ public final class WindowManager {
     lostFrontSwitchedProcessIDs.remove(processID) != nil
   }
 
+  func addLostFocusedEvent(for windowID: CGWindowID) {
+    guard windowID != 0 else { return }
+    lostFocusedWindowIDs.insert(windowID)
+  }
+
+  func containsLostFocusedEvent(for windowID: CGWindowID) -> Bool {
+    lostFocusedWindowIDs.contains(windowID)
+  }
+
+  func lostFocusedWindowIDsSnapshot() -> [CGWindowID] {
+    Array(lostFocusedWindowIDs)
+  }
+
+  @discardableResult
+  func removeLostFocusedEvent(for windowID: CGWindowID) -> Bool {
+    lostFocusedWindowIDs.remove(windowID) != nil
+  }
+
   func add(application: Application) {
     applicationsByPID[application.processID] = application
   }
@@ -156,6 +175,7 @@ public final class WindowManager {
   }
 
   func remove(by windowID: CGWindowID) {
+    lostFocusedWindowIDs.remove(windowID)
     windowsByID.removeValue(forKey: windowID)
   }
 

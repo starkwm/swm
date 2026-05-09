@@ -19,6 +19,14 @@ final class Window: NSObject {
     return AccessibilityClient.shared.subrole(for: element)
   }
 
+  var isMinimized: Bool {
+    guard let element else { return false }
+    return AccessibilityClient.shared.boolAttribute(
+      for: element,
+      attribute: kAXMinimizedAttribute as String
+    ) ?? false
+  }
+
   private var title: String {
     guard let element else { return "" }
 
