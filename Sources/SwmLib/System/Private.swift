@@ -1,5 +1,7 @@
 import Carbon
 
+// Private system functions imported from SkyLight, Accessibility, and Carbon.
+
 /// Get the display spaces information.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSCopyManagedDisplaySpaces") @discardableResult
@@ -36,7 +38,7 @@ func SLSGetConnectionIDForPSN(
   _ processConnnectionID: inout Int32
 ) -> CGError
 
-/// Get the main connection ID
+/// Get the main connection ID.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSMainConnectionID") @discardableResult
 func SLSMainConnectionID() -> Int32
