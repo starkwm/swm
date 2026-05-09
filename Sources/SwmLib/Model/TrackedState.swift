@@ -4,7 +4,7 @@ struct TrackedState<Value: Equatable> {
 
   init(current: Value?) {
     self.current = current
-    last = nil
+    last = current
   }
 
   mutating func update(to value: Value) {
