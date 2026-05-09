@@ -1,6 +1,8 @@
 import AppKit
 
+/// Serialized window state returned by query IPC commands.
 struct WindowSerializer: Encodable, Equatable {
+  /// JSON keys used for window query output.
   enum CodingKeys: String, CodingKey {
     case id
     case pid
@@ -12,7 +14,6 @@ struct WindowSerializer: Encodable, Equatable {
     case display
     case space
     case layer
-    case subLayer = "sub-layer"
     case canMove = "can-move"
     case canResize = "can-resize"
     case hasFocus = "has-focus"
@@ -22,6 +23,7 @@ struct WindowSerializer: Encodable, Equatable {
     case isMinimized = "is-minimized"
   }
 
+  /// Snapshot all manageable windows.
   static func all(windowManager: WindowManager) -> [WindowSerializer] {
     let windowInfo = windowInfo()
     let screens = NSScreen.screens
@@ -37,28 +39,63 @@ struct WindowSerializer: Encodable, Equatable {
     }
   }
 
+  /// Return raw Core Graphics window-list metadata.
   static func windowInfo() -> [[String: Any]] {
     CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
   }
 
+  /// Core Graphics window ID.
   let id: CGWindowID
+
+  /// Owning process ID when available.
   let pid: pid_t?
+
+  /// Owning application name when available.
   let app: String?
+
+  /// Window title when available.
   let title: String?
+
+  /// Window frame from accessibility data when available.
   let frame: FrameSerializer?
+
+  /// Accessibility role when available.
   let role: String?
+
+  /// Accessibility subrole when available.
   let subrole: String?
+
+  /// Core Graphics display ID for the display containing most of the window.
   let display: UInt32?
+
+  /// Zero-based space index containing the window.
   let space: Int?
+
+  /// Core Graphics window layer when available.
   let layer: Int?
+
+  /// Whether the window's position can be changed through accessibility.
   let canMove: Bool?
+
+  /// Whether the window's size can be changed through accessibility.
   let canResize: Bool?
+
+  /// Whether the window is the main accessibility window.
   let hasFocus: Bool?
+
+  /// Whether the window has an accessibility element reference.
   let hasAXReference: Bool
+
+  /// Whether the window is on a native fullscreen space.
   let isNativeFullscreen: Bool
+
+  /// Whether Core Graphics reports the window as onscreen.
   let isVisible: Bool
+
+  /// Whether accessibility reports the window as minimized.
   let isMinimized: Bool
 
+  /// Create a serializer from explicit window fields.
   init(
     id: CGWindowID,
     pid: pid_t?,
@@ -97,6 +134,7 @@ struct WindowSerializer: Encodable, Equatable {
     self.isMinimized = isMinimized
   }
 
+  /// Create a serializer by combining window, accessibility, and Core Graphics metadata.
   init(
     window: Window,
     info: [String: Any]?,
@@ -162,6 +200,7 @@ struct WindowSerializer: Encodable, Equatable {
       } ?? false
   }
 
+  /// Encode window state using stable query output keys.
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
@@ -184,7 +223,9 @@ struct WindowSerializer: Encodable, Equatable {
   }
 }
 
+/// Helpers for looking up raw Core Graphics window metadata.
 extension [[String: Any]] {
+  /// Return metadata for a specific Core Graphics window ID.
   func info(for windowID: CGWindowID) -> [String: Any]? {
     first { info in
       (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowID
@@ -192,7 +233,9 @@ extension [[String: Any]] {
   }
 }
 
+/// Helpers for relating spaces to windows.
 extension [Space] {
+  /// Return the zero-based index of the first space containing a window.
   func spaceIndex(containing windowID: CGWindowID) -> Int? {
     let spaceIDs = WindowServerClient.shared.spaceIDs(containing: windowID)
 
@@ -202,7 +245,9 @@ extension [Space] {
   }
 }
 
+/// Geometry helpers used when choosing the display that contains most of a window.
 extension CGRect {
+  /// Rectangle area.
   fileprivate var area: CGFloat {
     width * height
   }
