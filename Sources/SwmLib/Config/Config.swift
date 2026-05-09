@@ -1,18 +1,29 @@
 import Foundation
 
+/// Loads and runs the user's swm configuration file.
 public enum Config {
+  /// Validate, prepare, and execute the configuration file at the given path.
+  ///
+  /// If the file is not executable by its owner, this marks it executable before
+  /// launching it and waiting for it to exit.
+  ///
+  /// - Parameter path: Absolute or relative path to the configuration file.
+  /// - Throws: A `ConfigError` when the file is missing, cannot be made
+  ///   executable, cannot be launched, or exits with a non-zero status.
   public static func exec(path: String) throws {
     try validateExists(path: path)
     try ensureOwnerExecutable(path: path)
     try runAndWait(path: path)
   }
 
+  /// Ensure the configuration file exists before attempting to modify or run it.
   private static func validateExists(path: String) throws {
     if !FileManager.default.fileExists(atPath: path) {
       throw ConfigError.fileDoesNotExist
     }
   }
 
+  /// Add owner execute permission to the configuration file when it is missing.
   private static func ensureOwnerExecutable(path: String) throws {
     do {
       let attributes = try FileManager.default.attributesOfItem(atPath: path)
@@ -50,6 +61,7 @@ public enum Config {
     }
   }
 
+  /// Launch the configuration file and wait for it to finish.
   private static func runAndWait(path: String) throws {
     do {
       let proc = Foundation.Process()
