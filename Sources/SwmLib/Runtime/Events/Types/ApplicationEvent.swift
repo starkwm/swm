@@ -1,9 +1,9 @@
 /// Runtime events for application process lifecycle changes.
 enum ApplicationEvent: Sendable {
-  /// A process launched or became observable.
+  /// Process launched or became observable.
   case launched(Process)
 
-  /// A tracked process terminated.
+  /// Tracked process terminated.
   case terminated(Process)
 
   /// The frontmost process changed.

@@ -82,7 +82,7 @@ struct ConfigCommandHandler {
   }
 }
 
-/// A single side of a space padding setting.
+/// Single side of a space padding setting.
 private enum PaddingSide {
   case top
   case bottom

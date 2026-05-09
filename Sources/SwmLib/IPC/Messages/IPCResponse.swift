@@ -1,4 +1,4 @@
-/// A server response sent over IPC.
+/// Server response sent over IPC.
 struct IPCResponse: Codable, Equatable {
   /// Create a successful response.
   static func success(id: String, message: String) -> IPCResponse {

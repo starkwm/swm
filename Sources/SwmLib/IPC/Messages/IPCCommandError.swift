@@ -1,4 +1,4 @@
-/// A command-level IPC failure that can be converted into an IPC response.
+/// Command-level IPC failure that can be converted into an IPC response.
 struct IPCCommandError: Error, Equatable, CustomStringConvertible {
   /// Create an error for malformed or incomplete client input.
   static func invalidRequest(_ message: String) -> IPCCommandError {

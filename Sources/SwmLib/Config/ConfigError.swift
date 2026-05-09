@@ -1,4 +1,4 @@
-/// Errors that can occur while preparing or running the user's configuration file.
+/// Errors raised while preparing or running the user's configuration file.
 enum ConfigError: Error {
   /// The configuration file path does not exist.
   case fileDoesNotExist
@@ -14,7 +14,7 @@ enum ConfigError: Error {
 }
 
 extension ConfigError: CustomStringConvertible {
-  /// A user-facing explanation of the configuration failure.
+  /// User-facing explanation of the configuration failure.
   var description: String {
     switch self {
     case .fileDoesNotExist:

@@ -233,20 +233,20 @@ struct WindowCommandHandler {
   }
 }
 
-/// A parsed two-axis window geometry change.
+/// Parsed two-axis window geometry change.
 private struct WindowGeometryChange {
   let mode: ChangeMode
   let first: Int
   let second: Int
 }
 
-/// A parsed window selector and geometry argument pair.
+/// Parsed window selector and geometry argument pair.
 private struct WindowGeometrySelection {
   let selector: String?
   let geometry: String
 }
 
-/// A grid placement for resizing a window within visible screen bounds.
+/// Grid placement for resizing a window within visible screen bounds.
 struct WindowGrid: Equatable {
   private let rows: Int
   private let columns: Int

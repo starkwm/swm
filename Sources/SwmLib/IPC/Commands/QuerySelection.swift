@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// A selector that narrows query results to a display, space, or window.
+/// Selector that narrows query results to a display, space, or window.
 enum QuerySelection: Equatable {
   private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
   private static let selectorFlags = Set(["--display", "--space", "--window"])

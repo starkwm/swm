@@ -1,4 +1,4 @@
-/// Machine-readable categories for IPC command failures.
+/// Error-code categories for IPC command failures.
 enum IPCErrorCode: String, Codable, Equatable {
   /// The request shape or arguments are invalid.
   case invalidRequest

@@ -2,17 +2,17 @@ import Carbon
 
 // Private system functions imported from SkyLight, Accessibility, and Carbon.
 
-/// Get the display spaces information.
+/// Return display-space information.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSCopyManagedDisplaySpaces") @discardableResult
 func SLSCopyManagedDisplaySpaces(_ connectionID: Int32) -> CFArray
 
-/// Get the spaces that contain the given windows.
+/// Return the spaces that contain the given windows.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSCopySpacesForWindows") @discardableResult
 func SLSCopySpacesForWindows(_ connectionID: Int32, _ mask: Int32, _ windows: CFArray) -> CFArray
 
-/// Get the windows on the given spaces.
+/// Return windows on the given spaces.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSCopyWindowsWithOptionsAndTags") @discardableResult
 func SLSCopyWindowsWithOptionsAndTags(
@@ -24,12 +24,12 @@ func SLSCopyWindowsWithOptionsAndTags(
   _ clearTags: inout UInt64
 ) -> CFArray
 
-/// Get the active space.
+/// Return the active space.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSGetActiveSpace") @discardableResult
 func SLSGetActiveSpace(_ connectionID: Int32) -> UInt64
 
-/// Get the connection ID for the given process serial number.
+/// Return the connection ID for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSGetConnectionIDForPSN") @discardableResult
 func SLSGetConnectionIDForPSN(
@@ -38,62 +38,62 @@ func SLSGetConnectionIDForPSN(
   _ processConnnectionID: inout Int32
 ) -> CGError
 
-/// Get the main connection ID.
+/// Return the main connection ID.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSMainConnectionID") @discardableResult
 func SLSMainConnectionID() -> Int32
 
-/// Get the current space for the given screen.
+/// Return the current space for the given screen.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSManagedDisplayGetCurrentSpace") @discardableResult
 func SLSManagedDisplayGetCurrentSpace(_ connectionID: Int32, _ screenID: CFString) -> UInt64
 
-/// Get the type of space.
+/// Return the type of space.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSSpaceGetType") @discardableResult
 func SLSSpaceGetType(_ connectionID: Int32, _ spaceID: UInt64) -> Int32
 
-/// Iterate over the given query iterator.
+/// Advance the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorAdvance") @discardableResult
 func SLSWindowIteratorAdvance(_ iterator: CFTypeRef) -> Bool
 
-/// Get the window attributes for the given query iterator.
+/// Return the window attributes for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetAttributes") @discardableResult
 func SLSWindowIteratorGetAttributes(_ iterator: CFTypeRef) -> UInt64
 
-/// Get the parent ID for the given query iterator.
+/// Return the parent ID for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetParentID") @discardableResult
 func SLSWindowIteratorGetParentID(_ iterator: CFTypeRef) -> UInt32
 
-/// Get the window level for the given query iterator.
+/// Return the window level for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetLevel") @discardableResult
 func SLSWindowIteratorGetLevel(_ iterator: CFTypeRef) -> Int
 
-/// Get the tags for the given query iterator.
+/// Return the tags for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetTags") @discardableResult
 func SLSWindowIteratorGetTags(_ iterator: CFTypeRef) -> UInt64
 
-/// Get the window ID for the given query iterator.
+/// Return the window ID for the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowIteratorGetWindowID") @discardableResult
 func SLSWindowIteratorGetWindowID(_ iterator: CFTypeRef) -> UInt32
 
-/// Get the iterator for the given query.
+/// Return the iterator for the given query.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowQueryResultCopyWindows") @discardableResult
 func SLSWindowQueryResultCopyWindows(_ query: CFTypeRef) -> CFTypeRef
 
-/// Query for the given windows.
+/// Query the given windows.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowQueryWindows") @discardableResult
 func SLSWindowQueryWindows(_ connectionID: Int32, _ windows: CFArray, _ count: Int32) -> CFTypeRef
 
-/// Get the window ID for the given accessibility UI element.
+/// Return the window ID for the given accessibility UI element.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("_AXUIElementGetWindow") @discardableResult
 func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout UInt32) -> AXError
@@ -103,23 +103,23 @@ func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout UInt32) -
 @_silgen_name("_AXUIElementCreateWithRemoteToken") @discardableResult
 func _AXUIElementCreateWithRemoteToken(_ data: CFData) -> Unmanaged<AXUIElement>?
 
-/// Iterate over the running processes.
+/// Advance to the next running process.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("GetNextProcess") @discardableResult
 func GetNextProcess(_ psn: inout ProcessSerialNumber) -> OSStatus
 
-/// Get process information for the given process serial number.
+/// Return process information for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("GetProcessInformation") @discardableResult
 func GetProcessInformation(_ psn: inout ProcessSerialNumber, _ info: inout ProcessInfoRec)
   -> OSStatus
 
-/// Get the process ID for the given process serial number.
+/// Return the process ID for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("GetProcessPID") @discardableResult
 func GetProcessPID(_ psn: inout ProcessSerialNumber, _ pid: inout pid_t) -> OSStatus
 
-/// Get the frontmost process serial number.
+/// Return the frontmost process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("_SLPSGetFrontProcess") @discardableResult
 func _SLPSGetFrontProcess(_ psn: inout ProcessSerialNumber) -> OSStatus

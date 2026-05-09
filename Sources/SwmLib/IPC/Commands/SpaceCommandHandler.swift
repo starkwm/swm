@@ -140,13 +140,13 @@ struct SpaceCommandHandler {
   }
 }
 
-/// A parsed gap command argument.
+/// Parsed gap command argument.
 private struct GapChange {
   let mode: ChangeMode
   let value: Int
 }
 
-/// A parsed padding command argument.
+/// Parsed padding command argument.
 private struct PaddingChange {
   let mode: ChangeMode
   let padding: SpacePadding

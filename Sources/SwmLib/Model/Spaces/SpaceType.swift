@@ -1,12 +1,12 @@
 /// WindowServer space type.
 enum SpaceType: Int32 {
-  /// A standard desktop space.
+  /// Standard desktop space.
   case normal = 0
 
-  /// A native fullscreen app space.
+  /// Native fullscreen app space.
   case fullscreen = 4
 
-  /// A space type not recognized by swm.
+  /// Space type not recognized by swm.
   case unknown
 }
 

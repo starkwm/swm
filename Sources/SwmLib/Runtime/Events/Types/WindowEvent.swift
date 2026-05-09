@@ -2,25 +2,25 @@ import CoreGraphics
 
 /// Runtime events for window lifecycle and state changes.
 enum WindowEvent: Sendable {
-  /// A window was created for a process.
+  /// Window was created for a process.
   case created(pid_t, CGWindowID)
 
-  /// A managed window was destroyed.
+  /// Managed window was destroyed.
   case destroyed(Window)
 
-  /// A window became focused.
+  /// Window became focused.
   case focused(CGWindowID)
 
-  /// A window moved.
+  /// Window moved.
   case moved(CGWindowID)
 
-  /// A window resized.
+  /// Window resized.
   case resized(CGWindowID)
 
-  /// A managed window was minimized.
+  /// Managed window was minimized.
   case minimized(Window)
 
-  /// A managed window was restored from minimized state.
+  /// Managed window was restored from minimized state.
   case deminimized(Window)
 
   /// Generic event type for logging and routing.

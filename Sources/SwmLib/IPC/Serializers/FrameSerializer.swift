@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// A JSON-friendly rectangle representation.
+/// JSON-friendly rectangle representation.
 struct FrameSerializer: Codable, Equatable {
   /// Minimum x-coordinate of the rectangle.
   let x: Double
