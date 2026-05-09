@@ -2,6 +2,7 @@ import Darwin
 import Foundation
 import Socket
 
+/// Unix socket IPC server for swm commands.
 public class Daemon {
   private static let socketTimeout: UInt = 5_000
 
@@ -20,6 +21,7 @@ public class Daemon {
 
   private var listen: Socket?
 
+  /// Create a daemon using the runtime managers that handle command side effects.
   public convenience init(
     windowManager: WindowManager,
     spaceManager: SpaceManager,
@@ -33,10 +35,12 @@ public class Daemon {
     )
   }
 
+  /// Create a daemon with an explicit command dispatcher.
   init(dispatcher: IPCCommandDispatcher) {
     self.dispatcher = dispatcher
   }
 
+  /// Start listening for IPC requests on the per-user Unix socket.
   public func run() throws {
     do {
       try UnixSocket.removeStaleFileIfNeeded()
@@ -79,6 +83,7 @@ public class Daemon {
     }
   }
 
+  /// Stop accepting IPC requests and remove the socket file.
   public func shutdown() {
     running = false
     listen?.close()
@@ -87,6 +92,7 @@ public class Daemon {
     try? FileManager.default.removeItem(atPath: UnixSocket.filePath())
   }
 
+  /// Handle one accepted client connection on a background queue.
   private func handle(socket client: UncheckedSocket) {
     let queue = DispatchQueue.global(qos: .userInitiated)
 
@@ -134,6 +140,7 @@ public class Daemon {
     }
   }
 
+  /// Allow IPC only from clients owned by the same user as the daemon process.
   private func isAuthorized(socket: Socket) -> Bool {
     var uid: uid_t = 0
     var gid: gid_t = 0
@@ -148,6 +155,7 @@ public class Daemon {
 
 extension Daemon: @unchecked Sendable {}
 
+/// Sendable wrapper for `Socket`, which does not declare thread-safety itself.
 private struct UncheckedSocket: @unchecked Sendable {
   let socket: Socket
 }

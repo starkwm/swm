@@ -1,7 +1,9 @@
 import Foundation
 import Socket
 
+/// Helpers for the per-user Unix domain socket used by IPC.
 enum UnixSocket {
+  /// Return the current user's socket path in the temporary directory.
   static func filePath() -> String {
     return FileManager
       .default
@@ -10,6 +12,7 @@ enum UnixSocket {
       .path
   }
 
+  /// Remove a stale socket file unless another process is actively listening on it.
   static func removeStaleFileIfNeeded() throws {
     let path = filePath()
 
