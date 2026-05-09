@@ -2,9 +2,17 @@ import ApplicationServices
 import CoreGraphics
 
 /// Thin wrapper around macOS Accessibility APIs used by swm.
-final class AccessibilityClient {
+public final class AccessibilityClient {
   /// Shared accessibility client.
-  static let shared = AccessibilityClient()
+  public static let shared = AccessibilityClient()
+
+  private init() {}
+
+  /// Prompt for accessibility permission when needed and return current trust status.
+  public func askForAccessibilityIfNeeded() -> Bool {
+    let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary?
+    return AXIsProcessTrustedWithOptions(options)
+  }
 
   /// Return the accessibility application element for a process.
   func applicationElement(for processID: pid_t) -> AXUIElement {

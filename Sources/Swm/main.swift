@@ -47,7 +47,7 @@ if getuid() == 0 || geteuid() == 0 {
   fail("running as root is not allowed")
 }
 
-if !Accessibility.askForAccessibilityIfNeeded() {
+if !AccessibilityClient.shared.askForAccessibilityIfNeeded() {
   fail("could not access accessibility features")
 }
 
