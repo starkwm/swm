@@ -56,7 +56,7 @@ public final class WindowManager {
   /// Start managing all supplied processes.
   public func start(processes: [Process]) {
     for process in processes {
-      startManaging(process)
+      manage(process)
     }
   }
 
@@ -251,8 +251,8 @@ public final class WindowManager {
     )
   }
 
-  /// Start managing one observable process and discover its windows.
-  private func startManaging(_ process: Process) {
+  /// Manage one observable process and discover its windows.
+  private func manage(_ process: Process) {
     guard workspace.isObservable(process) else {
       log("application is not observable \(process)", level: .warn)
       workspace.observeActivationPolicy(process)
