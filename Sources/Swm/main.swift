@@ -18,11 +18,11 @@ func runOrFail(_ message: String, _ operation: () throws -> Void) {
 }
 
 /// Parsed command-line arguments for this invocation.
-let arguments = Swm.parseOrExit()
+let arguments = Arguments.parseOrExit()
 setMinimumLogLevel(arguments.logLevel)
 
 if arguments.help {
-  fputs(Swm.helpMessage(), stderr)
+  fputs(Arguments.helpMessage(), stderr)
   exit(EXIT_SUCCESS)
 }
 

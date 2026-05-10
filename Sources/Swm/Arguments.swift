@@ -3,7 +3,7 @@ import ArgumentParser
 import SwmLib
 
 /// Command-line arguments accepted by the swm executable.
-struct Swm: ParsableArguments {
+struct Arguments: ParsableArguments {
   /// Show command-line help.
   @Flag(name: .shortAndLong)
   var help = false
