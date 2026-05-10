@@ -39,7 +39,7 @@ struct ApplicationLifecycleHandler {
     }
 
     if !workspace.isObservable(process) {
-      log("application is not observable \(process)", level: .warn)
+      log("application is not observable \(process)", level: .info)
       workspace.observeActivationPolicy(process)
       guard workspace.isObservable(process) else { return }
       workspace.unobserveActivationPolicy(process)
@@ -48,7 +48,7 @@ struct ApplicationLifecycleHandler {
     guard windowManager.application(by: process.pid) == nil else { return }
 
     guard let application = Application(for: process) else {
-      log("could not create application for process \(process)", level: .warn)
+      log("could not create application for process \(process)", level: .info)
       return
     }
 
@@ -56,7 +56,10 @@ struct ApplicationLifecycleHandler {
     case .success:
       break
     case .failure(let error):
-      log("could not observe application \(application): \(error)", level: .warn)
+      log(
+        "could not observe application \(application): \(error)",
+        level: application.retryObserving ? .info : .warn
+      )
       application.unobserve()
 
       if application.retryObserving {

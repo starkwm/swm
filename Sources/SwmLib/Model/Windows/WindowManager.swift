@@ -233,13 +233,13 @@ public final class WindowManager {
   /// Manage one observable process and discover its windows.
   private func manage(_ process: Process) {
     guard workspace.isObservable(process) else {
-      log("application is not observable \(process)", level: .warn)
+      log("application is not observable \(process)", level: .info)
       workspace.observeActivationPolicy(process)
       return
     }
 
     guard let application = Application(for: process) else {
-      log("could not create application for process \(process)", level: .warn)
+      log("could not create application for process \(process)", level: .info)
       return
     }
 
@@ -338,7 +338,7 @@ public final class WindowManager {
     switch mode {
     case .initialDiscovery:
       if !unresolvedWindowIDs.isEmpty {
-        log("workaround failed to resolve all windows \(application)", level: .warn)
+        log("workaround failed to resolve all windows \(application)", level: .info)
         unresolvedApplicationIDs.insert(application.processID)
       }
 
