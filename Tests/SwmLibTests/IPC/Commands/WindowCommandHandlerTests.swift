@@ -63,6 +63,34 @@ struct WindowCommandHandlerTests {
     }
   }
 
+  @Test("dispatch: rejects invalid geometry action value")
+  func dispatchRejectsInvalidGeometryActionValue() {
+    let handler = handler()
+
+    for action in ["move", "resize"] {
+      let response = handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
+
+      #expect(response.ok == false)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "invalid window \(action) value: rel:100:x")
+    }
+  }
+
+  @Test("dispatch: rejects geometry action with invalid window selector")
+  func dispatchRejectsGeometryActionWithInvalidWindowSelector() {
+    let handler = handler()
+
+    for action in ["move", "resize"] {
+      let response = handler.dispatch(
+        request(command: "--\(action)", args: ["nope", "rel:100:-200"])
+      )
+
+      #expect(response.ok == false)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "invalid window selector: nope")
+    }
+  }
+
   @Test("dispatch: rejects malformed grid arguments")
   func dispatchRejectsMalformedGridArguments() {
     let handler = handler()
@@ -97,34 +125,6 @@ struct WindowCommandHandlerTests {
     #expect(response.message == "invalid window selector: nope")
   }
 
-  @Test("dispatch: rejects invalid geometry action value")
-  func dispatchRejectsInvalidGeometryActionValue() {
-    let handler = handler()
-
-    for action in ["move", "resize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "invalid window \(action) value: rel:100:x")
-    }
-  }
-
-  @Test("dispatch: rejects geometry action with invalid window selector")
-  func dispatchRejectsGeometryActionWithInvalidWindowSelector() {
-    let handler = handler()
-
-    for action in ["move", "resize"] {
-      let response = handler.dispatch(
-        request(command: "--\(action)", args: ["nope", "rel:100:-200"])
-      )
-
-      #expect(response.ok == false)
-      #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "invalid window selector: nope")
-    }
-  }
-
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .window, command: command, args: args)
   }
@@ -141,6 +141,16 @@ struct WindowCommandHandlerTests {
 
 @Suite("WindowGrid")
 struct WindowGridTests {
+  @Test("init: clamps position and size")
+  func initClampsPositionAndSize() throws {
+    let grid = try #require(WindowGrid(argument: "3:2:99:99:99:0"))
+
+    expect(
+      grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: .defaults),
+      equals: CGRect(x: 200, y: 60, width: 100, height: 60)
+    )
+  }
+
   @Test("frame: places window in left two thirds")
   func framePlacesWindowInLeftTwoThirds() throws {
     let grid = try #require(WindowGrid(argument: "3:1:0:0:2:1"))
@@ -199,16 +209,6 @@ struct WindowGridTests {
     expect(
       grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: settings),
       equals: CGRect(x: 100, y: 0, width: 100, height: 120)
-    )
-  }
-
-  @Test("init: clamps position and size")
-  func initClampsPositionAndSize() throws {
-    let grid = try #require(WindowGrid(argument: "3:2:99:99:99:0"))
-
-    expect(
-      grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: .defaults),
-      equals: CGRect(x: 200, y: 60, width: 100, height: 60)
     )
   }
 

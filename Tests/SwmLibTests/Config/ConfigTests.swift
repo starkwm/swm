@@ -19,6 +19,23 @@ struct ConfigTests {
     }
   }
 
+  @Test("exec: adds owner execute permission")
+  func execAddsOwnerExecutePermission() throws {
+    let directory = try TemporaryDirectory()
+    let script = try directory.makeScript(
+      name: "swmrc",
+      contents: """
+        #!/bin/sh
+        exit 0
+        """,
+      permissions: 0o640
+    )
+
+    try Config.exec(path: script.path())
+
+    #expect(try permissions(of: script) == 0o740)
+  }
+
   @Test("exec: runs already executable file and waits")
   func execRunsAlreadyExecutableFileAndWaits() throws {
     let directory = try TemporaryDirectory()
@@ -37,23 +54,6 @@ struct ConfigTests {
 
     let markerContents = try String(contentsOf: marker, encoding: .utf8)
     #expect(markerContents == "done")
-  }
-
-  @Test("exec: adds owner execute permission")
-  func execAddsOwnerExecutePermission() throws {
-    let directory = try TemporaryDirectory()
-    let script = try directory.makeScript(
-      name: "swmrc",
-      contents: """
-        #!/bin/sh
-        exit 0
-        """,
-      permissions: 0o640
-    )
-
-    try Config.exec(path: script.path())
-
-    #expect(try permissions(of: script) == 0o740)
   }
 
   @Test("exec: rejects invalid executable")
@@ -100,6 +100,23 @@ struct ConfigTests {
     let attributes = try FileManager.default.attributesOfItem(atPath: url.path())
     let permissions = try #require(attributes[.posixPermissions] as? NSNumber)
     return permissions.uint16Value & 0o777
+  }
+}
+
+@Suite("ConfigError")
+struct ConfigErrorTests {
+  @Test("description: describes failures")
+  func descriptionDescribesFailures() {
+    #expect(ConfigError.fileDoesNotExist.description == "configuration file does not exist")
+    #expect(
+      ConfigError.unableToMakeExecutable.description
+        == "unable to mark the configuration file as executable"
+    )
+    #expect(ConfigError.unableToExecute.description == "unable to execute the configuration file")
+    #expect(
+      ConfigError.configurationFailed(status: 7).description
+        == "configuration file exited with status 7"
+    )
   }
 }
 
