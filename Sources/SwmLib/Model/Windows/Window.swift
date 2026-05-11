@@ -44,7 +44,7 @@ final class Window: NSObject {
   private(set) var id: CGWindowID
 
   /// Accessibility title for the window.
-  private var title: String {
+  var title: String {
     guard let element else { return "" }
 
     return AccessibilityClient.shared.stringAttribute(
