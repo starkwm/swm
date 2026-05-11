@@ -52,6 +52,18 @@ struct IPCRequestTests {
     #expect(request.args == ["--display"])
   }
 
+  @Test("make: builds signal request")
+  func makeBuildsSignalRequest() throws {
+    let request = try IPCRequest.make(
+      domain: .signal,
+      arguments: ["--add", "event=window-focused", "action=echo"]
+    )
+
+    #expect(request.domain == .signal)
+    #expect(request.command == "--add")
+    #expect(request.args == ["event=window-focused", "action=echo"])
+  }
+
   @Test("make: requires command")
   func makeRequiresCommand() {
     do {

@@ -28,6 +28,18 @@ struct UnsupportedCommandHandlerTests {
     #expect(response.message == "unsupported display command: focus")
   }
 
+  @Test("dispatch: signal rejects unsupported commands")
+  func dispatchSignalRejectsUnsupportedCommands() {
+    let response = SignalCommandHandler().dispatch(
+      request(domain: .signal, command: "add")
+    )
+
+    #expect(response.id == "request-id")
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "unsupported signal command: add")
+  }
+
   private func request(domain: MessageDomain, command: String) -> IPCRequest {
     IPCRequest(id: "request-id", domain: domain, command: command, args: [])
   }

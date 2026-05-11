@@ -32,6 +32,9 @@ struct IPCCommandDispatcher {
         windowManager: windowManager,
         spaceManager: spaceManager
       ).dispatch(request)
+
+    case .signal:
+      return SignalCommandHandler().dispatch(request)
     }
   }
 }
