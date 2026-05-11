@@ -143,14 +143,34 @@ public final class WindowManager {
 
   /// Add a managed application.
   func add(application: Application) {
+    guard applicationsByPID[application.processID] == nil else { return }
     applicationsByPID[application.processID] = application
+
+    SignalManager.shared.emit(
+      .application(
+        event: .applicationLaunched,
+        processID: application.processID,
+        app: application.name,
+        active: WindowServerClient.shared.frontmostProcessID() == application.processID
+      )
+    )
   }
 
   /// Remove a managed application and associated pending event state.
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
-    applicationsByPID.removeValue(forKey: application.processID)
+
+    guard applicationsByPID.removeValue(forKey: application.processID) != nil else { return }
+
+    SignalManager.shared.emit(
+      .application(
+        event: .applicationTerminated,
+        processID: application.processID,
+        app: application.name,
+        active: WindowServerClient.shared.frontmostProcessID() == application.processID
+      )
+    )
   }
 
   /// Create, observe, and store one managed window for an application.
