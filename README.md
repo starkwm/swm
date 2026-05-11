@@ -86,6 +86,19 @@ Use config commands to update defaults for all spaces.
     swm -m config bottom-padding <number>
     swm -m config left-padding <number>
 
+**Signal**
+
+Use signal commands to run shell actions after observed runtime events.
+
+    swm -m signal --add event=window-focused action='echo $SWM_WINDOW_ID'
+    swm -m signal --add event=window-created action='echo "$SWM_PROCESS_ID $SWM_WINDOW_ID"' label=created app=Safari
+    swm -m signal --list
+    swm -m signal --remove created
+
+Signal actions run asynchronously through `/usr/bin/env sh -c`. Event values are exposed as
+`SWM_*` environment variables, such as `SWM_PROCESS_ID`, `SWM_WINDOW_ID`, `SWM_SPACE_ID`,
+`SWM_RECENT_SPACE_ID`, `SWM_DISPLAY_ID`, and `SWM_RECENT_DISPLAY_ID`.
+
 **Keyboard Shortcuts**
 
 `swm` does not bind keyboard shortcuts itself. Use a key binding daemon like [skbd][skbd] to run `swm` commands from shortcuts.
