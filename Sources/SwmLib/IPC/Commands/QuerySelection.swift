@@ -5,7 +5,7 @@ enum QuerySelection: Equatable {
   /// No selector; query all items for the requested command.
   case none
 
-  /// Select a display by index, or the focused display when the index is absent.
+  /// Select a display by one-based arrangement index, or the focused display when absent.
   case display(Int?)
 
   /// Select a space by index, or the focused space when the index is absent.
@@ -78,9 +78,9 @@ enum QuerySelection: Equatable {
 
       switch argument {
       case "--display":
-        selection = try .display(value.map(parseIndex))
+        selection = try .display(value.map(parseDisplayIndex))
       case "--space":
-        selection = try .space(value.map(parseIndex))
+        selection = try .space(value.map(parseSpaceIndex))
       case "--window":
         selection = try .window(value.map(parseWindowID))
       default:
@@ -106,10 +106,23 @@ enum QuerySelection: Equatable {
     return values
   }
 
-  /// Parse a non-negative display or space index.
-  private static func parseIndex(_ value: String) throws -> Int {
+  /// Parse a positive one-based display index.
+  private static func parseDisplayIndex(_ value: String) throws -> Int {
+    guard let index = Int(value), index > 0 else {
+      throw IPCCommandError.invalidRequest(
+        "query display selector value must be a positive integer"
+      )
+    }
+
+    return index
+  }
+
+  /// Parse a non-negative space index.
+  private static func parseSpaceIndex(_ value: String) throws -> Int {
     guard let index = Int(value), index >= 0 else {
-      throw IPCCommandError.invalidRequest("query selector value must be a non-negative integer")
+      throw IPCCommandError.invalidRequest(
+        "query space selector value must be a non-negative integer"
+      )
     }
 
     return index

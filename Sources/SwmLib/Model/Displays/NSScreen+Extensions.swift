@@ -1,6 +1,17 @@
 import AppKit
 
 extension NSScreen {
+  /// Screens sorted by their physical arrangement.
+  static var arrangedScreens: [NSScreen] {
+    screens.sorted { lhs, rhs in
+      if lhs.frame.minX != rhs.frame.minX {
+        return lhs.frame.minX < rhs.frame.minX
+      }
+
+      return lhs.frame.maxY > rhs.frame.maxY
+    }
+  }
+
   /// Return the screen with the given Core Graphics display UUID.
   static func screen(for uuid: String?) -> NSScreen? {
     screens.first { $0.uuid == uuid }

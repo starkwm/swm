@@ -8,13 +8,13 @@ struct QueryResolverTests {
   func displaysForResolvesDisplaySelectors() throws {
     let resolver = queryResolver()
 
-    #expect(try many(resolver.displays(for: .none)).map(\.index) == [0, 1])
-    #expect(try one(resolver.displays(for: .display(nil)))?.index == 0)
-    #expect(try one(resolver.displays(for: .display(1)))?.index == 1)
-    #expect(try one(resolver.displays(for: .space(nil)))?.index == 0)
-    #expect(try one(resolver.displays(for: .space(1)))?.index == 1)
-    #expect(try one(resolver.displays(for: .window(nil)))?.index == 0)
-    #expect(try one(resolver.displays(for: .window(200)))?.index == 1)
+    #expect(try many(resolver.displays(for: .none)).map(\.index) == [1, 2])
+    #expect(try one(resolver.displays(for: .display(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .display(2)))?.index == 2)
+    #expect(try one(resolver.displays(for: .space(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .space(1)))?.index == 2)
+    #expect(try one(resolver.displays(for: .window(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .window(200)))?.index == 2)
   }
 
   @Test("spaces(for:): resolves space selectors")
@@ -23,7 +23,7 @@ struct QueryResolverTests {
 
     #expect(try many(resolver.spaces(for: .none)).map(\.index) == [0, 1])
     #expect(try many(resolver.spaces(for: .display(nil))).map(\.index) == [0])
-    #expect(try many(resolver.spaces(for: .display(1))).map(\.index) == [1])
+    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [1])
     #expect(try one(resolver.spaces(for: .space(nil)))?.index == 0)
     #expect(try one(resolver.spaces(for: .space(1)))?.index == 1)
     #expect(try one(resolver.spaces(for: .window(nil)))?.index == 0)
@@ -36,7 +36,7 @@ struct QueryResolverTests {
 
     #expect(try many(resolver.windows(for: .none)).map(\.id) == [100, 200])
     #expect(try many(resolver.windows(for: .display(nil))).map(\.id) == [100])
-    #expect(try many(resolver.windows(for: .display(1))).map(\.id) == [200])
+    #expect(try many(resolver.windows(for: .display(2))).map(\.id) == [200])
     #expect(try many(resolver.windows(for: .space(nil))).map(\.id) == [100])
     #expect(try many(resolver.windows(for: .space(1))).map(\.id) == [200])
     #expect(try one(resolver.windows(for: .window(nil)))?.id == 100)
@@ -47,8 +47,8 @@ struct QueryResolverTests {
   private func queryResolver() -> QueryResolver {
     QueryResolver(
       displays: [
-        display(index: 0, id: 1, uuid: "display-0", hasFocus: true),
-        display(index: 1, id: 2, uuid: "display-1", hasFocus: false),
+        display(index: 1, id: 1, uuid: "display-0", hasFocus: true),
+        display(index: 2, id: 2, uuid: "display-1", hasFocus: false),
       ],
       spaces: [
         space(index: 0, id: 10, display: 1, hasFocus: true),
