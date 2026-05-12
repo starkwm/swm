@@ -44,13 +44,15 @@ struct ConfigTests {
       name: "swmrc",
       contents: """
         #!/bin/sh
-        sleep 0.1
-        printf done > "\(marker.path())"
+        exit 0
         """,
       permissions: 0o700
     )
 
-    try Config.exec(path: script.path())
+    try Config.exec(path: script.path()) { path in
+      #expect(path == script.path())
+      try "done".write(to: marker, atomically: true, encoding: .utf8)
+    }
 
     let markerContents = try String(contentsOf: marker, encoding: .utf8)
     #expect(markerContents == "done")

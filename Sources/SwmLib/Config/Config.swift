@@ -11,12 +11,17 @@ public enum Config {
   /// - Throws: A `ConfigError` when the file is missing, cannot be made
   ///   executable, cannot be launched, or exits with a non-zero status.
   public static func exec(path: String) throws {
+    try exec(path: path, runAndWait: runAndWait)
+  }
+
+  /// Validate, prepare, and execute a configuration file with an injected runner.
+  static func exec(path: String, runAndWait: (String) throws -> Void) throws {
     if !FileManager.default.fileExists(atPath: path) {
       throw ConfigError.fileDoesNotExist
     }
 
     try ensureOwnerExecutable(path: path)
-    try runAndWait(path: path)
+    try runAndWait(path)
   }
 
   /// Add owner execute permission to the configuration file when it is missing.
