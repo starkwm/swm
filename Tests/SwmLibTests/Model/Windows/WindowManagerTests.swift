@@ -6,8 +6,8 @@ import Testing
 
 @Suite("WindowManager")
 struct WindowManagerTests {
-  @Test("lost front-switched events are consumed once")
-  func lostFrontSwitchedEventsAreConsumedOnce() {
+  @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
+  func addAndRemoveLostFrontSwitchedEventConsumesOnce() {
     let manager = WindowManager(workspace: Workspace())
     let processID: pid_t = 42
 
@@ -19,8 +19,8 @@ struct WindowManagerTests {
     #expect(manager.removeLostFrontSwitchedEvent(for: processID) == false)
   }
 
-  @Test("lost focused events are tracked and consumed once")
-  func lostFocusedEventsAreTrackedAndConsumedOnce() {
+  @Test("addLostFocusedEvent/removeLostFocusedEvent: tracks and consumes once")
+  func addAndRemoveLostFocusedEventTracksAndConsumesOnce() {
     let manager = WindowManager(workspace: Workspace())
     let windowID: CGWindowID = 42
 

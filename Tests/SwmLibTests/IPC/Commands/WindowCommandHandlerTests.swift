@@ -91,6 +91,30 @@ struct WindowCommandHandlerTests {
     }
   }
 
+  @Test("dispatch: rejects malformed display arguments")
+  func dispatchRejectsMalformedDisplayArguments() {
+    let handler = handler()
+    let missing = handler.dispatch(request(command: "--display", args: []))
+    let extra = handler.dispatch(request(command: "--display", args: ["1", "next", "extra"]))
+
+    #expect(missing.ok == false)
+    #expect(missing.errorCode == .invalidRequest)
+    #expect(missing.message == "invalid window display arguments")
+    #expect(extra.ok == false)
+    #expect(extra.errorCode == .invalidRequest)
+    #expect(extra.message == "invalid window display arguments")
+  }
+
+  @Test("dispatch: rejects invalid display value")
+  func dispatchRejectsInvalidDisplayValue() {
+    let handler = handler()
+    let response = handler.dispatch(request(command: "--display", args: ["sideways"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "invalid window display value: sideways")
+  }
+
   @Test("dispatch: rejects malformed grid arguments")
   func dispatchRejectsMalformedGridArguments() {
     let handler = handler()
@@ -123,30 +147,6 @@ struct WindowCommandHandlerTests {
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "invalid window selector: nope")
-  }
-
-  @Test("dispatch: rejects malformed display arguments")
-  func dispatchRejectsMalformedDisplayArguments() {
-    let handler = handler()
-    let missing = handler.dispatch(request(command: "--display", args: []))
-    let extra = handler.dispatch(request(command: "--display", args: ["1", "next", "extra"]))
-
-    #expect(missing.ok == false)
-    #expect(missing.errorCode == .invalidRequest)
-    #expect(missing.message == "invalid window display arguments")
-    #expect(extra.ok == false)
-    #expect(extra.errorCode == .invalidRequest)
-    #expect(extra.message == "invalid window display arguments")
-  }
-
-  @Test("dispatch: rejects invalid display value")
-  func dispatchRejectsInvalidDisplayValue() {
-    let handler = handler()
-    let response = handler.dispatch(request(command: "--display", args: ["sideways"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid window display value: sideways")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {
