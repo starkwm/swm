@@ -14,23 +14,25 @@ struct DisplaySerializer: Encodable, Equatable {
 
   /// Snapshot all displays and their associated space indexes.
   static func all() -> [DisplaySerializer] {
-    let displaySpaces = WindowServerClient.shared.displaySpaces()
+    let displaySpaces = Dictionary(
+      uniqueKeysWithValues: WindowServerClient.shared.displaySpaces().map { ($0.id, $0.spaces) }
+    )
     let indexedSpaces = SpaceManager.all()
       .enumerated()
       .map { (index: $0.offset, id: $0.element.id) }
     let focusedSpace = SpaceManager.active().id
 
-    return displaySpaces.enumerated().compactMap { index, display in
-      guard let screen = NSScreen.screen(for: display.id) else {
+    return NSScreen.arrangedScreens.enumerated().compactMap { index, screen in
+      guard let spaces = displaySpaces[screen.uuid] else {
         return nil
       }
 
       return DisplaySerializer(
         id: screen.id,
         uuid: screen.uuid,
-        index: index,
+        index: index + 1,
         frame: FrameSerializer(screen.frame),
-        spaces: indexedSpaces.compactMap { display.spaces.contains($0.id) ? $0.index : nil },
+        spaces: indexedSpaces.compactMap { spaces.contains($0.id) ? $0.index : nil },
         hasFocus: WindowServerClient.shared.currentSpace(for: screen.uuid) == focusedSpace
       )
     }
@@ -42,7 +44,7 @@ struct DisplaySerializer: Encodable, Equatable {
   /// Stable display UUID when available.
   let uuid: String?
 
-  /// Zero-based display index in the current screen order.
+  /// One-based display index in physical arrangement order.
   let index: Int
 
   /// Display frame in global screen coordinates.

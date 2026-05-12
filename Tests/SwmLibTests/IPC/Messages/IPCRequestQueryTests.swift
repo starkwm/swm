@@ -134,10 +134,18 @@ struct IPCRequestQueryTests {
   @Test("make query: rejects invalid selector values")
   func makeQueryRejectsInvalidSelectorValues() {
     do {
+      _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--display", "0"])
+      Issue.record("Expected invalid display selector value to fail")
+    } catch let error as IPCCommandError {
+      #expect(error.message == "query display selector value must be a positive integer")
+      #expect(error.errorCode == .invalidRequest)
+    } catch {}
+
+    do {
       _ = try IPCRequest.make(domain: .query, arguments: ["--windows", "--space", "-1"])
       Issue.record("Expected invalid selector value to fail")
     } catch let error as IPCCommandError {
-      #expect(error.message == "query selector value must be a non-negative integer")
+      #expect(error.message == "query space selector value must be a non-negative integer")
       #expect(error.errorCode == .invalidRequest)
     } catch {}
 
