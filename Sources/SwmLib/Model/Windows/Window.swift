@@ -246,6 +246,8 @@ final class Window: NSObject {
   }
 }
 
+extension Window: @unchecked Sendable {}
+
 /// Accessibility notifications observed for an individual window.
 struct WindowNotifications: OptionSet, Sendable {
   /// Observe window destruction.
@@ -267,8 +269,6 @@ struct WindowNotifications: OptionSet, Sendable {
   /// Backing option-set bit field.
   let rawValue: Int8
 }
-
-extension Window: @unchecked Sendable {}
 
 /// Weak observation context passed through accessibility notification callbacks.
 final class WindowObservationContext {

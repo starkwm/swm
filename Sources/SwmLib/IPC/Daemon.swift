@@ -151,6 +151,8 @@ public class Daemon {
   }
 }
 
+extension Daemon: @unchecked Sendable {}
+
 /// Errors raised while starting the IPC daemon.
 enum DaemonError: Error {
   /// The daemon could not remove or validate the socket path before listening.
@@ -181,8 +183,6 @@ extension DaemonError: CustomStringConvertible {
     }
   }
 }
-
-extension Daemon: @unchecked Sendable {}
 
 /// Sendable wrapper for `Socket`, which does not declare thread-safety itself.
 private struct UncheckedSocket: @unchecked Sendable {

@@ -174,6 +174,8 @@ final class WindowServerClient {
   }
 }
 
+extension WindowServerClient: @unchecked Sendable {}
+
 /// WindowServer display identifier and the spaces assigned to it.
 struct WindowServerDisplaySpaces: Equatable {
   /// WindowServer display UUID.
@@ -182,5 +184,3 @@ struct WindowServerDisplaySpaces: Equatable {
   /// WindowServer space IDs assigned to the display.
   let spaces: [UInt64]
 }
-
-extension WindowServerClient: @unchecked Sendable {}

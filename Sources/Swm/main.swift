@@ -2,21 +2,6 @@ import AppKit
 import ArgumentParser
 import SwmLib
 
-/// Print an error message and terminate with failure.
-func fail(_ message: String) -> Never {
-  fputs("error: \(message)\n", stderr)
-  exit(EXIT_FAILURE)
-}
-
-/// Run a throwing operation and terminate with a prefixed error on failure.
-func runOrFail(_ message: String, _ operation: () throws -> Void) {
-  do {
-    try operation()
-  } catch {
-    fail("\(message) - \(error)")
-  }
-}
-
 /// Parsed command-line arguments for this invocation.
 let arguments = Arguments.parseOrExit()
 setMinimumLogLevel(arguments.logLevel)
@@ -97,3 +82,18 @@ signal(SIGINT) { _ in
 
 // Run the AppKit event loop used by accessibility and workspace callbacks.
 NSApplication.shared.run()
+
+/// Print an error message and terminate with failure.
+func fail(_ message: String) -> Never {
+  fputs("error: \(message)\n", stderr)
+  exit(EXIT_FAILURE)
+}
+
+/// Run a throwing operation and terminate with a prefixed error on failure.
+func runOrFail(_ message: String, _ operation: () throws -> Void) {
+  do {
+    try operation()
+  } catch {
+    fail("\(message) - \(error)")
+  }
+}

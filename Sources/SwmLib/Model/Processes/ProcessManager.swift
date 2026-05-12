@@ -131,6 +131,8 @@ public final class ProcessManager {
   }
 }
 
+extension ProcessManager: @unchecked Sendable {}
+
 /// Errors raised while starting or accessing process observation.
 public enum ProcessManagerError: Error, CustomStringConvertible {
   /// Process observation could not be started or accessed.
@@ -144,5 +146,3 @@ public enum ProcessManagerError: Error, CustomStringConvertible {
     }
   }
 }
-
-extension ProcessManager: @unchecked Sendable {}
