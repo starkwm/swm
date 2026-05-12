@@ -14,7 +14,7 @@ lint:
 	@swift format lint -r Sources Tests Package.swift
 
 test:
-	@swift test --parallel --enable-code-coverage --disable-xctest --quiet
+	@swift test --parallel --disable-xctest
 
 clean:
 	@swift package clean
