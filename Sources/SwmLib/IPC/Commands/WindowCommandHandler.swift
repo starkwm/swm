@@ -27,6 +27,8 @@ struct WindowCommandHandler {
         return try resize(request)
       case "--grid":
         return try grid(request)
+      case "--display":
+        return try display(request)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
@@ -114,6 +116,44 @@ struct WindowCommandHandler {
 
     guard resized else {
       throw IPCCommandError.internalError("could not resize window: \(window.id)")
+    }
+
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Move the selected window to another display.
+  private func display(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseDisplaySelection(request.args)
+    guard let target = WindowDisplayTarget(argument: selection.display) else {
+      throw IPCCommandError.invalidRequest("invalid window display value: \(selection.display)")
+    }
+
+    let window = try selectedWindow(selector: selection.selector)
+
+    guard let frame = window.frame() else {
+      throw IPCCommandError.internalError("could not move window to display: \(window.id)")
+    }
+
+    guard let sourceScreen = NSScreen.screen(containingLargestIntersectionWith: frame) else {
+      throw IPCCommandError.internalError("could not move window to display: \(window.id)")
+    }
+
+    guard let targetScreen = target.screen(from: sourceScreen, screens: NSScreen.arrangedScreens)
+    else {
+      throw IPCCommandError.invalidRequest("invalid window display value: \(selection.display)")
+    }
+
+    let targetFrame = WindowDisplayTransfer(
+      windowFrame: frame,
+      sourceFrame: sourceScreen.axVisibleFrame,
+      targetFrame: targetScreen.axVisibleFrame
+    ).targetWindowFrame()
+
+    let resized = targetFrame.size == frame.size || window.resize(to: targetFrame.size)
+    let moved = window.move(to: targetFrame.origin)
+
+    guard resized, moved else {
+      throw IPCCommandError.internalError("could not move window to display: \(window.id)")
     }
 
     return .success(id: request.id, message: "ok")
@@ -216,6 +256,19 @@ struct WindowCommandHandler {
     return WindowGeometrySelection(selector: args[0], geometry: args[1])
   }
 
+  /// Parse optional selector and required display arguments.
+  private func parseDisplaySelection(_ args: [String]) throws -> WindowDisplaySelection {
+    guard (1...2).contains(args.count) else {
+      throw IPCCommandError.invalidRequest("invalid window display arguments")
+    }
+
+    if args.count == 1 {
+      return WindowDisplaySelection(selector: nil, display: args[0])
+    }
+
+    return WindowDisplaySelection(selector: args[0], display: args[1])
+  }
+
   /// Parse a geometry change in `mode:first:second` format.
   private func parseGeometryChange(_ argument: String) -> WindowGeometryChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
@@ -230,6 +283,92 @@ struct WindowCommandHandler {
     }
 
     return WindowGeometryChange(mode: mode, first: first, second: second)
+  }
+}
+
+/// Display target for moving a window.
+struct WindowDisplayTarget: Equatable {
+  private enum Value: Equatable {
+    case next
+    case previous
+    case index(Int)
+  }
+
+  private let value: Value
+
+  /// Parse a display target.
+  init?(argument: String) {
+    switch argument {
+    case "next":
+      value = .next
+    case "prev", "previous":
+      value = .previous
+    default:
+      guard let index = Int(argument), index > 0 else { return nil }
+      value = .index(index)
+    }
+  }
+
+  /// Resolve the target display from the available screens.
+  func screen(from source: NSScreen, screens: [NSScreen]) -> NSScreen? {
+    guard !screens.isEmpty else { return nil }
+
+    switch value {
+    case .next:
+      guard let sourceIndex = screens.firstIndex(where: { $0.uuid == source.uuid }) else {
+        return nil
+      }
+      return screens[(sourceIndex + 1) % screens.count]
+    case .previous:
+      guard let sourceIndex = screens.firstIndex(where: { $0.uuid == source.uuid }) else {
+        return nil
+      }
+      return screens[(sourceIndex - 1 + screens.count) % screens.count]
+    case .index(let index):
+      let arrayIndex = index - 1
+      guard screens.indices.contains(arrayIndex) else { return nil }
+      return screens[arrayIndex]
+    }
+  }
+}
+
+/// Calculates equivalent window placement on another display.
+struct WindowDisplayTransfer: Equatable {
+  let windowFrame: CGRect
+  let sourceFrame: CGRect
+  let targetFrame: CGRect
+
+  /// Calculate a target frame preserving relative origin and fitting destination bounds.
+  func targetWindowFrame() -> CGRect {
+    let width = min(windowFrame.width, targetFrame.width)
+    let height = min(windowFrame.height, targetFrame.height)
+    let xProgress = progress(
+      windowFrame.minX - sourceFrame.minX,
+      over: sourceFrame.width - windowFrame.width
+    )
+    let yProgress = progress(
+      windowFrame.minY - sourceFrame.minY,
+      over: sourceFrame.height - windowFrame.height
+    )
+
+    let x = targetFrame.minX + xProgress * (targetFrame.width - width)
+    let y = targetFrame.minY + yProgress * (targetFrame.height - height)
+
+    return CGRect(
+      x: clamp(x, lower: targetFrame.minX, upper: targetFrame.maxX - width),
+      y: clamp(y, lower: targetFrame.minY, upper: targetFrame.maxY - height),
+      width: width,
+      height: height
+    )
+  }
+
+  private func progress(_ value: CGFloat, over range: CGFloat) -> CGFloat {
+    guard range > 0 else { return 0 }
+    return clamp(value / range, lower: 0, upper: 1)
+  }
+
+  private func clamp(_ value: CGFloat, lower: CGFloat, upper: CGFloat) -> CGFloat {
+    min(max(value, lower), upper)
   }
 }
 
@@ -337,4 +476,10 @@ private struct WindowGeometryChange {
 private struct WindowGeometrySelection {
   let selector: String?
   let geometry: String
+}
+
+/// Parsed window selector and display argument pair.
+private struct WindowDisplaySelection {
+  let selector: String?
+  let display: String
 }
