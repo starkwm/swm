@@ -214,6 +214,34 @@ struct WindowDisplayTransferTests {
     )
   }
 
+  @Test("targetWindowFrame: shrinks to target visible frame below menu bar")
+  func targetWindowFrameShrinksToTargetVisibleFrameBelowMenuBar() {
+    let transfer = WindowDisplayTransfer(
+      windowFrame: CGRect(x: 0, y: 0, width: 1200, height: 900),
+      sourceFrame: CGRect(x: 0, y: 0, width: 1200, height: 900),
+      targetFrame: CGRect(x: 1200, y: 24, width: 1200, height: 876)
+    )
+
+    expect(
+      transfer.targetWindowFrame(),
+      equals: CGRect(x: 1200, y: 24, width: 1200, height: 876)
+    )
+  }
+
+  @Test("targetWindowFrame: uses source visible frame below menu bar")
+  func targetWindowFrameUsesSourceVisibleFrameBelowMenuBar() {
+    let transfer = WindowDisplayTransfer(
+      windowFrame: CGRect(x: 0, y: 312, width: 400, height: 300),
+      sourceFrame: CGRect(x: 0, y: 24, width: 1200, height: 876),
+      targetFrame: CGRect(x: 1200, y: 0, width: 1200, height: 900)
+    )
+
+    expect(
+      transfer.targetWindowFrame(),
+      equals: CGRect(x: 1200, y: 300, width: 400, height: 300)
+    )
+  }
+
   @Test("targetWindowFrame: clamps offscreen source placement")
   func targetWindowFrameClampsOffscreenSourcePlacement() {
     let transfer = WindowDisplayTransfer(
