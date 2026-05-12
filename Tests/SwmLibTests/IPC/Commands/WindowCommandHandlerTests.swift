@@ -125,6 +125,30 @@ struct WindowCommandHandlerTests {
     #expect(response.message == "invalid window selector: nope")
   }
 
+  @Test("dispatch: rejects malformed display arguments")
+  func dispatchRejectsMalformedDisplayArguments() {
+    let handler = handler()
+    let missing = handler.dispatch(request(command: "--display", args: []))
+    let extra = handler.dispatch(request(command: "--display", args: ["1", "next", "extra"]))
+
+    #expect(missing.ok == false)
+    #expect(missing.errorCode == .invalidRequest)
+    #expect(missing.message == "invalid window display arguments")
+    #expect(extra.ok == false)
+    #expect(extra.errorCode == .invalidRequest)
+    #expect(extra.message == "invalid window display arguments")
+  }
+
+  @Test("dispatch: rejects invalid display value")
+  func dispatchRejectsInvalidDisplayValue() {
+    let handler = handler()
+    let response = handler.dispatch(request(command: "--display", args: ["sideways"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "invalid window display value: sideways")
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .window, command: command, args: args)
   }
@@ -136,6 +160,79 @@ struct WindowCommandHandlerTests {
       windowManager: windowManager,
       spaceManager: SpaceManager(activeSpaceID: nil)
     )
+  }
+}
+
+@Suite("WindowDisplayTarget")
+struct WindowDisplayTargetTests {
+  @Test("init: accepts relative and indexed targets")
+  func initAcceptsRelativeAndIndexedTargets() {
+    #expect(WindowDisplayTarget(argument: "next") != nil)
+    #expect(WindowDisplayTarget(argument: "prev") != nil)
+    #expect(WindowDisplayTarget(argument: "previous") != nil)
+    #expect(WindowDisplayTarget(argument: "1") != nil)
+  }
+
+  @Test("init: rejects invalid targets")
+  func initRejectsInvalidTargets() {
+    #expect(WindowDisplayTarget(argument: "primary") == nil)
+    #expect(WindowDisplayTarget(argument: "secondary") == nil)
+    #expect(WindowDisplayTarget(argument: "recent") == nil)
+    #expect(WindowDisplayTarget(argument: "0") == nil)
+    #expect(WindowDisplayTarget(argument: "-1") == nil)
+    #expect(WindowDisplayTarget(argument: "x") == nil)
+  }
+}
+
+@Suite("WindowDisplayTransfer")
+struct WindowDisplayTransferTests {
+  @Test("targetWindowFrame: preserves relative placement")
+  func targetWindowFramePreservesRelativePlacement() {
+    let transfer = WindowDisplayTransfer(
+      windowFrame: CGRect(x: 400, y: 200, width: 400, height: 300),
+      sourceFrame: CGRect(x: 0, y: 0, width: 1200, height: 900),
+      targetFrame: CGRect(x: 1200, y: 0, width: 1600, height: 1200)
+    )
+
+    expect(
+      transfer.targetWindowFrame(),
+      equals: CGRect(x: 1800, y: 300, width: 400, height: 300)
+    )
+  }
+
+  @Test("targetWindowFrame: shrinks to fit target")
+  func targetWindowFrameShrinksToFitTarget() {
+    let transfer = WindowDisplayTransfer(
+      windowFrame: CGRect(x: 0, y: 0, width: 900, height: 700),
+      sourceFrame: CGRect(x: 0, y: 0, width: 1200, height: 900),
+      targetFrame: CGRect(x: 1200, y: 0, width: 800, height: 600)
+    )
+
+    expect(
+      transfer.targetWindowFrame(),
+      equals: CGRect(x: 1200, y: 0, width: 800, height: 600)
+    )
+  }
+
+  @Test("targetWindowFrame: clamps offscreen source placement")
+  func targetWindowFrameClampsOffscreenSourcePlacement() {
+    let transfer = WindowDisplayTransfer(
+      windowFrame: CGRect(x: -200, y: 1000, width: 400, height: 300),
+      sourceFrame: CGRect(x: 0, y: 0, width: 1200, height: 900),
+      targetFrame: CGRect(x: 1200, y: 0, width: 1600, height: 1200)
+    )
+
+    expect(
+      transfer.targetWindowFrame(),
+      equals: CGRect(x: 1200, y: 900, width: 400, height: 300)
+    )
+  }
+
+  private func expect(_ actual: CGRect, equals expected: CGRect) {
+    #expect(abs(actual.origin.x - expected.origin.x) < 0.0001)
+    #expect(abs(actual.origin.y - expected.origin.y) < 0.0001)
+    #expect(abs(actual.size.width - expected.size.width) < 0.0001)
+    #expect(abs(actual.size.height - expected.size.height) < 0.0001)
   }
 }
 

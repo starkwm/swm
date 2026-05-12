@@ -50,7 +50,7 @@ Use query commands to inspect the tracked displays, spaces, and windows. Add one
     swm -m query --space [space-index]
     swm -m query --window <window-id>
 
-Selector-only queries default to the matching result type: `--display` queries displays, `--space` queries spaces, and `--window` queries windows.
+Selector-only queries default to the matching result type: `--display` queries displays, `--space` queries spaces, and `--window` queries windows. Display indexes are one-based and sorted by display arrangement.
 
 **Window**
 
@@ -62,8 +62,10 @@ Use window commands to focus, minimize, move, resize, or place windows on a grid
     swm -m window --move [window-id|recent] abs:<x>:<y>
     swm -m window --resize [window-id|recent] abs:<width>:<height>
     swm -m window --grid [window-id|recent] <columns>:<rows>:<x>:<y>:<width>:<height>
+    swm -m window --display [window-id|recent] <next|prev|display-index>
 
 Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
+Use `--display next` to toggle the focused window between two attached displays. Numeric display targets are one-based and sorted by display arrangement.
 
 **Space**
 
