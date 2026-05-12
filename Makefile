@@ -6,7 +6,6 @@ build:
 
 release: clean
 	@swift build --configuration release --disable-sandbox
-	@dsymutil .build/release/swm -o .build/release/swm.dSYM
 
 format:
 	@swift format format -r -i Sources Tests Package.swift
