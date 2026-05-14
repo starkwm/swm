@@ -12,7 +12,7 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.4"),
-    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.2"),
+    .package(url: "https://github.com/apple/swift-argument-parser", from: "1.7.1"),
   ],
   targets: [
     .executableTarget(
