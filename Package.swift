@@ -11,7 +11,7 @@ let package = Package(
     .executable(name: "swm", targets: ["Swm"])
   ],
   dependencies: [
-    .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.2"),
+    .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.4"),
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.2"),
   ],
   targets: [
