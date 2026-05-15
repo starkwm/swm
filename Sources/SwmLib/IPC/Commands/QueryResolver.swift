@@ -52,7 +52,8 @@ struct QueryResolver {
       return .many(spaces)
     case .display(let index):
       guard let display = display(for: index) else { return .many([]) }
-      return .many(spaces.filter { $0.display == display.id })
+      guard let displayID = display.id else { return .many([]) }
+      return .many(spaces.filter { $0.displays.contains(displayID) })
     case .space(let index):
       return .one(space(for: index))
     case .window(let id):
@@ -105,7 +106,10 @@ struct QueryResolver {
 
   /// Return the display that owns a space.
   private func display(containing space: SpaceSerializer) -> DisplaySerializer? {
-    displays.first { $0.id == space.display }
+    displays.first { display in
+      guard let displayID = display.id else { return false }
+      return space.displays.contains(displayID)
+    }
   }
 
   /// Return the display that owns a window.

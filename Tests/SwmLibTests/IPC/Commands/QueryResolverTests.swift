@@ -30,6 +30,23 @@ struct QueryResolverTests {
     #expect(try one(resolver.spaces(for: .window(200)))?.index == 1)
   }
 
+  @Test("spaces(for:): resolves shared spaces by display")
+  func spacesForResolvesSharedSpacesByDisplay() throws {
+    let resolver = QueryResolver(
+      displays: [
+        display(index: 1, id: 1, uuid: "display-0", hasFocus: true),
+        display(index: 2, id: 2, uuid: "display-1", hasFocus: false),
+      ],
+      spaces: [
+        space(index: 0, id: 10, displays: [1, 2], hasFocus: true)
+      ],
+      windows: []
+    )
+
+    #expect(try many(resolver.spaces(for: .display(1))).map(\.index) == [0])
+    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [0])
+  }
+
   @Test("windows(for:): resolves window selectors")
   func windowsForResolvesWindowSelectors() throws {
     let resolver = queryResolver()
@@ -77,7 +94,25 @@ struct QueryResolverTests {
       id: id,
       index: index,
       type: "normal",
-      display: display,
+      displays: [display],
+      windows: [],
+      hasFocus: hasFocus,
+      isVisible: hasFocus,
+      isNativeFullscreen: false
+    )
+  }
+
+  private func space(
+    index: Int,
+    id: UInt64,
+    displays: [UInt32],
+    hasFocus: Bool
+  ) -> SpaceSerializer {
+    SpaceSerializer(
+      id: id,
+      index: index,
+      type: "normal",
+      displays: displays,
       windows: [],
       hasFocus: hasFocus,
       isVisible: hasFocus,

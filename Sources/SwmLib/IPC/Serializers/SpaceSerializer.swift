@@ -9,7 +9,7 @@ struct SpaceSerializer: Encodable, Equatable {
     case index
     case label
     case type
-    case display
+    case displays
     case windows
     case hasFocus = "has-focus"
     case isVisible = "is-visible"
@@ -21,28 +21,43 @@ struct SpaceSerializer: Encodable, Equatable {
     let spaces = SpaceManager.all()
     let activeSpaceID = SpaceManager.active().id
     let displaySpaces = WindowServerClient.shared.displaySpaces()
+    let arrangedScreens = NSScreen.arrangedScreens
     let windows = windowManager.allWindows()
 
     return spaces.enumerated().map { index, space in
-      let display = displaySpaces.first { $0.spaces.contains(space.id) }?.id
-      let windowIDs =
-        windows
-        .filter { window in
-          WindowServerClient.shared.spaceIDs(containing: window.id)
-            .contains(space.id)
-        }
+      let screenIDs =
+        displaySpaces
+        .filter { $0.spaces.contains(space.id) }
         .map(\.id)
+      let normalizedScreenIDSet = Set(screenIDs.map { $0.lowercased() })
+      let directlyResolvedScreens = arrangedScreens.filter {
+        normalizedScreenIDSet.contains($0.uuid.lowercased())
+      }
+      let hasSharedDisplaySpaces = normalizedScreenIDSet.contains("main")
+      let resolvedScreens =
+        hasSharedDisplaySpaces
+        ? arrangedScreens
+        : directlyResolvedScreens
+      let visibleScreenIDs =
+        hasSharedDisplaySpaces
+        ? Set(arrangedScreens.map(\.uuid))
+        : Set(screenIDs)
 
       return SpaceSerializer(
         id: space.id,
         index: index,
         type: space.type.description,
-        display: NSScreen.screen(for: display)?.id,
-        windows: windowIDs,
+        displays: resolvedScreens.compactMap(\.id),
+        windows: windows
+          .filter { window in
+            WindowServerClient.shared.spaceIDs(containing: window.id)
+              .contains(space.id)
+          }
+          .map(\.id),
         hasFocus: space.id == activeSpaceID,
-        isVisible: display.map { screenID in
+        isVisible: visibleScreenIDs.contains { screenID in
           WindowServerClient.shared.currentSpace(for: screenID) == space.id
-        } ?? false,
+        },
         isNativeFullscreen: space.type == .fullscreen
       )
     }
@@ -57,8 +72,8 @@ struct SpaceSerializer: Encodable, Equatable {
   /// Human-readable space type.
   let type: String
 
-  /// Core Graphics display ID for the owning display, when available.
-  let display: UInt32?
+  /// Core Graphics display IDs associated with this space.
+  let displays: [UInt32]
 
   /// Window IDs currently associated with this space.
   let windows: [UInt32]
@@ -78,7 +93,7 @@ struct SpaceSerializer: Encodable, Equatable {
     try container.encode(id, forKey: .id)
     try container.encode(index, forKey: .index)
     try container.encode(type, forKey: .type)
-    try container.encodeNilOrValue(display, forKey: .display)
+    try container.encode(displays, forKey: .displays)
     try container.encode(windows, forKey: .windows)
     try container.encode(hasFocus, forKey: .hasFocus)
     try container.encode(isVisible, forKey: .isVisible)
