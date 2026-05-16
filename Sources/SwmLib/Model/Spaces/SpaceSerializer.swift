@@ -1,6 +1,6 @@
 import AppKit
 
-/// Serialized space state returned by query IPC commands.
+/// Space state returned by query commands.
 struct SpaceSerializer: Encodable, Equatable {
   /// JSON keys used for space query output.
   enum CodingKeys: String, CodingKey {
@@ -46,7 +46,8 @@ struct SpaceSerializer: Encodable, Equatable {
         index: index,
         type: space.type.description,
         displays: resolvedScreens.compactMap(\.id),
-        windows: windows
+        windows:
+          windows
           .filter { window in
             WindowServerClient.shared.spaceIDs(containing: window.id)
               .contains(space.id)

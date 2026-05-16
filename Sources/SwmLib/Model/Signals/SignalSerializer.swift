@@ -1,4 +1,4 @@
-/// Serialized signal state returned by `signal --list`.
+/// Signal state returned by `signal --list`.
 struct SignalSerializer: Encodable, Equatable {
   enum CodingKeys: String, CodingKey {
     case index

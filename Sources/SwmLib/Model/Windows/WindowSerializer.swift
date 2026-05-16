@@ -1,6 +1,6 @@
 import AppKit
 
-/// Serialized window state returned by query IPC commands.
+/// Window state returned by query commands.
 struct WindowSerializer: Encodable, Equatable {
   /// JSON keys used for window query output.
   enum CodingKeys: String, CodingKey {
@@ -91,7 +91,7 @@ struct WindowSerializer: Encodable, Equatable {
   /// Whether accessibility reports the window as minimized.
   let isMinimized: Bool
 
-  /// Create a serializer from explicit window fields.
+  /// Create query output from explicit window fields.
   init(
     id: CGWindowID,
     pid: pid_t?,
@@ -130,7 +130,7 @@ struct WindowSerializer: Encodable, Equatable {
     self.isMinimized = isMinimized
   }
 
-  /// Create a serializer by combining window, accessibility, and Core Graphics metadata.
+  /// Create query output by combining window, accessibility, and Core Graphics metadata.
   init(
     window: Window,
     info: [String: Any]?,

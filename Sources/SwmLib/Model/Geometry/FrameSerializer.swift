@@ -14,7 +14,7 @@ struct FrameSerializer: Codable, Equatable {
   /// Rectangle height.
   let height: Double
 
-  /// Create a frame serializer from a Core Graphics rectangle.
+  /// Create query geometry from a Core Graphics rectangle.
   init(_ rect: CGRect) {
     x = rect.origin.x
     y = rect.origin.y

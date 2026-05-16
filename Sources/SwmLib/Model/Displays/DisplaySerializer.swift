@@ -1,6 +1,6 @@
 import AppKit
 
-/// Serialized display state returned by query IPC commands.
+/// Display state returned by query commands.
 struct DisplaySerializer: Encodable, Equatable {
   /// JSON keys used for display query output.
   enum CodingKeys: String, CodingKey {
