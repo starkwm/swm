@@ -240,11 +240,3 @@ extension [Space] {
     return firstIndex { $0.id == spaceID }
   }
 }
-
-/// Geometry helpers used when choosing the display that contains most of a window.
-extension CGRect {
-  /// Rectangle area.
-  fileprivate var area: CGFloat {
-    width * height
-  }
-}

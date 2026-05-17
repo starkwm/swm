@@ -332,79 +332,7 @@ struct WindowDisplayTarget: Equatable {
   }
 }
 
-/// Calculates equivalent window placement on another display.
-struct WindowDisplayTransfer: Equatable {
-  let windowFrame: CGRect
-  let sourceFrame: CGRect
-  let targetFrame: CGRect
-
-  /// Calculate a target frame preserving relative origin and fitting destination bounds.
-  func targetWindowFrame() -> CGRect {
-    let width = min(windowFrame.width, targetFrame.width)
-    let height = min(windowFrame.height, targetFrame.height)
-    let xProgress = progress(
-      windowFrame.minX - sourceFrame.minX,
-      over: sourceFrame.width - windowFrame.width
-    )
-    let yProgress = progress(
-      windowFrame.minY - sourceFrame.minY,
-      over: sourceFrame.height - windowFrame.height
-    )
-
-    let x = targetFrame.minX + xProgress * (targetFrame.width - width)
-    let y = targetFrame.minY + yProgress * (targetFrame.height - height)
-
-    return CGRect(
-      x: clamp(x, lower: targetFrame.minX, upper: targetFrame.maxX - width),
-      y: clamp(y, lower: targetFrame.minY, upper: targetFrame.maxY - height),
-      width: width,
-      height: height
-    )
-  }
-
-  private func progress(_ value: CGFloat, over range: CGFloat) -> CGFloat {
-    guard range > 0 else { return 0 }
-    return clamp(value / range, lower: 0, upper: 1)
-  }
-
-  private func clamp(_ value: CGFloat, lower: CGFloat, upper: CGFloat) -> CGFloat {
-    min(max(value, lower), upper)
-  }
-}
-
-/// Grid placement for resizing a window within visible screen bounds.
-struct WindowGrid: Equatable {
-  private let rows: Int
-  private let columns: Int
-  private let x: Int
-  private let y: Int
-  private let width: Int
-  private let height: Int
-
-  /// Create a clamped grid placement.
-  init?(
-    rows: Int,
-    columns: Int,
-    x: Int,
-    y: Int,
-    width: Int,
-    height: Int
-  ) {
-    guard rows > 0, columns > 0 else { return nil }
-
-    let x = min(max(0, x), columns - 1)
-    let y = min(max(0, y), rows - 1)
-    let width = min(max(1, width), columns - x)
-    let height = min(max(1, height), rows - y)
-
-    self.rows = rows
-    self.columns = columns
-    self.x = x
-    self.y = y
-    self.width = width
-    self.height = height
-  }
-
+extension WindowGrid {
   /// Parse a grid placement in `columns:rows:x:y:width:height` format.
   init?(argument: String) {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
@@ -422,46 +350,6 @@ struct WindowGrid: Equatable {
     }
 
     self.init(rows: rows, columns: columns, x: x, y: y, width: width, height: height)
-  }
-
-  /// Calculate the target frame inside screen bounds using space padding and gap settings.
-  func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
-    let padding = settings.paddingEnabled ? settings.padding : .zero
-    let gap = settings.gapEnabled ? CGFloat(settings.gap) : 0
-
-    var bounds = bounds
-    bounds.origin.x += CGFloat(padding.left)
-    bounds.size.width -= CGFloat(padding.left + padding.right)
-    bounds.origin.y += CGFloat(padding.top)
-    bounds.size.height -= CGFloat(padding.top + padding.bottom)
-
-    if x > 0 {
-      bounds.origin.x += gap
-      bounds.size.width -= gap
-    }
-
-    if y > 0 {
-      bounds.origin.y += gap
-      bounds.size.height -= gap
-    }
-
-    if columns > x + width {
-      bounds.size.width -= gap
-    }
-
-    if rows > y + height {
-      bounds.size.height -= gap
-    }
-
-    let cellWidth = bounds.width / CGFloat(columns)
-    let cellHeight = bounds.height / CGFloat(rows)
-
-    return CGRect(
-      x: bounds.minX + bounds.width - cellWidth * CGFloat(columns - x),
-      y: bounds.minY + bounds.height - cellHeight * CGFloat(rows - y),
-      width: cellWidth * CGFloat(width),
-      height: cellHeight * CGFloat(height)
-    )
   }
 }
 

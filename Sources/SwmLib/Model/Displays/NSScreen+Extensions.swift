@@ -53,10 +53,3 @@ extension NSScreen {
     )
   }
 }
-
-extension CGRect {
-  /// Rectangle area.
-  fileprivate var area: CGFloat {
-    width * height
-  }
-}
