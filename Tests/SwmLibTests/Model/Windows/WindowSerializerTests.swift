@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 
@@ -46,5 +47,24 @@ struct WindowSerializerTests {
     #expect(object["is-native-fullscreen"] as? Bool == false)
     #expect(object["is-visible"] as? Bool == false)
     #expect(object["is-minimized"] as? Bool == false)
+  }
+
+  @Test("info(for:): returns metadata for matching window id")
+  func infoForReturnsMetadataForMatchingWindowID() throws {
+    let metadata: [[String: Any]] = [
+      [
+        kCGWindowNumber as String: NSNumber(value: UInt32(1)),
+        kCGWindowOwnerName as String: "Terminal",
+      ],
+      [
+        kCGWindowNumber as String: NSNumber(value: UInt32(42)),
+        kCGWindowOwnerName as String: "Safari",
+      ],
+    ]
+
+    let info = try #require(metadata.info(for: 42))
+
+    #expect(info[kCGWindowOwnerName as String] as? String == "Safari")
+    #expect(metadata.info(for: 99) == nil)
   }
 }
