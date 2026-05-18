@@ -43,4 +43,19 @@ struct SignalPayloadTests {
     #expect(payload.environment["SWM_DISPLAY_ID"] == "display-a")
     #expect(payload.environment["SWM_RECENT_DISPLAY_ID"] == "display-b")
   }
+
+  @Test("display: maps reconfiguration environment")
+  func displayMapsReconfigurationEnvironment() {
+    let payload = SignalPayload.display(
+      event: .displayMoved,
+      displayID: 42,
+      currentID: "display-a",
+      recentID: "display-b"
+    )
+
+    #expect(payload.event == .displayMoved)
+    #expect(payload.environment["SWM_EVENT_DISPLAY_ID"] == "42")
+    #expect(payload.environment["SWM_DISPLAY_ID"] == "display-a")
+    #expect(payload.environment["SWM_RECENT_DISPLAY_ID"] == "display-b")
+  }
 }

@@ -149,6 +149,34 @@ public final class EventManager {
         currentID: configuration.displayManager.currentActiveDisplayID,
         recentID: configuration.displayManager.lastActiveDisplayID
       )
+
+    case .display(.added(let displayID)):
+      return displayPayload(
+        event: .displayAdded,
+        displayID: displayID,
+        configuration: configuration
+      )
+
+    case .display(.removed(let displayID)):
+      return displayPayload(
+        event: .displayRemoved,
+        displayID: displayID,
+        configuration: configuration
+      )
+
+    case .display(.moved(let displayID)):
+      return displayPayload(
+        event: .displayMoved,
+        displayID: displayID,
+        configuration: configuration
+      )
+
+    case .display(.resized(let displayID)):
+      return displayPayload(
+        event: .displayResized,
+        displayID: displayID,
+        configuration: configuration
+      )
     }
   }
 
@@ -178,6 +206,20 @@ public final class EventManager {
       windowID: window.id,
       window: window,
       active: configuration.windowManager.currentFocusedWindowID == window.id
+    )
+  }
+
+  /// Build a display signal payload for CoreGraphics reconfiguration callbacks.
+  private func displayPayload(
+    event: SignalEvent,
+    displayID: UInt32,
+    configuration: Configuration
+  ) -> SignalPayload {
+    .display(
+      event: event,
+      displayID: displayID,
+      currentID: configuration.displayManager.currentActiveDisplayID,
+      recentID: configuration.displayManager.lastActiveDisplayID
     )
   }
 }

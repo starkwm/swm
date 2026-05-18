@@ -91,6 +91,32 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
+  /// Build a display reconfiguration payload.
+  static func display(
+    event: SignalEvent,
+    displayID: CGDirectDisplayID,
+    currentID: String?,
+    recentID: String?
+  ) -> SignalPayload {
+    var environment = ["SWM_EVENT_DISPLAY_ID": String(displayID)]
+
+    if let currentID {
+      environment["SWM_DISPLAY_ID"] = currentID
+    }
+
+    if let recentID {
+      environment["SWM_RECENT_DISPLAY_ID"] = recentID
+    }
+
+    return SignalPayload(
+      event: event,
+      app: nil,
+      title: nil,
+      active: nil,
+      environment: environment
+    )
+  }
+
   /// Signal event name.
   let event: SignalEvent
 

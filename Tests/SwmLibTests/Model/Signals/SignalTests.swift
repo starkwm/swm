@@ -45,6 +45,22 @@ struct SignalTests {
     )
   }
 
+  @Test("parseAdd: accepts display reconfiguration events")
+  func parseAddAcceptsDisplayReconfigurationEvents() throws {
+    let events: [SignalEvent] = [
+      .displayAdded,
+      .displayRemoved,
+      .displayMoved,
+      .displayResized,
+    ]
+
+    for event in events {
+      let signal = try Signal.parseAdd(arguments: ["event=\(event.rawValue)", "action=echo"])
+
+      #expect(signal.event == event)
+    }
+  }
+
   @Test("parseAdd: rejects invalid regex and unsupported active filter")
   func parseAddRejectsInvalidFilterArguments() {
     expectInvalid(
@@ -55,6 +71,24 @@ struct SignalTests {
       arguments: ["event=space-changed", "action=echo", "active=yes"],
       message: "signal event does not support active filter: space-changed"
     )
+  }
+
+  @Test("parseAdd: rejects active filter for display events")
+  func parseAddRejectsActiveFilterForDisplayEvents() {
+    let events: [SignalEvent] = [
+      .displayChanged,
+      .displayAdded,
+      .displayRemoved,
+      .displayMoved,
+      .displayResized,
+    ]
+
+    for event in events {
+      expectInvalid(
+        arguments: ["event=\(event.rawValue)", "action=echo", "active=yes"],
+        message: "signal event does not support active filter: \(event.rawValue)"
+      )
+    }
   }
 
   @Test("matches: applies regex, inversion, and active filters")

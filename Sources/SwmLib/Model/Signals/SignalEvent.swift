@@ -12,6 +12,10 @@ enum SignalEvent: String, Codable, CaseIterable, Sendable {
   case windowDeminimized = "window-deminimized"
   case spaceChanged = "space-changed"
   case displayChanged = "display-changed"
+  case displayAdded = "display-added"
+  case displayRemoved = "display-removed"
+  case displayMoved = "display-moved"
+  case displayResized = "display-resized"
 
   /// Whether this event can be filtered by focused/current active state.
   var supportsActiveFilter: Bool {
@@ -20,7 +24,8 @@ enum SignalEvent: String, Codable, CaseIterable, Sendable {
       .windowCreated, .windowDestroyed, .windowFocused, .windowMoved, .windowResized,
       .windowMinimized, .windowDeminimized:
       true
-    case .spaceChanged, .displayChanged:
+    case .spaceChanged, .displayChanged, .displayAdded, .displayRemoved, .displayMoved,
+      .displayResized:
       false
     }
   }

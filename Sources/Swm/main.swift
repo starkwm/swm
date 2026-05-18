@@ -46,6 +46,16 @@ let windowManager = WindowManager(workspace: workspace)
 let spaceManager = SpaceManager()
 let displayManager = DisplayManager()
 
+if case .failure(let error) = displayManager.start() {
+  fail("unable to start display manager - \(error)")
+}
+
+if case .failure(let error) = processManager.start() {
+  fail("unable to start process manager - \(error)")
+}
+
+windowManager.start(processes: processManager.all())
+
 EventManager.shared.configure(
   workspace: workspace,
   processManager: processManager,
@@ -53,12 +63,6 @@ EventManager.shared.configure(
   spaceManager: spaceManager,
   displayManager: displayManager
 )
-
-if case .failure(let error) = processManager.start() {
-  fail("unable to start process manager - \(error)")
-}
-
-windowManager.start(processes: processManager.all())
 
 let daemon = Daemon(
   windowManager: windowManager,
