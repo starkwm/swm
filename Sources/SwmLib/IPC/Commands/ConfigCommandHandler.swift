@@ -37,8 +37,8 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("invalid config window-gap value: \(request.args[0])")
     }
 
-    for space in SpaceManager.all() {
-      spaceManager.setGap(gap, for: space.id)
+    spaceManager.updateAllSettings { settings in
+      settings.gap = max(0, gap)
     }
 
     return .success(id: request.id, message: "ok")
@@ -56,21 +56,17 @@ struct ConfigCommandHandler {
       )
     }
 
-    for space in SpaceManager.all() {
-      var padding = spaceManager.settings(for: space.id).padding
-
+    spaceManager.updateAllSettings { settings in
       switch side {
       case .top:
-        padding.top = value
+        settings.padding.top = max(0, value)
       case .bottom:
-        padding.bottom = value
+        settings.padding.bottom = max(0, value)
       case .left:
-        padding.left = value
+        settings.padding.left = max(0, value)
       case .right:
-        padding.right = value
+        settings.padding.right = max(0, value)
       }
-
-      spaceManager.setPadding(padding, for: space.id)
     }
 
     return .success(id: request.id, message: "ok")

@@ -4,6 +4,35 @@ import Testing
 
 @Suite("ConfigCommandHandler")
 struct ConfigCommandHandlerTests {
+  @Test("dispatch: window gap updates defaults and overrides")
+  func dispatchWindowGapUpdatesDefaultsAndOverrides() {
+    let manager = SpaceManager(activeSpaceID: nil)
+    manager.setGap(5, for: 1)
+    let handler = ConfigCommandHandler(spaceManager: manager)
+
+    let response = handler.dispatch(request(command: "window-gap", args: ["12"]))
+
+    #expect(response.ok)
+    #expect(manager.settings(for: 1).gap == 12)
+    #expect(manager.settings(for: 2).gap == 12)
+  }
+
+  @Test("dispatch: padding updates defaults and preserves other override sides")
+  func dispatchPaddingUpdatesDefaultsAndPreservesOtherOverrideSides() {
+    let manager = SpaceManager(activeSpaceID: nil)
+    manager.setPadding(
+      SpacePadding(top: 1, bottom: 2, left: 3, right: 4),
+      for: 1
+    )
+    let handler = ConfigCommandHandler(spaceManager: manager)
+
+    let response = handler.dispatch(request(command: "top-padding", args: ["10"]))
+
+    #expect(response.ok)
+    #expect(manager.settings(for: 1).padding == SpacePadding(top: 10, bottom: 2, left: 3, right: 4))
+    #expect(manager.settings(for: 2).padding == SpacePadding(top: 10, bottom: 0, left: 0, right: 0))
+  }
+
   @Test("dispatch: rejects malformed window-gap arguments")
   func dispatchRejectsMalformedWindowGapArguments() {
     let handler = ConfigCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))

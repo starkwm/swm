@@ -16,7 +16,8 @@ struct SpaceLifecycleHandler {
 
   /// Update active-space tracking, refresh windows, and replay deferred focus.
   private func spaceChanged(with space: Space) {
-    spaceManager.activeSpaceDidChange()
+    spaceManager.activeSpaceDidChange(to: space.id)
+    spaceManager.retainSettings(for: Set(SpaceManager.all().map(\.id)))
     windowManager.refreshWindows()
     replayLostFocusedEvent()
 

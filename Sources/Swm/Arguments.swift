@@ -4,6 +4,13 @@ import SwmLib
 
 /// Command-line arguments accepted by the swm executable.
 struct Arguments: ParsableArguments {
+  /// Conventional configuration path used when `--config` is omitted.
+  static let defaultConfigPath = FileManager
+    .default
+    .homeDirectoryForCurrentUser
+    .appending(path: ".config/swm/swmrc")
+    .path()
+
   /// Show command-line help.
   @Flag(name: .shortAndLong)
   var help = false
@@ -17,11 +24,7 @@ struct Arguments: ParsableArguments {
     name: .shortAndLong,
     help: ArgumentHelp("Path to the configuration file.", valueName: "path")
   )
-  var config: String = FileManager
-    .default
-    .homeDirectoryForCurrentUser
-    .appending(path: ".config/swm/swmrc")
-    .path()
+  var config: String?
 
   /// IPC message domain to send instead of starting the daemon.
   @Option(name: .shortAndLong)

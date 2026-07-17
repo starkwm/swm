@@ -5,6 +5,31 @@ import Testing
 
 @Suite("Config")
 struct ConfigTests {
+  @Test("execIfPresent: accepts missing file")
+  func execIfPresentAcceptsMissingFile() throws {
+    let directory = try TemporaryDirectory()
+    let path = directory.url.appending(path: "missing").path()
+
+    try Config.execIfPresent(path: path)
+  }
+
+  @Test("execIfPresent: runs existing file")
+  func execIfPresentRunsExistingFile() throws {
+    let directory = try TemporaryDirectory()
+    let script = try directory.makeScript(
+      name: "swmrc",
+      contents: "#!/bin/sh\nexit 0",
+      permissions: 0o700
+    )
+    var executedPath: String?
+
+    try Config.execIfPresent(path: script.path()) { path in
+      executedPath = path
+    }
+
+    #expect(executedPath == script.path())
+  }
+
   @Test("exec: rejects missing file")
   func execRejectsMissingFile() throws {
     let directory = try TemporaryDirectory()

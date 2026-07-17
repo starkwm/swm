@@ -93,7 +93,11 @@ let terminationSignalSources = [SIGINT, SIGTERM].map { signalNumber in
 DispatchQueue.main.async {
   DispatchQueue.global(qos: .userInitiated).async {
     do {
-      try Config.exec(path: arguments.config)
+      if let configPath = arguments.config {
+        try Config.exec(path: configPath)
+      } else {
+        try Config.execIfPresent(path: Arguments.defaultConfigPath)
+      }
     } catch {
       DispatchQueue.main.async {
         daemon.shutdown()

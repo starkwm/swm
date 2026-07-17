@@ -33,6 +33,7 @@ public final class SpaceManager {
 
   private let lock = NSLock()
   private var activeSpace: TrackedState<UInt64>
+  private var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
   /// Create a space manager seeded from the active space.
@@ -46,16 +47,36 @@ public final class SpaceManager {
   }
 
   /// Update tracked space state after the active space changes.
-  func activeSpaceDidChange() {
+  func activeSpaceDidChange(to spaceID: UInt64) {
     lock.withLock {
-      activeSpace.update(to: Self.active().id)
+      activeSpace.update(to: spaceID)
     }
   }
 
   /// Return layout settings for a space, falling back to defaults.
   func settings(for spaceID: UInt64) -> SpaceSettings {
     lock.withLock {
-      settingsBySpaceID[spaceID] ?? .defaults
+      settingsBySpaceID[spaceID] ?? defaultSettings
+    }
+  }
+
+  /// Apply a global configuration change to defaults and existing overrides.
+  func updateAllSettings(_ transform: (inout SpaceSettings) -> Void) {
+    lock.withLock {
+      transform(&defaultSettings)
+
+      for spaceID in settingsBySpaceID.keys {
+        guard var settings = settingsBySpaceID[spaceID] else { continue }
+        transform(&settings)
+        settingsBySpaceID[spaceID] = settings
+      }
+    }
+  }
+
+  /// Discard overrides for spaces that no longer exist.
+  func retainSettings(for spaceIDs: Set<UInt64>) {
+    lock.withLock {
+      settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
     }
   }
 
@@ -119,7 +140,7 @@ public final class SpaceManager {
     transform: (inout SpaceSettings) -> Void
   ) -> SpaceSettings {
     lock.withLock {
-      var settings = settingsBySpaceID[spaceID] ?? .defaults
+      var settings = settingsBySpaceID[spaceID] ?? defaultSettings
       transform(&settings)
       settingsBySpaceID[spaceID] = settings
       return settings

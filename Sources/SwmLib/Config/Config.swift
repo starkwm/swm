@@ -2,6 +2,20 @@ import Foundation
 
 /// Loads and runs the user's swm configuration file.
 public enum Config {
+  /// Execute the configuration file when it exists.
+  ///
+  /// A missing conventional configuration is ignored so the daemon can start
+  /// with built-in defaults. Explicit configuration paths should use `exec(path:)`.
+  public static func execIfPresent(path: String) throws {
+    try execIfPresent(path: path, runAndWait: runAndWait)
+  }
+
+  /// Execute an optional configuration file with an injected runner.
+  static func execIfPresent(path: String, runAndWait: (String) throws -> Void) throws {
+    guard FileManager.default.fileExists(atPath: path) else { return }
+    try exec(path: path, runAndWait: runAndWait)
+  }
+
   /// Validate, prepare, and execute the configuration file at the given path.
   ///
   /// If the file is not executable by its owner, this marks it executable before

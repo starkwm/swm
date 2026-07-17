@@ -4,6 +4,16 @@ import Testing
 
 @Suite("SpaceManager")
 struct SpaceManagerTests {
+  @Test("activeSpaceDidChange(to:): uses event space ID")
+  func activeSpaceDidChangeUsesEventSpaceID() {
+    let manager = SpaceManager(activeSpaceID: 1)
+
+    manager.activeSpaceDidChange(to: 2)
+
+    #expect(manager.currentActiveSpaceID == 2)
+    #expect(manager.lastActiveSpaceID == 1)
+  }
+
   @Test("settings(for:): returns defaults")
   func settingsReturnsDefaults() {
     let manager = SpaceManager()
@@ -23,6 +33,19 @@ struct SpaceManagerTests {
     manager.setGap(20, for: 2)
 
     #expect(manager.settings(for: 1).gap == 10)
+    #expect(manager.settings(for: 2).gap == 20)
+  }
+
+  @Test("retainSettings(for:): removes stale overrides")
+  func retainSettingsRemovesStaleOverrides() {
+    let manager = SpaceManager()
+    manager.updateAllSettings { $0.gap = 5 }
+    manager.setGap(10, for: 1)
+    manager.setGap(20, for: 2)
+
+    manager.retainSettings(for: [2])
+
+    #expect(manager.settings(for: 1).gap == 5)
     #expect(manager.settings(for: 2).gap == 20)
   }
 

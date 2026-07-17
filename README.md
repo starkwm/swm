@@ -114,7 +114,7 @@ Signal actions run asynchronously through `/usr/bin/env sh -c`. Event values are
 
 ## Configuration
 
-`swm` is configured by a single file, `~/.config/swm/swmrc`. This file should be an executable shell script. You can call the `swm` binary to configure options.
+Configuration is optional. Without a configuration file, `swm` starts with built-in defaults. If `~/.config/swm/swmrc` exists, `swm` executes it at startup. Use `--config <path>` to execute a different file; an explicitly selected file must exist. Configuration files should be executable shell scripts and can call the `swm` binary to configure options.
 
 **Window Gaps**
 
