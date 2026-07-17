@@ -2,6 +2,19 @@
 
 import PackageDescription
 
+let releaseDebugSettings: [SwiftSetting] = [
+  .unsafeFlags(["-g"], .when(configuration: .release))
+]
+
+let privateFrameworkLinkerSettings: [LinkerSetting] = [
+  .unsafeFlags([
+    "-Xlinker", "-F",
+    "-Xlinker", "/System/Library/PrivateFrameworks",
+    "-Xlinker", "-framework",
+    "-Xlinker", "SkyLight",
+  ])
+]
+
 let package = Package(
   name: "swm",
   platforms: [
@@ -22,17 +35,7 @@ let package = Package(
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
       exclude: ["Version.swift.tmpl"],
-      swiftSettings: [
-        .unsafeFlags(["-g"], .when(configuration: .release))
-      ],
-      linkerSettings: [
-        .unsafeFlags([
-          "-Xlinker", "-F",
-          "-Xlinker", "/System/Library/PrivateFrameworks",
-          "-Xlinker", "-framework",
-          "-Xlinker", "SkyLight",
-        ])
-      ]
+      swiftSettings: releaseDebugSettings
     ),
     .target(
       name: "SwmLib",
@@ -40,17 +43,8 @@ let package = Package(
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
         .product(name: "Socket", package: "BlueSocket"),
       ],
-      swiftSettings: [
-        .unsafeFlags(["-g"], .when(configuration: .release))
-      ],
-      linkerSettings: [
-        .unsafeFlags([
-          "-Xlinker", "-F",
-          "-Xlinker", "/System/Library/PrivateFrameworks",
-          "-Xlinker", "-framework",
-          "-Xlinker", "SkyLight",
-        ])
-      ]
+      swiftSettings: releaseDebugSettings,
+      linkerSettings: privateFrameworkLinkerSettings
     ),
     .testTarget(
       name: "SwmLibTests",

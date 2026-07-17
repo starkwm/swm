@@ -1,9 +1,15 @@
-import AppKit
 import ArgumentParser
+import Foundation
 import SwmLib
 
 /// Command-line arguments accepted by the swm executable.
-struct Arguments: ParsableArguments {
+struct Arguments: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    commandName: "swm",
+    abstract: "Stark Window Manager for macOS.",
+    helpNames: []
+  )
+
   /// Conventional configuration path used when `--config` is omitted.
   static let defaultConfigPath = FileManager
     .default
@@ -12,7 +18,7 @@ struct Arguments: ParsableArguments {
     .path()
 
   /// Show command-line help.
-  @Flag(name: .shortAndLong)
+  @Flag(name: .shortAndLong, help: "Show help information.")
   var help = false
 
   /// Show version information.
@@ -27,7 +33,7 @@ struct Arguments: ParsableArguments {
   var config: String?
 
   /// IPC message domain to send instead of starting the daemon.
-  @Option(name: .shortAndLong)
+  @Option(name: .shortAndLong, help: "Send a command to the daemon instead of starting it.")
   var message: MessageDomain?
 
   /// Minimum runtime log level.
@@ -37,4 +43,19 @@ struct Arguments: ParsableArguments {
   /// Arguments passed through to IPC command handlers.
   @Argument(parsing: .captureForPassthrough)
   var args: [String] = []
+
+  /// Execute the parsed daemon or client invocation.
+  mutating func run() {
+    if help {
+      print(Self.helpMessage())
+      return
+    }
+
+    let arguments = self
+    // `ParsableCommand.main()` invokes the root command synchronously from the
+    // process main entrypoint, where AppKit runtime setup is permitted.
+    MainActor.assumeIsolated {
+      runSwm(with: arguments)
+    }
+  }
 }
