@@ -76,4 +76,24 @@ struct IPCRequestTests {
       Issue.record("Unexpected error: \(error)")
     }
   }
+
+  @Test("validateVersion: rejects unsupported versions")
+  func validateVersionRejectsUnsupportedVersions() {
+    let request = IPCRequest(
+      version: IPCRequest.currentVersion + 1,
+      domain: .window,
+      command: "--focus",
+      args: []
+    )
+
+    do {
+      try request.validateVersion()
+      Issue.record("Expected unsupported version error")
+    } catch let error as IPCCommandError {
+      #expect(error.errorCode == .invalidRequest)
+      #expect(error.message == "unsupported IPC request version: 2; expected 1")
+    } catch {
+      Issue.record("Unexpected error: \(error)")
+    }
+  }
 }

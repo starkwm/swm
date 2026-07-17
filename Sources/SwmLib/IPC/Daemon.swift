@@ -122,6 +122,13 @@ public class Daemon {
         }
 
         let request = try IPCMessage.decode(IPCRequest.self, from: data)
+        do {
+          try request.validateVersion()
+        } catch let error as IPCCommandError {
+          try socket.write(from: IPCMessage.encode(error.response(id: request.id)))
+          return
+        }
+
         log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
 
         let response = DispatchQueue.main.sync {

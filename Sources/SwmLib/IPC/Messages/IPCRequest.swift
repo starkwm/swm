@@ -53,4 +53,13 @@ struct IPCRequest: Codable, Equatable {
     self.command = command
     self.args = args
   }
+
+  /// Reject requests encoded for an unsupported IPC schema version.
+  func validateVersion() throws {
+    guard version == Self.currentVersion else {
+      throw IPCCommandError.invalidRequest(
+        "unsupported IPC request version: \(version); expected \(Self.currentVersion)"
+      )
+    }
+  }
 }

@@ -149,12 +149,12 @@ struct WindowCommandHandler {
       targetFrame: targetScreen.axVisibleFrame
     ).targetWindowFrame()
 
-    let resized = targetFrame.size == frame.size || window.resize(to: targetFrame.size)
-    let moved = window.move(to: targetFrame.origin)
-
-    guard resized, moved else {
-      throw IPCCommandError.internalError("could not move window to display: \(window.id)")
-    }
+    try applyFrame(
+      targetFrame,
+      currentFrame: frame,
+      window: window,
+      failureMessage: "could not move window to display: \(window.id)"
+    )
 
     return .success(id: request.id, message: "ok")
   }
@@ -185,11 +185,33 @@ struct WindowCommandHandler {
     let bounds = screen.axVisibleFrame
     let targetFrame = grid.frame(in: bounds, settings: settings)
 
-    guard window.move(to: targetFrame.origin), window.resize(to: targetFrame.size) else {
-      throw IPCCommandError.internalError("could not grid window: \(window.id)")
-    }
+    try applyFrame(
+      targetFrame,
+      currentFrame: frame,
+      window: window,
+      failureMessage: "could not grid window: \(window.id)"
+    )
 
     return .success(id: request.id, message: "ok")
+  }
+
+  /// Apply a multi-part frame change and report unrecoverable partial state.
+  private func applyFrame(
+    _ targetFrame: CGRect,
+    currentFrame: CGRect,
+    window: Window,
+    failureMessage: String
+  ) throws {
+    switch window.setFrame(targetFrame, from: currentFrame) {
+    case .success:
+      return
+    case .resizeFailed, .moveFailed:
+      throw IPCCommandError.internalError(failureMessage)
+    case .moveFailedAndRollbackFailed:
+      throw IPCCommandError.internalError(
+        "\(failureMessage); resize rollback failed and the window may be partially updated"
+      )
+    }
   }
 
   /// Resolve a window selector to a concrete window.

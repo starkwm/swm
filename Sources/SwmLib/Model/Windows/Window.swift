@@ -202,6 +202,16 @@ final class Window: NSObject {
     return AccessibilityClient.shared.frame(for: element)
   }
 
+  /// Apply a target frame, restoring the original size when moving fails.
+  func setFrame(_ targetFrame: CGRect, from currentFrame: CGRect) -> WindowFrameMutationResult {
+    WindowFrameMutation.apply(
+      from: currentFrame,
+      to: targetFrame,
+      resize: { resize(to: $0) },
+      move: { move(to: $0) }
+    )
+  }
+
   /// Register window-specific accessibility notifications.
   func observe() -> Bool {
     guard let application else { return false }
