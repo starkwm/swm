@@ -7,8 +7,8 @@ on:
   pull_request:
 
 jobs:
-  lint-and-test:
-    name: Lint and test
+  lint-test-and-smoke:
+    name: Lint, test, and smoke
     runs-on: macos-26
     timeout-minutes: 20
 
@@ -24,3 +24,6 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Release smoke test
+        run: make smoke

@@ -16,6 +16,9 @@ lint:
 test:
 	@swift test --parallel --disable-xctest
 
+smoke: release
+	@sh scripts/smoke-test .build/release/swm
+
 clean:
 	@swift package clean
 
@@ -23,4 +26,4 @@ bump_version:
 	@sed 's/__VERSION__/$(NEW_VERSION)/g' $(VERSION_TMPL) > $(VERSION_FILE)
 
 .DEFAULT_GOAL := build
-.PHONY: build release format lint test clean bump_version
+.PHONY: build release format lint test smoke clean bump_version
