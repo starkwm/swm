@@ -20,6 +20,7 @@ public class Daemon {
   private var listen: Socket?
 
   /// Create a daemon using the runtime managers that handle command side effects.
+  @MainActor
   public convenience init(
     windowManager: WindowManager,
     spaceManager: SpaceManager,
@@ -34,6 +35,7 @@ public class Daemon {
   }
 
   /// Create a daemon with an explicit command dispatcher.
+  @MainActor
   init(dispatcher: IPCCommandDispatcher) {
     self.dispatcher = dispatcher
   }
@@ -122,7 +124,9 @@ public class Daemon {
         let request = try IPCMessage.decode(IPCRequest.self, from: data)
         log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
 
-        let response = self.dispatcher.dispatch(request)
+        let response = DispatchQueue.main.sync {
+          self.dispatcher.dispatch(request)
+        }
         try socket.write(from: IPCMessage.encode(response))
       } catch {
         log("could not receive data from socket: \(error)", level: .error)

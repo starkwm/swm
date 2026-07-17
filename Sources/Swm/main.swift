@@ -74,18 +74,39 @@ runOrFail("unable to run messaging daemon") {
   try daemon.run()
 }
 
-runOrFail("could not execute the configuration file") {
-  try Config.exec(path: arguments.config)
+let terminationSignalSources = [SIGINT, SIGTERM].map { signalNumber in
+  signal(signalNumber, SIG_IGN)
+
+  let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .main)
+  source.setEventHandler {
+    let signalName = signalNumber == SIGINT ? "SIGINT" : "SIGTERM"
+    fputs("received \(signalName) - terminating...\n", stderr)
+    daemon.shutdown()
+    exit(EXIT_SUCCESS)
+  }
+  source.resume()
+  return source
 }
 
-signal(SIGINT) { _ in
-  fputs("received SIGINT - terminating...\n", stderr)
-  daemon.shutdown()
-  exit(EXIT_SUCCESS)
+// Wait until the AppKit event loop is processing main-actor work before running
+// configuration commands, which call back into this daemon over IPC.
+DispatchQueue.main.async {
+  DispatchQueue.global(qos: .userInitiated).async {
+    do {
+      try Config.exec(path: arguments.config)
+    } catch {
+      DispatchQueue.main.async {
+        daemon.shutdown()
+        fail("could not execute the configuration file - \(error)")
+      }
+    }
+  }
 }
 
 // Run the AppKit event loop used by accessibility and workspace callbacks.
-NSApplication.shared.run()
+withExtendedLifetime(terminationSignalSources) {
+  NSApplication.shared.run()
+}
 
 /// Print an error message and terminate with failure.
 func fail(_ message: String) -> Never {

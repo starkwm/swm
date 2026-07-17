@@ -1,4 +1,5 @@
 /// Routes IPC requests to the command handler for their domain.
+@MainActor
 struct IPCCommandDispatcher {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager

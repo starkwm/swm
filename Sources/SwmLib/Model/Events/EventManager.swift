@@ -5,12 +5,13 @@ public final class EventManager {
   /// Shared event manager used by model callbacks.
   public static let shared = EventManager()
 
-  private let queue = OperationQueue.main
+  @MainActor
   private var configuration: Configuration?
 
   private init() {}
 
   /// Configure the managers used to handle runtime events.
+  @MainActor
   public func configure(
     workspace: Workspace,
     processManager: ProcessManager,
@@ -29,12 +30,13 @@ public final class EventManager {
 
   /// Enqueue a runtime event for main-thread handling.
   func post(_ event: RuntimeEvent) {
-    queue.addOperation {
+    Task { @MainActor in
       self.handle(event)
     }
   }
 
   /// Dispatch an event to its domain-specific lifecycle handler.
+  @MainActor
   private func handle(_ event: RuntimeEvent) {
     guard let configuration else {
       preconditionFailure("EventManager must be configured before handling events")
@@ -78,6 +80,7 @@ public final class EventManager {
   }
 
   /// Build a signal payload from the runtime event and current state.
+  @MainActor
   private func signalPayload(
     _ event: RuntimeEvent,
     configuration: Configuration,
@@ -181,6 +184,7 @@ public final class EventManager {
   }
 
   /// Build a window signal payload for the current known state.
+  @MainActor
   private func windowPayload(
     event: SignalEvent,
     windowID: UInt32,
@@ -196,6 +200,7 @@ public final class EventManager {
   }
 
   /// Build a window signal payload for an event that still has a window reference.
+  @MainActor
   private func windowPayload(
     event: SignalEvent,
     window: Window,
@@ -210,6 +215,7 @@ public final class EventManager {
   }
 
   /// Build a display signal payload for CoreGraphics reconfiguration callbacks.
+  @MainActor
   private func displayPayload(
     event: SignalEvent,
     displayID: UInt32,
