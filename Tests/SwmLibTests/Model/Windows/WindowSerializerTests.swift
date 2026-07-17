@@ -49,8 +49,8 @@ struct WindowSerializerTests {
     #expect(object["is-minimized"] as? Bool == false)
   }
 
-  @Test("info(for:): returns metadata for matching window id")
-  func infoForReturnsMetadataForMatchingWindowID() throws {
+  @Test("keyedByWindowID: indexes metadata by window id")
+  func keyedByWindowIDIndexesMetadataByWindowID() throws {
     let metadata: [[String: Any]] = [
       [
         kCGWindowNumber as String: NSNumber(value: UInt32(1)),
@@ -62,9 +62,10 @@ struct WindowSerializerTests {
       ],
     ]
 
-    let info = try #require(metadata.info(for: 42))
+    let metadataByID = metadata.keyedByWindowID()
+    let info = try #require(metadataByID[42])
 
     #expect(info[kCGWindowOwnerName as String] as? String == "Safari")
-    #expect(metadata.info(for: 99) == nil)
+    #expect(metadataByID[99] == nil)
   }
 }

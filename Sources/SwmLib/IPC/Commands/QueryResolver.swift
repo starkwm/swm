@@ -1,34 +1,50 @@
 import CoreGraphics
 
 /// Resolves query selections against serialized display, space, and window state.
-struct QueryResolver {
+final class QueryResolver {
   /// Displays available to query.
-  let displays: [DisplaySerializer]
+  private(set) lazy var displays = displayProvider()
 
   /// Spaces available to query.
-  let spaces: [SpaceSerializer]
+  private(set) lazy var spaces = spaceProvider()
 
   /// Windows available to query.
-  let windows: [WindowSerializer]
+  private(set) lazy var windows = windowProvider()
+
+  private let displayProvider: () -> [DisplaySerializer]
+  private let spaceProvider: () -> [SpaceSerializer]
+  private let windowProvider: () -> [WindowSerializer]
 
   /// Snapshot the current display, space, and window state for querying.
   init(windowManager: WindowManager) {
-    self.init(
-      displays: DisplaySerializer.all(),
-      spaces: SpaceSerializer.all(windowManager: windowManager),
-      windows: WindowSerializer.all(windowManager: windowManager)
-    )
+    let snapshot = QuerySnapshot(windowManager: windowManager)
+    displayProvider = { DisplaySerializer.all(snapshot: snapshot) }
+    spaceProvider = { SpaceSerializer.all(snapshot: snapshot) }
+    windowProvider = { WindowSerializer.all(snapshot: snapshot) }
+  }
+
+  /// Create a resolver from lazy state providers.
+  init(
+    displayProvider: @escaping () -> [DisplaySerializer],
+    spaceProvider: @escaping () -> [SpaceSerializer],
+    windowProvider: @escaping () -> [WindowSerializer]
+  ) {
+    self.displayProvider = displayProvider
+    self.spaceProvider = spaceProvider
+    self.windowProvider = windowProvider
   }
 
   /// Create a resolver from pre-serialized state.
-  init(
+  convenience init(
     displays: [DisplaySerializer],
     spaces: [SpaceSerializer],
     windows: [WindowSerializer]
   ) {
-    self.displays = displays
-    self.spaces = spaces
-    self.windows = windows
+    self.init(
+      displayProvider: { displays },
+      spaceProvider: { spaces },
+      windowProvider: { windows }
+    )
   }
 
   /// Resolve displays matching a query selection.

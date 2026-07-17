@@ -100,6 +100,8 @@ Use signal commands to run shell actions after observed runtime events.
 Signal actions run asynchronously through `/usr/bin/env sh -c`. Event values are exposed as
 `SWM_*` environment variables, such as `SWM_PROCESS_ID`, `SWM_WINDOW_ID`, `SWM_SPACE_ID`,
 `SWM_RECENT_SPACE_ID`, `SWM_DISPLAY_ID`, and `SWM_RECENT_DISPLAY_ID`.
+Up to four actions run concurrently and 128 may wait; additional actions are dropped with a
+warning instead of creating unbounded processes.
 
 **Keyboard Shortcuts**
 

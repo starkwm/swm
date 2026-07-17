@@ -45,6 +45,7 @@ public final class WindowManager {
   private var windowsByID = [CGWindowID: Window]()
   private var lostFrontSwitchedProcessIDs = Set<pid_t>()
   private var lostFocusedWindowIDs = Set<CGWindowID>()
+  private var remoteTokenCursors = [pid_t: WindowDiscoveryCursor]()
 
   /// Create a window manager for a workspace.
   public init(workspace: Workspace) {
@@ -160,6 +161,7 @@ public final class WindowManager {
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
+    remoteTokenCursors.removeValue(forKey: application.processID)
 
     guard applicationsByPID.removeValue(forKey: application.processID) != nil else { return }
 
@@ -226,18 +228,15 @@ public final class WindowManager {
   ) -> Bool {
     let globalWindowIDs = application.windowIdentifiers()
     let accessibilityElements = application.windowElements()
-    let resolvedWindowCount = registerAccessibleWindows(
+    registerAccessibleWindows(
       for: application,
       elements: accessibilityElements
     )
 
-    if globalWindowIDs.count == resolvedWindowCount {
-      return finishResolution(for: application, mode: mode)
-    }
-
     var unresolvedWindowIDs = globalWindowIDs.filter { windowsByID[$0] == nil }
 
     guard !unresolvedWindowIDs.isEmpty else {
+      remoteTokenCursors.removeValue(forKey: application.processID)
       return finishResolution(for: application, mode: mode)
     }
 
@@ -280,22 +279,16 @@ public final class WindowManager {
   private func registerAccessibleWindows(
     for application: Application,
     elements: [AXUIElement]
-  ) -> Int {
-    var resolvedWindowCount = 0
-
+  ) {
     for element in elements {
       guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else {
         continue
       }
 
-      resolvedWindowCount += 1
-
       if windowsByID[windowID] == nil {
         _ = addWindow(for: application, with: element)
       }
     }
-
-    return resolvedWindowCount
   }
 
   /// Finish a refresh attempt when all windows are resolved.
@@ -316,7 +309,16 @@ public final class WindowManager {
       level: .info
     )
 
-    for id in 0...0x7fff {
+    var cursor = remoteTokenCursors[application.processID] ?? WindowDiscoveryCursor()
+    let tokenIDs = cursor.nextBatch()
+    remoteTokenCursors[application.processID] = cursor
+
+    log(
+      "scanning remote window tokens \(tokenIDs.lowerBound)...\(tokenIDs.upperBound) for \(application)",
+      level: .info
+    )
+
+    for id in tokenIDs {
       guard !unresolvedWindowIDs.isEmpty else { break }
 
       let token = createRemoteToken(for: application.processID, with: id)
@@ -329,11 +331,15 @@ public final class WindowManager {
         continue
       }
 
-      if let index = unresolvedWindowIDs.firstIndex(of: windowID) {
-        unresolvedWindowIDs.remove(at: index)
-        _ = addWindow(for: application, with: element)
-        log("resolved window \(windowID) for \(application)", level: .info)
-      }
+      guard let index = unresolvedWindowIDs.firstIndex(of: windowID) else { continue }
+      guard addWindow(for: application, with: element) != nil else { continue }
+
+      unresolvedWindowIDs.remove(at: index)
+      log("resolved window \(windowID) for \(application)", level: .info)
+    }
+
+    if unresolvedWindowIDs.isEmpty {
+      remoteTokenCursors.removeValue(forKey: application.processID)
     }
   }
 
@@ -380,4 +386,20 @@ extension WindowManager: @unchecked Sendable {}
 private enum WindowDiscoveryMode {
   case initialDiscovery
   case refreshAttempt
+}
+
+/// Cursor for bounded passes over private accessibility remote-token IDs.
+struct WindowDiscoveryCursor: Equatable {
+  static let batchSize = 4_096
+  static let maximumTokenID = 0x7fff
+
+  private(set) var nextTokenID = 0
+
+  /// Return the next bounded token range and advance, wrapping after the maximum.
+  mutating func nextBatch() -> ClosedRange<Int> {
+    let start = nextTokenID
+    let end = min(start + Self.batchSize - 1, Self.maximumTokenID)
+    nextTokenID = end == Self.maximumTokenID ? 0 : end + 1
+    return start...end
+  }
 }

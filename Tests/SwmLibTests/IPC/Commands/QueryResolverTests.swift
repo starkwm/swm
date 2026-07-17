@@ -4,6 +4,29 @@ import Testing
 
 @Suite("QueryResolver")
 struct QueryResolverTests {
+  @Test("windows(for:): loads only required snapshots")
+  func windowsForLoadsOnlyRequiredSnapshots() throws {
+    var loaded = [String]()
+    let resolver = QueryResolver(
+      displayProvider: {
+        loaded.append("displays")
+        return []
+      },
+      spaceProvider: {
+        loaded.append("spaces")
+        return []
+      },
+      windowProvider: {
+        loaded.append("windows")
+        return []
+      }
+    )
+
+    _ = try many(resolver.windows(for: .none))
+
+    #expect(loaded == ["windows"])
+  }
+
   @Test("displays(for:): resolves display selectors")
   func displaysForResolvesDisplaySelectors() throws {
     let resolver = queryResolver()

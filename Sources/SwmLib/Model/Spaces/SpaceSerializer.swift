@@ -15,30 +15,36 @@ struct SpaceSerializer: Encodable, Equatable {
   }
 
   /// Snapshot all spaces, including their display and window relationships.
-  static func all(windowManager: WindowManager) -> [SpaceSerializer] {
-    let spaces = SpaceManager.all()
-    let activeSpaceID = SpaceManager.active().id
-    let displaySpaces = WindowServerClient.shared.displaySpaces()
-    let arrangedScreens = NSScreen.arrangedScreens
-    let windows = windowManager.allWindows()
+  static func all(snapshot: QuerySnapshot) -> [SpaceSerializer] {
+    var screenIDsBySpaceID = [UInt64: [String]]()
+    var windowIDsBySpaceID = [UInt64: [CGWindowID]]()
 
-    return spaces.enumerated().map { index, space in
-      let screenIDs =
-        displaySpaces
-        .filter { $0.spaces.contains(space.id) }
-        .map(\.id)
+    for display in snapshot.displaySpaces {
+      for spaceID in display.spaces {
+        screenIDsBySpaceID[spaceID, default: []].append(display.id)
+      }
+    }
+
+    for window in snapshot.windows {
+      for spaceID in snapshot.spaceIDsByWindowID[window.id] ?? [] {
+        windowIDsBySpaceID[spaceID, default: []].append(window.id)
+      }
+    }
+
+    return snapshot.spaces.enumerated().map { index, space in
+      let screenIDs = screenIDsBySpaceID[space.id] ?? []
       let normalizedScreenIDSet = Set(screenIDs.map { $0.lowercased() })
-      let directlyResolvedScreens = arrangedScreens.filter {
+      let directlyResolvedScreens = snapshot.arrangedScreens.filter {
         normalizedScreenIDSet.contains($0.uuid.lowercased())
       }
       let hasSharedDisplaySpaces = normalizedScreenIDSet.contains("main")
       let resolvedScreens =
         hasSharedDisplaySpaces
-        ? arrangedScreens
+        ? snapshot.arrangedScreens
         : directlyResolvedScreens
       let visibleScreenIDs =
         hasSharedDisplaySpaces
-        ? Set(arrangedScreens.map(\.uuid))
+        ? Set(snapshot.arrangedScreens.map(\.uuid))
         : Set(screenIDs)
 
       return SpaceSerializer(
@@ -46,16 +52,10 @@ struct SpaceSerializer: Encodable, Equatable {
         index: index,
         type: space.type.description,
         displays: resolvedScreens.compactMap(\.id),
-        windows:
-          windows
-          .filter { window in
-            WindowServerClient.shared.spaceIDs(containing: window.id)
-              .contains(space.id)
-          }
-          .map(\.id),
-        hasFocus: space.id == activeSpaceID,
+        windows: windowIDsBySpaceID[space.id] ?? [],
+        hasFocus: space.id == snapshot.activeSpaceID,
         isVisible: visibleScreenIDs.contains { screenID in
-          WindowServerClient.shared.currentSpace(for: screenID) == space.id
+          snapshot.currentSpaceByScreenID[screenID] == space.id
         },
         isNativeFullscreen: space.type == .fullscreen
       )

@@ -24,18 +24,18 @@ struct WindowSerializer: Encodable, Equatable {
   }
 
   /// Snapshot all manageable windows.
-  static func all(windowManager: WindowManager) -> [WindowSerializer] {
-    let windowInfo =
-      CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
-    let screens = NSScreen.screens
-    let spaces = SpaceManager.all()
+  static func all(snapshot: QuerySnapshot) -> [WindowSerializer] {
+    snapshot.windows.map { window in
+      let spaceIDs = snapshot.spaceIDsByWindowID[window.id] ?? []
+      let spaceIndex = spaceIDs.lazy.compactMap { snapshot.spaceIndexByID[$0] }.first
 
-    return windowManager.allWindows().map { window in
-      WindowSerializer(
+      return WindowSerializer(
         window: window,
-        info: windowInfo.info(for: window.id),
-        screens: screens,
-        spaceIndex: spaces.spaceIndex(containing: window.id)
+        info: snapshot.windowInfoByID[window.id],
+        screens: snapshot.screens,
+        spaceIndex: spaceIndex,
+        knownSpaceIDs: spaceIDs,
+        nativeFullscreen: spaceIDs.first.map(snapshot.nativeFullscreenSpaceIDs.contains)
       )
     }
   }
@@ -135,11 +135,13 @@ struct WindowSerializer: Encodable, Equatable {
     window: Window,
     info: [String: Any]?,
     screens: [NSScreen] = NSScreen.screens,
-    spaceIndex: Int? = nil
+    spaceIndex: Int? = nil,
+    knownSpaceIDs: [UInt64]? = nil,
+    nativeFullscreen: Bool? = nil
   ) {
     let element = window.element
     let frame = element.flatMap { AccessibilityClient.shared.frame(for: $0) }
-    let spaceIDs = WindowServerClient.shared.spaceIDs(containing: window.id)
+    let spaceIDs = knownSpaceIDs ?? WindowServerClient.shared.spaceIDs(containing: window.id)
 
     id = window.id
     pid =
@@ -183,7 +185,7 @@ struct WindowSerializer: Encodable, Equatable {
     hasFocus = element.map { AccessibilityClient.shared.isMainWindow($0) }
     hasAXReference = element != nil
     isNativeFullscreen =
-      spaceIDs.first.map {
+      nativeFullscreen ?? spaceIDs.first.map {
         WindowServerClient.shared.spaceType(for: $0) == .fullscreen
       } ?? false
     isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
@@ -221,22 +223,14 @@ struct WindowSerializer: Encodable, Equatable {
 
 /// Helpers for looking up raw Core Graphics window metadata.
 extension [[String: Any]] {
-  /// Return metadata for a specific Core Graphics window ID.
-  func info(for windowID: CGWindowID) -> [String: Any]? {
-    first { info in
-      (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value == windowID
+  /// Index Core Graphics metadata by window ID for constant-time lookup.
+  func keyedByWindowID() -> [CGWindowID: [String: Any]] {
+    reduce(into: [:]) { result, info in
+      guard let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value else {
+        return
+      }
+
+      result[windowID] = info
     }
-  }
-}
-
-/// Helpers for relating spaces to windows.
-extension [Space] {
-  /// Return the zero-based index of the first space containing a window.
-  func spaceIndex(containing windowID: CGWindowID) -> Int? {
-    let spaceIDs = WindowServerClient.shared.spaceIDs(containing: windowID)
-
-    guard let spaceID = spaceIDs.first else { return nil }
-
-    return firstIndex { $0.id == spaceID }
   }
 }

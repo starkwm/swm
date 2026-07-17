@@ -6,10 +6,13 @@ public final class SignalManager {
   public static let shared = SignalManager()
 
   private let lock = NSLock()
+  private let executionQueue: SignalExecutionQueue
   private var signals = [Signal]()
 
   /// Create an empty signal manager.
-  init() {}
+  init(executionQueue: SignalExecutionQueue = SignalExecutionQueue()) {
+    self.executionQueue = executionQueue
+  }
 
   /// Register a signal, preserving insertion order.
   func add(_ signal: Signal) throws {
@@ -58,7 +61,10 @@ public final class SignalManager {
     }
 
     for signal in matches {
-      ShellSignalExecutor.execute(action: signal.action, environment: payload.environment)
+      guard executionQueue.enqueue(action: signal.action, environment: payload.environment) else {
+        log("signal action queue is full; dropping action", level: .warn)
+        continue
+      }
     }
   }
 }

@@ -3,7 +3,11 @@ import Foundation
 /// Default asynchronous `/usr/bin/env sh -c` signal executor.
 enum ShellSignalExecutor {
   /// Execute an action with signal environment variables.
-  static func execute(action: String, environment: [String: String]) {
+  static func execute(
+    action: String,
+    environment: [String: String],
+    completion: @escaping @Sendable () -> Void
+  ) {
     let process = Foundation.Process()
     process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
     process.arguments = ["sh", "-c", action]
@@ -15,6 +19,8 @@ enum ShellSignalExecutor {
     process.environment = mergedEnvironment
 
     process.terminationHandler = { process in
+      defer { completion() }
+
       guard process.terminationStatus == 0 else {
         log(
           "signal action exited with status \(process.terminationStatus): \(action)",
@@ -28,6 +34,7 @@ enum ShellSignalExecutor {
       try process.run()
     } catch {
       log("could not execute signal action: \(error)", level: .warn)
+      completion()
     }
   }
 }

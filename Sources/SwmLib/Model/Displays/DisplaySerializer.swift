@@ -13,16 +13,15 @@ struct DisplaySerializer: Encodable, Equatable {
   }
 
   /// Snapshot all displays and their associated space indexes.
-  static func all() -> [DisplaySerializer] {
+  static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
     let displaySpaces = Dictionary(
-      uniqueKeysWithValues: WindowServerClient.shared.displaySpaces().map { ($0.id, $0.spaces) }
+      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.id, $0.spaces) }
     )
-    let indexedSpaces = SpaceManager.all()
+    let indexedSpaces = snapshot.spaces
       .enumerated()
       .map { (index: $0.offset, id: $0.element.id) }
-    let focusedSpace = SpaceManager.active().id
 
-    return NSScreen.arrangedScreens.enumerated().compactMap { index, screen in
+    return snapshot.arrangedScreens.enumerated().compactMap { index, screen in
       guard let spaces = displaySpaces[screen.uuid] else {
         return nil
       }
@@ -33,7 +32,7 @@ struct DisplaySerializer: Encodable, Equatable {
         index: index + 1,
         frame: FrameSerializer(screen.frame),
         spaces: indexedSpaces.compactMap { spaces.contains($0.id) ? $0.index : nil },
-        hasFocus: WindowServerClient.shared.currentSpace(for: screen.uuid) == focusedSpace
+        hasFocus: snapshot.currentSpaceByScreenID[screen.uuid] == snapshot.activeSpaceID
       )
     }
   }
