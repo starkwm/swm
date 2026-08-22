@@ -7,6 +7,9 @@ struct SpaceLifecycleHandler {
   /// Window manager refreshed after space changes.
   let windowManager: WindowManager
 
+  /// Tiling coordinator refreshed after Space topology changes.
+  let tilingManager: TilingManager
+
   /// Handle one space lifecycle event.
   func handle(_ event: SpaceEvent) {
     switch event {
@@ -21,6 +24,7 @@ struct SpaceLifecycleHandler {
     spaceManager.retainSettings(for: Set(SpaceManager.all().map(\.id)))
     windowManager.refreshWindows()
     replayLostFocusedEvent()
+    tilingManager.reconcileAndReflowVisibleSpaces()
 
     log(
       "space changed \(space) current: \(spaceManager.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaceManager.lastActiveSpaceID.map(String.init) ?? "nil")"

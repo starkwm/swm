@@ -2,7 +2,7 @@ import CoreGraphics
 
 /// Owns automatic-tiling state and reconciles it from coherent topology snapshots.
 @MainActor
-final class TilingManager {
+public final class TilingManager {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
 
   private let layoutEngine = MasterStackLayoutEngine()
@@ -14,7 +14,7 @@ final class TilingManager {
   private var tiledSpaceIDByWindowID = [CGWindowID: UInt64]()
 
   /// Create a manager backed by the live runtime models.
-  convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
+  public convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
     self.init(
       snapshot: {
         let windows = windowManager.allWindows().map { $0.tilingSnapshot() }
@@ -43,7 +43,7 @@ final class TilingManager {
   }
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
-  func start() {
+  public func start() {
     reconcile()
     reflowVisibleSpaces()
   }

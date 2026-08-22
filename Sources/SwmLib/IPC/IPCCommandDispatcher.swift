@@ -3,11 +3,17 @@
 struct IPCCommandDispatcher {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
+  private let tilingManager: TilingManager
 
   /// Create a dispatcher backed by explicit window and space managers.
-  init(windowManager: WindowManager, spaceManager: SpaceManager) {
+  init(
+    windowManager: WindowManager,
+    spaceManager: SpaceManager,
+    tilingManager: TilingManager
+  ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
+    self.tilingManager = tilingManager
   }
 
   /// Dispatch a request to its domain-specific command handler.
@@ -17,10 +23,16 @@ struct IPCCommandDispatcher {
       return QueryCommandHandler(windowManager: windowManager).dispatch(request)
 
     case .space:
-      return SpaceCommandHandler(spaceManager: spaceManager).dispatch(request)
+      return SpaceCommandHandler(
+        spaceManager: spaceManager,
+        tilingManager: tilingManager
+      ).dispatch(request)
 
     case .config:
-      return ConfigCommandHandler(spaceManager: spaceManager).dispatch(request)
+      return ConfigCommandHandler(
+        spaceManager: spaceManager,
+        tilingManager: tilingManager
+      ).dispatch(request)
 
     case .display:
       return DisplayCommandHandler().dispatch(request)

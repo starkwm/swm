@@ -2,10 +2,12 @@
 @MainActor
 struct ConfigCommandHandler {
   private let spaceManager: SpaceManager
+  private let tilingManager: TilingManager
 
-  /// Create a config command handler backed by a space manager.
-  init(spaceManager: SpaceManager) {
+  /// Create a config command handler backed by space and tiling managers.
+  init(spaceManager: SpaceManager, tilingManager: TilingManager) {
     self.spaceManager = spaceManager
+    self.tilingManager = tilingManager
   }
 
   /// Dispatch a config IPC request to the matching setting update.
@@ -41,6 +43,7 @@ struct ConfigCommandHandler {
     spaceManager.updateAllSettings { settings in
       settings.gap = max(0, gap)
     }
+    tilingManager.reflowVisibleSpaces()
 
     return .success(id: request.id, message: "ok")
   }
@@ -69,6 +72,7 @@ struct ConfigCommandHandler {
         settings.padding.right = max(0, value)
       }
     }
+    tilingManager.reflowVisibleSpaces()
 
     return .success(id: request.id, message: "ok")
   }

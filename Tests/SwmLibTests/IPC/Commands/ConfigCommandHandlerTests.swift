@@ -2,14 +2,14 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("ConfigCommandHandler")
 @MainActor
+@Suite("ConfigCommandHandler")
 struct ConfigCommandHandlerTests {
   @Test("dispatch: window gap updates defaults and overrides")
   func dispatchWindowGapUpdatesDefaultsAndOverrides() {
     let manager = SpaceManager(activeSpaceID: nil)
     manager.setGap(5, for: 1)
-    let handler = ConfigCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     let response = handler.dispatch(request(command: "window-gap", args: ["12"]))
 
@@ -25,7 +25,7 @@ struct ConfigCommandHandlerTests {
       SpacePadding(top: 1, bottom: 2, left: 3, right: 4),
       for: 1
     )
-    let handler = ConfigCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     let response = handler.dispatch(request(command: "top-padding", args: ["10"]))
 
@@ -36,7 +36,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects malformed window-gap arguments")
   func dispatchRejectsMalformedWindowGapArguments() {
-    let handler = ConfigCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
     let missing = handler.dispatch(request(command: "window-gap", args: []))
     let extra = handler.dispatch(request(command: "window-gap", args: ["10", "20"]))
 
@@ -50,7 +50,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid window-gap value")
   func dispatchRejectsInvalidWindowGapValue() {
-    let handler = ConfigCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "window-gap", args: ["wide"]))
 
     #expect(response.ok == false)
@@ -60,7 +60,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects malformed padding command arguments")
   func dispatchRejectsMalformedPaddingCommandArguments() {
-    let handler = ConfigCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
     let missing = handler.dispatch(request(command: "top-padding", args: []))
     let extra = handler.dispatch(request(command: "top-padding", args: ["10", "20"]))
 
@@ -74,7 +74,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid padding command value")
   func dispatchRejectsInvalidPaddingCommandValue() {
-    let handler = ConfigCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "right-padding", args: ["wide"]))
 
     #expect(response.ok == false)
@@ -84,5 +84,12 @@ struct ConfigCommandHandlerTests {
 
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .config, command: command, args: args)
+  }
+
+  private func handler(spaceManager: SpaceManager) -> ConfigCommandHandler {
+    ConfigCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
+    )
   }
 }

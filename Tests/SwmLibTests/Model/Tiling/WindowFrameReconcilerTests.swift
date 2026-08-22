@@ -41,8 +41,8 @@ struct WindowFrameReconcilerTests {
     ])
   }
 
-  @Test("apply: reports failures and removes their expectations")
-  func applyReportsFailuresAndRemovesTheirExpectations() {
+  @Test("apply: reports failures and bounds their feedback suppression")
+  func applyReportsFailuresAndBoundsTheirFeedbackSuppression() {
     let reconciler = WindowFrameReconciler(
       currentFrame: { windowID in windowID == 1 ? .zero : nil },
       frameMutation: { _, _, _ in .resizeFailed }
@@ -53,7 +53,7 @@ struct WindowFrameReconcilerTests {
       2: CGRect(x: 100, y: 0, width: 100, height: 100),
     ])
 
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero) == false)
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
     #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero) == false)
   }
 

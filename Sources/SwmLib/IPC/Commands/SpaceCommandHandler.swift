@@ -2,10 +2,12 @@
 @MainActor
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
+  private let tilingManager: TilingManager
 
-  /// Create a space command handler backed by a space manager.
-  init(spaceManager: SpaceManager) {
+  /// Create a space command handler backed by space and tiling managers.
+  init(spaceManager: SpaceManager, tilingManager: TilingManager) {
     self.spaceManager = spaceManager
+    self.tilingManager = tilingManager
   }
 
   /// Dispatch a space IPC request to the matching active-space update.
@@ -36,9 +38,17 @@ struct SpaceCommandHandler {
     case "padding":
       let spaceID = try currentSpaceID()
       spaceManager.togglePadding(for: spaceID)
+      tilingManager.reflow(spaceID: spaceID)
     case "gap":
       let spaceID = try currentSpaceID()
       spaceManager.toggleGap(for: spaceID)
+      tilingManager.reflow(spaceID: spaceID)
+    case "tiling":
+      let spaceID = try currentSpaceID()
+      guard let enabled = tilingManager.toggleEnabled(for: spaceID) else {
+        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      }
+      return .success(id: request.id, message: enabled ? "on" : "off")
     default:
       throw IPCCommandError.invalidRequest("invalid space toggle target: \(target)")
     }
@@ -65,6 +75,8 @@ struct SpaceCommandHandler {
       spaceManager.adjustPadding(change.padding, for: spaceID)
     }
 
+    tilingManager.reflow(spaceID: spaceID)
+
     return .success(id: request.id, message: "ok")
   }
 
@@ -86,6 +98,8 @@ struct SpaceCommandHandler {
     case .relative:
       spaceManager.adjustGap(change.value, for: spaceID)
     }
+
+    tilingManager.reflow(spaceID: spaceID)
 
     return .success(id: request.id, message: "ok")
   }

@@ -17,14 +17,16 @@ public final class EventManager {
     processManager: ProcessManager,
     windowManager: WindowManager,
     spaceManager: SpaceManager,
-    displayManager: DisplayManager
+    displayManager: DisplayManager,
+    tilingManager: TilingManager
   ) {
     configuration = Configuration(
       workspace: workspace,
       processManager: processManager,
       windowManager: windowManager,
       spaceManager: spaceManager,
-      displayManager: displayManager
+      displayManager: displayManager,
+      tilingManager: tilingManager
     )
   }
 
@@ -54,20 +56,28 @@ public final class EventManager {
       ApplicationLifecycleHandler(
         workspace: configuration.workspace,
         processManager: configuration.processManager,
-        windowManager: configuration.windowManager
+        windowManager: configuration.windowManager,
+        tilingManager: configuration.tilingManager
       ).handle(event)
 
     case .window(let event):
-      WindowLifecycleHandler(windowManager: configuration.windowManager).handle(event)
+      WindowLifecycleHandler(
+        windowManager: configuration.windowManager,
+        tilingManager: configuration.tilingManager
+      ).handle(event)
 
     case .space(let event):
       SpaceLifecycleHandler(
         spaceManager: configuration.spaceManager,
-        windowManager: configuration.windowManager
+        windowManager: configuration.windowManager,
+        tilingManager: configuration.tilingManager
       ).handle(event)
 
     case .display(let event):
-      DisplayLifecycleHandler(displayManager: configuration.displayManager).handle(event)
+      DisplayLifecycleHandler(
+        displayManager: configuration.displayManager,
+        tilingManager: configuration.tilingManager
+      ).handle(event)
     }
 
     if let payload = signalPayload(
@@ -239,4 +249,5 @@ private struct Configuration {
   let windowManager: WindowManager
   let spaceManager: SpaceManager
   let displayManager: DisplayManager
+  let tilingManager: TilingManager
 }
