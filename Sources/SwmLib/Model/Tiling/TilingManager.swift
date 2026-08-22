@@ -8,6 +8,7 @@ final class TilingManager {
   private let layoutEngine = MasterStackLayoutEngine()
   private let snapshot: SnapshotProvider
   private let spaceManager: SpaceManager
+  private var frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
   private var layoutsBySpaceID = [UInt64: SpaceLayoutState]()
   private var tiledSpaceIDByWindowID = [CGWindowID: UInt64]()
@@ -24,6 +25,12 @@ final class TilingManager {
       },
       spaceManager: spaceManager
     )
+    frameReconciler = WindowFrameReconciler(
+      currentFrame: { windowManager.window(by: $0)?.frame() },
+      frameMutation: { windowID, targetFrame, currentFrame in
+        windowManager.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
+      }
+    )
   }
 
   /// Create a manager with an injectable reconciliation snapshot.
@@ -38,6 +45,7 @@ final class TilingManager {
   /// Seed and reconcile all per-Space state from the current runtime inventory.
   func start() {
     reconcile()
+    reflowVisibleSpaces()
   }
 
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
@@ -120,7 +128,22 @@ final class TilingManager {
     guard var state = layoutsBySpaceID[spaceID] else { return false }
     state.enabled = enabled
     layoutsBySpaceID[spaceID] = state
+    if enabled {
+      reflow(spaceID: spaceID)
+    }
     return true
+  }
+
+  /// Toggle automatic tiling for a known normal Space and return the new value.
+  func toggleEnabled(for spaceID: UInt64) -> Bool? {
+    guard let state = layoutsBySpaceID[spaceID] else { return nil }
+    let enabled = !state.enabled
+    return setEnabled(enabled, for: spaceID) ? enabled : nil
+  }
+
+  /// Return whether automatic tiling is enabled for a known Space.
+  func isEnabled(for spaceID: UInt64) -> Bool {
+    layoutsBySpaceID[spaceID]?.enabled ?? false
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
@@ -130,6 +153,36 @@ final class TilingManager {
 
     state.focusedWindowID = windowID
     layoutsBySpaceID[spaceID] = state
+  }
+
+  /// Reconcile current facts and apply every visible enabled Space plan.
+  func reconcileAndReflowVisibleSpaces() {
+    reconcile()
+    reflowVisibleSpaces()
+  }
+
+  /// Suppress expected frame feedback or reconcile an external move or resize.
+  func windowFrameDidChange(_ windowID: CGWindowID) {
+    if frameReconciler?.shouldSuppressNotification(for: windowID) == true {
+      return
+    }
+
+    reconcileAndReflowVisibleSpaces()
+  }
+
+  /// Apply a fresh plan for one Space when it is visible and enabled.
+  func reflow(spaceID: UInt64) {
+    guard case .layout(.frames(let frames)) = layoutPlan(for: spaceID) else { return }
+    frameReconciler?.apply(frames)
+  }
+
+  /// Apply fresh plans for all currently visible normal Spaces.
+  func reflowVisibleSpaces() {
+    guard let currentTopology else { return }
+
+    for spaceID in currentTopology.visibleNormalSpaceIDs.sorted() {
+      reflow(spaceID: spaceID)
+    }
   }
 
   /// Calculate the current plan for an enabled, visible Space without side effects.
