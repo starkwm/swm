@@ -1,4 +1,7 @@
-/// Tracks active space state and per-space layout settings.
+import AppKit
+import CoreGraphics
+
+/// Owns active Space state, per-Space settings, and runtime topology observations.
 @MainActor
 public final class SpaceManager {
   /// Return all known WindowServer spaces.
@@ -48,6 +51,48 @@ public final class SpaceManager {
   /// Return layout settings for a space, falling back to defaults.
   func settings(for spaceID: UInt64) -> SpaceSettings {
     settingsBySpaceID[spaceID] ?? defaultSettings
+  }
+
+  /// Capture the Space facts needed by one tiling reconciliation.
+  func snapshotTopology(for windowIDs: [CGWindowID]) -> SpaceTopology {
+    let displaySpaces = WindowServerClient.shared.displaySpaces()
+    let spacesByID = Dictionary(
+      uniqueKeysWithValues: displaySpaces.flatMap { display in
+        display.spaces.map { spaceID in
+          (
+            spaceID,
+            SpaceTopologyDescriptor(
+              id: spaceID,
+              displayID: display.id,
+              type: WindowServerClient.shared.spaceType(for: spaceID)
+            )
+          )
+        }
+      }
+    )
+    let visibleSpaceIDByDisplayID = Dictionary(
+      uniqueKeysWithValues: displaySpaces.compactMap { display in
+        let spaceID = WindowServerClient.shared.currentSpace(for: display.id)
+        return spaceID == 0 ? nil : (display.id, spaceID)
+      }
+    )
+    let spaceIDsByWindowID = Dictionary(
+      uniqueKeysWithValues: windowIDs.map { windowID in
+        (windowID, Set(WindowServerClient.shared.spaceIDs(containing: windowID)))
+      }
+    )
+
+    return SpaceTopology(
+      spacesByID: spacesByID,
+      visibleSpaceIDByDisplayID: visibleSpaceIDByDisplayID,
+      spaceIDsByWindowID: spaceIDsByWindowID,
+      displaysByID: Dictionary(
+        uniqueKeysWithValues: NSScreen.screens.map {
+          let display = SpaceTopologyDisplay(id: $0.uuid, visibleFrame: $0.axVisibleFrame)
+          return (display.id, display)
+        }
+      )
+    )
   }
 
   /// Apply a global configuration change to defaults and existing overrides.
