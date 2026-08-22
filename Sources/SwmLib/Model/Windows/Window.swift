@@ -198,6 +198,33 @@ final class Window: NSObject {
     return AccessibilityClient.shared.frame(for: element)
   }
 
+  /// Capture the window facts used by automatic-tiling policy.
+  func tilingSnapshot() -> TilingWindowSnapshot {
+    guard let element else {
+      return TilingWindowSnapshot(
+        id: id,
+        subrole: nil,
+        isMinimized: false,
+        isMovable: false,
+        isResizable: false
+      )
+    }
+
+    return TilingWindowSnapshot(
+      id: id,
+      subrole: subrole,
+      isMinimized: isMinimized,
+      isMovable: AccessibilityClient.shared.isAttributeSettable(
+        kAXPositionAttribute as String,
+        for: element
+      ),
+      isResizable: AccessibilityClient.shared.isAttributeSettable(
+        kAXSizeAttribute as String,
+        for: element
+      )
+    )
+  }
+
   /// Apply a target frame, restoring the original size when moving fails.
   func setFrame(_ targetFrame: CGRect, from currentFrame: CGRect) -> WindowFrameMutationResult {
     WindowFrameMutation.apply(
