@@ -21,12 +21,14 @@ public final class Daemon {
   @MainActor
   public convenience init(
     windowManager: WindowManager,
-    spaceManager: SpaceManager
+    spaceManager: SpaceManager,
+    tilingManager: TilingManager
   ) {
     self.init(
       dispatcher: IPCCommandDispatcher(
         windowManager: windowManager,
-        spaceManager: spaceManager
+        spaceManager: spaceManager,
+        tilingManager: tilingManager
       )
     )
   }

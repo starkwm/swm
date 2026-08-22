@@ -1,14 +1,15 @@
+import CoreGraphics
 import Testing
 
 @testable import SwmLib
 
-@Suite("SpaceCommandHandler")
 @MainActor
+@Suite("SpaceCommandHandler")
 struct SpaceCommandHandlerTests {
   @Test("dispatch: accepts toggle commands")
   func dispatchAcceptsToggleCommands() throws {
     let manager = SpaceManager(activeSpaceID: 42)
-    let handler = SpaceCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     let padding = handler.dispatch(request(command: "--toggle", args: ["padding"]))
     let gap = handler.dispatch(request(command: "--toggle", args: ["gap"]))
@@ -21,10 +22,45 @@ struct SpaceCommandHandlerTests {
     #expect(manager.settings(for: 42).gapEnabled == false)
   }
 
+  @Test("dispatch: explicitly toggles automatic tiling for the active Space")
+  func dispatchExplicitlyTogglesAutomaticTiling() {
+    let spaceManager = SpaceManager(activeSpaceID: 42)
+    let tilingManager = makeTestTilingManager(
+      spaceManager: spaceManager,
+      topology: SpaceTopology(
+        spacesByID: [
+          42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
+        ],
+        visibleSpaceIDByDisplayID: ["display": 42],
+        spaceIDsByWindowID: [:],
+        displaysByID: [
+          "display": SpaceTopologyDisplay(
+            id: "display",
+            visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+          )
+        ]
+      )
+    )
+    tilingManager.start()
+    let handler = SpaceCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: tilingManager
+    )
+
+    let enabled = handler.dispatch(request(command: "--toggle", args: ["tiling"]))
+    let disabled = handler.dispatch(request(command: "--toggle", args: ["tiling"]))
+
+    #expect(enabled.ok)
+    #expect(enabled.message == "on")
+    #expect(disabled.ok)
+    #expect(disabled.message == "off")
+    #expect(tilingManager.isEnabled(for: 42) == false)
+  }
+
   @Test("dispatch: accepts padding commands")
   func dispatchAcceptsPaddingCommands() throws {
     let manager = SpaceManager(activeSpaceID: 42)
-    let handler = SpaceCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     let absolute = handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
     let relative = handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
@@ -42,7 +78,7 @@ struct SpaceCommandHandlerTests {
   @Test("dispatch: accepts gap commands")
   func dispatchAcceptsGapCommands() throws {
     let manager = SpaceManager(activeSpaceID: 42)
-    let handler = SpaceCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     let absolute = handler.dispatch(request(command: "--gap", args: ["abs:0"]))
     let relative = handler.dispatch(request(command: "--gap", args: ["rel:10"]))
@@ -57,7 +93,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
-    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: 42))
 
     let responses = [
       handler.dispatch(request(command: "--toggle", args: [])),
@@ -73,7 +109,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects unsupported space commands")
   func dispatchRejectsUnsupportedSpaceCommands() {
-    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: 42))
     let response = handler.dispatch(request(command: "--unknown", args: []))
 
     #expect(response.ok == false)
@@ -83,7 +119,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects focus command as unsupported")
   func dispatchRejectsFocusCommandAsUnsupported() {
-    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: 42))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: 42))
     let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
 
     #expect(response.ok == false)
@@ -94,7 +130,7 @@ struct SpaceCommandHandlerTests {
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
     let manager = SpaceManager(activeSpaceID: 2)
-    let handler = SpaceCommandHandler(spaceManager: manager)
+    let handler = handler(spaceManager: manager)
 
     _ = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
@@ -104,7 +140,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects active-space mutation without active space")
   func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() {
-    let handler = SpaceCommandHandler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
     #expect(response.ok == false)
@@ -114,5 +150,12 @@ struct SpaceCommandHandlerTests {
 
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .space, command: command, args: args)
+  }
+
+  private func handler(spaceManager: SpaceManager) -> SpaceCommandHandler {
+    SpaceCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
+    )
   }
 }

@@ -71,12 +71,17 @@ Use `--display next` to toggle the focused window between two attached displays.
 
 Use space commands to change padding and gap settings for the active space.
 
+    swm -m space --toggle tiling
     swm -m space --toggle padding
     swm -m space --toggle gap
     swm -m space --padding abs:<top>:<right>:<bottom>:<left>
     swm -m space --gap abs:<number>
 
 Use `rel:` instead of `abs:` for relative padding and gap changes.
+
+Automatic tiling is opt-in per Space and currently uses an ordered master-stack layout. It requires
+macOS's separate Spaces per display setting so a Space can be mapped safely to one display's visible
+bounds. Moving or resizing a tiled window manually snaps it back into the current layout.
 
 **Config**
 

@@ -60,13 +60,9 @@ final class WindowFrameReconciler {
         continue
       }
 
-      guard let result = frameMutation(windowID, target.targetFrame, currentFrame) else {
+      guard frameMutation(windowID, target.targetFrame, currentFrame) != nil else {
         pendingMutations.removeValue(forKey: windowID)
         continue
-      }
-
-      if result != .success {
-        pendingMutations.removeValue(forKey: windowID)
       }
     }
   }

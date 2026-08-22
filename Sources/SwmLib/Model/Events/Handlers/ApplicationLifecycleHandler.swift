@@ -12,6 +12,9 @@ struct ApplicationLifecycleHandler {
   /// Window manager updated by application lifecycle changes.
   let windowManager: WindowManager
 
+  /// Tiling coordinator reconciled after application inventory changes.
+  let tilingManager: TilingManager
+
   /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
     switch event {
@@ -60,6 +63,7 @@ struct ApplicationLifecycleHandler {
     else { return }
 
     windowManager.addWindows(for: application)
+    tilingManager.reconcileAndReflowVisibleSpaces()
     emitApplicationSignal(.applicationLaunched, application: application)
 
     if windowManager.removeLostFrontSwitchedEvent(for: process.pid) {
@@ -86,6 +90,11 @@ struct ApplicationLifecycleHandler {
 
     for window in windows {
       windowManager.remove(by: window.id)
+    }
+
+    tilingManager.reconcileAndReflowVisibleSpaces()
+
+    for window in windows {
       window.invalidate()
     }
 

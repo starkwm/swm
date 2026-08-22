@@ -45,6 +45,16 @@ func runSwm(with arguments: Arguments) {
   let windowManager = WindowManager(workspace: workspace)
   let spaceManager = SpaceManager()
   let displayManager = DisplayManager()
+  let tilingManager = TilingManager(windowManager: windowManager, spaceManager: spaceManager)
+
+  EventManager.shared.configure(
+    workspace: workspace,
+    processManager: processManager,
+    windowManager: windowManager,
+    spaceManager: spaceManager,
+    displayManager: displayManager,
+    tilingManager: tilingManager
+  )
 
   if case .failure(let error) = displayManager.start() {
     fail("unable to start display manager - \(error)")
@@ -55,18 +65,12 @@ func runSwm(with arguments: Arguments) {
   }
 
   windowManager.start(processes: processManager.all())
-
-  EventManager.shared.configure(
-    workspace: workspace,
-    processManager: processManager,
-    windowManager: windowManager,
-    spaceManager: spaceManager,
-    displayManager: displayManager
-  )
+  tilingManager.start()
 
   let daemon = Daemon(
     windowManager: windowManager,
-    spaceManager: spaceManager
+    spaceManager: spaceManager,
+    tilingManager: tilingManager
   )
 
   runOrFail("unable to run messaging daemon") {

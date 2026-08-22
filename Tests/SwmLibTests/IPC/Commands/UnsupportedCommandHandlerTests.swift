@@ -2,12 +2,16 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("Unsupported command handlers")
 @MainActor
+@Suite("Unsupported command handlers")
 struct UnsupportedCommandHandlerTests {
   @Test("dispatch: config rejects unsupported commands")
   func dispatchConfigRejectsUnsupportedCommands() {
-    let response = ConfigCommandHandler(spaceManager: SpaceManager()).dispatch(
+    let spaceManager = SpaceManager()
+    let response = ConfigCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
+    ).dispatch(
       request(domain: .config, command: "set")
     )
 

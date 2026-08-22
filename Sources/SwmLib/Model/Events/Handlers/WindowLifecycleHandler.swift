@@ -6,6 +6,9 @@ struct WindowLifecycleHandler {
   /// Window manager updated by window events.
   let windowManager: WindowManager
 
+  /// Tiling coordinator updated by window lifecycle events.
+  let tilingManager: TilingManager
+
   /// Handle one window lifecycle event.
   func handle(_ event: WindowEvent) {
     switch event {
@@ -15,8 +18,8 @@ struct WindowLifecycleHandler {
       windowDestroyed(with: window)
     case .focused(let windowID):
       windowFocused(with: windowID)
-    case .moved, .resized:
-      break
+    case .moved(let windowID), .resized(let windowID):
+      windowFrameChanged(with: windowID)
     case .minimized(let window):
       windowMinimized(with: window)
     case .deminimized(let window):
@@ -33,6 +36,7 @@ struct WindowLifecycleHandler {
     guard let window = windowManager.addWindow(with: windowID, for: application) else { return }
 
     log("window created \(window)")
+    tilingManager.reconcileAndReflowVisibleSpaces()
 
     if windowManager.removeLostFocusedEvent(for: window.id) {
       EventManager.shared.post(.window(.focused(window.id)))
@@ -46,6 +50,7 @@ struct WindowLifecycleHandler {
     log("window destroyed \(window)")
 
     windowManager.remove(by: window.id)
+    tilingManager.reconcileAndReflowVisibleSpaces()
     window.invalidate()
   }
 
@@ -67,20 +72,29 @@ struct WindowLifecycleHandler {
 
     windowManager.removeLostFocusedEvent(for: windowID)
     windowManager.focusedWindowDidChange(to: windowID)
+    tilingManager.windowDidFocus(windowID)
 
     log(
       "window focused \(window) current: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
     )
   }
 
+  /// Handle a window move or resize notification.
+  private func windowFrameChanged(with windowID: CGWindowID) {
+    guard windowID != 0 else { return }
+    tilingManager.windowFrameDidChange(windowID)
+  }
+
   /// Handle a window minimization notification.
   private func windowMinimized(with window: Window) {
     log("window minimized \(window)")
+    tilingManager.reconcileAndReflowVisibleSpaces()
   }
 
   /// Handle a window restore notification and replay deferred focus.
   private func windowDeminimized(with window: Window) {
     log("window deminimized \(window)")
+    tilingManager.reconcileAndReflowVisibleSpaces()
 
     if windowManager.removeLostFocusedEvent(for: window.id) {
       EventManager.shared.post(.window(.focused(window.id)))
