@@ -22,7 +22,10 @@ struct SpaceLayoutState: Equatable {
 }
 
 /// Automatic layout algorithms supported by runtime state.
-enum LayoutMode: Equatable {
+enum LayoutMode: String, Equatable {
   /// One master pane with remaining windows in a vertical stack.
-  case masterStack
+  case master
+
+  /// Recursively bisect the longest edge of the remaining region.
+  case dwindle
 }

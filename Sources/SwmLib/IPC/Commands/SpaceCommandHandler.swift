@@ -16,6 +16,8 @@ struct SpaceCommandHandler {
       switch request.command {
       case "--toggle":
         return try toggle(request)
+      case "--layout":
+        return try layout(request)
       case "--padding":
         return try padding(request)
       case "--gap":
@@ -54,6 +56,32 @@ struct SpaceCommandHandler {
     }
 
     return .success(id: request.id, message: "ok")
+  }
+
+  /// Select the automatic layout for the active Space.
+  private func layout(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid space layout arguments")
+    }
+
+    let argument = request.args[0]
+    let mode: LayoutMode
+
+    switch argument {
+    case "master":
+      mode = .master
+    case "dwindle":
+      mode = .dwindle
+    default:
+      throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
+    }
+
+    let spaceID = try currentSpaceID()
+    guard tilingManager.setLayoutMode(mode, for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+    }
+
+    return .success(id: request.id, message: mode.rawValue)
   }
 
   /// Set or adjust padding for the active space.
