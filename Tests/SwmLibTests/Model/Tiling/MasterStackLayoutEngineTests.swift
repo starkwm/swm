@@ -77,30 +77,32 @@ struct MasterStackLayoutEngineTests {
     "layout: reports minimum-size constraint",
     arguments: [
       (
-        CGRect(x: 0, y: 0, width: 99, height: 100),
+        CGRect(x: 0, y: 0, width: 0, height: 1),
         [CGWindowID(1)],
-        MasterStackLayoutConstraint.usableBounds
+        TilingLayoutConstraint.usableBounds
       ),
       (
-        CGRect(x: 0, y: 0, width: 150, height: 300),
+        CGRect(x: 0, y: 0, width: 1, height: 1),
         [CGWindowID(1), 2],
-        MasterStackLayoutConstraint.masterWidth
+        TilingLayoutConstraint.stackWidth
       ),
       (
-        CGRect(x: 0, y: 0, width: 400, height: 150),
+        CGRect(x: 0, y: 0, width: 2, height: 1),
         [CGWindowID(1), 2, 3],
-        MasterStackLayoutConstraint.stackHeight
+        TilingLayoutConstraint.stackHeight
       ),
     ]
   )
   func layoutReportsMinimumSizeConstraint(
     bounds: CGRect,
     windowIDs: [CGWindowID],
-    constraint: MasterStackLayoutConstraint
+    constraint: TilingLayoutConstraint
   ) {
-    let result = MasterStackLayoutEngine(
-      minimumWindowSize: CGSize(width: 100, height: 100)
-    ).layout(windowIDs: windowIDs, in: bounds, settings: .defaults)
+    let result = MasterStackLayoutEngine().layout(
+      windowIDs: windowIDs,
+      in: bounds,
+      settings: .defaults
+    )
 
     #expect(result == .insufficientSpace(constraint))
   }

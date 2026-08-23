@@ -234,5 +234,5 @@ enum TilingLayoutPlan: Equatable {
   case unresolvedDisplay
 
   /// Pure engine result for the Space's active retained leaves.
-  case layout(MasterStackLayoutResult)
+  case layout(TilingLayoutResult)
 }
