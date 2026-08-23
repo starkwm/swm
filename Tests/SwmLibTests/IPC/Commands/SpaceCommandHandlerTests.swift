@@ -57,6 +57,49 @@ struct SpaceCommandHandlerTests {
     #expect(tilingManager.isEnabled(for: 42) == false)
   }
 
+  @Test("dispatch: selects the automatic layout for the active Space")
+  func dispatchSelectsAutomaticLayout() {
+    let spaceManager = SpaceManager(activeSpaceID: 42)
+    let tilingManager = TilingManager(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [],
+          topology: SpaceTopology(
+            spacesByID: [
+              42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
+            ],
+            visibleSpaceIDByDisplayID: ["display": 42],
+            spaceIDsByWindowID: [:],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                id: "display",
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaceManager: spaceManager
+    )
+    tilingManager.start()
+    let handler = SpaceCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: tilingManager
+    )
+
+    let dwindle = handler.dispatch(request(command: "--layout", args: ["dwindle"]))
+
+    #expect(dwindle.ok)
+    #expect(dwindle.message == "dwindle")
+    #expect(tilingManager.layoutMode(for: 42) == .dwindle)
+
+    let master = handler.dispatch(request(command: "--layout", args: ["master"]))
+
+    #expect(master.ok)
+    #expect(master.message == "master")
+    #expect(tilingManager.layoutMode(for: 42) == .master)
+  }
+
   @Test("dispatch: accepts padding commands")
   func dispatchAcceptsPaddingCommands() throws {
     let manager = SpaceManager(activeSpaceID: 42)
@@ -98,6 +141,8 @@ struct SpaceCommandHandlerTests {
     let responses = [
       handler.dispatch(request(command: "--toggle", args: [])),
       handler.dispatch(request(command: "--toggle", args: ["unknown"])),
+      handler.dispatch(request(command: "--layout", args: [])),
+      handler.dispatch(request(command: "--layout", args: ["unknown"])),
       handler.dispatch(request(command: "--padding", args: ["abs:1:2:3"])),
       handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
       handler.dispatch(request(command: "--gap", args: ["abs"])),

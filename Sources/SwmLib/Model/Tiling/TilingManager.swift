@@ -5,7 +5,8 @@ import CoreGraphics
 public final class TilingManager {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
 
-  private let layoutEngine = MasterStackLayoutEngine()
+  private let masterLayout = MasterLayout()
+  private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
   private let spaceManager: SpaceManager
   private var frameReconciler: WindowFrameReconciler?
@@ -62,7 +63,7 @@ public final class TilingManager {
       if layoutsBySpaceID[descriptor.id] == nil {
         layoutsBySpaceID[descriptor.id] = SpaceLayoutState(
           displayID: descriptor.displayID,
-          mode: .masterStack,
+          mode: .master,
           layout: OrderedWindowLayout(),
           minimizedWindowIDs: [],
           focusedWindowID: nil,
@@ -146,6 +147,23 @@ public final class TilingManager {
     layoutsBySpaceID[spaceID]?.enabled ?? false
   }
 
+  /// Select the layout algorithm for a known normal Space.
+  @discardableResult
+  func setLayoutMode(_ mode: LayoutMode, for spaceID: UInt64) -> Bool {
+    guard var state = layoutsBySpaceID[spaceID] else { return false }
+    state.mode = mode
+    layoutsBySpaceID[spaceID] = state
+    if state.enabled {
+      reflow(spaceID: spaceID)
+    }
+    return true
+  }
+
+  /// Return the selected layout algorithm for a known Space.
+  func layoutMode(for spaceID: UInt64) -> LayoutMode? {
+    layoutsBySpaceID[spaceID]?.mode
+  }
+
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
     guard let spaceID = tiledSpaceIDByWindowID[windowID] else { return }
@@ -195,15 +213,26 @@ public final class TilingManager {
       return .unresolvedDisplay
     }
 
+    let windowIDs = state.layout.activeWindowIDs(
+      excluding: state.minimizedWindowIDs
+    )
+    let spaceSettings = spaceManager.settings(for: spaceID)
+
     switch state.mode {
-    case .masterStack:
+    case .master:
       return .layout(
-        layoutEngine.layout(
-          windowIDs: state.layout.activeWindowIDs(
-            excluding: state.minimizedWindowIDs
-          ),
+        masterLayout.layout(
+          windowIDs: windowIDs,
           in: display.visibleFrame,
-          settings: spaceManager.settings(for: spaceID)
+          settings: spaceSettings
+        )
+      )
+    case .dwindle:
+      return .layout(
+        dwindleLayout.layout(
+          windowIDs: windowIDs,
+          in: display.visibleFrame,
+          settings: spaceSettings
         )
       )
     }

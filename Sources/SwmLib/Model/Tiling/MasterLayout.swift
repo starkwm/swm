@@ -1,11 +1,11 @@
 import CoreGraphics
 
-/// Pure ordered master-stack geometry calculator.
-struct MasterStackLayoutEngine {
+/// Pure ordered master layout geometry calculator.
+struct MasterLayout {
   /// Minimum frame size accepted for every tiled window.
   private static let minimumWindowSize = CGSize(width: 1, height: 1)
 
-  /// Calculate master-stack frames without performing window side effects.
+  /// Calculate master layout frames without performing window side effects.
   func layout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,

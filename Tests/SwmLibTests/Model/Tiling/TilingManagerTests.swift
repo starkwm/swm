@@ -51,6 +51,37 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("setLayoutMode: retains dwindle selection and plans its geometry")
+  func setLayoutModeRetainsDwindleSelectionAndPlansItsGeometry() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3), window(id: 4)],
+      memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
+    )
+    manager.start()
+
+    #expect(manager.layoutMode(for: 10) == .master)
+    #expect(manager.setLayoutMode(.dwindle, for: 10))
+    #expect(manager.setLayoutMode(.dwindle, for: 99) == false)
+    manager.setEnabled(true, for: 10)
+
+    #expect(manager.layoutMode(for: 10) == .dwindle)
+    #expect(
+      manager.layoutPlan(for: 10)
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            3: CGRect(x: 500, y: 400, width: 250, height: 400),
+            4: CGRect(x: 750, y: 400, width: 250, height: 400),
+          ])
+        )
+    )
+
+    manager.reconcile()
+
+    #expect(manager.layoutMode(for: 10) == .dwindle)
+  }
+
   @Test("reconcile: preserves minimized leaves but omits them from geometry")
   func reconcilePreservesMinimizedLeavesButOmitsThemFromGeometry() {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]

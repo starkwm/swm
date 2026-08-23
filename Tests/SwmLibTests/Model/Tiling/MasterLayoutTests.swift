@@ -3,12 +3,12 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("MasterStackLayoutEngine")
-struct MasterStackLayoutEngineTests {
+@Suite("MasterLayout")
+struct MasterLayoutTests {
   @Test("layout: returns no frames for no windows")
   func layoutReturnsNoFramesForNoWindows() {
     #expect(
-      MasterStackLayoutEngine().layout(
+      MasterLayout().layout(
         windowIDs: [],
         in: CGRect(x: 0, y: 0, width: 100, height: 100),
         settings: .defaults
@@ -21,7 +21,7 @@ struct MasterStackLayoutEngineTests {
     var settings = SpaceSettings.defaults
     settings.padding = SpacePadding(top: 10, bottom: 20, left: 30, right: 40)
 
-    let result = MasterStackLayoutEngine().layout(
+    let result = MasterLayout().layout(
       windowIDs: [1],
       in: CGRect(x: -300, y: 24, width: 300, height: 200),
       settings: settings
@@ -35,7 +35,7 @@ struct MasterStackLayoutEngineTests {
     var settings = SpaceSettings.defaults
     settings.gap = 5
 
-    let result = MasterStackLayoutEngine().layout(
+    let result = MasterLayout().layout(
       windowIDs: [1, 2, 3, 4],
       in: CGRect(x: -301, y: 25, width: 301, height: 202),
       settings: settings
@@ -54,18 +54,18 @@ struct MasterStackLayoutEngineTests {
 
   @Test("layout: clamps ratios before calculating frames")
   func layoutClampsRatiosBeforeCalculatingFrames() {
-    let engine = MasterStackLayoutEngine()
+    let layout = MasterLayout()
     let bounds = CGRect(x: 0, y: 0, width: 1_000, height: 500)
 
     #expect(
-      engine.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 0)
+      layout.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 0)
         == .frames([
           1: CGRect(x: 0, y: 0, width: 100, height: 500),
           2: CGRect(x: 100, y: 0, width: 900, height: 500),
         ])
     )
     #expect(
-      engine.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 1)
+      layout.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 1)
         == .frames([
           1: CGRect(x: 0, y: 0, width: 900, height: 500),
           2: CGRect(x: 900, y: 0, width: 100, height: 500),
@@ -98,7 +98,7 @@ struct MasterStackLayoutEngineTests {
     windowIDs: [CGWindowID],
     constraint: TilingLayoutConstraint
   ) {
-    let result = MasterStackLayoutEngine().layout(
+    let result = MasterLayout().layout(
       windowIDs: windowIDs,
       in: bounds,
       settings: .defaults
@@ -112,11 +112,11 @@ struct MasterStackLayoutEngineTests {
     var settings = SpaceSettings.defaults
     settings.padding = SpacePadding(top: 7, bottom: 11, left: 13, right: 17)
     settings.gap = 9
-    let engine = MasterStackLayoutEngine()
+    let layout = MasterLayout()
     let bounds = CGRect(x: -1_024, y: -20, width: 1_024, height: 768)
 
-    let first = engine.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
-    let second = engine.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
+    let first = layout.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
+    let second = layout.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
 
     #expect(first == second)
   }
