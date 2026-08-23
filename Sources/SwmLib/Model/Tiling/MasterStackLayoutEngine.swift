@@ -3,15 +3,7 @@ import CoreGraphics
 /// Pure ordered master-stack geometry calculator.
 struct MasterStackLayoutEngine {
   /// Minimum frame size accepted for every tiled window.
-  let minimumWindowSize: CGSize
-
-  /// Create an engine with an injectable minimum tile size.
-  init(minimumWindowSize: CGSize = .zero) {
-    self.minimumWindowSize = CGSize(
-      width: max(0, minimumWindowSize.width),
-      height: max(0, minimumWindowSize.height)
-    )
-  }
+  private static let minimumWindowSize = CGSize(width: 1, height: 1)
 
   /// Calculate master-stack frames without performing window side effects.
   func layout(
@@ -19,7 +11,7 @@ struct MasterStackLayoutEngine {
     in bounds: CGRect,
     settings: SpaceSettings,
     masterRatio: CGFloat = 0.5
-  ) -> MasterStackLayoutResult {
+  ) -> TilingLayoutResult {
     guard !windowIDs.isEmpty else { return .frames([:]) }
 
     let usableBounds = usableBounds(in: bounds, settings: settings)
@@ -40,10 +32,10 @@ struct MasterStackLayoutEngine {
     let ratio = min(max(masterRatio, 0.1), 0.9)
     let masterWidth = (availableWidth * ratio).rounded()
     let stackWidth = availableWidth - masterWidth
-    guard masterWidth >= minimumWindowSize.width else {
+    guard masterWidth >= Self.minimumWindowSize.width else {
       return .insufficientSpace(.masterWidth)
     }
-    guard stackWidth >= minimumWindowSize.width else {
+    guard stackWidth >= Self.minimumWindowSize.width else {
       return .insufficientSpace(.stackWidth)
     }
 
@@ -53,7 +45,7 @@ struct MasterStackLayoutEngine {
         length: usableBounds.height,
         count: stackWindowIDs.count,
         gap: gap,
-        minimum: minimumWindowSize.height
+        minimum: Self.minimumWindowSize.height
       )
     else {
       return .insufficientSpace(.stackHeight)
@@ -124,33 +116,6 @@ struct MasterStackLayoutEngine {
 
   /// Return whether a frame size satisfies the configured minimum.
   private func satisfiesMinimum(_ size: CGSize) -> Bool {
-    size.width >= minimumWindowSize.width && size.height >= minimumWindowSize.height
+    size.width >= Self.minimumWindowSize.width && size.height >= Self.minimumWindowSize.height
   }
-}
-
-/// Result of calculating one complete master-stack layout.
-enum MasterStackLayoutResult: Equatable {
-  /// Target frames keyed by window ID.
-  case frames([CGWindowID: CGRect])
-
-  /// No frames were returned because a layout constraint could not be met.
-  case insufficientSpace(MasterStackLayoutConstraint)
-}
-
-/// Explainable constraint that prevented master-stack geometry.
-enum MasterStackLayoutConstraint: Equatable {
-  /// Padded visible bounds do not meet the minimum window size.
-  case usableBounds
-
-  /// The gap between master and stack consumes the available width.
-  case horizontalGap
-
-  /// The master pane is narrower than the minimum window width.
-  case masterWidth
-
-  /// The stack pane is narrower than the minimum window width.
-  case stackWidth
-
-  /// One or more stack rows are shorter than the minimum window height.
-  case stackHeight
 }
