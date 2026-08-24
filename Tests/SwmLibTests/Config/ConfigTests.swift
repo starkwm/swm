@@ -16,18 +16,16 @@ struct ConfigTests {
   @Test("execIfPresent: runs existing file")
   func execIfPresentRunsExistingFile() throws {
     let directory = try TemporaryDirectory()
+    let marker = directory.url.appending(path: "marker")
     let script = try directory.makeScript(
       name: "swmrc",
-      contents: "#!/bin/sh\nexit 0",
+      contents: "#!/bin/sh\nprintf done > \"\(marker.path())\"",
       permissions: 0o700
     )
-    var executedPath: String?
 
-    try Config.execIfPresent(path: script.path()) { path in
-      executedPath = path
-    }
+    try Config.execIfPresent(path: script.path())
 
-    #expect(executedPath == script.path())
+    #expect(try String(contentsOf: marker, encoding: .utf8) == "done")
   }
 
   @Test("exec: rejects missing file")
@@ -69,15 +67,13 @@ struct ConfigTests {
       name: "swmrc",
       contents: """
         #!/bin/sh
-        exit 0
+        sleep 0.05
+        printf done > "\(marker.path())"
         """,
       permissions: 0o700
     )
 
-    try Config.exec(path: script.path()) { path in
-      #expect(path == script.path())
-      try "done".write(to: marker, atomically: true, encoding: .utf8)
-    }
+    try Config.exec(path: script.path())
 
     let markerContents = try String(contentsOf: marker, encoding: .utf8)
     #expect(markerContents == "done")
