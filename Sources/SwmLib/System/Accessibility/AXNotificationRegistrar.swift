@@ -1,45 +1,38 @@
 import ApplicationServices
 
 /// Registers and unregisters a fixed list of accessibility notifications.
-struct AXNotificationRegistrar<Notifications: OptionSet & Sendable>: Sendable
-where Notifications.RawValue == Int8 {
-  /// Notification names to register, in option-bit order.
+struct AXNotificationRegistrar: Sendable {
+  /// Notification names to register.
   let notifications: [String]
 
-  /// Option set representing every expected notification.
-  let allNotifications: Notifications
-
-  /// Register notifications and update the observed option set.
+  /// Register notifications and update the observed-name set.
   func observe(
-    observedNotifications: inout Notifications,
+    observedNotifications: inout Set<String>,
     addNotification: (String) -> ApplicationServices.AXError,
     onFailure: (String, ApplicationServices.AXError) -> Void
   ) -> Bool {
-    for (index, notification) in notifications.enumerated() {
+    for notification in notifications {
       let result = addNotification(notification)
 
       if result == .success || result == .notificationAlreadyRegistered {
-        observedNotifications.formUnion(Notifications(rawValue: 1 << index))
+        observedNotifications.insert(notification)
       } else {
         onFailure(notification, result)
       }
     }
 
-    return observedNotifications.isSuperset(of: allNotifications)
+    return observedNotifications.isSuperset(of: notifications)
   }
 
   /// Unregister notifications that were previously observed.
   func unobserve(
-    observedNotifications: inout Notifications,
+    observedNotifications: inout Set<String>,
     removeNotification: (String) -> Void
   ) {
-    for (index, notification) in notifications.enumerated() {
-      let registeredNotification = Notifications(rawValue: 1 << index)
-
-      guard observedNotifications.isSuperset(of: registeredNotification) else { continue }
+    for notification in notifications where observedNotifications.contains(notification) {
 
       removeNotification(notification)
-      observedNotifications.subtract(registeredNotification)
+      observedNotifications.remove(notification)
     }
   }
 }

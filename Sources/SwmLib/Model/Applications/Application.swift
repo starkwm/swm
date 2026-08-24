@@ -1,6 +1,6 @@
 import AppKit
 
-/// Accessibility notification names matching `ApplicationNotifications`.
+/// Accessibility notifications observed for an application.
 let applicationNotifications = [
   kAXCreatedNotification,
   kAXFocusedWindowChangedNotification,
@@ -60,9 +60,8 @@ private func accessibilityObserverCallback(
 
 /// Runtime model for a single running application.
 final class Application: NSObject {
-  private static let notificationRegistrar = AXNotificationRegistrar<ApplicationNotifications>(
-    notifications: applicationNotifications,
-    allNotifications: .all
+  private static let notificationRegistrar = AXNotificationRegistrar(
+    notifications: applicationNotifications
   )
 
   /// Debug description including process, app name, and bundle identifier.
@@ -94,7 +93,7 @@ final class Application: NSObject {
 
   private var application: NSRunningApplication
   private var connection: Int32 = -1
-  private var observedNotifications = ApplicationNotifications(rawValue: 0)
+  private var observedNotifications = Set<String>()
   private var observing = false
 
   /// Create an application model for a process discovered by the process manager.
@@ -254,30 +253,4 @@ final class Application: NSObject {
       attribute: kAXEnhancedUserInterface
     )
   }
-}
-
-/// Accessibility notifications observed for an application.
-struct ApplicationNotifications: OptionSet, Sendable {
-  /// Observe newly created windows.
-  static let windowCreated = ApplicationNotifications(rawValue: 1 << 0)
-
-  /// Observe focused-window changes.
-  static let windowFocused = ApplicationNotifications(rawValue: 1 << 1)
-
-  /// Observe window movement.
-  static let windowMoved = ApplicationNotifications(rawValue: 1 << 2)
-
-  /// Observe window resizing.
-  static let windowResized = ApplicationNotifications(rawValue: 1 << 3)
-
-  /// All application-level notifications currently used by swm.
-  static let all: ApplicationNotifications = [
-    .windowCreated,
-    .windowFocused,
-    .windowMoved,
-    .windowResized,
-  ]
-
-  /// Backing option-set bit field.
-  let rawValue: Int8
 }
