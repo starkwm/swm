@@ -1,6 +1,7 @@
 import CoreGraphics
 
 /// Resolves query selections against serialized display, space, and window state.
+@MainActor
 final class QueryResolver {
   /// Displays available to query.
   private(set) lazy var displays = displayProvider()

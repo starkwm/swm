@@ -1,6 +1,7 @@
 import ApplicationServices
 
 /// Handles window lifecycle and focus events.
+@MainActor
 struct WindowLifecycleHandler {
   /// Window manager updated by window events.
   let windowManager: WindowManager

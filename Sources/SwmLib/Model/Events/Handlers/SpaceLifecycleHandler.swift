@@ -1,4 +1,5 @@
 /// Handles space lifecycle events.
+@MainActor
 struct SpaceLifecycleHandler {
   /// Space manager updated by space events.
   let spaceManager: SpaceManager

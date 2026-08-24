@@ -1,6 +1,7 @@
 import Foundation
 
 /// Handles application lifecycle events and starts or stops application/window management.
+@MainActor
 struct ApplicationLifecycleHandler {
   /// Workspace bridge used for AppKit readiness and observability checks.
   let workspace: Workspace

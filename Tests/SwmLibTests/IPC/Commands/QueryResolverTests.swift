@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("QueryResolver")
+@MainActor
 struct QueryResolverTests {
   @Test("windows(for:): loads only required snapshots")
   func windowsForLoadsOnlyRequiredSnapshots() throws {

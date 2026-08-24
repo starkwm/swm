@@ -1,4 +1,5 @@
 /// Handles display lifecycle events.
+@MainActor
 struct DisplayLifecycleHandler {
   /// Display manager updated by display events.
   let displayManager: DisplayManager

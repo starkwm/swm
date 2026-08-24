@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("SpaceManager")
+@MainActor
 struct SpaceManagerTests {
   @Test("activeSpaceDidChange(to:): uses event space ID")
   func activeSpaceDidChangeUsesEventSpaceID() {

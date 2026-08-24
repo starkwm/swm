@@ -1,6 +1,7 @@
 import AppKit
 
 /// Handles IPC commands that focus, minimize, move, resize, and grid windows.
+@MainActor
 struct WindowCommandHandler {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager

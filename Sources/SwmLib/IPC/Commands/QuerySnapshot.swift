@@ -1,6 +1,7 @@
 import AppKit
 
 /// Lazy raw-state snapshot shared by display, space, and window query serializers.
+@MainActor
 final class QuerySnapshot {
   private let windowManager: WindowManager
 

@@ -1,4 +1,5 @@
 /// Handles IPC commands that update the active space.
+@MainActor
 struct SpaceCommandHandler {
   private let spaceManager: SpaceManager
 

@@ -1,37 +1,33 @@
 import Foundation
 
 /// Tracks active space state and per-space layout settings.
+@MainActor
 public final class SpaceManager {
   /// Return all known WindowServer spaces.
-  static func all() -> [Space] {
+  nonisolated static func all() -> [Space] {
     WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))
   }
 
   /// Return the currently active WindowServer space.
-  static func active() -> Space {
+  nonisolated static func active() -> Space {
     Space(id: WindowServerClient.shared.activeSpace())
   }
 
   /// Return the display UUID for a space.
-  static func display(for space: Space) -> String? {
+  nonisolated static func display(for space: Space) -> String? {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
   /// ID of the currently active space.
   var currentActiveSpaceID: UInt64? {
-    lock.withLock {
-      activeSpace.current
-    }
+    activeSpace.current
   }
 
   /// ID of the previously active space.
   var lastActiveSpaceID: UInt64? {
-    lock.withLock {
-      activeSpace.last
-    }
+    activeSpace.last
   }
 
-  private let lock = NSLock()
   private var activeSpace: TrackedState<UInt64>
   private var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
@@ -48,36 +44,28 @@ public final class SpaceManager {
 
   /// Update tracked space state after the active space changes.
   func activeSpaceDidChange(to spaceID: UInt64) {
-    lock.withLock {
-      activeSpace.update(to: spaceID)
-    }
+    activeSpace.update(to: spaceID)
   }
 
   /// Return layout settings for a space, falling back to defaults.
   func settings(for spaceID: UInt64) -> SpaceSettings {
-    lock.withLock {
-      settingsBySpaceID[spaceID] ?? defaultSettings
-    }
+    settingsBySpaceID[spaceID] ?? defaultSettings
   }
 
   /// Apply a global configuration change to defaults and existing overrides.
   func updateAllSettings(_ transform: (inout SpaceSettings) -> Void) {
-    lock.withLock {
-      transform(&defaultSettings)
+    transform(&defaultSettings)
 
-      for spaceID in settingsBySpaceID.keys {
-        guard var settings = settingsBySpaceID[spaceID] else { continue }
-        transform(&settings)
-        settingsBySpaceID[spaceID] = settings
-      }
+    for spaceID in settingsBySpaceID.keys {
+      guard var settings = settingsBySpaceID[spaceID] else { continue }
+      transform(&settings)
+      settingsBySpaceID[spaceID] = settings
     }
   }
 
   /// Discard overrides for spaces that no longer exist.
   func retainSettings(for spaceIDs: Set<UInt64>) {
-    lock.withLock {
-      settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
-    }
+    settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
   }
 
   /// Toggle whether padding is applied on a space.
@@ -139,16 +127,12 @@ public final class SpaceManager {
     _ spaceID: UInt64,
     transform: (inout SpaceSettings) -> Void
   ) -> SpaceSettings {
-    lock.withLock {
-      var settings = settingsBySpaceID[spaceID] ?? defaultSettings
-      transform(&settings)
-      settingsBySpaceID[spaceID] = settings
-      return settings
-    }
+    var settings = settingsBySpaceID[spaceID] ?? defaultSettings
+    transform(&settings)
+    settingsBySpaceID[spaceID] = settings
+    return settings
   }
 }
-
-extension SpaceManager: @unchecked Sendable {}
 
 /// Per-side padding applied inside a space's visible frame.
 struct SpacePadding: Equatable {
