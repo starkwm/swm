@@ -1,6 +1,6 @@
 import AppKit
 
-/// Accessibility notification names matching `WindowNotifications`.
+/// Accessibility notifications observed for an individual window.
 let windowNotifications = [
   kAXUIElementDestroyedNotification,
   kAXWindowMiniaturizedNotification,
@@ -9,9 +9,8 @@ let windowNotifications = [
 
 /// Runtime model for an accessibility-backed window.
 final class Window: NSObject {
-  private static let notificationRegistrar = AXNotificationRegistrar<WindowNotifications>(
-    notifications: windowNotifications,
-    allNotifications: .all
+  private static let notificationRegistrar = AXNotificationRegistrar(
+    notifications: windowNotifications
   )
 
   /// Owning application, held weakly to avoid a retain cycle.
@@ -53,7 +52,7 @@ final class Window: NSObject {
     ) ?? ""
   }
 
-  private var observedNotifications = WindowNotifications(rawValue: 0)
+  private var observedNotifications = Set<String>()
   private var observationContext: WindowObservationContext?
 
   /// Create a window model from an accessibility element and owning application.
@@ -257,28 +256,6 @@ final class Window: NSObject {
 }
 
 extension Window: @unchecked Sendable {}
-
-/// Accessibility notifications observed for an individual window.
-struct WindowNotifications: OptionSet, Sendable {
-  /// Observe window destruction.
-  static let windowDestroyed = WindowNotifications(rawValue: 1 << 0)
-
-  /// Observe window minimization.
-  static let windowMinimized = WindowNotifications(rawValue: 1 << 1)
-
-  /// Observe restoration from a minimized state.
-  static let windowDeminimized = WindowNotifications(rawValue: 1 << 2)
-
-  /// All window-level notifications currently used by swm.
-  static let all: WindowNotifications = [
-    .windowDestroyed,
-    .windowMinimized,
-    .windowDeminimized,
-  ]
-
-  /// Backing option-set bit field.
-  let rawValue: Int8
-}
 
 /// Weak observation context passed through accessibility notification callbacks.
 final class WindowObservationContext {
