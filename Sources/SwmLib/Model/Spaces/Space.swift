@@ -1,24 +1,20 @@
-import AppKit
-
 /// Runtime model for a WindowServer space.
-final class Space: NSObject {
+struct Space: Equatable, Sendable, CustomStringConvertible {
   /// WindowServer space ID.
-  var id: UInt64
+  let id: UInt64
 
   /// WindowServer space type.
-  var type: SpaceType
+  let type: SpaceType
 
   /// Debug description including space ID and type.
-  override var description: String {
+  var description: String {
     "<Space id: \(id), type: \(type)>"
   }
 
   /// Create a space model by looking up its current WindowServer type.
-  convenience init(id: UInt64) {
-    self.init(
-      id: id,
-      type: WindowServerClient.shared.spaceType(for: id)
-    )
+  init(id: UInt64) {
+    self.id = id
+    type = WindowServerClient.shared.spaceType(for: id)
   }
 
   /// Create a space model from explicit fields.
@@ -27,11 +23,8 @@ final class Space: NSObject {
     self.type = type
   }
 
-  /// Compare spaces by WindowServer ID.
-  override func isEqual(_ object: Any?) -> Bool {
-    guard let space = object as? Self else { return false }
-    return id == space.id
+  /// Compare spaces by their stable WindowServer ID.
+  static func == (lhs: Space, rhs: Space) -> Bool {
+    lhs.id == rhs.id
   }
 }
-
-extension Space: @unchecked Sendable {}
