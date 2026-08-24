@@ -7,13 +7,8 @@ public enum Config {
   /// A missing conventional configuration is ignored so the daemon can start
   /// with built-in defaults. Explicit configuration paths should use `exec(path:)`.
   public static func execIfPresent(path: String) throws {
-    try execIfPresent(path: path, runAndWait: runAndWait)
-  }
-
-  /// Execute an optional configuration file with an injected runner.
-  static func execIfPresent(path: String, runAndWait: (String) throws -> Void) throws {
     guard FileManager.default.fileExists(atPath: path) else { return }
-    try exec(path: path, runAndWait: runAndWait)
+    try exec(path: path)
   }
 
   /// Validate, prepare, and execute the configuration file at the given path.
@@ -25,17 +20,12 @@ public enum Config {
   /// - Throws: A `ConfigError` when the file is missing, cannot be made
   ///   executable, cannot be launched, or exits with a non-zero status.
   public static func exec(path: String) throws {
-    try exec(path: path, runAndWait: runAndWait)
-  }
-
-  /// Validate, prepare, and execute a configuration file with an injected runner.
-  static func exec(path: String, runAndWait: (String) throws -> Void) throws {
     if !FileManager.default.fileExists(atPath: path) {
       throw ConfigError.fileDoesNotExist
     }
 
     try ensureOwnerExecutable(path: path)
-    try runAndWait(path)
+    try runAndWait(path: path)
   }
 
   /// Add owner execute permission to the configuration file when it is missing.
