@@ -31,19 +31,7 @@ struct WindowLifecycleHandler {
     guard windowManager.window(by: windowID) == nil else { return }
     guard let application = windowManager.application(by: pid) else { return }
 
-    let element = application.windowElements().first {
-      AccessibilityClient.shared.optionalWindowID(for: $0) == windowID
-    }
-    let window: Window?
-
-    if let element {
-      window = windowManager.addWindow(for: application, with: element)
-    } else {
-      _ = windowManager.addWindows(for: application)
-      window = windowManager.window(by: windowID)
-    }
-
-    guard let window else { return }
+    guard let window = windowManager.addWindow(with: windowID, for: application) else { return }
 
     log("window created \(window)")
 

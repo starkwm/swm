@@ -45,36 +45,21 @@ struct ApplicationLifecycleHandler {
       workspace.unobserveActivationPolicy(process)
     }
 
-    guard windowManager.application(by: process.pid) == nil else { return }
-
-    guard let application = Application(for: process) else {
-      log("could not create application for process \(process)", level: .info)
-      return
-    }
-
-    switch application.observe() {
-    case .success:
-      break
-    case .failure(let error):
-      log(
-        "could not observe application \(application): \(error)",
-        level: application.retryObserving ? .info : .warn
-      )
-      application.unobserve()
-
-      if application.retryObserving {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-          [processManager, psn = process.psn] in
-          guard let process = processManager.find(by: psn) else { return }
-          EventManager.shared.post(.application(.launched(process)))
+    guard
+      let application = windowManager.manage(
+        process,
+        retryObservation: {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            [processManager, psn = process.psn] in
+            guard let process = processManager.find(by: psn) else { return }
+            EventManager.shared.post(.application(.launched(process)))
+          }
         }
-      }
+      )
+    else { return }
 
-      return
-    }
-
-    windowManager.add(application: application)
-    _ = windowManager.addWindows(for: application)
+    windowManager.addWindows(for: application)
+    emitApplicationSignal(.applicationLaunched, application: application)
 
     if windowManager.removeLostFrontSwitchedEvent(for: process.pid) {
       EventManager.shared.post(.application(.frontSwitched(process)))
@@ -94,6 +79,7 @@ struct ApplicationLifecycleHandler {
     log("application terminated \(application)")
 
     windowManager.remove(application: application)
+    emitApplicationSignal(.applicationTerminated, application: application)
 
     let windows = windowManager.allWindows(for: application)
 
@@ -121,6 +107,18 @@ struct ApplicationLifecycleHandler {
 
     log(
       "frontmost application switched \(application), current focused window: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+    )
+  }
+
+  /// Emit an application lifecycle signal after the model state changes.
+  private func emitApplicationSignal(_ event: SignalEvent, application: Application) {
+    SignalManager.shared.emit(
+      .application(
+        event: event,
+        processID: application.processID,
+        app: application.name,
+        active: WindowServerClient.shared.frontmostProcessID() == application.processID
+      )
     )
   }
 }

@@ -56,7 +56,8 @@ public final class WindowManager {
   /// Start managing all supplied processes.
   public func start(processes: [Process]) {
     for process in processes {
-      manage(process)
+      guard let application = manage(process) else { continue }
+      reconcileWindows(for: application, mode: .initialDiscovery)
     }
   }
 
@@ -106,7 +107,7 @@ public final class WindowManager {
     guard unresolvedApplicationIDs.contains(application.processID) else { return }
 
     log("application has windows that are not yet resolved \(application)", level: .info)
-    _ = reconcileWindows(for: application, mode: .refreshAttempt)
+    reconcileWindows(for: application, mode: .refreshAttempt)
   }
 
   /// Record a front-switched event that arrived before its application was managed.
@@ -126,11 +127,6 @@ public final class WindowManager {
     lostFocusedWindowIDs.insert(windowID)
   }
 
-  /// Return whether a focused-window event is waiting for a window.
-  func containsLostFocusedEvent(for windowID: CGWindowID) -> Bool {
-    lostFocusedWindowIDs.contains(windowID)
-  }
-
   /// Return a snapshot of window IDs with lost focused-window events.
   func lostFocusedWindowIDsSnapshot() -> [CGWindowID] {
     Array(lostFocusedWindowIDs)
@@ -142,37 +138,13 @@ public final class WindowManager {
     lostFocusedWindowIDs.remove(windowID) != nil
   }
 
-  /// Add a managed application.
-  func add(application: Application) {
-    guard applicationsByPID[application.processID] == nil else { return }
-    applicationsByPID[application.processID] = application
-
-    SignalManager.shared.emit(
-      .application(
-        event: .applicationLaunched,
-        processID: application.processID,
-        app: application.name,
-        active: WindowServerClient.shared.frontmostProcessID() == application.processID
-      )
-    )
-  }
-
   /// Remove a managed application and associated pending event state.
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
     remoteTokenCursors.removeValue(forKey: application.processID)
 
-    guard applicationsByPID.removeValue(forKey: application.processID) != nil else { return }
-
-    SignalManager.shared.emit(
-      .application(
-        event: .applicationTerminated,
-        processID: application.processID,
-        app: application.name,
-        active: WindowServerClient.shared.frontmostProcessID() == application.processID
-      )
-    )
+    applicationsByPID.removeValue(forKey: application.processID)
   }
 
   /// Create, observe, and store one managed window for an application.
@@ -192,13 +164,23 @@ public final class WindowManager {
     return window
   }
 
-  /// Add all currently accessible windows for an application.
-  @discardableResult
-  func addWindows(for application: Application) -> [Window] {
-    let elements = application.windowElements()
-    var windows = [Window]()
+  /// Find and add one window by ID from an application's accessibility elements.
+  func addWindow(with windowID: CGWindowID, for application: Application) -> Window? {
+    guard windowsByID[windowID] == nil else { return windowsByID[windowID] }
 
-    for element in elements {
+    if let element = application.windowElements().first(where: {
+      AccessibilityClient.shared.optionalWindowID(for: $0) == windowID
+    }) {
+      return addWindow(for: application, with: element)
+    }
+
+    addWindows(for: application)
+    return windowsByID[windowID]
+  }
+
+  /// Add all currently accessible windows for an application.
+  func addWindows(for application: Application) {
+    for element in application.windowElements() {
       guard
         let windowID = AccessibilityClient.shared.optionalWindowID(for: element),
         windowsByID[windowID] == nil
@@ -206,12 +188,44 @@ public final class WindowManager {
         continue
       }
 
-      if let window = addWindow(for: application, with: element) {
-        windows.append(window)
-      }
+      _ = addWindow(for: application, with: element)
+    }
+  }
+
+  /// Manage one observable process and register its application observer.
+  func manage(_ process: Process, retryObservation: (() -> Void)? = nil) -> Application? {
+    guard applicationsByPID[process.pid] == nil else { return nil }
+
+    guard workspace.isObservable(process) else {
+      log("application is not observable \(process)", level: .info)
+      workspace.observeActivationPolicy(process)
+      return nil
     }
 
-    return windows
+    guard let application = Application(for: process) else {
+      log("could not create application for process \(process)", level: .info)
+      return nil
+    }
+
+    switch application.observe() {
+    case .success:
+      break
+    case .failure(let error):
+      log(
+        "could not observe application \(application): \(error)",
+        level: application.retryObserving ? .info : .warn
+      )
+      application.unobserve()
+
+      if application.retryObserving {
+        retryObservation?()
+      }
+
+      return nil
+    }
+
+    applicationsByPID[application.processID] = application
+    return application
   }
 
   /// Remove a managed window by ID.
@@ -221,82 +235,35 @@ public final class WindowManager {
   }
 
   /// Reconcile WindowServer IDs with accessibility window elements for an application.
-  @discardableResult
   private func reconcileWindows(
     for application: Application,
     mode: WindowDiscoveryMode
-  ) -> Bool {
+  ) {
     let globalWindowIDs = application.windowIdentifiers()
-    let accessibilityElements = application.windowElements()
-    registerAccessibleWindows(
-      for: application,
-      elements: accessibilityElements
-    )
+    addWindows(for: application)
 
     var unresolvedWindowIDs = globalWindowIDs.filter { windowsByID[$0] == nil }
 
     guard !unresolvedWindowIDs.isEmpty else {
       remoteTokenCursors.removeValue(forKey: application.processID)
-      return finishResolution(for: application, mode: mode)
+      finishResolution(for: application, mode: mode)
+      return
     }
 
     resolveRemoteWindows(&unresolvedWindowIDs, for: application)
 
-    return updateRefreshTracking(
+    updateRefreshTracking(
       for: application,
       unresolvedWindowIDs: unresolvedWindowIDs,
       mode: mode
     )
   }
 
-  /// Manage one observable process and discover its windows.
-  private func manage(_ process: Process) {
-    guard workspace.isObservable(process) else {
-      log("application is not observable \(process)", level: .info)
-      workspace.observeActivationPolicy(process)
-      return
-    }
-
-    guard let application = Application(for: process) else {
-      log("could not create application for process \(process)", level: .info)
-      return
-    }
-
-    switch application.observe() {
-    case .success:
-      break
-    case .failure(let error):
-      log("could not observe application \(application): \(error)", level: .warn)
-      application.unobserve()
-      return
-    }
-
-    add(application: application)
-    _ = reconcileWindows(for: application, mode: .initialDiscovery)
-  }
-
-  /// Register windows that already have accessibility elements.
-  private func registerAccessibleWindows(
-    for application: Application,
-    elements: [AXUIElement]
-  ) {
-    for element in elements {
-      guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else {
-        continue
-      }
-
-      if windowsByID[windowID] == nil {
-        _ = addWindow(for: application, with: element)
-      }
-    }
-  }
-
   /// Finish a refresh attempt when all windows are resolved.
-  private func finishResolution(for application: Application, mode: WindowDiscoveryMode) -> Bool {
-    guard mode == .refreshAttempt else { return false }
+  private func finishResolution(for application: Application, mode: WindowDiscoveryMode) {
+    guard mode == .refreshAttempt else { return }
     log("all windows resolved \(application)", level: .info)
     unresolvedApplicationIDs.remove(application.processID)
-    return true
   }
 
   /// Attempt to resolve missing windows by creating accessibility elements from remote tokens.
@@ -360,7 +327,7 @@ public final class WindowManager {
     for application: Application,
     unresolvedWindowIDs: [CGWindowID],
     mode: WindowDiscoveryMode
-  ) -> Bool {
+  ) {
     switch mode {
     case .initialDiscovery:
       if !unresolvedWindowIDs.isEmpty {
@@ -372,11 +339,8 @@ public final class WindowManager {
       if unresolvedWindowIDs.isEmpty {
         log("workaround successfully resolved all windows \(application)", level: .info)
         unresolvedApplicationIDs.remove(application.processID)
-        return true
       }
     }
-
-    return false
   }
 }
 
