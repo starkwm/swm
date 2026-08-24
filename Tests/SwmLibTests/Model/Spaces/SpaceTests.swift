@@ -19,12 +19,11 @@ struct SpaceTests {
     #expect(space.description == "<Space id: 42, type: normal>")
   }
 
-  @Test("isEqual: compares spaces by id")
-  func isEqualComparesSpacesByID() {
+  @Test("equality: compares spaces by id")
+  func equalityComparesSpacesByID() {
     let space = Space(id: 42, type: .normal)
 
-    #expect(space.isEqual(Space(id: 42, type: .fullscreen)))
-    #expect(!space.isEqual(Space(id: 43, type: .normal)))
-    #expect(!space.isEqual("42"))
+    #expect(space == Space(id: 42, type: .fullscreen))
+    #expect(space != Space(id: 43, type: .normal))
   }
 }

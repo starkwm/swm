@@ -15,10 +15,8 @@ struct WindowLifecycleHandler {
       windowDestroyed(with: window)
     case .focused(let windowID):
       windowFocused(with: windowID)
-    case .moved(let windowID):
-      windowMoved(with: windowID)
-    case .resized(let windowID):
-      windowResized(with: windowID)
+    case .moved, .resized:
+      break
     case .minimized(let window):
       windowMinimized(with: window)
     case .deminimized(let window):
@@ -73,16 +71,6 @@ struct WindowLifecycleHandler {
     log(
       "window focused \(window) current: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
     )
-  }
-
-  /// Handle a window move notification.
-  private func windowMoved(with windowID: CGWindowID) {
-    guard windowID != 0 else { return }
-  }
-
-  /// Handle a window resize notification.
-  private func windowResized(with windowID: CGWindowID) {
-    guard windowID != 0 else { return }
   }
 
   /// Handle a window minimization notification.
