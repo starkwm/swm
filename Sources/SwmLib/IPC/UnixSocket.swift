@@ -3,6 +3,9 @@ import Socket
 
 /// Helpers for the per-user Unix domain socket used by IPC.
 enum UnixSocket {
+  /// Read and write timeout used by IPC clients and the daemon, in milliseconds.
+  static let timeout: UInt = 5_000
+
   /// Return the current user's socket path in the temporary directory.
   static func filePath() -> String {
     return FileManager

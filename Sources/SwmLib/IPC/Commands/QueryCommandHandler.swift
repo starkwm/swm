@@ -5,7 +5,7 @@ struct QueryCommandHandler {
   private let windowManager: WindowManager
 
   /// Create a query command handler backed by a window manager.
-  init(windowManager: WindowManager = WindowManager(workspace: Workspace())) {
+  init(windowManager: WindowManager) {
     self.windowManager = windowManager
   }
 
@@ -28,23 +28,13 @@ struct QueryCommandHandler {
     }
   }
 
-  /// Encode a query payload as sorted-key JSON in the response message.
-  func response<T: Encodable>(id: String, payload: T) throws -> IPCResponse {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-
-    let data = try encoder.encode(payload)
-
-    return .success(id: id, message: String(decoding: data, as: UTF8.self))
-  }
-
   /// Encode either a single query value or a list of query values.
-  func response<T: Encodable>(id: String, result: QueryResult<T>) throws -> IPCResponse {
+  private func response<T: Encodable>(id: String, result: QueryResult<T>) throws -> IPCResponse {
     switch result {
     case .many(let values):
-      try response(id: id, payload: values)
+      try .json(id: id, payload: values)
     case .one(let value):
-      try response(id: id, payload: value)
+      try .json(id: id, payload: value)
     }
   }
 }

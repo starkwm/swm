@@ -1,5 +1,3 @@
-import Foundation
-
 /// Handles IPC commands that register, remove, and list runtime signals.
 struct SignalCommandHandler {
   /// Dispatch a signal IPC request.
@@ -44,10 +42,6 @@ struct SignalCommandHandler {
     }
 
     let payload = SignalManager.shared.list().map(SignalSerializer.init)
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
-
-    let data = try encoder.encode(payload)
-    return .success(id: request.id, message: String(decoding: data, as: UTF8.self))
+    return try .json(id: request.id, payload: payload)
   }
 }
