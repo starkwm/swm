@@ -21,12 +21,7 @@ public final class AccessibilityClient {
 
   /// Read a Boolean accessibility attribute.
   func boolAttribute(for element: AXUIElement, attribute: String) -> Bool? {
-    var value: AnyObject?
-
-    guard
-      AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-      let number = value as? NSNumber
-    else {
+    guard let number = attributeValue(for: element, attribute: attribute) as? NSNumber else {
       return nil
     }
 
@@ -35,27 +30,16 @@ public final class AccessibilityClient {
 
   /// Read a string accessibility attribute.
   func stringAttribute(for element: AXUIElement, attribute: String) -> String? {
-    var value: AnyObject?
-
-    guard
-      AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-      let result = value as? String
-    else {
-      return nil
-    }
-
-    return result
+    attributeValue(for: element, attribute: attribute) as? String
   }
 
   /// Read a point accessibility attribute.
   func pointAttribute(for element: AXUIElement, attribute: String) -> CGPoint? {
-    var value: AnyObject?
     var point = CGPoint.zero
 
     guard
-      AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-      let value,
-      AXValueGetValue(value as! AXValue, .cgPoint, &point)
+      let value = axValueAttribute(for: element, attribute: attribute, type: .cgPoint),
+      AXValueGetValue(value, .cgPoint, &point)
     else {
       return nil
     }
@@ -65,13 +49,11 @@ public final class AccessibilityClient {
 
   /// Read a size accessibility attribute.
   func sizeAttribute(for element: AXUIElement, attribute: String) -> CGSize? {
-    var value: AnyObject?
     var size = CGSize.zero
 
     guard
-      AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-      let value,
-      AXValueGetValue(value as! AXValue, .cgSize, &size)
+      let value = axValueAttribute(for: element, attribute: attribute, type: .cgSize),
+      AXValueGetValue(value, .cgSize, &size)
     else {
       return nil
     }
@@ -147,12 +129,9 @@ public final class AccessibilityClient {
 
   /// Return the focused window element for an application element.
   func focusedWindowElement(for element: AXUIElement) -> AXUIElement? {
-    var value: AnyObject?
-
     guard
-      AXUIElementCopyAttributeValue(element, kAXFocusedWindowAttribute as CFString, &value)
-        == .success,
-      let value
+      let value = attributeValue(for: element, attribute: kAXFocusedWindowAttribute as String),
+      CFGetTypeID(value) == AXUIElementGetTypeID()
     else {
       return nil
     }
@@ -200,18 +179,7 @@ public final class AccessibilityClient {
 
   /// Return whether an application has enhanced accessibility UI enabled.
   func enhancedUIEnabled(for element: AXUIElement, attribute: String) -> Bool {
-    var value: AnyObject?
-    let result = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
-
-    if result == .success,
-      let value,
-      CFGetTypeID(value) == CFBooleanGetTypeID()
-    {
-      let boolValue = value as! CFBoolean
-      return CFBooleanGetValue(boolValue)
-    }
-
-    return false
+    boolAttribute(for: element, attribute: attribute) ?? false
   }
 
   /// Create an accessibility observer for a process.
@@ -241,6 +209,34 @@ public final class AccessibilityClient {
   /// Remove an accessibility notification from an observer.
   func removeNotification(observer: AXObserver, element: AXUIElement, notification: String) {
     AXObserverRemoveNotification(observer, element, notification as CFString)
+  }
+
+  /// Read an untyped accessibility attribute value.
+  private func attributeValue(for element: AXUIElement, attribute: String) -> AnyObject? {
+    var value: AnyObject?
+
+    guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+      return nil
+    }
+
+    return value
+  }
+
+  /// Read an accessibility value after verifying its Core Foundation and payload types.
+  private func axValueAttribute(
+    for element: AXUIElement,
+    attribute: String,
+    type: AXValueType
+  ) -> AXValue? {
+    guard
+      let value = attributeValue(for: element, attribute: attribute),
+      CFGetTypeID(value) == AXValueGetTypeID()
+    else {
+      return nil
+    }
+
+    let axValue = value as! AXValue
+    return AXValueGetType(axValue) == type ? axValue : nil
   }
 }
 
