@@ -1,3 +1,5 @@
+import Foundation
+
 /// Server response sent over IPC.
 struct IPCResponse: Codable, Equatable {
   /// Create a successful response.
@@ -8,6 +10,14 @@ struct IPCResponse: Codable, Equatable {
   /// Create a failed response.
   static func failure(id: String, message: String, errorCode: IPCErrorCode) -> IPCResponse {
     IPCResponse(id: id, ok: false, message: message, errorCode: errorCode)
+  }
+
+  /// Create a successful response containing sorted-key JSON.
+  static func json<T: Encodable>(id: String, payload: T) throws -> IPCResponse {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    let data = try encoder.encode(payload)
+    return .success(id: id, message: String(decoding: data, as: UTF8.self))
   }
 
   /// Request identifier this response belongs to.

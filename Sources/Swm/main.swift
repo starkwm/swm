@@ -66,8 +66,7 @@ func runSwm(with arguments: Arguments) {
 
   let daemon = Daemon(
     windowManager: windowManager,
-    spaceManager: spaceManager,
-    displayManager: displayManager
+    spaceManager: spaceManager
   )
 
   runOrFail("unable to run messaging daemon") {

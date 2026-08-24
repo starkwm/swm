@@ -49,8 +49,8 @@ public enum Client {
     let socket = try Socket.create(family: .unix)
     defer { socket.close() }
 
-    try socket.setReadTimeout(value: 5_000)
-    try socket.setWriteTimeout(value: 5_000)
+    try socket.setReadTimeout(value: UnixSocket.timeout)
+    try socket.setWriteTimeout(value: UnixSocket.timeout)
 
     do {
       try socket.connect(to: UnixSocket.filePath())

@@ -3,9 +3,7 @@ import Foundation
 import Socket
 
 /// Unix socket IPC server for swm commands.
-public class Daemon {
-  private static let socketTimeout: UInt = 5_000
-
+public final class Daemon {
   private let lockQueue = DispatchQueue(label: "app.usestark.swm")
   private let dispatcher: IPCCommandDispatcher
   private var isRunning = false
@@ -23,8 +21,7 @@ public class Daemon {
   @MainActor
   public convenience init(
     windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    displayManager: DisplayManager
+    spaceManager: SpaceManager
   ) {
     self.init(
       dispatcher: IPCCommandDispatcher(
@@ -104,8 +101,8 @@ public class Daemon {
       }
 
       do {
-        try socket.setReadTimeout(value: Daemon.socketTimeout)
-        try socket.setWriteTimeout(value: Daemon.socketTimeout)
+        try socket.setReadTimeout(value: UnixSocket.timeout)
+        try socket.setWriteTimeout(value: UnixSocket.timeout)
 
         guard self.isAuthorized(socket: socket) else {
           let response = IPCResponse.failure(

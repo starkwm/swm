@@ -4,11 +4,8 @@ struct IPCCommandDispatcher {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
 
-  /// Create a dispatcher backed by shared window and space managers.
-  init(
-    windowManager: WindowManager = WindowManager(workspace: Workspace()),
-    spaceManager: SpaceManager = SpaceManager()
-  ) {
+  /// Create a dispatcher backed by explicit window and space managers.
+  init(windowManager: WindowManager, spaceManager: SpaceManager) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
   }
