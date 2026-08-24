@@ -165,12 +165,12 @@ struct WindowSerializer: Encodable, Equatable {
       )
     }
     subrole = window.subrole
-    let displayIndex = frame.flatMap { rect in
-      screens.indices.max { a, b in
-        rect.intersection(screens[a].frame).area < rect.intersection(screens[b].frame).area
+    let displayScreen = frame.flatMap { rect in
+      screens.max { lhs, rhs in
+        rect.intersection(lhs.axFrame).area < rect.intersection(rhs.axFrame).area
       }
     }
-    display = displayIndex.flatMap { screens[$0].id }
+    display = displayScreen?.id
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
     canMove = element.map {

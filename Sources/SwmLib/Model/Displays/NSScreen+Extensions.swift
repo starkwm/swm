@@ -39,17 +39,27 @@ extension NSScreen {
     return CFUUIDCreateString(nil, uuid) as String
   }
 
+  /// Full frame converted to the coordinate space used by accessibility APIs.
+  var axFrame: CGRect {
+    accessibilityFrame(for: frame)
+  }
+
   /// Visible frame converted to the coordinate space used by accessibility APIs.
   var axVisibleFrame: CGRect {
+    accessibilityFrame(for: visibleFrame)
+  }
+
+  /// Convert an AppKit screen frame to the coordinate space used by accessibility APIs.
+  private func accessibilityFrame(for frame: CGRect) -> CGRect {
     guard let mainFrame = NSScreen.screens.map(\.frame).max(by: { $0.maxY < $1.maxY }) else {
-      return visibleFrame
+      return frame
     }
 
     return CGRect(
-      x: visibleFrame.origin.x,
-      y: mainFrame.maxY - visibleFrame.maxY,
-      width: visibleFrame.width,
-      height: visibleFrame.height
+      x: frame.origin.x,
+      y: mainFrame.maxY - frame.maxY,
+      width: frame.width,
+      height: frame.height
     )
   }
 }
