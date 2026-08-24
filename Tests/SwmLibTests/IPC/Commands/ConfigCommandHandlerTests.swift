@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("ConfigCommandHandler")
+@MainActor
 struct ConfigCommandHandlerTests {
   @Test("dispatch: window gap updates defaults and overrides")
   func dispatchWindowGapUpdatesDefaultsAndOverrides() {

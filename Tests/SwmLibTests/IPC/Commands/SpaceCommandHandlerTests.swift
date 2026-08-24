@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("SpaceCommandHandler")
+@MainActor
 struct SpaceCommandHandlerTests {
   @Test("dispatch: accepts toggle commands")
   func dispatchAcceptsToggleCommands() throws {

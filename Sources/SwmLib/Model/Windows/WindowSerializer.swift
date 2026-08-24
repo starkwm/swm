@@ -24,6 +24,7 @@ struct WindowSerializer: Encodable, Equatable {
   }
 
   /// Snapshot all manageable windows.
+  @MainActor
   static func all(snapshot: QuerySnapshot) -> [WindowSerializer] {
     snapshot.windows.map { window in
       let spaceIDs = snapshot.spaceIDsByWindowID[window.id] ?? []

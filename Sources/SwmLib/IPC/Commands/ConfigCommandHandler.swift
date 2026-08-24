@@ -1,4 +1,5 @@
 /// Handles IPC commands that update global configuration for every known space.
+@MainActor
 struct ConfigCommandHandler {
   private let spaceManager: SpaceManager
 

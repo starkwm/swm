@@ -14,6 +14,7 @@ private func processEventHandler(
 }
 
 /// Tracks running application processes and publishes process lifecycle events.
+@MainActor
 public final class ProcessManager {
   private var processes = [UInt32: Process]()
 
@@ -63,7 +64,7 @@ public final class ProcessManager {
   }
 
   /// Handle a Carbon application event.
-  func handle(event: EventRef) -> OSStatus {
+  nonisolated func handle(event: EventRef) -> OSStatus {
     var psn = ProcessSerialNumber()
 
     GetEventParameter(
@@ -76,7 +77,17 @@ public final class ProcessManager {
       &psn
     )
 
-    switch Int(GetEventKind(event)) {
+    let eventKind = Int(GetEventKind(event))
+    Task { @MainActor in
+      handle(eventKind: eventKind, psn: psn)
+    }
+
+    return noErr
+  }
+
+  /// Update process state for a parsed Carbon application event.
+  private func handle(eventKind: Int, psn: ProcessSerialNumber) {
+    switch eventKind {
     case kEventAppLaunched:
       applicationLaunched(with: psn)
 
@@ -90,7 +101,6 @@ public final class ProcessManager {
       break
     }
 
-    return noErr
   }
 
   /// Add all currently running processes to the tracked process map.
@@ -130,8 +140,6 @@ public final class ProcessManager {
     EventManager.shared.post(.application(.frontSwitched(process)))
   }
 }
-
-extension ProcessManager: @unchecked Sendable {}
 
 /// Errors raised while starting or accessing process observation.
 public enum ProcessManagerError: Error, CustomStringConvertible {

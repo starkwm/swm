@@ -5,6 +5,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("WindowManager")
+@MainActor
 struct WindowManagerTests {
   @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
   func addAndRemoveLostFrontSwitchedEventConsumesOnce() {

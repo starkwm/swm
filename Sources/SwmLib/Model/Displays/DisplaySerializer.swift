@@ -13,6 +13,7 @@ struct DisplaySerializer: Encodable, Equatable {
   }
 
   /// Snapshot all displays and their associated space indexes.
+  @MainActor
   static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
     let displaySpaces = Dictionary(
       uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.id, $0.spaces) }

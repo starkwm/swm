@@ -3,9 +3,10 @@ import Carbon
 import Foundation
 
 /// Tracks observable applications, managed windows, and focus history.
+@MainActor
 public final class WindowManager {
   /// Resolve the currently focused window ID from the frontmost process.
-  static func focusedWindowID() -> CGWindowID? {
+  nonisolated static func focusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {
       return nil
     }
@@ -25,20 +26,15 @@ public final class WindowManager {
 
   /// Tracked ID of the current focused window.
   var currentFocusedWindowID: CGWindowID? {
-    focusedWindowLock.withLock {
-      focusedWindowState.current
-    }
+    focusedWindowState.current
   }
 
   /// Tracked ID of the previously focused window.
   var lastFocusedWindowID: CGWindowID? {
-    focusedWindowLock.withLock {
-      focusedWindowState.last
-    }
+    focusedWindowState.last
   }
 
   private let workspace: Workspace
-  private let focusedWindowLock = NSLock()
   private var focusedWindowState: TrackedState<CGWindowID>
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
@@ -84,10 +80,7 @@ public final class WindowManager {
   /// Update tracked focused-window state.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
-
-    focusedWindowLock.withLock {
-      focusedWindowState.update(to: windowID)
-    }
+    focusedWindowState.update(to: windowID)
   }
 
   /// Retry discovery for applications with unresolved windows.
@@ -343,8 +336,6 @@ public final class WindowManager {
     }
   }
 }
-
-extension WindowManager: @unchecked Sendable {}
 
 /// Identifies whether discovery is initial or a retry for unresolved windows.
 private enum WindowDiscoveryMode {

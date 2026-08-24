@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("WindowCommandHandler")
+@MainActor
 struct WindowCommandHandlerTests {
   @Test("dispatch: rejects malformed single-target action arguments")
   func dispatchRejectsMalformedSingleTargetActionArguments() {

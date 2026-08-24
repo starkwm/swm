@@ -3,6 +3,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("Unsupported command handlers")
+@MainActor
 struct UnsupportedCommandHandlerTests {
   @Test("dispatch: config rejects unsupported commands")
   func dispatchConfigRejectsUnsupportedCommands() {

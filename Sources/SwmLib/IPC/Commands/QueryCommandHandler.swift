@@ -1,6 +1,7 @@
 import Foundation
 
 /// Handles IPC requests that query displays, spaces, and windows.
+@MainActor
 struct QueryCommandHandler {
   private let windowManager: WindowManager
 

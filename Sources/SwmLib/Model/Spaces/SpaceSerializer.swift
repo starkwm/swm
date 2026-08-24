@@ -15,6 +15,7 @@ struct SpaceSerializer: Encodable, Equatable {
   }
 
   /// Snapshot all spaces, including their display and window relationships.
+  @MainActor
   static func all(snapshot: QuerySnapshot) -> [SpaceSerializer] {
     var screenIDsBySpaceID = [UInt64: [String]]()
     var windowIDsBySpaceID = [UInt64: [CGWindowID]]()
