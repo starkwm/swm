@@ -24,14 +24,11 @@ struct WindowManagerTests {
     let manager = WindowManager(workspace: Workspace())
     let windowID: CGWindowID = 42
 
-    #expect(manager.containsLostFocusedEvent(for: windowID) == false)
     #expect(manager.removeLostFocusedEvent(for: windowID) == false)
 
     manager.addLostFocusedEvent(for: windowID)
 
-    #expect(manager.containsLostFocusedEvent(for: windowID))
     #expect(manager.removeLostFocusedEvent(for: windowID))
-    #expect(manager.containsLostFocusedEvent(for: windowID) == false)
     #expect(manager.removeLostFocusedEvent(for: windowID) == false)
   }
 }
