@@ -11,8 +11,8 @@ public final class TilingManager {
   private let spaceManager: SpaceManager
   private var frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
-  private var layoutsBySpaceID = [UInt64: SpaceLayoutState]()
-  private var tiledSpaceIDByWindowID = [CGWindowID: UInt64]()
+  private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
+  private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
   /// Create a manager backed by the live runtime models.
   public convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
@@ -54,49 +54,45 @@ public final class TilingManager {
     let snapshot = snapshot()
     let windows = snapshot.windows.sorted { $0.id < $1.id }
     let topology = snapshot.topology
-    let normalSpaceIDs = Set(
-      topology.spacesByID.values.filter { $0.type == .normal }.map(\.id)
-    )
+    let layoutIDs = topology.layoutIDs
 
-    layoutsBySpaceID = layoutsBySpaceID.filter { normalSpaceIDs.contains($0.key) }
-    for descriptor in topology.spacesByID.values where descriptor.type == .normal {
-      if layoutsBySpaceID[descriptor.id] == nil {
-        layoutsBySpaceID[descriptor.id] = SpaceLayoutState(
-          displayID: descriptor.displayID,
-          mode: .master,
-          layout: OrderedWindowLayout(),
-          minimizedWindowIDs: [],
-          focusedWindowID: nil,
-          enabled: false
-        )
-      } else {
-        layoutsBySpaceID[descriptor.id]?.displayID = descriptor.displayID
-      }
+    layoutsByID = layoutsByID.filter { layoutIDs.contains($0.key) }
+    for layoutID in layoutIDs where layoutsByID[layoutID] == nil {
+      layoutsByID[layoutID] = SpaceLayoutState(
+        id: layoutID,
+        mode: .master,
+        layout: OrderedWindowLayout(),
+        minimizedWindowIDs: [],
+        focusedWindowID: nil,
+        enabled: false
+      )
     }
 
-    var tiledWindowIDsBySpaceID = [UInt64: Set<CGWindowID>]()
-    var minimizedWindowIDsBySpaceID = [UInt64: Set<CGWindowID>]()
-    var tiledSpaceIDByWindowID = [CGWindowID: UInt64]()
+    var tiledWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
+    var minimizedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
+    var newLayoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
 
     for window in windows {
-      let normalMembership = topology.normalSpaceIDs(for: window.id)
-
       switch WindowEligibilityPolicy.disposition(for: window, topology: topology) {
       case .tiled:
-        guard let spaceID = normalMembership.first else { continue }
-        tiledWindowIDsBySpaceID[spaceID, default: []].insert(window.id)
-        tiledSpaceIDByWindowID[window.id] = spaceID
+        guard
+          let layoutID = topology.layoutID(for: window.id, on: window.displayID)
+        else {
+          continue
+        }
+        tiledWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
+        newLayoutIDByWindowID[window.id] = layoutID
         if window.isMinimized {
-          minimizedWindowIDsBySpaceID[spaceID, default: []].insert(window.id)
+          minimizedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
         }
       case .floating, .excluded, .pending:
         break
       }
     }
 
-    for spaceID in normalSpaceIDs {
-      guard var state = layoutsBySpaceID[spaceID] else { continue }
-      let desiredWindowIDs = tiledWindowIDsBySpaceID[spaceID] ?? []
+    for layoutID in layoutIDs {
+      guard var state = layoutsByID[layoutID] else { continue }
+      let desiredWindowIDs = tiledWindowIDsByLayoutID[layoutID] ?? []
 
       let retainedWindowIDs = state.layout.windowIDs
       for windowID in retainedWindowIDs where !desiredWindowIDs.contains(windowID) {
@@ -115,20 +111,23 @@ public final class TilingManager {
         state.focusedWindowID = nil
       }
 
-      state.minimizedWindowIDs = minimizedWindowIDsBySpaceID[spaceID] ?? []
-      layoutsBySpaceID[spaceID] = state
+      state.minimizedWindowIDs = minimizedWindowIDsByLayoutID[layoutID] ?? []
+      layoutsByID[layoutID] = state
     }
 
     currentTopology = topology
-    self.tiledSpaceIDByWindowID = tiledSpaceIDByWindowID
+    layoutIDByWindowID = newLayoutIDByWindowID
   }
 
   /// Enable or disable automatic frame planning for a known normal Space.
   @discardableResult
   func setEnabled(_ enabled: Bool, for spaceID: UInt64) -> Bool {
-    guard var state = layoutsBySpaceID[spaceID] else { return false }
-    state.enabled = enabled
-    layoutsBySpaceID[spaceID] = state
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    for layoutID in layoutIDs {
+      layoutsByID[layoutID]?.enabled = enabled
+    }
     if enabled {
       reflow(spaceID: spaceID)
     }
@@ -137,23 +136,28 @@ public final class TilingManager {
 
   /// Toggle automatic tiling for a known normal Space and return the new value.
   func toggleEnabled(for spaceID: UInt64) -> Bool? {
-    guard let state = layoutsBySpaceID[spaceID] else { return nil }
-    let enabled = !state.enabled
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return nil }
+    let enabled = !layoutIDs.allSatisfy { layoutsByID[$0]?.enabled == true }
     return setEnabled(enabled, for: spaceID) ? enabled : nil
   }
 
   /// Return whether automatic tiling is enabled for a known Space.
   func isEnabled(for spaceID: UInt64) -> Bool {
-    layoutsBySpaceID[spaceID]?.enabled ?? false
+    let layoutIDs = layoutIDs(for: spaceID)
+    return !layoutIDs.isEmpty && layoutIDs.allSatisfy { layoutsByID[$0]?.enabled == true }
   }
 
   /// Select the layout algorithm for a known normal Space.
   @discardableResult
   func setLayoutMode(_ mode: LayoutMode, for spaceID: UInt64) -> Bool {
-    guard var state = layoutsBySpaceID[spaceID] else { return false }
-    state.mode = mode
-    layoutsBySpaceID[spaceID] = state
-    if state.enabled {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    for layoutID in layoutIDs {
+      layoutsByID[layoutID]?.mode = mode
+    }
+    if layoutIDs.contains(where: { layoutsByID[$0]?.enabled == true }) {
       reflow(spaceID: spaceID)
     }
     return true
@@ -161,16 +165,18 @@ public final class TilingManager {
 
   /// Return the selected layout algorithm for a known Space.
   func layoutMode(for spaceID: UInt64) -> LayoutMode? {
-    layoutsBySpaceID[spaceID]?.mode
+    let modes = Set(layoutIDs(for: spaceID).compactMap { layoutsByID[$0]?.mode })
+    guard modes.count == 1 else { return nil }
+    return modes.first
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
-    guard let spaceID = tiledSpaceIDByWindowID[windowID] else { return }
-    guard var state = layoutsBySpaceID[spaceID] else { return }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return }
+    guard var state = layoutsByID[layoutID] else { return }
 
     state.focusedWindowID = windowID
-    layoutsBySpaceID[spaceID] = state
+    layoutsByID[layoutID] = state
   }
 
   /// Reconcile current facts and apply every visible enabled Space plan.
@@ -190,33 +196,36 @@ public final class TilingManager {
 
   /// Apply a fresh plan for one Space when it is visible and enabled.
   func reflow(spaceID: UInt64) {
-    guard case .layout(.frames(let frames)) = layoutPlan(for: spaceID) else { return }
-    frameReconciler?.apply(frames)
+    for layoutID in layoutIDs(for: spaceID) {
+      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
+      frameReconciler?.apply(frames)
+    }
   }
 
   /// Apply fresh plans for all currently visible normal Spaces.
   func reflowVisibleSpaces() {
     guard let currentTopology else { return }
 
-    for spaceID in currentTopology.visibleNormalSpaceIDs.sorted() {
-      reflow(spaceID: spaceID)
+    for layoutID in sorted(currentTopology.visibleLayoutIDs) {
+      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
+      frameReconciler?.apply(frames)
     }
   }
 
-  /// Calculate the current plan for an enabled, visible Space without side effects.
-  func layoutPlan(for spaceID: UInt64) -> TilingLayoutPlan {
-    guard let state = layoutsBySpaceID[spaceID] else { return .unknownSpace }
+  /// Calculate the current plan for an enabled, visible layout without side effects.
+  func layoutPlan(for layoutID: SpaceLayoutID) -> TilingLayoutPlan {
+    guard let state = layoutsByID[layoutID] else { return .unknownSpace }
     guard state.enabled else { return .disabled }
     guard let topology = currentTopology else { return .unknownSpace }
-    guard topology.visibleNormalSpaceIDs.contains(spaceID) else { return .notVisible }
-    guard let display = topology.displaysByID[state.displayID] else {
+    guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
+    guard let display = topology.displaysByID[layoutID.displayID] else {
       return .unresolvedDisplay
     }
 
     let windowIDs = state.layout.activeWindowIDs(
       excluding: state.minimizedWindowIDs
     )
-    let spaceSettings = spaceManager.settings(for: spaceID)
+    let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
 
     switch state.mode {
     case .master:
@@ -235,6 +244,21 @@ public final class TilingManager {
           settings: spaceSettings
         )
       )
+    }
+  }
+
+  /// Return stable layout IDs for a Space.
+  private func layoutIDs(for spaceID: UInt64) -> [SpaceLayoutID] {
+    sorted(layoutsByID.keys.filter { $0.spaceID == spaceID })
+  }
+
+  /// Sort composite IDs for deterministic reconciliation and frame application.
+  private func sorted(_ layoutIDs: some Sequence<SpaceLayoutID>) -> [SpaceLayoutID] {
+    layoutIDs.sorted {
+      if $0.spaceID != $1.spaceID {
+        return $0.spaceID < $1.spaceID
+      }
+      return $0.displayID < $1.displayID
     }
   }
 }
