@@ -82,9 +82,10 @@ Use `rel:` instead of `abs:` for relative padding and gap changes.
 
 Automatic tiling is opt-in per Space and uses an ordered master layout by default. Select the
 recursive longest-edge dwindle layout with `swm -m space --layout dwindle`, and return with
-`swm -m space --layout master`. Tiling requires macOS's separate Spaces per display setting so a
-Space can be mapped safely to one display's visible bounds. Moving or resizing a tiled window
-manually snaps it back into the current layout.
+`swm -m space --layout master`. Each physical display is tiled independently, whether macOS's
+**Displays have separate Spaces** setting is enabled or disabled. Space commands apply the selected
+layout and settings to every display showing the active Space. Moving a window to another display
+moves it into that display's layout; moving or resizing it manually snaps it back into place.
 
 **Config**
 

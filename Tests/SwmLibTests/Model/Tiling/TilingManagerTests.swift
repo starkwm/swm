@@ -128,6 +128,8 @@ struct TilingManagerTests {
     manager.start()
 
     #expect(manager.setEnabled(true, for: 10))
+    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.enabled == true)
+    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.enabled == true)
     #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.layout.windowIDs == [1, 2])
     #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.layout.windowIDs == [3])
     #expect(
@@ -149,6 +151,10 @@ struct TilingManagerTests {
 
     #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.layout.windowIDs == [1])
     #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.layout.windowIDs == [3, 2])
+
+    #expect(manager.setLayoutMode(.dwindle, for: 10))
+    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.mode == .dwindle)
+    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.mode == .dwindle)
   }
 
   private func makeManager(
