@@ -171,10 +171,12 @@ struct TilingManagerTests {
 
 private func window(
   id: CGWindowID,
+  displayID: String? = "display",
   isMinimized: Bool = false
 ) -> TilingWindowSnapshot {
   TilingWindowSnapshot(
     id: id,
+    displayID: displayID,
     subrole: "AXStandardWindow",
     isMinimized: isMinimized,
     isMovable: true,

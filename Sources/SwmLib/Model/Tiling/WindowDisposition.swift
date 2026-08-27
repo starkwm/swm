@@ -38,6 +38,9 @@ struct TilingWindowSnapshot: Equatable {
   /// Core Graphics window ID.
   let id: CGWindowID
 
+  /// Physical display containing most of the window frame, when known.
+  let displayID: String?
+
   /// Accessibility window subrole.
   let subrole: String?
 
@@ -63,6 +66,7 @@ enum WindowEligibilityPolicy {
     }
     guard window.isMovable else { return .excluded(.notMovable) }
     guard window.isResizable else { return .excluded(.notResizable) }
+    guard window.displayID != nil else { return .pending }
 
     let membership = topology.spaceIDsByWindowID[window.id] ?? []
     let normalSpaceIDs = topology.normalSpaceIDs(for: window.id)
