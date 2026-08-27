@@ -1,5 +1,14 @@
 import CoreGraphics
 
+/// Identifies one independently tiled display within a macOS Space.
+struct SpaceLayoutID: Hashable {
+  /// WindowServer Space ID.
+  let spaceID: UInt64
+
+  /// Core Graphics display UUID.
+  let displayID: String
+}
+
 /// Runtime automatic-tiling state retained independently for one Space.
 struct SpaceLayoutState: Equatable {
   /// WindowServer display identifier currently owning the Space.

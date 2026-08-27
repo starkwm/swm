@@ -14,14 +14,52 @@ struct SpaceTopology: Equatable {
   /// Attached physical displays keyed by Core Graphics UUID.
   let displaysByID: [String: SpaceTopologyDisplay]
 
+  /// Every normal Space and physical display pair available for tiling.
+  var layoutIDs: Set<SpaceLayoutID> {
+    Set(
+      spacesByID.values
+        .filter { $0.type == .normal }
+        .flatMap { layoutIDs(spaceID: $0.id, windowServerDisplayID: $0.displayID) }
+    )
+  }
+
   /// Normal Spaces that are currently visible on at least one WindowServer display.
   var visibleNormalSpaceIDs: Set<UInt64> {
     Set(visibleSpaceIDByDisplayID.values.filter { spacesByID[$0]?.type == .normal })
   }
 
+  /// Every visible normal Space and physical display pair available for tiling.
+  var visibleLayoutIDs: Set<SpaceLayoutID> {
+    Set(
+      visibleSpaceIDByDisplayID.flatMap { displayID, spaceID in
+        guard spacesByID[spaceID]?.type == .normal else { return [SpaceLayoutID]() }
+        return layoutIDs(spaceID: spaceID, windowServerDisplayID: displayID)
+      }
+    )
+  }
+
   /// Normal Space membership for a managed window.
   func normalSpaceIDs(for windowID: CGWindowID) -> Set<UInt64> {
     Set((spaceIDsByWindowID[windowID] ?? []).filter { spacesByID[$0]?.type == .normal })
+  }
+
+  /// Resolve an eligible window to its Space and physical display layout.
+  func layoutID(for windowID: CGWindowID, on displayID: String?) -> SpaceLayoutID? {
+    guard let displayID, displaysByID[displayID] != nil else { return nil }
+    let normalSpaceIDs = normalSpaceIDs(for: windowID)
+    guard normalSpaceIDs.count == 1, let spaceID = normalSpaceIDs.first else { return nil }
+    return SpaceLayoutID(spaceID: spaceID, displayID: displayID)
+  }
+
+  private func layoutIDs(
+    spaceID: UInt64,
+    windowServerDisplayID: String
+  ) -> [SpaceLayoutID] {
+    if displaysByID[windowServerDisplayID] != nil {
+      return [SpaceLayoutID(spaceID: spaceID, displayID: windowServerDisplayID)]
+    }
+
+    return displaysByID.keys.map { SpaceLayoutID(spaceID: spaceID, displayID: $0) }
   }
 }
 

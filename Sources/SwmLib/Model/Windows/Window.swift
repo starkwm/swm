@@ -203,6 +203,7 @@ final class Window: NSObject {
     guard let element else {
       return TilingWindowSnapshot(
         id: id,
+        displayID: nil,
         subrole: nil,
         isMinimized: false,
         isMovable: false,
@@ -212,6 +213,9 @@ final class Window: NSObject {
 
     return TilingWindowSnapshot(
       id: id,
+      displayID: frame().flatMap {
+        NSScreen.screen(containingLargestIntersectionWith: $0)?.uuid
+      },
       subrole: subrole,
       isMinimized: isMinimized,
       isMovable: AccessibilityClient.shared.isAttributeSettable(
