@@ -57,6 +57,31 @@ struct WindowFrameReconcilerTests {
     #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero) == false)
   }
 
+  @Test("apply: retries a successful mutation that did not reach its target")
+  func applyRetriesIncompleteSuccessfulMutation() {
+    let initialFrame = CGRect(x: 750, y: 400, width: 250, height: 400)
+    let targetFrame = CGRect(x: 500, y: 400, width: 500, height: 400)
+    var frame = initialFrame
+    var mutationCount = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, targetFrame, currentFrame in
+        mutationCount += 1
+        if mutationCount == 1 {
+          frame = CGRect(origin: targetFrame.origin, size: currentFrame.size)
+        } else {
+          frame = targetFrame
+        }
+        return .success
+      }
+    )
+
+    reconciler.apply([1: targetFrame])
+
+    #expect(mutationCount == 2)
+    #expect(frame == targetFrame)
+  }
+
   @Test("shouldSuppressNotification: holds intermediate events and consumes the target")
   func shouldSuppressNotificationHoldsIntermediateEventsAndConsumesTarget() {
     let reconciler = WindowFrameReconciler(

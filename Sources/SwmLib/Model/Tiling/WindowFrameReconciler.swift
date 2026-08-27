@@ -60,9 +60,17 @@ final class WindowFrameReconciler {
         continue
       }
 
-      guard frameMutation(windowID, target.targetFrame, currentFrame) != nil else {
+      guard let result = frameMutation(windowID, target.targetFrame, currentFrame) else {
         pendingMutations.removeValue(forKey: windowID)
         continue
+      }
+
+      // Some apps clamp a resize at the old origin before accepting the accompanying move.
+      if result == .success,
+        let appliedFrame = self.currentFrame(windowID),
+        !framesMatch(appliedFrame, target.targetFrame)
+      {
+        _ = frameMutation(windowID, target.targetFrame, appliedFrame)
       }
     }
   }
