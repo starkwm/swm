@@ -16,7 +16,7 @@ struct TilingManagerTests {
     manager.start()
 
     #expect(manager.isEnabled(for: 10) == false)
-    #expect(manager.layoutMode(for: 10) == .masterStack)
+    #expect(manager.layoutMode(for: 10) == .master)
     #expect(manager.layoutPlan(for: layoutID(10)) == .disabled)
     #expect(manager.setEnabled(true, for: 10))
     #expect(

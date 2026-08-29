@@ -6,7 +6,7 @@ import Testing
 struct TilingTreeTests {
   @Test("insert: splits the focused leaf and preserves traversal order")
   func insertSplitsFocusedLeaf() throws {
-    var tree = try #require(TilingTree(windowIDs: [1, 2, 3]))
+    var tree = try #require(tilingTree([1, 2, 3]))
 
     tree.insert(4, beside: 1)
 
@@ -16,7 +16,7 @@ struct TilingTreeTests {
 
   @Test("insert: falls back to the final leaf")
   func insertFallsBackToFinalLeaf() throws {
-    var tree = try #require(TilingTree(windowIDs: [1, 2]))
+    var tree = try #require(tilingTree([1, 2]))
 
     tree.insert(3, beside: nil)
     tree.insert(4, beside: 99)
@@ -28,7 +28,7 @@ struct TilingTreeTests {
 
   @Test("removing: collapses the removed leaf's parent")
   func removingCollapsesParent() throws {
-    let tree = try #require(TilingTree(windowIDs: [1, 2, 3]))
+    let tree = try #require(tilingTree([1, 2, 3]))
 
     #expect(tree.removing([2]) == .branch(.leaf(1), .leaf(3)))
     #expect(tree.removing([1, 2, 3]) == nil)
@@ -36,7 +36,7 @@ struct TilingTreeTests {
 
   @Test("removing: restores omitted leaves at their retained position")
   func removingRestoresOmittedLeavesAtRetainedPosition() throws {
-    let tree = try #require(TilingTree(windowIDs: [1, 2, 3]))
+    let tree = try #require(tilingTree([1, 2, 3]))
 
     #expect(tree.removing([2])?.windowIDs == [1, 3])
     #expect(tree.removing([])?.windowIDs == [1, 2, 3])

@@ -9,7 +9,7 @@ struct DwindleLayoutTests {
   func layoutReturnsNoFramesForNoWindows() {
     #expect(
       DwindleLayout().layout(
-        windowIDs: [],
+        tree: tilingTree([]),
         in: CGRect(x: 0, y: 0, width: 100, height: 100),
         settings: .defaults
       ) == .frames([:])
@@ -22,7 +22,7 @@ struct DwindleLayoutTests {
     settings.padding = SpacePadding(top: 10, bottom: 20, left: 30, right: 40)
 
     let result = DwindleLayout().layout(
-      windowIDs: [1],
+      tree: tilingTree([1]),
       in: CGRect(x: -300, y: 24, width: 300, height: 200),
       settings: settings
     )
@@ -36,7 +36,7 @@ struct DwindleLayoutTests {
     settings.gap = 10
 
     let result = DwindleLayout().layout(
-      windowIDs: [1, 2, 3, 4],
+      tree: tilingTree([1, 2, 3, 4]),
       in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
       settings: settings
     )
@@ -55,7 +55,7 @@ struct DwindleLayoutTests {
   @Test("layout: chooses the longest edge for portrait bounds")
   func layoutChoosesLongestEdgeForPortraitBounds() {
     let result = DwindleLayout().layout(
-      windowIDs: [1, 2, 3],
+      tree: tilingTree([1, 2, 3]),
       in: CGRect(x: -200, y: 20, width: 400, height: 800),
       settings: .defaults
     )
@@ -96,7 +96,7 @@ struct DwindleLayoutTests {
     constraint: TilingLayoutConstraint
   ) {
     let result = DwindleLayout().layout(
-      windowIDs: windowIDs,
+      tree: tilingTree(windowIDs),
       in: bounds,
       settings: .defaults
     )
@@ -112,14 +112,14 @@ struct DwindleLayoutTests {
 
     #expect(
       layout.layout(
-        windowIDs: [1, 2],
+        tree: tilingTree([1, 2]),
         in: CGRect(x: 0, y: 0, width: 300, height: 150),
         settings: settings
       ) == .insufficientSpace(.horizontalGap)
     )
     #expect(
       layout.layout(
-        windowIDs: [1, 2],
+        tree: tilingTree([1, 2]),
         in: CGRect(x: 0, y: 0, width: 150, height: 300),
         settings: settings
       ) == .insufficientSpace(.verticalGap)
@@ -134,8 +134,9 @@ struct DwindleLayoutTests {
     let layout = DwindleLayout()
     let bounds = CGRect(x: -1_024, y: -20, width: 1_024, height: 768)
 
-    let first = layout.layout(windowIDs: [1, 2, 3, 4], in: bounds, settings: settings)
-    let second = layout.layout(windowIDs: [1, 2, 3, 4], in: bounds, settings: settings)
+    let tree = tilingTree([1, 2, 3, 4])
+    let first = layout.layout(tree: tree, in: bounds, settings: settings)
+    let second = layout.layout(tree: tree, in: bounds, settings: settings)
 
     #expect(first == second)
   }
