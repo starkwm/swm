@@ -15,10 +15,8 @@ struct TilingManagerTests {
 
     manager.start()
 
-    #expect(manager.isEnabled(for: 10) == false)
-    #expect(manager.layoutMode(for: 10) == .master)
     #expect(manager.layoutPlan(for: layoutID(10)) == .disabled)
-    #expect(manager.setEnabled(true, for: 10))
+    #expect(manager.setLayout(.master, for: 10))
     #expect(
       manager.layoutPlan(for: layoutID(10))
         == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
@@ -34,7 +32,7 @@ struct TilingManagerTests {
       memberships: { memberships }
     )
     manager.start()
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.master, for: 10)
     manager.windowDidFocus(1)
 
     windows.append(window(id: 3))
@@ -42,8 +40,6 @@ struct TilingManagerTests {
     memberships[3] = [10]
     manager.reconcile()
 
-    #expect(manager.isEnabled(for: 10))
-    #expect(manager.isEnabled(for: 11) == false)
     #expect(
       manager.layoutPlan(for: layoutID(10))
         == .layout(
@@ -56,20 +52,17 @@ struct TilingManagerTests {
     #expect(manager.layoutPlan(for: layoutID(11)) == .disabled)
   }
 
-  @Test("setLayoutMode: retains dwindle selection and plans its geometry")
-  func setLayoutModeRetainsDwindleSelectionAndPlansItsGeometry() {
+  @Test("setLayout: retains dwindle selection and plans its geometry")
+  func setLayoutRetainsDwindleSelectionAndPlansItsGeometry() {
     let manager = makeManager(
       windows: [window(id: 1), window(id: 2), window(id: 3), window(id: 4)],
       memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
     )
     manager.start()
 
-    #expect(manager.layoutMode(for: 10) == .master)
-    #expect(manager.setLayoutMode(.dwindle, for: 10))
-    #expect(manager.setLayoutMode(.dwindle, for: 99) == false)
-    manager.setEnabled(true, for: 10)
+    #expect(manager.setLayout(.dwindle, for: 10))
+    #expect(manager.setLayout(.dwindle, for: 99) == false)
 
-    #expect(manager.layoutMode(for: 10) == .dwindle)
     #expect(
       manager.layoutPlan(for: layoutID(10))
         == .layout(
@@ -84,7 +77,17 @@ struct TilingManagerTests {
 
     manager.reconcile()
 
-    #expect(manager.layoutMode(for: 10) == .dwindle)
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            3: CGRect(x: 500, y: 400, width: 250, height: 400),
+            4: CGRect(x: 750, y: 400, width: 250, height: 400),
+          ])
+        )
+    )
   }
 
   @Test("dwindle: a new window splits the focused leaf")
@@ -95,8 +98,7 @@ struct TilingManagerTests {
       memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
     )
     manager.start()
-    manager.setLayoutMode(.dwindle, for: 10)
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.dwindle, for: 10)
     manager.windowDidFocus(1)
 
     windows.append(window(id: 4))
@@ -120,7 +122,7 @@ struct TilingManagerTests {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]
     let manager = makeManager(windows: { windows }, memberships: { [1: [10], 2: [10]] })
     manager.start()
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.master, for: 10)
 
     #expect(
       manager.layoutPlan(for: layoutID(10))
@@ -147,7 +149,7 @@ struct TilingManagerTests {
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [10]]
     let manager = makeManager(windows: { windows }, memberships: { memberships })
     manager.start()
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.master, for: 10)
     manager.windowDidFocus(3)
     let initialPlan = manager.layoutPlan(for: layoutID(10))
 
@@ -189,15 +191,11 @@ struct TilingManagerTests {
       spaceManager: spaceManager
     )
     manager.start()
-    manager.setLayoutMode(.dwindle, for: 10)
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.dwindle, for: 10)
     let initialPlan = manager.layoutPlan(for: layoutID(10))
 
     windowServerDisplayID = "stale-display"
     manager.reconcile()
-
-    #expect(manager.isEnabled(for: 10))
-    #expect(manager.layoutMode(for: 10) == .dwindle)
 
     windowServerDisplayID = "display"
     manager.reconcile()
@@ -209,7 +207,7 @@ struct TilingManagerTests {
   func layoutPlanRequiresVisibleSpace() {
     let hiddenManager = makeManager(visibleSpaceID: 11)
     hiddenManager.start()
-    hiddenManager.setEnabled(true, for: 10)
+    hiddenManager.setLayout(.master, for: 10)
 
     #expect(hiddenManager.layoutPlan(for: layoutID(10)) == .notVisible)
   }
@@ -224,8 +222,7 @@ struct TilingManagerTests {
     let manager = makeSharedSpaceManager(windows: { windows })
     manager.start()
 
-    #expect(manager.setEnabled(true, for: 10))
-    #expect(manager.isEnabled(for: 10))
+    #expect(manager.setLayout(.master, for: 10))
     #expect(
       manager.layoutPlan(for: layoutID(10, displayID: "display-a"))
         == .layout(
@@ -257,11 +254,10 @@ struct TilingManagerTests {
         )
     )
 
-    #expect(manager.setLayoutMode(.dwindle, for: 10))
-    #expect(manager.layoutMode(for: 10) == .dwindle)
+    #expect(manager.setLayout(.dwindle, for: 10))
   }
 
-  @Test("shared Space: a new monitor inherits enablement and layout mode")
+  @Test("shared Space: a new monitor inherits the layout selection")
   func sharedSpaceNewMonitorInheritsState() {
     var displays = [
       "display-a": SpaceTopologyDisplay(
@@ -270,16 +266,13 @@ struct TilingManagerTests {
     ]
     let manager = makeSharedSpaceManager(windows: { [] }, displays: { displays })
     manager.start()
-    manager.setLayoutMode(.dwindle, for: 10)
-    manager.setEnabled(true, for: 10)
+    manager.setLayout(.dwindle, for: 10)
 
     displays["display-b"] = SpaceTopologyDisplay(
       visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
     )
     manager.reconcile()
 
-    #expect(manager.isEnabled(for: 10))
-    #expect(manager.layoutMode(for: 10) == .dwindle)
     #expect(
       manager.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
     )

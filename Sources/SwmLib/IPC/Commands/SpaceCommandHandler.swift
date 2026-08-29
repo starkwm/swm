@@ -14,8 +14,6 @@ struct SpaceCommandHandler {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
-      case "--toggle":
-        return try toggle(request)
       case "--layout":
         return try layout(request)
       case "--padding":
@@ -28,53 +26,23 @@ struct SpaceCommandHandler {
     }
   }
 
-  /// Toggle padding or gap behavior for the active space.
-  private func toggle(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space toggle arguments")
-    }
-
-    let target = request.args[0]
-
-    switch target {
-    case "padding":
-      let spaceID = try currentSpaceID()
-      spaceManager.togglePadding(for: spaceID)
-      tilingManager.reflow(spaceID: spaceID)
-    case "gap":
-      let spaceID = try currentSpaceID()
-      spaceManager.toggleGap(for: spaceID)
-      tilingManager.reflow(spaceID: spaceID)
-    case "tiling":
-      let spaceID = try currentSpaceID()
-      guard let enabled = tilingManager.toggleEnabled(for: spaceID) else {
-        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
-      }
-      return .success(id: request.id, message: enabled ? "on" : "off")
-    default:
-      throw IPCCommandError.invalidRequest("invalid space toggle target: \(target)")
-    }
-
-    return .success(id: request.id, message: "ok")
-  }
-
-  /// Select the automatic layout for the active Space.
+  /// Select floating or automatic layout for the active Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space layout arguments")
     }
 
     let argument = request.args[0]
-    guard let mode = LayoutMode(argument: argument) else {
+    guard let selection = LayoutSelection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
     }
 
     let spaceID = try currentSpaceID()
-    guard tilingManager.setLayoutMode(mode, for: spaceID) else {
+    guard tilingManager.setLayout(selection, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
     }
 
-    return .success(id: request.id, message: mode.rawValue)
+    return .success(id: request.id, message: selection.rawValue)
   }
 
   /// Set or adjust padding for the active space.

@@ -11,7 +11,7 @@ public final class TilingManager {
   private let spaceManager: SpaceManager
   private var frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
-  private var defaultLayoutMode = LayoutMode.master
+  private var defaultSelection = LayoutSelection.float
   private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
   private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
@@ -149,67 +149,33 @@ public final class TilingManager {
     layoutIDByWindowID = newLayoutIDByWindowID
   }
 
-  /// Enable or disable automatic frame planning for a known normal Space.
+  /// Select floating or an automatic layout for a known normal Space.
   @discardableResult
-  func setEnabled(_ enabled: Bool, for spaceID: UInt64) -> Bool {
+  func setLayout(_ selection: LayoutSelection, for spaceID: UInt64) -> Bool {
     let layoutIDs = layoutIDs(for: spaceID)
     guard !layoutIDs.isEmpty else { return false }
 
     for layoutID in layoutIDs {
-      layoutsByID[layoutID]?.enabled = enabled
+      layoutsByID[layoutID]?.selection = selection
     }
-    if enabled {
+    if selection != .float {
       reflow(spaceID: spaceID)
     }
     return true
   }
 
-  /// Toggle automatic tiling for a known normal Space and return the new value.
-  func toggleEnabled(for spaceID: UInt64) -> Bool? {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return nil }
-    let enabled = !layoutIDs.allSatisfy { layoutsByID[$0]?.enabled == true }
-    return setEnabled(enabled, for: spaceID) ? enabled : nil
-  }
+  /// Select floating or an automatic layout for all current and future Spaces.
+  func setLayoutForSpaces(_ selection: LayoutSelection) {
+    defaultSelection = selection
 
-  /// Return whether automatic tiling is enabled for a known Space.
-  func isEnabled(for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    return !layoutIDs.isEmpty && layoutIDs.allSatisfy { layoutsByID[$0]?.enabled == true }
-  }
-
-  /// Select the layout algorithm for a known normal Space.
-  @discardableResult
-  func setLayoutMode(_ mode: LayoutMode, for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return false }
-
-    for layoutID in layoutIDs {
-      layoutsByID[layoutID]?.mode = mode
-    }
-    if layoutIDs.contains(where: { layoutsByID[$0]?.enabled == true }) {
-      reflow(spaceID: spaceID)
-    }
-    return true
-  }
-
-  /// Select the layout algorithm for every known Space and future Space defaults.
-  func setLayoutModeForAll(_ mode: LayoutMode) {
-    defaultLayoutMode = mode
-
-    layoutsByID = layoutsByID.mapValues { state in
-      var state = state
-      state.mode = mode
+    layoutsByID = layoutsByID.mapValues { currentState in
+      var state = currentState
+      state.selection = selection
       return state
     }
-    reflowVisibleSpaces()
-  }
-
-  /// Return the selected layout algorithm for a known Space.
-  func layoutMode(for spaceID: UInt64) -> LayoutMode? {
-    let modes = Set(layoutIDs(for: spaceID).compactMap { layoutsByID[$0]?.mode })
-    guard modes.count == 1 else { return nil }
-    return modes.first
+    if selection != .float {
+      reflowVisibleSpaces()
+    }
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
@@ -250,7 +216,7 @@ public final class TilingManager {
   /// Calculate the current plan for an enabled, visible layout without side effects.
   func layoutPlan(for layoutID: SpaceLayoutID) -> TilingLayoutPlan {
     guard let state = layoutsByID[layoutID] else { return .unknownSpace }
-    guard state.enabled else { return .disabled }
+    guard state.selection != .float else { return .disabled }
     guard let topology = currentTopology else { return .unknownSpace }
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
@@ -258,7 +224,9 @@ public final class TilingManager {
     let activeTree = state.tree?.removing(state.omittedWindowIDs)
     let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
 
-    switch state.mode {
+    switch state.selection {
+    case .float:
+      return .disabled
     case .master:
       return .layout(
         masterLayout.layout(
@@ -298,11 +266,10 @@ public final class TilingManager {
       .value
 
     return SpaceLayoutState(
-      mode: inheritedState?.mode ?? defaultLayoutMode,
+      selection: inheritedState?.selection ?? defaultSelection,
       tree: nil,
       omittedWindowIDs: [],
-      focusedWindowID: nil,
-      enabled: inheritedState?.enabled ?? false
+      focusedWindowID: nil
     )
   }
 
@@ -336,7 +303,7 @@ enum TilingLayoutPlan: Equatable {
   /// Space is not part of the current normal-Space topology.
   case unknownSpace
 
-  /// Automatic tiling has not been explicitly enabled for the Space.
+  /// The Space is using unmanaged floating layout.
   case disabled
 
   /// Space exists but is not currently visible.

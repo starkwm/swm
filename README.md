@@ -69,22 +69,20 @@ Use `--display next` to toggle the focused window between two attached displays.
 
 **Space**
 
-Use space commands to select a tiling layout and change settings for the active space.
+Use space commands to select floating or automatic layout and change settings for the active space.
 
-    swm -m space --toggle tiling
-    swm -m space --layout <master|dwindle>
-    swm -m space --toggle padding
-    swm -m space --toggle gap
+    swm -m space --layout <float|master|dwindle>
     swm -m space --padding abs:<top>:<right>:<bottom>:<left>
     swm -m space --gap abs:<number>
 
 Use `rel:` instead of `abs:` for relative padding and gap changes.
 
-Automatic tiling is opt-in per Space and uses an ordered master layout by default. Select the
-tree-backed dwindle layout with `swm -m space --layout dwindle`, and return with
-`swm -m space --layout master`. New windows split the focused tiled window; closing a window
-collapses its sibling branch. Each split follows the longest edge of its current bounds. Each
-physical display is tiled independently, whether macOS's
+Spaces use unmanaged floating windows by default. Select the ordered master layout with
+`swm -m space --layout master`, the tree-backed dwindle layout with
+`swm -m space --layout dwindle`, or stop automatic tiling with `swm -m space --layout float`.
+In dwindle, new windows split the focused tiled window; closing a window collapses its sibling
+branch. Each split follows the longest edge of its current bounds. Each physical display is tiled
+independently, whether macOS's
 **Displays have separate Spaces** setting is enabled or disabled. Space commands apply the selected
 layout and settings to every display showing the active Space. Moving a window to another display
 moves it into that display's layout; moving or resizing it manually snaps it back into place.
@@ -93,7 +91,7 @@ moves it into that display's layout; moving or resizing it manually snaps it bac
 
 Use config commands to update defaults for all spaces.
 
-    swm -m config layout <master|dwindle>
+    swm -m config layout <float|master|dwindle>
     swm -m config window-gap <number>
     swm -m config top-padding <number>
     swm -m config right-padding <number>
@@ -136,7 +134,7 @@ You can use `swm -m config window-gap <number>` to configure the size of the gap
 
 **Automatic Tiling Layout**
 
-Use `swm -m config layout <master|dwindle>` to select the automatic tiling layout for every Space. The selection also applies to Spaces created later while the daemon is running.
+Use `swm -m config layout <float|master|dwindle>` to select floating or automatic layout for every Space. The selection also applies to Spaces created later while the daemon is running.
 
 **Padding**
 
