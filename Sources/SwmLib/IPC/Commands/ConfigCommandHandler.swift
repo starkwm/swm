@@ -32,20 +32,20 @@ struct ConfigCommandHandler {
     }
   }
 
-  /// Select the automatic layout for every Space.
+  /// Select floating or automatic layout for every Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid config layout arguments")
     }
 
     let argument = request.args[0]
-    guard let mode = LayoutMode(argument: argument) else {
+    guard let selection = LayoutSelection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid config layout: \(argument)")
     }
 
-    tilingManager.setLayoutModeForAll(mode)
+    tilingManager.setLayoutForSpaces(selection)
 
-    return .success(id: request.id, message: mode.rawValue)
+    return .success(id: request.id, message: selection.rawValue)
   }
 
   /// Set the window gap for every known space.

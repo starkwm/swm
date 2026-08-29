@@ -24,7 +24,6 @@ struct ConfigCommandHandlerTests {
             spaceIDsByWindowID: [:],
             displaysByID: [
               "display": SpaceTopologyDisplay(
-                id: "display",
                 visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
               )
             ]
@@ -43,21 +42,35 @@ struct ConfigCommandHandlerTests {
 
     #expect(dwindle.ok)
     #expect(dwindle.message == "dwindle")
-    #expect(tilingManager.layoutMode(for: 10) == .dwindle)
-    #expect(tilingManager.layoutMode(for: 11) == .dwindle)
+    #expect(tilingManager.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
+    #expect(tilingManager.layoutPlan(for: layoutID(11)) == .notVisible)
 
     spaceIDs.insert(12)
     tilingManager.reconcile()
 
-    #expect(tilingManager.layoutMode(for: 12) == .dwindle)
+    #expect(tilingManager.layoutPlan(for: layoutID(12)) == .notVisible)
+
+    let float = handler.dispatch(request(command: "layout", args: ["float"]))
+
+    #expect(float.ok)
+    #expect(float.message == "float")
+    #expect(tilingManager.layoutPlan(for: layoutID(10)) == .disabled)
+    #expect(tilingManager.layoutPlan(for: layoutID(11)) == .disabled)
+    #expect(tilingManager.layoutPlan(for: layoutID(12)) == .disabled)
+
+    spaceIDs.insert(13)
+    tilingManager.reconcile()
+
+    #expect(tilingManager.layoutPlan(for: layoutID(13)) == .disabled)
 
     let master = handler.dispatch(request(command: "layout", args: ["master"]))
 
     #expect(master.ok)
     #expect(master.message == "master")
-    #expect(tilingManager.layoutMode(for: 10) == .master)
-    #expect(tilingManager.layoutMode(for: 11) == .master)
-    #expect(tilingManager.layoutMode(for: 12) == .master)
+    #expect(tilingManager.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
+    #expect(tilingManager.layoutPlan(for: layoutID(11)) == .notVisible)
+    #expect(tilingManager.layoutPlan(for: layoutID(12)) == .notVisible)
+    #expect(tilingManager.layoutPlan(for: layoutID(13)) == .notVisible)
   }
 
   @Test("dispatch: window gap updates defaults and overrides")
@@ -143,7 +156,6 @@ struct ConfigCommandHandlerTests {
     let missing = handler.dispatch(request(command: "layout", args: []))
     let extra = handler.dispatch(request(command: "layout", args: ["master", "dwindle"]))
     let unknown = handler.dispatch(request(command: "layout", args: ["columns"]))
-    let legacy = handler.dispatch(request(command: "layout", args: ["master-stack"]))
 
     #expect(missing.ok == false)
     #expect(missing.errorCode == .invalidRequest)
@@ -154,13 +166,14 @@ struct ConfigCommandHandlerTests {
     #expect(unknown.ok == false)
     #expect(unknown.errorCode == .invalidRequest)
     #expect(unknown.message == "invalid config layout: columns")
-    #expect(legacy.ok == false)
-    #expect(legacy.errorCode == .invalidRequest)
-    #expect(legacy.message == "invalid config layout: master-stack")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .config, command: command, args: args)
+  }
+
+  private func layoutID(_ spaceID: UInt64) -> SpaceLayoutID {
+    SpaceLayoutID(spaceID: spaceID, displayID: "display")
   }
 
   private func handler(spaceManager: SpaceManager) -> ConfigCommandHandler {

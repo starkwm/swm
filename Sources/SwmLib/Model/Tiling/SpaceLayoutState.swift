@@ -11,8 +11,8 @@ struct SpaceLayoutID: Hashable {
 
 /// Runtime automatic-tiling state retained for one Space and physical display.
 struct SpaceLayoutState {
-  /// Selected layout algorithm.
-  var mode: LayoutMode
+  /// Selected floating or automatic layout.
+  var selection: LayoutSelection
 
   /// Persistent sibling relationships and stable window order.
   var tree: TilingTree?
@@ -22,27 +22,16 @@ struct SpaceLayoutState {
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
 
-  /// Whether automatic frame planning is enabled for this Space.
-  var enabled: Bool
 }
 
-/// Automatic layout algorithms supported by runtime state.
-enum LayoutMode: String, Equatable {
-  /// One master pane with remaining windows in a vertical stack.
+/// User-facing automatic layout selection, including unmanaged floating windows.
+enum LayoutSelection: String, Equatable {
+  /// Leave windows unmanaged by automatic tiling.
+  case float
+
+  /// Arrange windows as one master pane and a vertical stack.
   case master
 
   /// Recursively bisect the longest edge of the remaining region.
   case dwindle
-
-  /// Parse the spelling accepted by layout IPC commands.
-  init?(argument: String) {
-    switch argument {
-    case "master":
-      self = .master
-    case "dwindle":
-      self = .dwindle
-    default:
-      return nil
-    }
-  }
 }
