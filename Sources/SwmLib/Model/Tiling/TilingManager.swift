@@ -59,7 +59,6 @@ public final class TilingManager {
     layoutsByID = layoutsByID.filter { layoutIDs.contains($0.key) }
     for layoutID in layoutIDs where layoutsByID[layoutID] == nil {
       layoutsByID[layoutID] = SpaceLayoutState(
-        id: layoutID,
         mode: .master,
         tree: nil,
         minimizedWindowIDs: [],
@@ -73,20 +72,16 @@ public final class TilingManager {
     var newLayoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
 
     for window in windows {
-      switch WindowEligibilityPolicy.disposition(for: window, topology: topology) {
-      case .tiled:
-        guard
-          let layoutID = topology.layoutID(for: window.id, on: window.displayID)
-        else {
-          continue
-        }
-        tiledWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-        newLayoutIDByWindowID[window.id] = layoutID
-        if window.isMinimized {
-          minimizedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-        }
-      case .floating, .excluded, .pending:
-        break
+      guard WindowEligibilityPolicy.disposition(for: window, topology: topology) == .tiled else {
+        continue
+      }
+      guard let layoutID = topology.layoutID(for: window.id, on: window.displayID) else {
+        continue
+      }
+      tiledWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
+      newLayoutIDByWindowID[window.id] = layoutID
+      if window.isMinimized {
+        minimizedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
       }
     }
 

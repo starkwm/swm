@@ -15,6 +15,8 @@ struct TilingManagerTests {
 
     manager.start()
 
+    #expect(manager.isEnabled(for: 10) == false)
+    #expect(manager.layoutMode(for: 10) == .masterStack)
     #expect(manager.layoutPlan(for: layoutID(10)) == .disabled)
     #expect(manager.setEnabled(true, for: 10))
     #expect(
@@ -40,6 +42,8 @@ struct TilingManagerTests {
     memberships[3] = [10]
     manager.reconcile()
 
+    #expect(manager.isEnabled(for: 10))
+    #expect(manager.isEnabled(for: 11) == false)
     #expect(
       manager.layoutPlan(for: layoutID(10))
         == .layout(
@@ -49,6 +53,7 @@ struct TilingManagerTests {
           ])
         )
     )
+    #expect(manager.layoutPlan(for: layoutID(11)) == .disabled)
   }
 
   @Test("setLayoutMode: retains dwindle selection and plans its geometry")
