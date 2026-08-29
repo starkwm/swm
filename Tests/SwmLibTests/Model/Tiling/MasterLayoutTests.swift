@@ -107,6 +107,20 @@ struct MasterLayoutTests {
     #expect(result == .insufficientSpace(constraint))
   }
 
+  @Test("layout: rejects zero-width tiles with default constraints")
+  func layoutRejectsZeroWidthTilesWithDefaultConstraints() {
+    var settings = SpaceSettings.defaults
+    settings.gap = 100
+
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2],
+      in: CGRect(x: 0, y: 0, width: 100, height: 100),
+      settings: settings
+    )
+
+    #expect(result == .insufficientSpace(.masterWidth))
+  }
+
   @Test("layout: is idempotent")
   func layoutIsIdempotent() {
     var settings = SpaceSettings.defaults
