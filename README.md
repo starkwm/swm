@@ -93,6 +93,7 @@ moves it into that display's layout; moving or resizing it manually snaps it bac
 
 Use config commands to update defaults for all spaces.
 
+    swm -m config layout <master|dwindle>
     swm -m config window-gap <number>
     swm -m config top-padding <number>
     swm -m config right-padding <number>
@@ -132,6 +133,10 @@ Configuration is optional. Without a configuration file, `swm` starts with built
 **Window Gaps**
 
 You can use `swm -m config window-gap <number>` to configure the size of the gap between windows, when using the `-m window --grid` command.
+
+**Automatic Tiling Layout**
+
+Use `swm -m config layout <master|dwindle>` to select the automatic tiling layout for every Space. The selection also applies to Spaces created later while the daemon is running.
 
 **Padding**
 

@@ -14,6 +14,8 @@ struct ConfigCommandHandler {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
+      case "layout":
+        return try layout(request)
       case "window-gap":
         return try windowGap(request)
       case "top-padding":
@@ -28,6 +30,22 @@ struct ConfigCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
     }
+  }
+
+  /// Select the automatic layout for every Space.
+  private func layout(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid config layout arguments")
+    }
+
+    let argument = request.args[0]
+    guard let mode = LayoutMode(argument: argument) else {
+      throw IPCCommandError.invalidRequest("invalid config layout: \(argument)")
+    }
+
+    tilingManager.setLayoutModeForAll(mode)
+
+    return .success(id: request.id, message: mode.rawValue)
   }
 
   /// Set the window gap for every known space.

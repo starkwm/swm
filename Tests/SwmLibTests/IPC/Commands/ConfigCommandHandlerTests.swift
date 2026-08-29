@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 
 @testable import SwmLib
@@ -5,6 +6,60 @@ import Testing
 @MainActor
 @Suite("ConfigCommandHandler")
 struct ConfigCommandHandlerTests {
+  @Test("dispatch: layout updates current and future Spaces")
+  func dispatchLayoutUpdatesCurrentAndFutureSpaces() {
+    let spaceManager = SpaceManager(activeSpaceID: nil)
+    var spaceIDs = Set([UInt64(10), UInt64(11)])
+    let tilingManager = TilingManager(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [],
+          topology: SpaceTopology(
+            spacesByID: Dictionary(
+              uniqueKeysWithValues: spaceIDs.map {
+                ($0, SpaceTopologyDescriptor(id: $0, displayID: "display", type: .normal))
+              }
+            ),
+            visibleSpaceIDByDisplayID: ["display": 10],
+            spaceIDsByWindowID: [:],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                id: "display",
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaceManager: spaceManager
+    )
+    tilingManager.start()
+    let handler = ConfigCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: tilingManager
+    )
+
+    let dwindle = handler.dispatch(request(command: "layout", args: ["dwindle"]))
+
+    #expect(dwindle.ok)
+    #expect(dwindle.message == "dwindle")
+    #expect(tilingManager.layoutMode(for: 10) == .dwindle)
+    #expect(tilingManager.layoutMode(for: 11) == .dwindle)
+
+    spaceIDs.insert(12)
+    tilingManager.reconcile()
+
+    #expect(tilingManager.layoutMode(for: 12) == .dwindle)
+
+    let master = handler.dispatch(request(command: "layout", args: ["master"]))
+
+    #expect(master.ok)
+    #expect(master.message == "master")
+    #expect(tilingManager.layoutMode(for: 10) == .master)
+    #expect(tilingManager.layoutMode(for: 11) == .master)
+    #expect(tilingManager.layoutMode(for: 12) == .master)
+  }
+
   @Test("dispatch: window gap updates defaults and overrides")
   func dispatchWindowGapUpdatesDefaultsAndOverrides() {
     let manager = SpaceManager(activeSpaceID: nil)
@@ -80,6 +135,28 @@ struct ConfigCommandHandlerTests {
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "invalid config right-padding value: wide")
+  }
+
+  @Test("dispatch: rejects invalid layout commands")
+  func dispatchRejectsInvalidLayoutCommands() {
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let missing = handler.dispatch(request(command: "layout", args: []))
+    let extra = handler.dispatch(request(command: "layout", args: ["master", "dwindle"]))
+    let unknown = handler.dispatch(request(command: "layout", args: ["columns"]))
+    let legacy = handler.dispatch(request(command: "layout", args: ["master-stack"]))
+
+    #expect(missing.ok == false)
+    #expect(missing.errorCode == .invalidRequest)
+    #expect(missing.message == "invalid config layout arguments")
+    #expect(extra.ok == false)
+    #expect(extra.errorCode == .invalidRequest)
+    #expect(extra.message == "invalid config layout arguments")
+    #expect(unknown.ok == false)
+    #expect(unknown.errorCode == .invalidRequest)
+    #expect(unknown.message == "invalid config layout: columns")
+    #expect(legacy.ok == false)
+    #expect(legacy.errorCode == .invalidRequest)
+    #expect(legacy.message == "invalid config layout: master-stack")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {
