@@ -10,10 +10,7 @@ struct SpaceLayoutID: Hashable {
 }
 
 /// Runtime automatic-tiling state retained for one Space and physical display.
-struct SpaceLayoutState: Equatable {
-  /// Space and physical display owning this layout.
-  let id: SpaceLayoutID
-
+struct SpaceLayoutState {
   /// Selected layout algorithm.
   var mode: LayoutMode
 
