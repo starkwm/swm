@@ -11,12 +11,12 @@ struct DwindleLayout {
     in bounds: CGRect,
     settings: SpaceSettings
   ) -> TilingLayoutResult {
-    layout(tree: DwindleTree(windowIDs: windowIDs), in: bounds, settings: settings)
+    layout(tree: TilingTree(windowIDs: windowIDs), in: bounds, settings: settings)
   }
 
   /// Calculate frames for persistent dwindle sibling relationships.
   func layout(
-    tree: DwindleTree?,
+    tree: TilingTree?,
     in bounds: CGRect,
     settings: SpaceSettings
   ) -> TilingLayoutResult {
@@ -42,7 +42,7 @@ struct DwindleLayout {
 
   /// Recursively calculate leaf frames from the retained binary tree.
   private func layout(
-    _ tree: DwindleTree,
+    _ tree: TilingTree,
     in bounds: CGRect,
     gap: CGFloat,
     framesByWindowID: inout [CGWindowID: CGRect]
