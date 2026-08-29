@@ -20,6 +20,8 @@ struct SpaceLayoutState: Equatable {
   /// Ordered retained window leaves.
   var layout: OrderedWindowLayout
 
+  /// Persistent sibling relationships used by the dwindle layout.
+  var dwindleTree: DwindleTree?
   /// Retained leaves omitted from current geometry.
   var minimizedWindowIDs: Set<CGWindowID>
 

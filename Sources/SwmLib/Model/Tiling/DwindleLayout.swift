@@ -11,46 +11,62 @@ struct DwindleLayout {
     in bounds: CGRect,
     settings: SpaceSettings
   ) -> TilingLayoutResult {
-    guard !windowIDs.isEmpty else { return .frames([:]) }
+    layout(tree: DwindleTree(windowIDs: windowIDs), in: bounds, settings: settings)
+  }
+
+  /// Calculate frames for persistent dwindle sibling relationships.
+  func layout(
+    tree: DwindleTree?,
+    in bounds: CGRect,
+    settings: SpaceSettings
+  ) -> TilingLayoutResult {
+    guard let tree else { return .frames([:]) }
 
     let usableBounds = usableBounds(in: bounds, settings: settings)
     guard satisfiesMinimum(usableBounds.size) else {
       return .insufficientSpace(.usableBounds)
     }
 
-    guard windowIDs.count > 1 else {
-      return .frames([windowIDs[0]: usableBounds])
-    }
-
     let gap = settings.gapEnabled ? CGFloat(max(0, settings.gap)) : 0
     var framesByWindowID = [CGWindowID: CGRect]()
-    var remainingBounds = usableBounds
-
-    for windowID in windowIDs.dropLast() {
-      let split: SplitResult
-      if remainingBounds.width >= remainingBounds.height {
-        split = splitVertically(remainingBounds, gap: gap)
-      } else {
-        split = splitHorizontally(remainingBounds, gap: gap)
-      }
-
-      switch split {
-      case .frames(let windowFrame, let remainder):
-        framesByWindowID[windowID] = windowFrame
-        remainingBounds = remainder
-      case .insufficientSpace(let constraint):
-        return .insufficientSpace(constraint)
-      }
+    if let constraint = layout(
+      tree,
+      in: usableBounds,
+      gap: gap,
+      framesByWindowID: &framesByWindowID
+    ) {
+      return .insufficientSpace(constraint)
     }
-
-    guard satisfiesMinimum(remainingBounds.size) else {
-      return .insufficientSpace(
-        remainingBounds.width < Self.minimumWindowSize.width ? .tileWidth : .tileHeight
-      )
-    }
-
-    framesByWindowID[windowIDs[windowIDs.count - 1]] = remainingBounds
     return .frames(framesByWindowID)
+  }
+
+  /// Recursively calculate leaf frames from the retained binary tree.
+  private func layout(
+    _ tree: DwindleTree,
+    in bounds: CGRect,
+    gap: CGFloat,
+    framesByWindowID: inout [CGWindowID: CGRect]
+  ) -> TilingLayoutConstraint? {
+    switch tree {
+    case .leaf(let windowID):
+      guard satisfiesMinimum(bounds.size) else {
+        return bounds.width < Self.minimumWindowSize.width ? .tileWidth : .tileHeight
+      }
+      framesByWindowID[windowID] = bounds
+      return nil
+    case .branch(let first, let second):
+      let split =
+        bounds.width >= bounds.height
+        ? splitVertically(bounds, gap: gap)
+        : splitHorizontally(bounds, gap: gap)
+      switch split {
+      case .frames(let firstBounds, let secondBounds):
+        return layout(first, in: firstBounds, gap: gap, framesByWindowID: &framesByWindowID)
+          ?? layout(second, in: secondBounds, gap: gap, framesByWindowID: &framesByWindowID)
+      case .insufficientSpace(let constraint):
+        return constraint
+      }
+    }
   }
 
   /// Split a landscape region into leading and remaining columns.

@@ -82,6 +82,34 @@ struct TilingManagerTests {
     #expect(manager.layoutMode(for: 10) == .dwindle)
   }
 
+  @Test("dwindle: a new window splits the focused leaf")
+  func dwindleNewWindowSplitsFocusedLeaf() {
+    var windows = [window(id: 1), window(id: 2), window(id: 3)]
+    let manager = makeManager(
+      windows: { windows },
+      memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
+    )
+    manager.start()
+    manager.setLayoutMode(.dwindle, for: 10)
+    manager.setEnabled(true, for: 10)
+    manager.windowDidFocus(1)
+
+    windows.append(window(id: 4))
+    manager.reconcile()
+
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 400),
+            4: CGRect(x: 0, y: 400, width: 500, height: 400),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            3: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
   @Test("reconcile: preserves minimized leaves but omits them from geometry")
   func reconcilePreservesMinimizedLeavesButOmitsThemFromGeometry() {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]
