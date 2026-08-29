@@ -62,6 +62,7 @@ public final class TilingManager {
         id: layoutID,
         mode: .master,
         layout: OrderedWindowLayout(),
+        dwindleTree: nil,
         minimizedWindowIDs: [],
         focusedWindowID: nil,
         enabled: false
@@ -97,11 +98,18 @@ public final class TilingManager {
       let retainedWindowIDs = state.layout.windowIDs
       for windowID in retainedWindowIDs where !desiredWindowIDs.contains(windowID) {
         state.layout.remove(windowID)
+        state.dwindleTree = state.dwindleTree?.removing([windowID])
       }
 
       var insertionAnchor = state.focusedWindowID
       for windowID in desiredWindowIDs.sorted() where !state.layout.windowIDs.contains(windowID) {
         state.layout.insert(windowID, after: insertionAnchor)
+        if var tree = state.dwindleTree {
+          tree.insert(windowID, beside: insertionAnchor)
+          state.dwindleTree = tree
+        } else {
+          state.dwindleTree = .leaf(windowID)
+        }
         insertionAnchor = windowID
       }
 
@@ -237,7 +245,7 @@ public final class TilingManager {
     case .dwindle:
       return .layout(
         dwindleLayout.layout(
-          windowIDs: windowIDs,
+          tree: state.dwindleTree?.removing(state.minimizedWindowIDs),
           in: display.visibleFrame,
           settings: spaceSettings
         )
