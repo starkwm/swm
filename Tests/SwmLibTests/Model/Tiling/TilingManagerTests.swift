@@ -141,6 +141,70 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("reconcile: preserves native-fullscreen leaves at their prior position")
+  func reconcilePreservesNativeFullscreenLeafPosition() {
+    let windows = [window(id: 1), window(id: 2), window(id: 3)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [10]]
+    let manager = makeManager(windows: { windows }, memberships: { memberships })
+    manager.start()
+    manager.setEnabled(true, for: 10)
+    manager.windowDidFocus(3)
+    let initialPlan = manager.layoutPlan(for: layoutID(10))
+
+    memberships[1] = [12]
+    manager.reconcile()
+    memberships[1] = [10]
+    manager.reconcile()
+
+    #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
+  }
+
+  @Test("reconcile: preserves state while display ownership is unresolved")
+  func reconcilePreservesStateWhileDisplayOwnershipIsUnresolved() {
+    let windows = [window(id: 1), window(id: 2), window(id: 3)]
+    var windowServerDisplayID = "display"
+    let spaceManager = SpaceManager(activeSpaceID: nil)
+    let manager = TilingManager(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: windows,
+          topology: SpaceTopology(
+            spacesByID: [
+              10: SpaceTopologyDescriptor(
+                id: 10,
+                displayID: windowServerDisplayID,
+                type: .normal
+              )
+            ],
+            visibleSpaceIDByDisplayID: [windowServerDisplayID: 10],
+            spaceIDsByWindowID: [1: [10], 2: [10], 3: [10]],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaceManager: spaceManager
+    )
+    manager.start()
+    manager.setLayoutMode(.dwindle, for: 10)
+    manager.setEnabled(true, for: 10)
+    let initialPlan = manager.layoutPlan(for: layoutID(10))
+
+    windowServerDisplayID = "stale-display"
+    manager.reconcile()
+
+    #expect(manager.isEnabled(for: 10))
+    #expect(manager.layoutMode(for: 10) == .dwindle)
+
+    windowServerDisplayID = "display"
+    manager.reconcile()
+
+    #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
+  }
+
   @Test("layoutPlan: requires a visible Space")
   func layoutPlanRequiresVisibleSpace() {
     let hiddenManager = makeManager(visibleSpaceID: 11)
@@ -197,6 +261,30 @@ struct TilingManagerTests {
     #expect(manager.layoutMode(for: 10) == .dwindle)
   }
 
+  @Test("shared Space: a new monitor inherits enablement and layout mode")
+  func sharedSpaceNewMonitorInheritsState() {
+    var displays = [
+      "display-a": SpaceTopologyDisplay(
+        visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+      )
+    ]
+    let manager = makeSharedSpaceManager(windows: { [] }, displays: { displays })
+    manager.start()
+    manager.setLayoutMode(.dwindle, for: 10)
+    manager.setEnabled(true, for: 10)
+
+    displays["display-b"] = SpaceTopologyDisplay(
+      visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
+    )
+    manager.reconcile()
+
+    #expect(manager.isEnabled(for: 10))
+    #expect(manager.layoutMode(for: 10) == .dwindle)
+    #expect(
+      manager.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
+    )
+  }
+
   private func makeManager(
     windows: [TilingWindowSnapshot] = [window(id: 1)],
     memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
@@ -223,6 +311,7 @@ struct TilingManagerTests {
             spacesByID: [
               10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal),
               11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal),
+              12: SpaceTopologyDescriptor(id: 12, displayID: "display", type: .fullscreen),
             ],
             visibleSpaceIDByDisplayID: ["display": visibleSpaceID],
             spaceIDsByWindowID: memberships(),
@@ -241,6 +330,25 @@ struct TilingManagerTests {
   private func makeSharedSpaceManager(
     windows: @escaping () -> [TilingWindowSnapshot]
   ) -> TilingManager {
+    makeSharedSpaceManager(
+      windows: windows,
+      displays: {
+        [
+          "display-a": SpaceTopologyDisplay(
+            visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+          ),
+          "display-b": SpaceTopologyDisplay(
+            visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
+          ),
+        ]
+      }
+    )
+  }
+
+  private func makeSharedSpaceManager(
+    windows: @escaping () -> [TilingWindowSnapshot],
+    displays: @escaping () -> [String: SpaceTopologyDisplay]
+  ) -> TilingManager {
     let spaceManager = SpaceManager(activeSpaceID: nil)
     return TilingManager(
       snapshot: {
@@ -256,14 +364,7 @@ struct TilingManagerTests {
             spaceIDsByWindowID: Dictionary(
               uniqueKeysWithValues: windows.map { ($0.id, Set([UInt64(10)])) }
             ),
-            displaysByID: [
-              "display-a": SpaceTopologyDisplay(
-                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-              ),
-              "display-b": SpaceTopologyDisplay(
-                visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
-              ),
-            ]
+            displaysByID: displays()
           )
         )
       },
