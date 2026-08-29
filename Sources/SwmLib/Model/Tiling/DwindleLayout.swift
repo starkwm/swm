@@ -5,15 +5,6 @@ struct DwindleLayout {
   /// Minimum frame size accepted for every tiled window.
   private static let minimumWindowSize = CGSize(width: 1, height: 1)
 
-  /// Calculate dwindle frames without performing window side effects.
-  func layout(
-    windowIDs: [CGWindowID],
-    in bounds: CGRect,
-    settings: SpaceSettings
-  ) -> TilingLayoutResult {
-    layout(tree: TilingTree(windowIDs: windowIDs), in: bounds, settings: settings)
-  }
-
   /// Calculate frames for persistent dwindle sibling relationships.
   func layout(
     tree: TilingTree?,
@@ -22,12 +13,12 @@ struct DwindleLayout {
   ) -> TilingLayoutResult {
     guard let tree else { return .frames([:]) }
 
-    let usableBounds = usableBounds(in: bounds, settings: settings)
-    guard satisfiesMinimum(usableBounds.size) else {
+    let usableBounds = settings.tilingBounds(in: bounds)
+    guard usableBounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
       return .insufficientSpace(.usableBounds)
     }
 
-    let gap = settings.gapEnabled ? CGFloat(max(0, settings.gap)) : 0
+    let gap = settings.tilingGap
     var framesByWindowID = [CGWindowID: CGRect]()
     if let constraint = layout(
       tree,
@@ -49,7 +40,7 @@ struct DwindleLayout {
   ) -> TilingLayoutConstraint? {
     switch tree {
     case .leaf(let windowID):
-      guard satisfiesMinimum(bounds.size) else {
+      guard bounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
         return bounds.width < Self.minimumWindowSize.width ? .tileWidth : .tileHeight
       }
       framesByWindowID[windowID] = bounds
@@ -129,27 +120,6 @@ struct DwindleLayout {
     )
   }
 
-  /// Apply enabled per-Space padding to visible display bounds.
-  private func usableBounds(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
-    guard settings.paddingEnabled else { return bounds }
-
-    let top = CGFloat(max(0, settings.padding.top))
-    let bottom = CGFloat(max(0, settings.padding.bottom))
-    let left = CGFloat(max(0, settings.padding.left))
-    let right = CGFloat(max(0, settings.padding.right))
-
-    return CGRect(
-      x: bounds.minX + left,
-      y: bounds.minY + top,
-      width: max(0, bounds.width - left - right),
-      height: max(0, bounds.height - top - bottom)
-    )
-  }
-
-  /// Return whether a frame size satisfies the configured minimum.
-  private func satisfiesMinimum(_ size: CGSize) -> Bool {
-    size.width >= Self.minimumWindowSize.width && size.height >= Self.minimumWindowSize.height
-  }
 }
 
 /// Internal outcome from splitting one remaining dwindle region.

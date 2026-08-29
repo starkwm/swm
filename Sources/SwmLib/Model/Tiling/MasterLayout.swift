@@ -14,8 +14,8 @@ struct MasterLayout {
   ) -> TilingLayoutResult {
     guard !windowIDs.isEmpty else { return .frames([:]) }
 
-    let usableBounds = usableBounds(in: bounds, settings: settings)
-    guard satisfiesMinimum(usableBounds.size) else {
+    let usableBounds = settings.tilingBounds(in: bounds)
+    guard usableBounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
       return .insufficientSpace(.usableBounds)
     }
 
@@ -23,7 +23,7 @@ struct MasterLayout {
       return .frames([windowIDs[0]: usableBounds])
     }
 
-    let gap = settings.gapEnabled ? CGFloat(max(0, settings.gap)) : 0
+    let gap = settings.tilingGap
     let availableWidth = usableBounds.width - gap
     guard availableWidth >= 0 else {
       return .insufficientSpace(.horizontalGap)
@@ -76,23 +76,6 @@ struct MasterLayout {
     return .frames(framesByWindowID)
   }
 
-  /// Apply enabled per-Space padding to visible display bounds.
-  private func usableBounds(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
-    guard settings.paddingEnabled else { return bounds }
-
-    let top = CGFloat(max(0, settings.padding.top))
-    let bottom = CGFloat(max(0, settings.padding.bottom))
-    let left = CGFloat(max(0, settings.padding.left))
-    let right = CGFloat(max(0, settings.padding.right))
-
-    return CGRect(
-      x: bounds.minX + left,
-      y: bounds.minY + top,
-      width: max(0, bounds.width - left - right),
-      height: max(0, bounds.height - top - bottom)
-    )
-  }
-
   /// Return rounded partition lengths whose total plus gaps exactly fills the input length.
   private func partitions(
     length: CGFloat,
@@ -112,10 +95,5 @@ struct MasterLayout {
     }
 
     return lengths.allSatisfy { $0 >= minimum } ? lengths : nil
-  }
-
-  /// Return whether a frame size satisfies the configured minimum.
-  private func satisfiesMinimum(_ size: CGSize) -> Bool {
-    size.width >= Self.minimumWindowSize.width && size.height >= Self.minimumWindowSize.height
   }
 }

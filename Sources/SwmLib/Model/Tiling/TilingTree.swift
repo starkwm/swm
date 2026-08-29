@@ -66,14 +66,3 @@ indirect enum TilingTree: Equatable {
     }
   }
 }
-
-extension TilingTree {
-  /// Create a tree by repeatedly splitting the most recently inserted leaf.
-  init?(windowIDs: [CGWindowID]) {
-    guard let firstWindowID = windowIDs.first, firstWindowID != 0 else { return nil }
-    self = .leaf(firstWindowID)
-    for windowID in windowIDs.dropFirst() {
-      insert(windowID, beside: self.windowIDs.last)
-    }
-  }
-}

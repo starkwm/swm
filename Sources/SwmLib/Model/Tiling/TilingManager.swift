@@ -196,20 +196,13 @@ public final class TilingManager {
 
   /// Apply a fresh plan for one Space when it is visible and enabled.
   func reflow(spaceID: UInt64) {
-    for layoutID in layoutIDs(for: spaceID) {
-      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
-      frameReconciler?.apply(frames)
-    }
+    applyPlans(for: layoutIDs(for: spaceID))
   }
 
   /// Apply fresh plans for all currently visible normal Spaces.
   func reflowVisibleSpaces() {
     guard let currentTopology else { return }
-
-    for layoutID in sorted(currentTopology.visibleLayoutIDs) {
-      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
-      frameReconciler?.apply(frames)
-    }
+    applyPlans(for: sorted(currentTopology.visibleLayoutIDs))
   }
 
   /// Calculate the current plan for an enabled, visible layout without side effects.
@@ -240,6 +233,14 @@ public final class TilingManager {
           settings: spaceSettings
         )
       )
+    }
+  }
+
+  /// Apply actionable plans for a stable sequence of layouts.
+  private func applyPlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+    for layoutID in layoutIDs {
+      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
+      frameReconciler?.apply(frames)
     }
   }
 
