@@ -11,6 +11,7 @@ public final class TilingManager {
   private let spaceManager: SpaceManager
   private var frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
+  private var defaultLayoutMode = LayoutMode.master
   private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
   private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
@@ -192,6 +193,18 @@ public final class TilingManager {
     return true
   }
 
+  /// Select the layout algorithm for every known Space and future Space defaults.
+  func setLayoutModeForAll(_ mode: LayoutMode) {
+    defaultLayoutMode = mode
+
+    layoutsByID = layoutsByID.mapValues { state in
+      var state = state
+      state.mode = mode
+      return state
+    }
+    reflowVisibleSpaces()
+  }
+
   /// Return the selected layout algorithm for a known Space.
   func layoutMode(for spaceID: UInt64) -> LayoutMode? {
     let modes = Set(layoutIDs(for: spaceID).compactMap { layoutsByID[$0]?.mode })
@@ -285,7 +298,7 @@ public final class TilingManager {
       .value
 
     return SpaceLayoutState(
-      mode: inheritedState?.mode ?? .master,
+      mode: inheritedState?.mode ?? defaultLayoutMode,
       tree: nil,
       omittedWindowIDs: [],
       focusedWindowID: nil,

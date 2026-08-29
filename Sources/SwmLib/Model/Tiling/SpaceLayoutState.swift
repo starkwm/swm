@@ -33,4 +33,16 @@ enum LayoutMode: String, Equatable {
 
   /// Recursively bisect the longest edge of the remaining region.
   case dwindle
+
+  /// Parse the spelling accepted by layout IPC commands.
+  init?(argument: String) {
+    switch argument {
+    case "master":
+      self = .master
+    case "dwindle":
+      self = .dwindle
+    default:
+      return nil
+    }
+  }
 }

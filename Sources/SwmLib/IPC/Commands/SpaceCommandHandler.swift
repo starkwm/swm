@@ -65,14 +65,7 @@ struct SpaceCommandHandler {
     }
 
     let argument = request.args[0]
-    let mode: LayoutMode
-
-    switch argument {
-    case "master":
-      mode = .master
-    case "dwindle":
-      mode = .dwindle
-    default:
+    guard let mode = LayoutMode(argument: argument) else {
       throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
     }
 
