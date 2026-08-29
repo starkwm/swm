@@ -1,4 +1,4 @@
-import Foundation
+import Dispatch
 
 /// Handles application lifecycle events and starts or stops application/window management.
 @MainActor

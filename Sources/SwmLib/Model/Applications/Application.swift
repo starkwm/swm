@@ -1,13 +1,5 @@
 import AppKit
 
-/// Accessibility notifications observed for an application.
-let applicationNotifications = [
-  kAXCreatedNotification,
-  kAXFocusedWindowChangedNotification,
-  kAXWindowMovedNotification,
-  kAXWindowResizedNotification,
-]
-
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
 /// Forward accessibility window notifications into swm's event manager.
@@ -61,7 +53,12 @@ private func accessibilityObserverCallback(
 /// Runtime model for a single running application.
 final class Application: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar(
-    notifications: applicationNotifications
+    notifications: [
+      kAXCreatedNotification,
+      kAXFocusedWindowChangedNotification,
+      kAXWindowMovedNotification,
+      kAXWindowResizedNotification,
+    ]
   )
 
   /// Debug description including process, app name, and bundle identifier.

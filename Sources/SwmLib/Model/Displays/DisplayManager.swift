@@ -1,5 +1,4 @@
 import CoreGraphics
-import Foundation
 
 private func displayReconfigurationCallback(
   displayID: CGDirectDisplayID,

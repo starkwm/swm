@@ -201,15 +201,10 @@ struct WindowCommandHandler {
         windowID = CGWindowID(id)
       }
     } else {
-      guard let windowID = WindowManager.focusedWindowID() else {
+      guard let focusedWindowID = WindowManager.focusedWindowID() else {
         throw IPCCommandError.invalidRequest("no focused window")
       }
-
-      guard let window = windowManager.window(by: windowID) else {
-        throw IPCCommandError.invalidRequest("window not found: \(windowID)")
-      }
-
-      return window
+      windowID = focusedWindowID
     }
 
     guard let window = windowManager.window(by: windowID) else {

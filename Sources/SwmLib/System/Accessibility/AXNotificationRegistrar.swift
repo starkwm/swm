@@ -30,7 +30,6 @@ struct AXNotificationRegistrar: Sendable {
     removeNotification: (String) -> Void
   ) {
     for notification in notifications where observedNotifications.contains(notification) {
-
       removeNotification(notification)
       observedNotifications.remove(notification)
     }

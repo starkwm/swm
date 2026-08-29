@@ -1,16 +1,13 @@
 import AppKit
 
-/// Accessibility notifications observed for an individual window.
-let windowNotifications = [
-  kAXUIElementDestroyedNotification,
-  kAXWindowMiniaturizedNotification,
-  kAXWindowDeminiaturizedNotification,
-]
-
 /// Runtime model for an accessibility-backed window.
 final class Window: NSObject {
   private static let notificationRegistrar = AXNotificationRegistrar(
-    notifications: windowNotifications
+    notifications: [
+      kAXUIElementDestroyedNotification,
+      kAXWindowMiniaturizedNotification,
+      kAXWindowDeminiaturizedNotification,
+    ]
   )
 
   /// Owning application, held weakly to avoid a retain cycle.

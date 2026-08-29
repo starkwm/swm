@@ -1,5 +1,3 @@
-import Foundation
-
 /// Tracks active space state and per-space layout settings.
 @MainActor
 public final class SpaceManager {
@@ -56,10 +54,10 @@ public final class SpaceManager {
   func updateAllSettings(_ transform: (inout SpaceSettings) -> Void) {
     transform(&defaultSettings)
 
-    for spaceID in settingsBySpaceID.keys {
-      guard var settings = settingsBySpaceID[spaceID] else { continue }
+    settingsBySpaceID = settingsBySpaceID.mapValues { currentSettings in
+      var settings = currentSettings
       transform(&settings)
-      settingsBySpaceID[spaceID] = settings
+      return settings
     }
   }
 
@@ -122,7 +120,7 @@ public final class SpaceManager {
     }
   }
 
-  /// Update stored settings for a space under the manager lock.
+  /// Update stored settings for a space.
   private func update(
     _ spaceID: UInt64,
     transform: (inout SpaceSettings) -> Void

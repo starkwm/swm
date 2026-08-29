@@ -100,7 +100,6 @@ public final class ProcessManager {
     default:
       break
     }
-
   }
 
   /// Add all currently running processes to the tracked process map.

@@ -159,7 +159,9 @@ public final class WindowManager {
 
   /// Find and add one window by ID from an application's accessibility elements.
   func addWindow(with windowID: CGWindowID, for application: Application) -> Window? {
-    guard windowsByID[windowID] == nil else { return windowsByID[windowID] }
+    if let window = windowsByID[windowID] {
+      return window
+    }
 
     if let element = application.windowElements().first(where: {
       AccessibilityClient.shared.optionalWindowID(for: $0) == windowID
