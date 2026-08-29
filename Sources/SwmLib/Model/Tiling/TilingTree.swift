@@ -1,12 +1,12 @@
 import CoreGraphics
 
-/// Persistent binary relationships between windows in a dwindle layout.
-indirect enum DwindleTree: Equatable {
+/// Persistent binary relationships and stable order for tiled windows.
+indirect enum TilingTree: Equatable {
   /// A tiled window.
   case leaf(CGWindowID)
 
-  /// Two sibling subtrees sharing a dynamically oriented split.
-  case branch(DwindleTree, DwindleTree)
+  /// Two sibling subtrees sharing one layout region.
+  case branch(TilingTree, TilingTree)
 
   /// Window IDs in stable tree order.
   var windowIDs: [CGWindowID] {
@@ -30,7 +30,7 @@ indirect enum DwindleTree: Equatable {
   }
 
   /// Return a copy with omitted leaves removed and unary branches collapsed.
-  func removing(_ windowIDs: Set<CGWindowID>) -> DwindleTree? {
+  func removing(_ windowIDs: Set<CGWindowID>) -> TilingTree? {
     switch self {
     case .leaf(let windowID):
       return windowIDs.contains(windowID) ? nil : self
@@ -47,7 +47,7 @@ indirect enum DwindleTree: Equatable {
   }
 
   /// Replace one leaf while preserving every other branch relationship.
-  private mutating func replaceLeaf(_ windowID: CGWindowID, with replacement: DwindleTree) -> Bool {
+  private mutating func replaceLeaf(_ windowID: CGWindowID, with replacement: TilingTree) -> Bool {
     switch self {
     case .leaf(let candidate):
       guard candidate == windowID else { return false }
@@ -67,7 +67,7 @@ indirect enum DwindleTree: Equatable {
   }
 }
 
-extension DwindleTree {
+extension TilingTree {
   /// Create a tree by repeatedly splitting the most recently inserted leaf.
   init?(windowIDs: [CGWindowID]) {
     guard let firstWindowID = windowIDs.first, firstWindowID != 0 else { return nil }

@@ -17,11 +17,8 @@ struct SpaceLayoutState: Equatable {
   /// Selected layout algorithm.
   var mode: LayoutMode
 
-  /// Ordered retained window leaves.
-  var layout: OrderedWindowLayout
-
-  /// Persistent sibling relationships used by the dwindle layout.
-  var dwindleTree: DwindleTree?
+  /// Persistent sibling relationships and stable window order.
+  var tree: TilingTree?
   /// Retained leaves omitted from current geometry.
   var minimizedWindowIDs: Set<CGWindowID>
 

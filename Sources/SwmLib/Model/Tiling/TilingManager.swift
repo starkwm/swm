@@ -61,8 +61,7 @@ public final class TilingManager {
       layoutsByID[layoutID] = SpaceLayoutState(
         id: layoutID,
         mode: .master,
-        layout: OrderedWindowLayout(),
-        dwindleTree: nil,
+        tree: nil,
         minimizedWindowIDs: [],
         focusedWindowID: nil,
         enabled: false
@@ -95,20 +94,18 @@ public final class TilingManager {
       guard var state = layoutsByID[layoutID] else { continue }
       let desiredWindowIDs = tiledWindowIDsByLayoutID[layoutID] ?? []
 
-      let retainedWindowIDs = state.layout.windowIDs
+      let retainedWindowIDs = state.tree?.windowIDs ?? []
       for windowID in retainedWindowIDs where !desiredWindowIDs.contains(windowID) {
-        state.layout.remove(windowID)
-        state.dwindleTree = state.dwindleTree?.removing([windowID])
+        state.tree = state.tree?.removing([windowID])
       }
 
       var insertionAnchor = state.focusedWindowID
-      for windowID in desiredWindowIDs.sorted() where !state.layout.windowIDs.contains(windowID) {
-        state.layout.insert(windowID, after: insertionAnchor)
-        if var tree = state.dwindleTree {
+      for windowID in desiredWindowIDs.sorted() where !retainedWindowIDs.contains(windowID) {
+        if var tree = state.tree {
           tree.insert(windowID, beside: insertionAnchor)
-          state.dwindleTree = tree
+          state.tree = tree
         } else {
-          state.dwindleTree = .leaf(windowID)
+          state.tree = .leaf(windowID)
         }
         insertionAnchor = windowID
       }
@@ -228,16 +225,14 @@ public final class TilingManager {
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
-    let windowIDs = state.layout.activeWindowIDs(
-      excluding: state.minimizedWindowIDs
-    )
+    let activeTree = state.tree?.removing(state.minimizedWindowIDs)
     let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
 
     switch state.mode {
     case .master:
       return .layout(
         masterLayout.layout(
-          windowIDs: windowIDs,
+          windowIDs: activeTree?.windowIDs ?? [],
           in: display.visibleFrame,
           settings: spaceSettings
         )
@@ -245,7 +240,7 @@ public final class TilingManager {
     case .dwindle:
       return .layout(
         dwindleLayout.layout(
-          tree: state.dwindleTree?.removing(state.minimizedWindowIDs),
+          tree: activeTree,
           in: display.visibleFrame,
           settings: spaceSettings
         )
