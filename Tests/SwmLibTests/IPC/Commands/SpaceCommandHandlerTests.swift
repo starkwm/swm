@@ -83,6 +83,72 @@ struct SpaceCommandHandlerTests {
     #expect(manager.settings(for: 42).gap == 10)
   }
 
+  @Test("dispatch: updates master controls")
+  func dispatchUpdatesMasterControls() {
+    let spaceManager = SpaceManager(activeSpaceID: 42)
+    let tilingManager = TilingManager(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [
+            TilingWindowSnapshot(
+              id: 1,
+              displayID: "display",
+              subrole: "AXStandardWindow",
+              isMinimized: false,
+              isMovable: true,
+              isResizable: true
+            ),
+            TilingWindowSnapshot(
+              id: 2,
+              displayID: "display",
+              subrole: "AXStandardWindow",
+              isMinimized: false,
+              isMovable: true,
+              isResizable: true
+            ),
+          ],
+          topology: SpaceTopology(
+            spacesByID: [
+              42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
+            ],
+            visibleSpaceIDByDisplayID: ["display": 42],
+            spaceIDsByWindowID: [1: [42], 2: [42]],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaceManager: spaceManager
+    )
+    tilingManager.start()
+    let handler = SpaceCommandHandler(
+      spaceManager: spaceManager,
+      tilingManager: tilingManager
+    )
+
+    let ratio = handler.dispatch(request(command: "--master-ratio", args: ["abs:0.6"]))
+    let relativeRatio = handler.dispatch(request(command: "--master-ratio", args: ["rel:0.1"]))
+    let placement = handler.dispatch(request(command: "--master-placement", args: ["bottom"]))
+    let layout = handler.dispatch(request(command: "--layout", args: ["master"]))
+
+    #expect(ratio.ok)
+    #expect(relativeRatio.ok)
+    #expect(placement.ok && placement.message == "bottom")
+    #expect(layout.ok)
+    #expect(
+      tilingManager.layoutPlan(for: layoutID(42))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 240, width: 1_000, height: 560),
+            2: CGRect(x: 0, y: 0, width: 1_000, height: 240),
+          ])
+        )
+    )
+  }
+
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
     let handler = handler(spaceManager: SpaceManager(activeSpaceID: 42))
@@ -94,6 +160,8 @@ struct SpaceCommandHandlerTests {
       handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
       handler.dispatch(request(command: "--gap", args: ["abs"])),
       handler.dispatch(request(command: "--gap", args: ["rel:x"])),
+      handler.dispatch(request(command: "--master-ratio", args: ["0.6"])),
+      handler.dispatch(request(command: "--master-placement", args: ["center"])),
     ]
 
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })

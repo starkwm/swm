@@ -23,6 +23,9 @@ enum TilingLayoutConstraint: Equatable {
   /// The master pane is narrower than the minimum window width.
   case masterWidth
 
+  /// The master pane is shorter than the minimum window height.
+  case masterHeight
+
   /// The stack pane is narrower than the minimum window width.
   case stackWidth
 

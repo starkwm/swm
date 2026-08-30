@@ -73,6 +73,66 @@ struct MasterLayoutTests {
     )
   }
 
+  @Test("layout: places a right master after its stack")
+  func layoutPlacesRightMasterAfterStack() {
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2, 3],
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+      settings: .defaults,
+      masterRatio: 0.6,
+      placement: .right
+    )
+
+    #expect(
+      result
+        == .frames([
+          1: CGRect(x: 400, y: 0, width: 600, height: 800),
+          2: CGRect(x: 0, y: 0, width: 400, height: 400),
+          3: CGRect(x: 0, y: 400, width: 400, height: 400),
+        ])
+    )
+  }
+
+  @Test("layout: places a top master above a horizontal stack")
+  func layoutPlacesTopMasterAboveStack() {
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2, 3],
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+      settings: .defaults,
+      masterRatio: 0.6,
+      placement: .top
+    )
+
+    #expect(
+      result
+        == .frames([
+          1: CGRect(x: 0, y: 0, width: 1_000, height: 480),
+          2: CGRect(x: 0, y: 480, width: 500, height: 320),
+          3: CGRect(x: 500, y: 480, width: 500, height: 320),
+        ])
+    )
+  }
+
+  @Test("layout: places a bottom master below a horizontal stack")
+  func layoutPlacesBottomMasterBelowStack() {
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2, 3],
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+      settings: .defaults,
+      masterRatio: 0.6,
+      placement: .bottom
+    )
+
+    #expect(
+      result
+        == .frames([
+          1: CGRect(x: 0, y: 320, width: 1_000, height: 480),
+          2: CGRect(x: 0, y: 0, width: 500, height: 320),
+          3: CGRect(x: 500, y: 0, width: 500, height: 320),
+        ])
+    )
+  }
+
   @Test(
     "layout: reports minimum-size constraint",
     arguments: [

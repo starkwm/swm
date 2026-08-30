@@ -12,6 +12,8 @@ public final class TilingManager {
   private var frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
+  private var defaultMasterRatio: CGFloat = 0.5
+  private var defaultMasterPlacement = MasterPlacement.left
   private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
   private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
@@ -178,6 +180,71 @@ public final class TilingManager {
     }
   }
 
+  /// Set or adjust the master ratio for one Space.
+  @discardableResult
+  func changeMasterRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    let ratio = change.applying(to: layoutsByID[layoutIDs[0]]?.masterRatio ?? defaultMasterRatio)
+    for layoutID in layoutIDs {
+      layoutsByID[layoutID]?.masterRatio = ratio
+    }
+    applyMasterPlans(for: layoutIDs)
+    return true
+  }
+
+  /// Set the default master ratio for all current and future Spaces.
+  func setMasterRatioForAllSpaces(_ ratio: CGFloat) {
+    let ratio = LayoutRatioChange.absolute(ratio).applying(to: defaultMasterRatio)
+    defaultMasterRatio = ratio
+    layoutsByID = layoutsByID.mapValues { currentState in
+      var state = currentState
+      state.masterRatio = ratio
+      return state
+    }
+    reflowVisibleMasterLayouts()
+  }
+
+  /// Set the master placement for one Space.
+  @discardableResult
+  func setMasterPlacement(_ placement: MasterPlacement, for spaceID: UInt64) -> Bool {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    for layoutID in layoutIDs {
+      layoutsByID[layoutID]?.masterPlacement = placement
+    }
+    applyMasterPlans(for: layoutIDs)
+    return true
+  }
+
+  /// Set the default master placement for all current and future Spaces.
+  func setMasterPlacementForAllSpaces(_ placement: MasterPlacement) {
+    defaultMasterPlacement = placement
+    layoutsByID = layoutsByID.mapValues { currentState in
+      var state = currentState
+      state.masterPlacement = placement
+      return state
+    }
+    reflowVisibleMasterLayouts()
+  }
+
+  /// Swap a tiled window with the current master pane.
+  @discardableResult
+  func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard var state = layoutsByID[layoutID], state.selection == .master else { return false }
+    guard var tree = state.tree, let masterWindowID = tree.windowIDs.first else { return false }
+    guard tree.swap(windowID, with: masterWindowID) else { return false }
+
+    state.tree = tree
+    state.focusedWindowID = windowID
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
     guard let layoutID = layoutIDByWindowID[windowID] else { return }
@@ -213,7 +280,7 @@ public final class TilingManager {
     applyPlans(for: sorted(currentTopology.visibleLayoutIDs))
   }
 
-  /// Calculate the current plan for an enabled, visible layout without side effects.
+  /// Calculate the current plan for an enabled, visible layout without applying frames.
   func layoutPlan(for layoutID: SpaceLayoutID) -> TilingLayoutPlan {
     guard let state = layoutsByID[layoutID] else { return .unknownSpace }
     guard state.selection != .float else { return .disabled }
@@ -232,7 +299,9 @@ public final class TilingManager {
         masterLayout.layout(
           windowIDs: activeTree?.windowIDs ?? [],
           in: display.visibleFrame,
-          settings: spaceSettings
+          settings: spaceSettings,
+          masterRatio: state.masterRatio,
+          placement: state.masterPlacement
         )
       )
     case .dwindle:
@@ -267,6 +336,8 @@ public final class TilingManager {
 
     return SpaceLayoutState(
       selection: inheritedState?.selection ?? defaultSelection,
+      masterRatio: inheritedState?.masterRatio ?? defaultMasterRatio,
+      masterPlacement: inheritedState?.masterPlacement ?? defaultMasterPlacement,
       tree: nil,
       omittedWindowIDs: [],
       focusedWindowID: nil
@@ -276,6 +347,17 @@ public final class TilingManager {
   /// Return stable layout IDs for a Space.
   private func layoutIDs(for spaceID: UInt64) -> [SpaceLayoutID] {
     sorted(layoutsByID.keys.filter { $0.spaceID == spaceID })
+  }
+
+  /// Apply fresh master plans for every visible master layout.
+  private func reflowVisibleMasterLayouts() {
+    guard let currentTopology else { return }
+    applyMasterPlans(for: sorted(currentTopology.visibleLayoutIDs))
+  }
+
+  /// Apply fresh plans only where the master settings affect geometry.
+  private func applyMasterPlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+    applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .master })
   }
 
   /// Sort composite IDs for deterministic reconciliation and frame application.

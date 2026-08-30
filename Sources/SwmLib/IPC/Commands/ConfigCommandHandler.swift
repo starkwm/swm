@@ -16,6 +16,10 @@ struct ConfigCommandHandler {
       switch request.command {
       case "layout":
         return try layout(request)
+      case "master-ratio":
+        return try masterRatio(request)
+      case "master-placement":
+        return try masterPlacement(request)
       case "window-gap":
         return try windowGap(request)
       case "top-padding":
@@ -30,6 +34,31 @@ struct ConfigCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
     }
+  }
+
+  /// Set the master pane ratio for every current and future Space.
+  private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid config master-ratio arguments")
+    }
+    guard let ratio = LayoutCommandParser.ratio(from: request.args[0]) else {
+      throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(request.args[0])")
+    }
+    tilingManager.setMasterRatioForAllSpaces(ratio)
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Set the master pane edge for every current and future Space.
+  private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid config master-placement arguments")
+    }
+    let argument = request.args[0]
+    guard let placement = MasterPlacement(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest("invalid config master-placement: \(argument)")
+    }
+    tilingManager.setMasterPlacementForAllSpaces(placement)
+    return .success(id: request.id, message: placement.rawValue)
   }
 
   /// Select floating or automatic layout for every Space.

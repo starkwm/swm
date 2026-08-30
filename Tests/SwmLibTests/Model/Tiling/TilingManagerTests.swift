@@ -278,6 +278,100 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("master controls: update ratio and placement for a Space")
+  func masterControlsUpdateRatioAndPlacement() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.changeMasterRatio(.absolute(0.6), for: 10))
+    #expect(manager.setMasterPlacement(.right, for: 10))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 400, y: 0, width: 600, height: 800),
+            2: CGRect(x: 0, y: 0, width: 400, height: 400),
+            3: CGRect(x: 0, y: 400, width: 400, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("master controls: swap a selected window with master")
+  func masterControlsSwapSelectedWindowWithMaster() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.swapWindowWithMaster(3))
+    #expect(manager.swapWindowWithMaster(99) == false)
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            3: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            1: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("global controls: apply master settings to current and future Spaces")
+  func globalControlsApplyMasterSettingsToCurrentAndFutureSpaces() {
+    var spaceIDs = Set([UInt64(10)])
+    var visibleSpaceID = UInt64(10)
+    let spaceManager = SpaceManager(activeSpaceID: nil)
+    let manager = TilingManager(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [window(id: 1), window(id: 2)],
+          topology: SpaceTopology(
+            spacesByID: Dictionary(
+              uniqueKeysWithValues: spaceIDs.map {
+                ($0, SpaceTopologyDescriptor(id: $0, displayID: "display", type: .normal))
+              }
+            ),
+            visibleSpaceIDByDisplayID: ["display": visibleSpaceID],
+            spaceIDsByWindowID: [1: [visibleSpaceID], 2: [visibleSpaceID]],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaceManager: spaceManager
+    )
+    manager.start()
+
+    manager.setLayoutForSpaces(.master)
+    manager.setMasterRatioForAllSpaces(0.65)
+    manager.setMasterPlacementForAllSpaces(.bottom)
+
+    let expectedPlan = TilingLayoutPlan.layout(
+      .frames([
+        1: CGRect(x: 0, y: 280, width: 1_000, height: 520),
+        2: CGRect(x: 0, y: 0, width: 1_000, height: 280),
+      ])
+    )
+    #expect(manager.layoutPlan(for: layoutID(10)) == expectedPlan)
+
+    spaceIDs.insert(11)
+    visibleSpaceID = 11
+    manager.reconcile()
+
+    #expect(manager.layoutPlan(for: layoutID(11)) == expectedPlan)
+  }
+
   private func makeManager(
     windows: [TilingWindowSnapshot] = [window(id: 1)],
     memberships: [CGWindowID: Set<UInt64>] = [1: [10]],

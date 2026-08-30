@@ -16,6 +16,10 @@ struct SpaceCommandHandler {
       switch request.command {
       case "--layout":
         return try layout(request)
+      case "--master-ratio":
+        return try masterRatio(request)
+      case "--master-placement":
+        return try masterPlacement(request)
       case "--padding":
         return try padding(request)
       case "--gap":
@@ -24,6 +28,39 @@ struct SpaceCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported space command: \(request.command)")
       }
     }
+  }
+
+  /// Set or adjust the master pane ratio for the active Space.
+  private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid space master-ratio arguments")
+    }
+    guard let change = LayoutCommandParser.ratioChange(from: request.args[0]) else {
+      throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(request.args[0])")
+    }
+
+    let spaceID = try currentSpaceID()
+    guard tilingManager.changeMasterRatio(change, for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+    }
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Set the master pane edge for the active Space.
+  private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid space master-placement arguments")
+    }
+    let argument = request.args[0]
+    guard let placement = MasterPlacement(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest("invalid space master-placement: \(argument)")
+    }
+
+    let spaceID = try currentSpaceID()
+    guard tilingManager.setMasterPlacement(placement, for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+    }
+    return .success(id: request.id, message: placement.rawValue)
   }
 
   /// Select floating or automatic layout for the active Space.

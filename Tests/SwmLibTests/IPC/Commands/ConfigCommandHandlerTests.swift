@@ -86,6 +86,17 @@ struct ConfigCommandHandlerTests {
     #expect(manager.settings(for: 2).gap == 12)
   }
 
+  @Test("dispatch: accepts master controls")
+  func dispatchAcceptsMasterControls() {
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+
+    let ratio = handler.dispatch(request(command: "master-ratio", args: ["0.65"]))
+    let placement = handler.dispatch(request(command: "master-placement", args: ["top"]))
+
+    #expect(ratio.ok)
+    #expect(placement.ok && placement.message == "top")
+  }
+
   @Test("dispatch: padding updates defaults and preserves other override sides")
   func dispatchPaddingUpdatesDefaultsAndPreservesOtherOverrideSides() {
     let manager = SpaceManager(activeSpaceID: nil)
@@ -166,6 +177,17 @@ struct ConfigCommandHandlerTests {
     #expect(unknown.ok == false)
     #expect(unknown.errorCode == .invalidRequest)
     #expect(unknown.message == "invalid config layout: columns")
+  }
+
+  @Test("dispatch: rejects invalid master control values")
+  func dispatchRejectsInvalidMasterControlValues() {
+    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let responses = [
+      handler.dispatch(request(command: "master-ratio", args: ["wide"])),
+      handler.dispatch(request(command: "master-placement", args: ["center"])),
+    ]
+
+    #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {

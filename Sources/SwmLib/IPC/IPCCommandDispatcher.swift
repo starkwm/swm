@@ -40,7 +40,8 @@ struct IPCCommandDispatcher {
     case .window:
       return WindowCommandHandler(
         windowManager: windowManager,
-        spaceManager: spaceManager
+        spaceManager: spaceManager,
+        tilingManager: tilingManager
       ).dispatch(request)
 
     case .signal:
