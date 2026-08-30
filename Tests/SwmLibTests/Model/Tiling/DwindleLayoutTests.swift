@@ -132,7 +132,7 @@ struct DwindleLayoutTests {
     settings.gap = 100
 
     let result = DwindleLayout().layout(
-      windowIDs: [1, 2],
+      tree: tilingTree([1, 2]),
       in: CGRect(x: 0, y: 0, width: 100, height: 100),
       settings: settings
     )
