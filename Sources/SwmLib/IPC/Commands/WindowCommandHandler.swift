@@ -28,6 +28,8 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "minimize") { $0.minimize() }
       case "--unminimize":
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
+      case "--layout":
+        return try layout(request)
       case "--swap-with-master":
         return try swapWithMaster(request)
       case "--split-ratio":
@@ -58,6 +60,19 @@ struct WindowCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
     }
+  }
+
+  /// Set the selected window's floating or tiled participation.
+  private func layout(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseValueSelection(request.args, action: "layout")
+    guard let layout = WindowLayoutSelection(rawValue: selection.value) else {
+      throw IPCCommandError.invalidRequest("invalid window layout: \(selection.value)")
+    }
+    let window = try selectedWindow(selector: selection.selector)
+    guard tilingManager.setWindowLayout(layout, for: window.id) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for window: \(window.id)")
+    }
+    return .success(id: request.id, message: layout.rawValue)
   }
 
   /// Swap the selected tiled window with the master pane.
