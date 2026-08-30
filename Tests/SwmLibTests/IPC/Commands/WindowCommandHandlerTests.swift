@@ -149,6 +149,16 @@ struct WindowCommandHandlerTests {
     #expect(response.message == "invalid window selector: nope")
   }
 
+  @Test("dispatch: rejects invalid master swap arguments")
+  func dispatchRejectsInvalidMasterSwapArguments() {
+    let response = handler().dispatch(
+      request(command: "--swap-with-master", args: ["1", "extra"])
+    )
+
+    #expect(response.ok == false)
+    #expect(response.message == "invalid window swap-with-master arguments")
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .window, command: command, args: args)
   }
@@ -156,9 +166,11 @@ struct WindowCommandHandlerTests {
   private func handler(
     windowManager: WindowManager = WindowManager(workspace: Workspace())
   ) -> WindowCommandHandler {
-    WindowCommandHandler(
+    let spaceManager = SpaceManager(activeSpaceID: nil)
+    return WindowCommandHandler(
       windowManager: windowManager,
-      spaceManager: SpaceManager(activeSpaceID: nil)
+      spaceManager: spaceManager,
+      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
     )
   }
 }

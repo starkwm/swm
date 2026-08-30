@@ -42,4 +42,16 @@ struct TilingTreeTests {
     #expect(tree.removing([])?.windowIDs == [1, 2, 3])
     #expect(tree.windowIDs == [1, 2, 3])
   }
+
+  @Test("swap: exchanges leaves without changing the tree")
+  func swapExchangesLeaves() throws {
+    var tree = try #require(tilingTree([1, 2, 3]))
+
+    let swapped = tree.swap(1, with: 3)
+    let missing = tree.swap(3, with: 99)
+
+    #expect(swapped)
+    #expect(tree.windowIDs == [3, 2, 1])
+    #expect(missing == false)
+  }
 }

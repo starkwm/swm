@@ -46,6 +46,18 @@ indirect enum TilingTree: Equatable {
     }
   }
 
+  /// Swap two window leaves while retaining branch geometry.
+  mutating func swap(_ firstWindowID: CGWindowID, with secondWindowID: CGWindowID) -> Bool {
+    let windowIDs = windowIDs
+    guard firstWindowID != secondWindowID else { return windowIDs.contains(firstWindowID) }
+    guard windowIDs.contains(firstWindowID), windowIDs.contains(secondWindowID) else {
+      return false
+    }
+
+    self = swappingWindows(firstWindowID, secondWindowID)
+    return true
+  }
+
   /// Replace one leaf while preserving every other branch relationship.
   private mutating func replaceLeaf(_ windowID: CGWindowID, with replacement: TilingTree) -> Bool {
     switch self {
@@ -63,6 +75,28 @@ indirect enum TilingTree: Equatable {
         return true
       }
       return false
+    }
+  }
+
+  /// Return a copy with two leaf identifiers exchanged.
+  private func swappingWindows(
+    _ firstWindowID: CGWindowID,
+    _ secondWindowID: CGWindowID
+  ) -> TilingTree {
+    switch self {
+    case .leaf(let windowID):
+      if windowID == firstWindowID {
+        return .leaf(secondWindowID)
+      }
+      if windowID == secondWindowID {
+        return .leaf(firstWindowID)
+      }
+      return self
+    case .branch(let first, let second):
+      return .branch(
+        first.swappingWindows(firstWindowID, secondWindowID),
+        second.swappingWindows(firstWindowID, secondWindowID)
+      )
     }
   }
 }

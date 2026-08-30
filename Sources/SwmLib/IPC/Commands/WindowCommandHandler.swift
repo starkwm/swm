@@ -1,15 +1,21 @@
 import AppKit
 
-/// Handles IPC commands that focus, minimize, move, resize, and grid windows.
+/// Handles IPC commands that focus, minimize, move, resize, tile, and grid windows.
 @MainActor
 struct WindowCommandHandler {
   private let windowManager: WindowManager
   private let spaceManager: SpaceManager
+  private let tilingManager: TilingManager
 
-  /// Create a window command handler backed by window and space managers.
-  init(windowManager: WindowManager, spaceManager: SpaceManager) {
+  /// Create a window command handler backed by window, Space, and tiling managers.
+  init(
+    windowManager: WindowManager,
+    spaceManager: SpaceManager,
+    tilingManager: TilingManager
+  ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
+    self.tilingManager = tilingManager
   }
 
   /// Dispatch a window IPC request to the matching window operation.
@@ -22,6 +28,8 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "minimize") { $0.minimize() }
       case "--unminimize":
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
+      case "--swap-with-master":
+        return try swapWithMaster(request)
       case "--move":
         return try performGeometryAction(request, action: "move") { window, change in
           switch change.mode {
@@ -48,6 +56,16 @@ struct WindowCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
     }
+  }
+
+  /// Swap the selected tiled window with the master pane.
+  private func swapWithMaster(_ request: IPCRequest) throws -> IPCResponse {
+    let selector = try parseSelector(request.args, action: "swap-with-master")
+    let window = try selectedWindow(selector: selector)
+    guard tilingManager.swapWindowWithMaster(window.id) else {
+      throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
+    }
+    return .success(id: request.id, message: "ok")
   }
 
   /// Perform an action on a selected window.
