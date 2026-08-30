@@ -20,6 +20,8 @@ struct SpaceCommandHandler {
         return try masterRatio(request)
       case "--master-placement":
         return try masterPlacement(request)
+      case "--preserve-split":
+        return try preserveSplitDirections(request)
       case "--padding":
         return try padding(request)
       case "--gap":
@@ -61,6 +63,23 @@ struct SpaceCommandHandler {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
     }
     return .success(id: request.id, message: placement.rawValue)
+  }
+
+  /// Set whether dwindle branches preserve their resolved direction on the active Space.
+  private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid space preserve-split arguments")
+    }
+    let argument = request.args[0]
+    guard let enabled = LayoutCommandParser.boolean(from: argument) else {
+      throw IPCCommandError.invalidRequest("invalid space preserve-split value: \(argument)")
+    }
+
+    let spaceID = try currentSpaceID()
+    guard tilingManager.setSplitDirectionPreservation(enabled, for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+    }
+    return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
   /// Select floating or automatic layout for the active Space.

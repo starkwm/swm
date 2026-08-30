@@ -21,4 +21,16 @@ enum LayoutCommandParser {
     guard let value = Double(argument), value.isFinite else { return nil }
     return CGFloat(value)
   }
+
+  /// Parse a conventional enabled or disabled value.
+  static func boolean(from argument: String) -> Bool? {
+    switch argument {
+    case "on", "true", "yes", "1":
+      return true
+    case "off", "false", "no", "0":
+      return false
+    default:
+      return nil
+    }
+  }
 }

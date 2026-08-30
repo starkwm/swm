@@ -30,6 +30,8 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
       case "--swap-with-master":
         return try swapWithMaster(request)
+      case "--split-ratio":
+        return try splitRatio(request)
       case "--move":
         return try performGeometryAction(request, action: "move") { window, change in
           switch change.mode {
@@ -64,6 +66,19 @@ struct WindowCommandHandler {
     let window = try selectedWindow(selector: selector)
     guard tilingManager.swapWindowWithMaster(window.id) else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
+    }
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Set or adjust the selected window's nearest dwindle split ratio.
+  private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseValueSelection(request.args, action: "split-ratio")
+    guard let change = LayoutCommandParser.ratioChange(from: selection.value) else {
+      throw IPCCommandError.invalidRequest("invalid window split-ratio value: \(selection.value)")
+    }
+    let window = try selectedWindow(selector: selection.selector)
+    guard tilingManager.changeDwindleSplitRatio(change, for: window.id) != nil else {
+      throw IPCCommandError.invalidRequest("window has no dwindle split: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
   }

@@ -65,10 +65,13 @@ a grid.
     swm -m window --grid [window-id|recent] <columns>:<rows>:<x>:<y>:<width>:<height>
     swm -m window --display [window-id|recent] <next|prev|display-index>
     swm -m window --swap-with-master [window-id|recent]
+    swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
 
 Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
 Use `--display next` to toggle the focused window between two attached displays. Numeric display targets are one-based and sorted by display arrangement.
-`--swap-with-master` promotes the selected window in a master layout.
+`--swap-with-master` promotes the selected window in a master layout. In dwindle,
+`--split-ratio rel:0.05` grows the selected window's side of its nearest split; ratios are clamped
+to `0.1...0.9`.
 
 **Space**
 
@@ -77,6 +80,7 @@ Use space commands to select floating or automatic layout and change settings fo
     swm -m space --layout <float|master|dwindle>
     swm -m space --master-ratio <abs|rel>:<ratio>
     swm -m space --master-placement <left|right|top|bottom>
+    swm -m space --preserve-split <on|off>
     swm -m space --padding abs:<top>:<right>:<bottom>:<left>
     swm -m space --gap abs:<number>
 
@@ -86,10 +90,10 @@ Spaces use unmanaged floating windows by default. Select the ordered master layo
 `swm -m space --layout master`, the tree-backed dwindle layout with
 `swm -m space --layout dwindle`, or stop automatic tiling with `swm -m space --layout float`.
 Master ratio changes are clamped to `0.1...0.9`. Master placement selects which edge contains the
-master pane.
-In dwindle, new windows split the focused tiled window; closing a window collapses its sibling
-branch. Each split follows the longest edge of its current bounds. Each physical display is tiled
-independently, whether macOS's
+master pane. In dwindle, new windows split the focused tiled window; closing a window collapses its
+sibling branch. Each split follows the longest edge of its current bounds unless
+`--preserve-split on` retains the direction selected when that branch is first laid out. Each
+physical display is tiled independently, whether macOS's
 **Displays have separate Spaces** setting is enabled or disabled. Space commands apply the selected
 layout and settings to every display showing the active Space. Moving a window to another display
 moves it into that display's layout; moving or resizing it manually snaps it back into place.
@@ -101,6 +105,7 @@ Use config commands to update defaults for all spaces.
     swm -m config layout <float|master|dwindle>
     swm -m config master-ratio <ratio>
     swm -m config master-placement <left|right|top|bottom>
+    swm -m config preserve-split <on|off>
     swm -m config window-gap <number>
     swm -m config top-padding <number>
     swm -m config right-padding <number>
@@ -145,9 +150,9 @@ You can use `swm -m config window-gap <number>` to configure the size of the gap
 
 Use `swm -m config layout <float|master|dwindle>` to select floating or automatic layout for every Space. The selection also applies to Spaces created later while the daemon is running.
 
-Use `master-ratio` and `master-placement` to set the corresponding automatic layout defaults for
-every current and future Space. Per-Space commands override those defaults for the active Space
-during the daemon run.
+Use `master-ratio`, `master-placement`, and `preserve-split` to set the corresponding automatic
+layout defaults for every current and future Space. Per-Space commands override those defaults for
+the active Space during the daemon run.
 
 **Padding**
 

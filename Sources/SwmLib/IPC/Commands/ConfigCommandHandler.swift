@@ -20,6 +20,8 @@ struct ConfigCommandHandler {
         return try masterRatio(request)
       case "master-placement":
         return try masterPlacement(request)
+      case "preserve-split":
+        return try preserveSplitDirections(request)
       case "window-gap":
         return try windowGap(request)
       case "top-padding":
@@ -59,6 +61,19 @@ struct ConfigCommandHandler {
     }
     tilingManager.setMasterPlacementForAllSpaces(placement)
     return .success(id: request.id, message: placement.rawValue)
+  }
+
+  /// Set retained dwindle split directions for every current and future Space.
+  private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid config preserve-split arguments")
+    }
+    let argument = request.args[0]
+    guard let enabled = LayoutCommandParser.boolean(from: argument) else {
+      throw IPCCommandError.invalidRequest("invalid config preserve-split value: \(argument)")
+    }
+    tilingManager.setSplitDirectionPreservationForAllSpaces(enabled)
+    return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
   /// Select floating or automatic layout for every Space.

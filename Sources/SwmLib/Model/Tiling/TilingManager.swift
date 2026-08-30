@@ -14,6 +14,7 @@ public final class TilingManager {
   private var defaultSelection = LayoutSelection.float
   private var defaultMasterRatio: CGFloat = 0.5
   private var defaultMasterPlacement = MasterPlacement.left
+  private var defaultPreserveSplitDirections = false
   private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
   private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
@@ -230,6 +231,38 @@ public final class TilingManager {
     reflowVisibleMasterLayouts()
   }
 
+  /// Enable or disable retained dwindle split directions for one Space.
+  @discardableResult
+  func setSplitDirectionPreservation(_ enabled: Bool, for spaceID: UInt64) -> Bool {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    for layoutID in layoutIDs {
+      guard var state = layoutsByID[layoutID] else { continue }
+      state.preserveSplitDirections = enabled
+      if !enabled {
+        state.tree = state.tree?.clearingSplitDirections()
+      }
+      layoutsByID[layoutID] = state
+    }
+    applyDwindlePlans(for: layoutIDs)
+    return true
+  }
+
+  /// Set retained dwindle split directions for all current and future Spaces.
+  func setSplitDirectionPreservationForAllSpaces(_ enabled: Bool) {
+    defaultPreserveSplitDirections = enabled
+    layoutsByID = layoutsByID.mapValues { currentState in
+      var state = currentState
+      state.preserveSplitDirections = enabled
+      if !enabled {
+        state.tree = state.tree?.clearingSplitDirections()
+      }
+      return state
+    }
+    reflowVisibleDwindleLayouts()
+  }
+
   /// Swap a tiled window with the current master pane.
   @discardableResult
   func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
@@ -243,6 +276,25 @@ public final class TilingManager {
     layoutsByID[layoutID] = state
     applyPlans(for: [layoutID])
     return true
+  }
+
+  /// Set or adjust the nearest dwindle split containing a tiled window.
+  @discardableResult
+  func changeDwindleSplitRatio(
+    _ change: LayoutRatioChange,
+    for windowID: CGWindowID
+  ) -> CGFloat? {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
+    guard var state = layoutsByID[layoutID], state.selection == .dwindle else { return nil }
+    guard var tree = state.tree else { return nil }
+    guard let ratio = tree.changeSplitRatio(change, containing: windowID) else {
+      return nil
+    }
+
+    state.tree = tree
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return ratio
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
@@ -282,14 +334,22 @@ public final class TilingManager {
 
   /// Calculate the current plan for an enabled, visible layout without applying frames.
   func layoutPlan(for layoutID: SpaceLayoutID) -> TilingLayoutPlan {
-    guard let state = layoutsByID[layoutID] else { return .unknownSpace }
+    guard var state = layoutsByID[layoutID] else { return .unknownSpace }
     guard state.selection != .float else { return .disabled }
     guard let topology = currentTopology else { return .unknownSpace }
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
-    let activeTree = state.tree?.removing(state.omittedWindowIDs)
     let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
+    if state.selection == .dwindle, state.preserveSplitDirections {
+      state.tree = dwindleLayout.resolvingSplitDirections(
+        in: state.tree,
+        bounds: display.visibleFrame,
+        settings: spaceSettings
+      )
+      layoutsByID[layoutID] = state
+    }
+    let activeTree = state.tree?.removing(state.omittedWindowIDs)
 
     switch state.selection {
     case .float:
@@ -338,6 +398,8 @@ public final class TilingManager {
       selection: inheritedState?.selection ?? defaultSelection,
       masterRatio: inheritedState?.masterRatio ?? defaultMasterRatio,
       masterPlacement: inheritedState?.masterPlacement ?? defaultMasterPlacement,
+      preserveSplitDirections: inheritedState?.preserveSplitDirections
+        ?? defaultPreserveSplitDirections,
       tree: nil,
       omittedWindowIDs: [],
       focusedWindowID: nil
@@ -358,6 +420,17 @@ public final class TilingManager {
   /// Apply fresh plans only where the master settings affect geometry.
   private func applyMasterPlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
     applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .master })
+  }
+
+  /// Apply fresh dwindle plans for every visible dwindle layout.
+  private func reflowVisibleDwindleLayouts() {
+    guard let currentTopology else { return }
+    applyDwindlePlans(for: sorted(currentTopology.visibleLayoutIDs))
+  }
+
+  /// Apply fresh plans only where dwindle settings affect geometry.
+  private func applyDwindlePlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+    applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .dwindle })
   }
 
   /// Sort composite IDs for deterministic reconciliation and frame application.

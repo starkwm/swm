@@ -70,6 +70,50 @@ struct DwindleLayoutTests {
     )
   }
 
+  @Test("layout: applies a branch-local split ratio")
+  func layoutAppliesBranchLocalSplitRatio() {
+    let tree = TilingTree.branch(
+      .leaf(1),
+      .leaf(2),
+      split: TilingSplit(ratio: 0.7, direction: .vertical)
+    )
+
+    #expect(
+      DwindleLayout().layout(
+        tree: tree,
+        in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+        settings: .defaults
+      )
+        == .frames([
+          1: CGRect(x: 0, y: 0, width: 700, height: 800),
+          2: CGRect(x: 700, y: 0, width: 300, height: 800),
+        ])
+    )
+  }
+
+  @Test("resolvingSplitDirections: preserves an initially vertical split")
+  func resolvingSplitDirectionsPreservesInitiallyVerticalSplit() throws {
+    let layout = DwindleLayout()
+    let tree = try #require(tilingTree([1, 2]))
+    let resolvedTree = layout.resolvingSplitDirections(
+      in: tree,
+      bounds: CGRect(x: 0, y: 0, width: 1_000, height: 600),
+      settings: .defaults
+    )
+
+    #expect(
+      layout.layout(
+        tree: resolvedTree,
+        in: CGRect(x: 0, y: 0, width: 400, height: 800),
+        settings: .defaults
+      )
+        == .frames([
+          1: CGRect(x: 0, y: 0, width: 200, height: 800),
+          2: CGRect(x: 200, y: 0, width: 200, height: 800),
+        ])
+    )
+  }
+
   @Test(
     "layout: reports minimum-size constraint",
     arguments: [
