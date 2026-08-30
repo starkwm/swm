@@ -87,9 +87,8 @@ public final class SpaceManager {
       visibleSpaceIDByDisplayID: visibleSpaceIDByDisplayID,
       spaceIDsByWindowID: spaceIDsByWindowID,
       displaysByID: Dictionary(
-        uniqueKeysWithValues: NSScreen.screens.map {
-          let display = SpaceTopologyDisplay(id: $0.uuid, visibleFrame: $0.axVisibleFrame)
-          return (display.id, display)
+        uniqueKeysWithValues: NSScreen.screens.map { screen in
+          (screen.uuid, SpaceTopologyDisplay(visibleFrame: screen.axVisibleFrame))
         }
       )
     )

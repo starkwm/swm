@@ -218,9 +218,7 @@ public final class TilingManager {
     guard state.enabled else { return .disabled }
     guard let topology = currentTopology else { return .unknownSpace }
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
-    guard let display = topology.displaysByID[layoutID.displayID] else {
-      return .unresolvedDisplay
-    }
+    guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
     let windowIDs = state.layout.activeWindowIDs(
       excluding: state.minimizedWindowIDs
@@ -282,9 +280,6 @@ enum TilingLayoutPlan: Equatable {
 
   /// Space exists but is not currently visible.
   case notVisible
-
-  /// WindowServer display ownership cannot yet be mapped to physical bounds.
-  case unresolvedDisplay
 
   /// Pure engine result for the Space's active retained leaves.
   case layout(TilingLayoutResult)

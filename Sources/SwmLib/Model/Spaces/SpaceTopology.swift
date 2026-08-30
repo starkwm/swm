@@ -14,6 +14,11 @@ struct SpaceTopology: Equatable {
   /// Attached physical displays keyed by Core Graphics UUID.
   let displaysByID: [String: SpaceTopologyDisplay]
 
+  private var windowServerDisplayIDs: Set<String> {
+    Set(spacesByID.values.map(\.displayID))
+      .union(visibleSpaceIDByDisplayID.keys)
+  }
+
   /// Every normal Space and physical display pair available for tiling.
   var layoutIDs: Set<SpaceLayoutID> {
     Set(
@@ -21,11 +26,6 @@ struct SpaceTopology: Equatable {
         .filter { $0.type == .normal }
         .flatMap { layoutIDs(spaceID: $0.id, windowServerDisplayID: $0.displayID) }
     )
-  }
-
-  /// Normal Spaces that are currently visible on at least one WindowServer display.
-  var visibleNormalSpaceIDs: Set<UInt64> {
-    Set(visibleSpaceIDByDisplayID.values.filter { spacesByID[$0]?.type == .normal })
   }
 
   /// Every visible normal Space and physical display pair available for tiling.
@@ -48,7 +48,8 @@ struct SpaceTopology: Equatable {
     guard let displayID, displaysByID[displayID] != nil else { return nil }
     let normalSpaceIDs = normalSpaceIDs(for: windowID)
     guard normalSpaceIDs.count == 1, let spaceID = normalSpaceIDs.first else { return nil }
-    return SpaceLayoutID(spaceID: spaceID, displayID: displayID)
+    let layoutID = SpaceLayoutID(spaceID: spaceID, displayID: displayID)
+    return layoutIDs.contains(layoutID) ? layoutID : nil
   }
 
   private func layoutIDs(
@@ -59,6 +60,8 @@ struct SpaceTopology: Equatable {
       return [SpaceLayoutID(spaceID: spaceID, displayID: windowServerDisplayID)]
     }
 
+    // Without separate Spaces, WindowServer reports one logical display group for every screen.
+    guard windowServerDisplayIDs == [windowServerDisplayID] else { return [] }
     return displaysByID.keys.map { SpaceLayoutID(spaceID: spaceID, displayID: $0) }
   }
 }
@@ -77,9 +80,6 @@ struct SpaceTopologyDescriptor: Equatable {
 
 /// Physical display geometry captured alongside Space facts.
 struct SpaceTopologyDisplay: Equatable {
-  /// Core Graphics display UUID.
-  let id: String
-
   /// Visible frame in Accessibility coordinates.
   let visibleFrame: CGRect
 }
