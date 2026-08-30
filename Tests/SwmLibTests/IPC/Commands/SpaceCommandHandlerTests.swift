@@ -35,7 +35,6 @@ struct SpaceCommandHandlerTests {
         spaceIDsByWindowID: [:],
         displaysByID: [
           "display": SpaceTopologyDisplay(
-            id: "display",
             visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
           )
         ]
@@ -72,7 +71,6 @@ struct SpaceCommandHandlerTests {
             spaceIDsByWindowID: [:],
             displaysByID: [
               "display": SpaceTopologyDisplay(
-                id: "display",
                 visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
               )
             ]

@@ -118,7 +118,7 @@ struct TilingManagerTests {
   }
 
   @Test("shared Space: tiles and migrates windows independently per monitor")
-  func sharedSpaceTilesAndMigratesWindowsIndependentlyPerMonitor() throws {
+  func sharedSpaceTilesAndMigratesWindowsIndependentlyPerMonitor() {
     var windows = [
       window(id: 1, displayID: "display-a"),
       window(id: 2, displayID: "display-a"),
@@ -128,10 +128,7 @@ struct TilingManagerTests {
     manager.start()
 
     #expect(manager.setEnabled(true, for: 10))
-    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.enabled == true)
-    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.enabled == true)
-    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.layout.windowIDs == [1, 2])
-    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.layout.windowIDs == [3])
+    #expect(manager.isEnabled(for: 10))
     #expect(
       manager.layoutPlan(for: layoutID(10, displayID: "display-a"))
         == .layout(
@@ -149,24 +146,32 @@ struct TilingManagerTests {
     windows[1] = window(id: 2, displayID: "display-b")
     manager.reconcile()
 
-    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.layout.windowIDs == [1])
-    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.layout.windowIDs == [3, 2])
+    #expect(
+      manager.layoutPlan(for: layoutID(10, displayID: "display-a"))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+    #expect(
+      manager.layoutPlan(for: layoutID(10, displayID: "display-b"))
+        == .layout(
+          .frames([
+            3: CGRect(x: 1_000, y: 0, width: 400, height: 800),
+            2: CGRect(x: 1_400, y: 0, width: 400, height: 800),
+          ])
+        )
+    )
 
     #expect(manager.setLayoutMode(.dwindle, for: 10))
-    #expect(manager.state(for: layoutID(10, displayID: "display-a"))?.mode == .dwindle)
-    #expect(manager.state(for: layoutID(10, displayID: "display-b"))?.mode == .dwindle)
+    #expect(manager.layoutMode(for: 10) == .dwindle)
   }
 
   private func makeManager(
     windows: [TilingWindowSnapshot] = [window(id: 1)],
     memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
-    displayID: String = "display",
     visibleSpaceID: UInt64 = 10
   ) -> TilingManager {
     makeManager(
       windows: { windows },
       memberships: { memberships },
-      displayID: displayID,
       visibleSpaceID: visibleSpaceID
     )
   }
@@ -174,7 +179,6 @@ struct TilingManagerTests {
   private func makeManager(
     windows: @escaping () -> [TilingWindowSnapshot],
     memberships: @escaping () -> [CGWindowID: Set<UInt64>],
-    displayID: String = "display",
     visibleSpaceID: UInt64 = 10
   ) -> TilingManager {
     let spaceManager = SpaceManager(activeSpaceID: nil)
@@ -184,14 +188,13 @@ struct TilingManagerTests {
           windows: windows(),
           topology: SpaceTopology(
             spacesByID: [
-              10: SpaceTopologyDescriptor(id: 10, displayID: displayID, type: .normal),
-              11: SpaceTopologyDescriptor(id: 11, displayID: displayID, type: .normal),
+              10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal),
+              11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal),
             ],
-            visibleSpaceIDByDisplayID: [displayID: visibleSpaceID],
+            visibleSpaceIDByDisplayID: ["display": visibleSpaceID],
             spaceIDsByWindowID: memberships(),
             displaysByID: [
               "display": SpaceTopologyDisplay(
-                id: "display",
                 visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
               )
             ]
@@ -205,31 +208,33 @@ struct TilingManagerTests {
   private func makeSharedSpaceManager(
     windows: @escaping () -> [TilingWindowSnapshot]
   ) -> TilingManager {
-    TilingManager(
-      windows: windows,
-      topology: { _ in
-        SpaceTopology(
-          spacesByID: [
-            10: SpaceTopologyDescriptor(id: 10, displayID: "Main", type: .normal),
-            11: SpaceTopologyDescriptor(id: 11, displayID: "Main", type: .normal),
-          ],
-          visibleSpaceIDByDisplayID: ["Main": 10],
-          spaceIDsByWindowID: Dictionary(
-            uniqueKeysWithValues: windows().map { ($0.id, Set([UInt64(10)])) }
-          ),
-          displaysByID: [
-            "display-a": SpaceTopologyDisplay(
-              id: "display-a",
-              visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+    let spaceManager = SpaceManager(activeSpaceID: nil)
+    return TilingManager(
+      snapshot: {
+        let windows = windows()
+        return TilingReconciliationSnapshot(
+          windows: windows,
+          topology: SpaceTopology(
+            spacesByID: [
+              10: SpaceTopologyDescriptor(id: 10, displayID: "Main", type: .normal),
+              11: SpaceTopologyDescriptor(id: 11, displayID: "Main", type: .normal),
+            ],
+            visibleSpaceIDByDisplayID: ["Main": 10],
+            spaceIDsByWindowID: Dictionary(
+              uniqueKeysWithValues: windows.map { ($0.id, Set([UInt64(10)])) }
             ),
-            "display-b": SpaceTopologyDisplay(
-              id: "display-b",
-              visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
-            ),
-          ]
+            displaysByID: [
+              "display-a": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              ),
+              "display-b": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
+              ),
+            ]
+          )
         )
       },
-      settings: { _ in .defaults }
+      spaceManager: spaceManager
     )
   }
 }
