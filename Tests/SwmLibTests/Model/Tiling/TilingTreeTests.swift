@@ -54,4 +54,42 @@ struct TilingTreeTests {
     #expect(tree.windowIDs == [3, 2, 1])
     #expect(missing == false)
   }
+
+  @Test("changeSplitRatio: updates the nearest parent and clamps the ratio")
+  func changeSplitRatioUpdatesNearestParent() throws {
+    var tree = try #require(tilingTree([1, 2, 3]))
+
+    let relativeRatio = tree.changeSplitRatio(.relative(0.2), containing: 2)
+    let absoluteRatio = tree.changeSplitRatio(.absolute(2), containing: 3)
+    let missingRatio = tree.changeSplitRatio(.absolute(0.4), containing: 99)
+
+    #expect(relativeRatio == 0.7)
+    #expect(absoluteRatio == 0.9)
+    #expect(missingRatio == nil)
+
+    guard case .branch(.leaf(1), .branch(.leaf(2), .leaf(3), let split), _) = tree else {
+      Issue.record("expected the original branch structure")
+      return
+    }
+    #expect(abs(split.ratio - 0.1) < 0.000_001)
+    #expect(split.direction == nil)
+  }
+
+  @Test("clearingSplitDirections: retains ratios and removes directions")
+  func clearingSplitDirectionsRetainsRatios() {
+    let tree = TilingTree.branch(
+      .leaf(1),
+      .leaf(2),
+      split: TilingSplit(ratio: 0.7, direction: .horizontal)
+    )
+
+    #expect(
+      tree.clearingSplitDirections()
+        == .branch(
+          .leaf(1),
+          .leaf(2),
+          split: TilingSplit(ratio: 0.7, direction: nil)
+        )
+    )
+  }
 }

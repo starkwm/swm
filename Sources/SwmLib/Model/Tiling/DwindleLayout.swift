@@ -31,6 +31,20 @@ struct DwindleLayout {
     return .frames(framesByWindowID)
   }
 
+  /// Resolve dynamic branch directions from their current bounds and retain them in a copy.
+  func resolvingSplitDirections(
+    in tree: TilingTree?,
+    bounds: CGRect,
+    settings: SpaceSettings
+  ) -> TilingTree? {
+    guard let tree else { return nil }
+    return resolvingSplitDirections(
+      in: tree,
+      bounds: settings.tilingBounds(in: bounds),
+      gap: settings.tilingGap
+    )
+  }
+
   /// Recursively calculate leaf frames from the retained binary tree.
   private func layout(
     _ tree: TilingTree,
@@ -45,12 +59,8 @@ struct DwindleLayout {
       }
       framesByWindowID[windowID] = bounds
       return nil
-    case .branch(let first, let second):
-      let split =
-        bounds.width >= bounds.height
-        ? splitVertically(bounds, gap: gap)
-        : splitHorizontally(bounds, gap: gap)
-      switch split {
+    case .branch(let first, let second, let split):
+      switch splitBounds(bounds, gap: gap, split: split) {
       case .frames(let firstBounds, let secondBounds):
         return layout(first, in: firstBounds, gap: gap, framesByWindowID: &framesByWindowID)
           ?? layout(second, in: secondBounds, gap: gap, framesByWindowID: &framesByWindowID)
@@ -60,12 +70,63 @@ struct DwindleLayout {
     }
   }
 
+  /// Resolve unset directions recursively while preserving existing branch ratios.
+  private func resolvingSplitDirections(
+    in tree: TilingTree,
+    bounds: CGRect,
+    gap: CGFloat
+  ) -> TilingTree {
+    switch tree {
+    case .leaf:
+      return tree
+    case .branch(let first, let second, var split):
+      split.direction = split.direction ?? direction(for: bounds)
+      guard
+        case .frames(let firstBounds, let secondBounds) = splitBounds(
+          bounds,
+          gap: gap,
+          split: split
+        )
+      else {
+        return .branch(first, second, split: split)
+      }
+      return .branch(
+        resolvingSplitDirections(in: first, bounds: firstBounds, gap: gap),
+        resolvingSplitDirections(in: second, bounds: secondBounds, gap: gap),
+        split: split
+      )
+    }
+  }
+
+  /// Select a split direction from the longest edge of the current bounds.
+  private func direction(for bounds: CGRect) -> TilingSplitDirection {
+    bounds.width >= bounds.height ? .vertical : .horizontal
+  }
+
+  /// Divide bounds using retained geometry or the current longest edge.
+  private func splitBounds(
+    _ bounds: CGRect,
+    gap: CGFloat,
+    split: TilingSplit
+  ) -> SplitResult {
+    switch split.direction ?? direction(for: bounds) {
+    case .vertical:
+      return splitVertically(bounds, gap: gap, ratio: split.ratio)
+    case .horizontal:
+      return splitHorizontally(bounds, gap: gap, ratio: split.ratio)
+    }
+  }
+
   /// Split a landscape region into leading and remaining columns.
-  private func splitVertically(_ bounds: CGRect, gap: CGFloat) -> SplitResult {
+  private func splitVertically(
+    _ bounds: CGRect,
+    gap: CGFloat,
+    ratio: CGFloat
+  ) -> SplitResult {
     let availableWidth = bounds.width - gap
     guard availableWidth >= 0 else { return .insufficientSpace(.horizontalGap) }
 
-    let leadingWidth = (availableWidth / 2).rounded()
+    let leadingWidth = (availableWidth * min(max(ratio, 0.1), 0.9)).rounded()
     let trailingWidth = availableWidth - leadingWidth
     guard
       leadingWidth >= Self.minimumWindowSize.width,
@@ -91,11 +152,15 @@ struct DwindleLayout {
   }
 
   /// Split a portrait region into leading and remaining rows.
-  private func splitHorizontally(_ bounds: CGRect, gap: CGFloat) -> SplitResult {
+  private func splitHorizontally(
+    _ bounds: CGRect,
+    gap: CGFloat,
+    ratio: CGFloat
+  ) -> SplitResult {
     let availableHeight = bounds.height - gap
     guard availableHeight >= 0 else { return .insufficientSpace(.verticalGap) }
 
-    let leadingHeight = (availableHeight / 2).rounded()
+    let leadingHeight = (availableHeight * min(max(ratio, 0.1), 0.9)).rounded()
     let trailingHeight = availableHeight - leadingHeight
     guard
       leadingHeight >= Self.minimumWindowSize.height,
@@ -119,7 +184,6 @@ struct DwindleLayout {
       )
     )
   }
-
 }
 
 /// Internal outcome from splitting one remaining dwindle region.

@@ -324,10 +324,34 @@ struct TilingManagerTests {
     )
   }
 
-  @Test("global controls: apply master settings to current and future Spaces")
-  func globalControlsApplyMasterSettingsToCurrentAndFutureSpaces() {
+  @Test("dwindle controls: adjust a window's nearest split")
+  func dwindleControlsAdjustNearestSplit() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.dwindle, for: 10)
+
+    #expect(manager.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
+    #expect(manager.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 700, height: 800),
+            2: CGRect(x: 700, y: 0, width: 300, height: 400),
+            3: CGRect(x: 700, y: 400, width: 300, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("global controls: apply layout settings to current and future Spaces")
+  func globalControlsApplyLayoutSettingsToCurrentAndFutureSpaces() {
     var spaceIDs = Set([UInt64(10)])
     var visibleSpaceID = UInt64(10)
+    var visibleFrame = CGRect(x: 0, y: 0, width: 1_000, height: 800)
     let spaceManager = SpaceManager(activeSpaceID: nil)
     let manager = TilingManager(
       snapshot: {
@@ -343,7 +367,7 @@ struct TilingManagerTests {
             spaceIDsByWindowID: [1: [visibleSpaceID], 2: [visibleSpaceID]],
             displaysByID: [
               "display": SpaceTopologyDisplay(
-                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+                visibleFrame: visibleFrame
               )
             ]
           )
@@ -356,6 +380,7 @@ struct TilingManagerTests {
     manager.setLayoutForSpaces(.master)
     manager.setMasterRatioForAllSpaces(0.65)
     manager.setMasterPlacementForAllSpaces(.bottom)
+    manager.setSplitDirectionPreservationForAllSpaces(true)
 
     let expectedPlan = TilingLayoutPlan.layout(
       .frames([
@@ -370,6 +395,20 @@ struct TilingManagerTests {
     manager.reconcile()
 
     #expect(manager.layoutPlan(for: layoutID(11)) == expectedPlan)
+
+    manager.setLayout(.dwindle, for: 11)
+    visibleFrame = CGRect(x: 0, y: 0, width: 600, height: 1_000)
+    manager.reconcile()
+
+    #expect(
+      manager.layoutPlan(for: layoutID(11))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 300, height: 1_000),
+            2: CGRect(x: 300, y: 0, width: 300, height: 1_000),
+          ])
+        )
+    )
   }
 
   private func makeManager(
