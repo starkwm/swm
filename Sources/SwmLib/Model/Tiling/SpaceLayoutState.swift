@@ -79,3 +79,12 @@ enum LayoutSelection: String, Equatable {
   /// Recursively bisect the longest edge of the remaining region.
   case dwindle
 }
+
+/// Per-window participation in an automatic Space layout.
+enum WindowLayoutSelection: String, Equatable {
+  /// Remove the window from automatic layout geometry.
+  case float
+
+  /// Return the window to automatic layout geometry.
+  case tile
+}

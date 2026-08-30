@@ -347,6 +347,59 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("window layout: float removes a window and tile restores it")
+  func windowLayoutFloatsAndRestoresWindow() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+    let initialPlan = manager.layoutPlan(for: layoutID(10))
+
+    #expect(manager.setWindowLayout(.float, for: 2))
+    manager.reconcile()
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 800),
+          ])
+        )
+    )
+
+    #expect(manager.setWindowLayout(.tile, for: 2))
+    #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
+  }
+
+  @Test("window layout: floating the insertion anchor excludes it from focused insertion")
+  func windowLayoutFloatingInsertionAnchor() {
+    var windows = [window(id: 1), window(id: 2), window(id: 3)]
+    let manager = makeManager(
+      windows: { windows },
+      memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
+    )
+    manager.start()
+    manager.setLayout(.dwindle, for: 10)
+    manager.windowDidFocus(1)
+
+    #expect(manager.setWindowLayout(.float, for: 1))
+    windows.append(window(id: 4))
+    manager.reconcile()
+
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            2: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 400),
+            4: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
   @Test("global controls: apply layout settings to current and future Spaces")
   func globalControlsApplyLayoutSettingsToCurrentAndFutureSpaces() {
     var spaceIDs = Set([UInt64(10)])

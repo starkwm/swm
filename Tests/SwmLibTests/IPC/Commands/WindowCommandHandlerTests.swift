@@ -152,11 +152,13 @@ struct WindowCommandHandlerTests {
   @Test("dispatch: rejects invalid automatic layout controls")
   func dispatchRejectsInvalidAutomaticLayoutControls() {
     let handler = handler()
+    let layout = handler.dispatch(request(command: "--layout", args: ["stack"]))
     let ratio = handler.dispatch(request(command: "--split-ratio", args: ["middle"]))
     let swap = handler.dispatch(
       request(command: "--swap-with-master", args: ["1", "extra"])
     )
 
+    #expect(layout.ok == false && layout.message == "invalid window layout: stack")
     #expect(ratio.ok == false && ratio.message == "invalid window split-ratio value: middle")
     #expect(swap.ok == false && swap.message == "invalid window swap-with-master arguments")
   }

@@ -15,6 +15,7 @@ public final class TilingManager {
   private var defaultMasterRatio: CGFloat = 0.5
   private var defaultMasterPlacement = MasterPlacement.left
   private var defaultPreserveSplitDirections = false
+  private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
   private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
 
@@ -57,6 +58,7 @@ public final class TilingManager {
   func reconcile() {
     let snapshot = snapshot()
     let windows = snapshot.windows.sorted { $0.id < $1.id }
+    floatingOverrideWindowIDs.formIntersection(windows.map(\.id))
     let topology = snapshot.topology
     let availableLayoutIDs = topology.layoutIDs
     let previousLayoutsByID = layoutsByID
@@ -266,6 +268,7 @@ public final class TilingManager {
   /// Swap a tiled window with the current master pane.
   @discardableResult
   func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
     guard var state = layoutsByID[layoutID], state.selection == .master else { return false }
     guard var tree = state.tree, let masterWindowID = tree.windowIDs.first else { return false }
@@ -278,12 +281,33 @@ public final class TilingManager {
     return true
   }
 
+  /// Set a window's explicit floating or tiled participation.
+  @discardableResult
+  func setWindowLayout(_ selection: WindowLayoutSelection, for windowID: CGWindowID) -> Bool {
+    guard let topology = currentTopology else { return false }
+    guard topology.normalSpaceIDs(for: windowID).count == 1 else { return false }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+
+    switch selection {
+    case .float:
+      floatingOverrideWindowIDs.insert(windowID)
+      if layoutsByID[layoutID]?.focusedWindowID == windowID {
+        layoutsByID[layoutID]?.focusedWindowID = nil
+      }
+    case .tile:
+      floatingOverrideWindowIDs.remove(windowID)
+    }
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Set or adjust the nearest dwindle split containing a tiled window.
   @discardableResult
   func changeDwindleSplitRatio(
     _ change: LayoutRatioChange,
     for windowID: CGWindowID
   ) -> CGFloat? {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return nil }
     guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
     guard var state = layoutsByID[layoutID], state.selection == .dwindle else { return nil }
     guard var tree = state.tree else { return nil }
@@ -299,6 +323,7 @@ public final class TilingManager {
 
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return }
     guard let layoutID = layoutIDByWindowID[windowID] else { return }
     guard var state = layoutsByID[layoutID] else { return }
 
@@ -317,6 +342,7 @@ public final class TilingManager {
     if frameReconciler?.shouldSuppressNotification(for: windowID) == true {
       return
     }
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return }
 
     reconcileAndReflowVisibleSpaces()
   }
@@ -340,6 +366,7 @@ public final class TilingManager {
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
+    let omittedWindowIDs = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
     let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
     if state.selection == .dwindle, state.preserveSplitDirections {
       state.tree = dwindleLayout.resolvingSplitDirections(
@@ -349,7 +376,7 @@ public final class TilingManager {
       )
       layoutsByID[layoutID] = state
     }
-    let activeTree = state.tree?.removing(state.omittedWindowIDs)
+    let activeTree = state.tree?.removing(omittedWindowIDs)
 
     switch state.selection {
     case .float:
