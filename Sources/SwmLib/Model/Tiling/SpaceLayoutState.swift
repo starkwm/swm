@@ -16,11 +16,8 @@ struct SpaceLayoutState {
 
   /// Persistent sibling relationships and stable window order.
   var tree: TilingTree?
-  /// Retained leaves omitted from current geometry.
-  var minimizedWindowIDs: Set<CGWindowID>
-
-  /// Temporarily unresolved or native-fullscreen leaves omitted from current geometry.
-  var suspendedWindowIDs: Set<CGWindowID>
+  /// Retained minimized, unresolved, or native-fullscreen leaves omitted from current geometry.
+  var omittedWindowIDs: Set<CGWindowID>
 
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?

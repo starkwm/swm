@@ -75,31 +75,23 @@ public final class TilingManager {
     }
 
     var retainedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
-    var minimizedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
-    var suspendedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
+    var omittedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
     var newLayoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
 
     for window in windows {
       let disposition = WindowEligibilityPolicy.disposition(for: window, topology: topology)
+      let placement: (layoutID: SpaceLayoutID, isOmitted: Bool)
 
       switch disposition {
       case .tiled:
-        guard let layoutID = topology.layoutID(for: window.id, on: window.displayID) else {
-          guard
-            let layoutID = layoutIDByWindowID[window.id],
-            retainedLayoutIDs.contains(layoutID)
-          else {
-            continue
-          }
-          retainedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-          suspendedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-          newLayoutIDByWindowID[window.id] = layoutID
+        if let layoutID = topology.layoutID(for: window.id, on: window.displayID) {
+          placement = (layoutID, window.isMinimized)
+        } else if let layoutID = layoutIDByWindowID[window.id],
+          retainedLayoutIDs.contains(layoutID)
+        {
+          placement = (layoutID, true)
+        } else {
           continue
-        }
-        retainedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-        newLayoutIDByWindowID[window.id] = layoutID
-        if window.isMinimized {
-          minimizedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
         }
 
       case .excluded(.nativeFullscreen), .pending:
@@ -109,13 +101,17 @@ public final class TilingManager {
         else {
           continue
         }
-        retainedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-        suspendedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
-        newLayoutIDByWindowID[window.id] = layoutID
+        placement = (layoutID, true)
 
       case .floating, .excluded:
         continue
       }
+
+      retainedWindowIDsByLayoutID[placement.layoutID, default: []].insert(window.id)
+      if placement.isOmitted {
+        omittedWindowIDsByLayoutID[placement.layoutID, default: []].insert(window.id)
+      }
+      newLayoutIDByWindowID[window.id] = placement.layoutID
     }
 
     for layoutID in retainedLayoutIDs {
@@ -144,8 +140,7 @@ public final class TilingManager {
         state.focusedWindowID = nil
       }
 
-      state.minimizedWindowIDs = minimizedWindowIDsByLayoutID[layoutID] ?? []
-      state.suspendedWindowIDs = suspendedWindowIDsByLayoutID[layoutID] ?? []
+      state.omittedWindowIDs = omittedWindowIDsByLayoutID[layoutID] ?? []
       layoutsByID[layoutID] = state
     }
 
@@ -247,8 +242,7 @@ public final class TilingManager {
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
-    let omittedWindowIDs = state.minimizedWindowIDs.union(state.suspendedWindowIDs)
-    let activeTree = state.tree?.removing(omittedWindowIDs)
+    let activeTree = state.tree?.removing(state.omittedWindowIDs)
     let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
 
     switch state.mode {
@@ -293,8 +287,7 @@ public final class TilingManager {
     return SpaceLayoutState(
       mode: inheritedState?.mode ?? .master,
       tree: nil,
-      minimizedWindowIDs: [],
-      suspendedWindowIDs: [],
+      omittedWindowIDs: [],
       focusedWindowID: nil,
       enabled: inheritedState?.enabled ?? false
     )
