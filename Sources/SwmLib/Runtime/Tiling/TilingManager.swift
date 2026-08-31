@@ -322,6 +322,13 @@ public final class TilingManager {
       }
     case .tile:
       floatingOverrideWindowIDs.remove(windowID)
+    case .toggle:
+      if floatingOverrideWindowIDs.remove(windowID) == nil {
+        floatingOverrideWindowIDs.insert(windowID)
+        if layoutsByID[layoutID]?.focusedWindowID == windowID {
+          layoutsByID[layoutID]?.focusedWindowID = nil
+        }
+      }
     }
     applyPlans(for: [layoutID])
     return true

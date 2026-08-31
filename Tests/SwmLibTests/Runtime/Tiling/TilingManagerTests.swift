@@ -450,6 +450,26 @@ struct TilingManagerTests {
     #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
+  @Test("window layout: toggle alternates floating participation")
+  func windowLayoutToggleAlternatesParticipation() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2)],
+      memberships: [1: [10], 2: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+    let tiledPlan = manager.layoutPlan(for: layoutID(10))
+
+    #expect(manager.setWindowLayout(.toggle, for: 2))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+
+    #expect(manager.setWindowLayout(.toggle, for: 2))
+    #expect(manager.layoutPlan(for: layoutID(10)) == tiledPlan)
+  }
+
   @Test("window layout: floating the insertion anchor excludes it from focused insertion")
   func windowLayoutFloatingInsertionAnchor() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
