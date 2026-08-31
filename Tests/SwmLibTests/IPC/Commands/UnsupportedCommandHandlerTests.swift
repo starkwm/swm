@@ -46,7 +46,7 @@ struct UnsupportedCommandHandlerTests {
     #expect(response.message == "unsupported signal command: add")
   }
 
-  private func request(domain: MessageDomain, command: String) -> IPCRequest {
+  private func request(domain: CommandDomain, command: String) -> IPCRequest {
     IPCRequest(id: "request-id", domain: domain, command: command, args: [])
   }
 }

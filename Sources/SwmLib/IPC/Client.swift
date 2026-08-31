@@ -13,18 +13,18 @@ public enum Client {
   }
 
   /// Send a command request and wait for a response from the daemon.
-  public static func send(message: MessageDomain, args: [String]) -> SendResult {
-    send(message: message, args: args, exchange: exchange)
+  public static func send(domain: CommandDomain, args: [String]) -> SendResult {
+    send(domain: domain, args: args, exchange: exchange)
   }
 
   /// Send a command using an injected request/response exchange.
   static func send(
-    message: MessageDomain,
+    domain: CommandDomain,
     args: [String],
     exchange: (IPCRequest) throws -> IPCResponse?
   ) -> SendResult {
     do {
-      let request = try IPCRequest.make(domain: message, arguments: args)
+      let request = try IPCRequest.make(domain: domain, arguments: args)
       guard let response = try exchange(request) else {
         throw IPCClientError.missingResponse
       }

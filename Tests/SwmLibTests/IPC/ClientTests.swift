@@ -6,7 +6,7 @@ import Testing
 struct ClientTests {
   @Test("send: accepts matching response")
   func sendAcceptsMatchingResponse() {
-    let result = Client.send(message: .window, args: ["--focus", "42"]) { request in
+    let result = Client.send(domain: .window, args: ["--focus", "42"]) { request in
       .success(id: request.id, message: "ok")
     }
 
@@ -16,7 +16,7 @@ struct ClientTests {
 
   @Test("send: rejects missing response")
   func sendRejectsMissingResponse() {
-    let result = Client.send(message: .window, args: ["--focus", "42"]) { _ in nil }
+    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in nil }
 
     #expect(result.ok == false)
     #expect(result.outputMessage == "error: daemon closed the IPC connection without a response")
@@ -24,7 +24,7 @@ struct ClientTests {
 
   @Test("send: rejects mismatched response ID")
   func sendRejectsMismatchedResponseID() {
-    let result = Client.send(message: .window, args: ["--focus", "42"]) { _ in
+    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
       .success(id: "another-request", message: "ok")
     }
 
@@ -39,7 +39,7 @@ struct ClientTests {
 
   @Test("send: presents daemon connection failure")
   func sendPresentsDaemonConnectionFailure() {
-    let result = Client.send(message: .window, args: ["--focus", "42"]) { _ in
+    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
       throw IPCClientError.daemonNotRunning
     }
 

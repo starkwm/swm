@@ -50,6 +50,10 @@ let package = Package(
       name: "SwmLibTests",
       dependencies: ["SwmLib"]
     ),
+    .testTarget(
+      name: "SwmTests",
+      dependencies: ["Swm"]
+    ),
   ],
   swiftLanguageModes: [.v6]
 )
