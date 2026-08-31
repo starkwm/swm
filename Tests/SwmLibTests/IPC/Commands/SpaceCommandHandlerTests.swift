@@ -42,6 +42,12 @@ struct SpaceCommandHandlerTests {
     #expect(master.message == "master")
     #expect(tilingManager.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
+    let monocle = handler.dispatch(request(command: "--layout", args: ["monocle"]))
+
+    #expect(monocle.ok)
+    #expect(monocle.message == "monocle")
+    #expect(tilingManager.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
+
     let float = handler.dispatch(request(command: "--layout", args: ["float"]))
 
     #expect(float.ok)

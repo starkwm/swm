@@ -99,7 +99,7 @@ Use `--focus-master` to focus the first available window in a master layout.
 
 Use space commands to select floating or automatic layout and change settings for the active space.
 
-    swm -m space --layout <float|master|dwindle>
+    swm -m space --layout <float|master|monocle|dwindle>
     swm -m space --master-ratio <abs|rel>:<ratio>
     swm -m space --master-placement <left|right|top|bottom|next|prev>
     swm -m space --preserve-split <on|off>
@@ -110,7 +110,8 @@ Use `rel:` instead of `abs:` for relative padding and gap changes.
 
 Spaces use unmanaged floating windows by default. Select the ordered master layout with
 `swm -m space --layout master`, the tree-backed dwindle layout with
-`swm -m space --layout dwindle`, or stop automatic tiling with `swm -m space --layout float`.
+`swm -m space --layout dwindle`, the full-bounds overlapping monocle layout with
+`swm -m space --layout monocle`, or stop automatic tiling with `swm -m space --layout float`.
 Master ratio changes are clamped to `0.1...0.9`. Master placement selects which edge contains the
 master pane; `next` and `prev` cycle clockwise or counter-clockwise. In dwindle, new windows split
 the focused tiled window; closing a window collapses its
@@ -125,7 +126,7 @@ moves it into that display's layout; moving or resizing it manually snaps it bac
 
 Use config commands to update defaults for all spaces.
 
-    swm -m config layout <float|master|dwindle>
+    swm -m config layout <float|master|monocle|dwindle>
     swm -m config master-ratio <ratio>
     swm -m config master-placement <left|right|top|bottom>
     swm -m config preserve-split <on|off>
@@ -171,7 +172,7 @@ You can use `swm -m config window-gap <number>` to configure the size of the gap
 
 **Automatic Tiling Layout**
 
-Use `swm -m config layout <float|master|dwindle>` to select floating or automatic layout for every Space. The selection also applies to Spaces created later while the daemon is running.
+Use `swm -m config layout <float|master|monocle|dwindle>` to select floating or automatic layout for every Space. The selection also applies to Spaces created later while the daemon is running.
 
 Use `master-ratio`, `master-placement`, and `preserve-split` to set the corresponding automatic
 layout defaults for every current and future Space. Per-Space commands override those defaults for

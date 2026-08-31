@@ -6,6 +6,9 @@ enum LayoutSelection: String, Equatable {
   /// Arrange windows as one master pane and a stack.
   case master
 
+  /// Stack every window across the complete available bounds.
+  case monocle
+
   /// Recursively bisect the longest edge of the remaining region.
   case dwindle
 }

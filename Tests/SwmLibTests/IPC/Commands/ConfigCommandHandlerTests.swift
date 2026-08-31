@@ -71,6 +71,12 @@ struct ConfigCommandHandlerTests {
     #expect(tilingManager.layoutPlan(for: layoutID(11)) == .notVisible)
     #expect(tilingManager.layoutPlan(for: layoutID(12)) == .notVisible)
     #expect(tilingManager.layoutPlan(for: layoutID(13)) == .notVisible)
+
+    let monocle = handler.dispatch(request(command: "layout", args: ["monocle"]))
+
+    #expect(monocle.ok)
+    #expect(monocle.message == "monocle")
+    #expect(tilingManager.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
   }
 
   @Test("dispatch: window gap updates defaults and overrides")
