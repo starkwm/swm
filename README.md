@@ -64,7 +64,7 @@ a grid.
     swm -m window --resize [window-id|recent] abs:<width>:<height>
     swm -m window --grid [window-id|recent] <columns>:<rows>:<x>:<y>:<width>:<height>
     swm -m window --display [window-id|recent] <next|prev|display-index>
-    swm -m window --layout [window-id|recent] <float|tile>
+    swm -m window --layout [window-id|recent] <float|tile|toggle>
     swm -m window --swap [window-id|recent] <left|right|up|down>
     swm -m window --swap-with-master [window-id|recent]
     swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
@@ -73,7 +73,8 @@ Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for re
 Use `--focus left`, `right`, `up`, or `down` to focus the nearest non-minimized window on the
 currently visible Spaces in that direction.
 Use `--display next` to toggle the focused window between two attached displays. Numeric display targets are one-based and sorted by display arrangement.
-Use `--layout float` to remove one window from automatic tiling and `--layout tile` to return it.
+Use `--layout float` to remove one window from automatic tiling, `--layout tile` to return it, or
+`--layout toggle` to alternate between the two.
 `--swap` exchanges the selected window with its nearest neighbour to the left, right, up, or down.
 In master and dwindle layouts it swaps their tiled positions; in a floating layout it swaps their
 complete frames. `--swap-with-master` promotes the selected window in a master layout. In dwindle,
