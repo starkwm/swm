@@ -116,11 +116,9 @@ struct WindowCommandHandler {
 
   /// Focus the next available window in stable layout order.
   private func cycle(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window cycle arguments")
-    }
-    guard let direction = CycleDirection(rawValue: request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid window cycle direction: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "window cycle").requiredValue()
+    guard let direction = CycleDirection(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest("invalid window cycle direction: \(argument)")
     }
     let window = try selectedWindow(selector: nil)
     guard let cycledWindowID = tilingManager.cycledWindowID(from: window.id, in: direction),
@@ -151,12 +149,10 @@ struct WindowCommandHandler {
 
   /// Swap the focused tiled window with its neighbour in stable layout order.
   private func swapCycle(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid window swap-cycle arguments")
-    }
-    guard let direction = CycleDirection(rawValue: request.args[0]) else {
+    let argument = try IPCArguments(request.args, context: "window swap-cycle").requiredValue()
+    guard let direction = CycleDirection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest(
-        "invalid window swap-cycle direction: \(request.args[0])"
+        "invalid window swap-cycle direction: \(argument)"
       )
     }
     let window = try selectedWindow(selector: nil)
@@ -420,11 +416,7 @@ struct WindowCommandHandler {
 
   /// Parse an optional single window selector argument.
   private func parseSelector(_ args: [String], action: String) throws -> String? {
-    guard args.count <= 1 else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
-    }
-
-    return args.first
+    try IPCArguments(args, context: "window \(action)").optionalValue()
   }
 
   /// Parse an optional selector and one required action value.
@@ -432,15 +424,7 @@ struct WindowCommandHandler {
     _ args: [String],
     action: String
   ) throws -> (selector: String?, value: String) {
-    guard (1...2).contains(args.count) else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) arguments")
-    }
-
-    if args.count == 1 {
-      return (selector: nil, value: args[0])
-    }
-
-    return (selector: args[0], value: args[1])
+    try IPCArguments(args, context: "window \(action)").selectedValue()
   }
 
   /// Parse a geometry change in `mode:first:second` format.
@@ -449,7 +433,7 @@ struct WindowCommandHandler {
 
     guard
       parts.count == 3,
-      let mode = ChangeMode(rawValue: parts[0]),
+      let mode = NumericChangeMode(rawValue: parts[0]),
       let first = Int(parts[1]),
       let second = Int(parts[2])
     else {
@@ -462,7 +446,7 @@ struct WindowCommandHandler {
 
 /// Parsed two-axis window geometry change.
 private struct WindowGeometryChange {
-  let mode: ChangeMode
+  let mode: NumericChangeMode
   let first: Int
   let second: Int
 }

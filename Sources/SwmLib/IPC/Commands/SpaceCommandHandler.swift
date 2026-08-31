@@ -34,11 +34,9 @@ struct SpaceCommandHandler {
 
   /// Set or adjust the master pane ratio for the active Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space master-ratio arguments")
-    }
-    guard let change = LayoutCommandParser.ratioChange(from: request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "space master-ratio").requiredValue()
+    guard let change = LayoutCommandParser.ratioChange(from: argument) else {
+      throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(argument)")
     }
 
     let spaceID = try currentSpaceID()
@@ -50,10 +48,10 @@ struct SpaceCommandHandler {
 
   /// Set or cycle the master pane edge for the active Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space master-placement arguments")
-    }
-    let argument = request.args[0]
+    let argument = try IPCArguments(
+      request.args,
+      context: "space master-placement"
+    ).requiredValue()
     let spaceID = try currentSpaceID()
     let placement: MasterPlacement
     if let selectedPlacement = MasterPlacement(rawValue: argument) {
@@ -74,10 +72,10 @@ struct SpaceCommandHandler {
 
   /// Set whether dwindle branches preserve their resolved direction on the active Space.
   private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space preserve-split arguments")
-    }
-    let argument = request.args[0]
+    let argument = try IPCArguments(
+      request.args,
+      context: "space preserve-split"
+    ).requiredValue()
     guard let enabled = LayoutCommandParser.boolean(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid space preserve-split value: \(argument)")
     }
@@ -91,11 +89,7 @@ struct SpaceCommandHandler {
 
   /// Select floating or automatic layout for the active Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space layout arguments")
-    }
-
-    let argument = request.args[0]
+    let argument = try IPCArguments(request.args, context: "space layout").requiredValue()
     guard let selection = LayoutSelection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
     }
@@ -110,12 +104,9 @@ struct SpaceCommandHandler {
 
   /// Set or adjust padding for the active space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space padding arguments")
-    }
-
-    guard let change = parsePaddingChange(request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid space padding value: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "space padding").requiredValue()
+    guard let change = parsePaddingChange(argument) else {
+      throw IPCCommandError.invalidRequest("invalid space padding value: \(argument)")
     }
 
     let spaceID = try currentSpaceID()
@@ -134,12 +125,9 @@ struct SpaceCommandHandler {
 
   /// Set or adjust the window gap for the active space.
   private func gap(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid space gap arguments")
-    }
-
-    guard let change = parseGapChange(request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid space gap value: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "space gap").requiredValue()
+    guard let change = parseGapChange(argument) else {
+      throw IPCCommandError.invalidRequest("invalid space gap value: \(argument)")
     }
 
     let spaceID = try currentSpaceID()
@@ -171,7 +159,7 @@ struct SpaceCommandHandler {
 
     guard
       parts.count == 5,
-      let mode = ChangeMode(rawValue: parts[0])
+      let mode = NumericChangeMode(rawValue: parts[0])
     else {
       return nil
     }
@@ -197,7 +185,7 @@ struct SpaceCommandHandler {
 
     guard
       parts.count == 2,
-      let mode = ChangeMode(rawValue: parts[0]),
+      let mode = NumericChangeMode(rawValue: parts[0]),
       let value = Int(parts[1])
     else {
       return nil
@@ -209,12 +197,12 @@ struct SpaceCommandHandler {
 
 /// Parsed gap command argument.
 private struct GapChange {
-  let mode: ChangeMode
+  let mode: NumericChangeMode
   let value: Int
 }
 
 /// Parsed padding command argument.
 private struct PaddingChange {
-  let mode: ChangeMode
+  let mode: NumericChangeMode
   let padding: SpacePadding
 }

@@ -40,11 +40,9 @@ struct ConfigCommandHandler {
 
   /// Set the master pane ratio for every current and future Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config master-ratio arguments")
-    }
-    guard let ratio = LayoutCommandParser.ratio(from: request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "config master-ratio").requiredValue()
+    guard let ratio = LayoutCommandParser.ratio(from: argument) else {
+      throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(argument)")
     }
     tilingManager.setMasterRatioForAllSpaces(ratio)
     return .success(id: request.id, message: "ok")
@@ -52,10 +50,10 @@ struct ConfigCommandHandler {
 
   /// Set the master pane edge for every current and future Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config master-placement arguments")
-    }
-    let argument = request.args[0]
+    let argument = try IPCArguments(
+      request.args,
+      context: "config master-placement"
+    ).requiredValue()
     guard let placement = MasterPlacement(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid config master-placement: \(argument)")
     }
@@ -65,10 +63,10 @@ struct ConfigCommandHandler {
 
   /// Set retained dwindle split directions for every current and future Space.
   private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config preserve-split arguments")
-    }
-    let argument = request.args[0]
+    let argument = try IPCArguments(
+      request.args,
+      context: "config preserve-split"
+    ).requiredValue()
     guard let enabled = LayoutCommandParser.boolean(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config preserve-split value: \(argument)")
     }
@@ -78,11 +76,7 @@ struct ConfigCommandHandler {
 
   /// Select floating or automatic layout for every Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config layout arguments")
-    }
-
-    let argument = request.args[0]
+    let argument = try IPCArguments(request.args, context: "config layout").requiredValue()
     guard let selection = LayoutSelection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid config layout: \(argument)")
     }
@@ -94,12 +88,9 @@ struct ConfigCommandHandler {
 
   /// Set the window gap for every known space.
   private func windowGap(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config window-gap arguments")
-    }
-
-    guard let gap = Int(request.args[0]) else {
-      throw IPCCommandError.invalidRequest("invalid config window-gap value: \(request.args[0])")
+    let argument = try IPCArguments(request.args, context: "config window-gap").requiredValue()
+    guard let gap = Int(argument) else {
+      throw IPCCommandError.invalidRequest("invalid config window-gap value: \(argument)")
     }
 
     spaceManager.updateAllSettings { settings in
@@ -112,13 +103,13 @@ struct ConfigCommandHandler {
 
   /// Set one padding side for every known space.
   private func padding(_ request: IPCRequest, side: PaddingSide) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid config \(request.command) arguments")
-    }
-
-    guard let value = Int(request.args[0]) else {
+    let argument = try IPCArguments(
+      request.args,
+      context: "config \(request.command)"
+    ).requiredValue()
+    guard let value = Int(argument) else {
       throw IPCCommandError.invalidRequest(
-        "invalid config \(request.command) value: \(request.args[0])"
+        "invalid config \(request.command) value: \(argument)"
       )
     }
 
