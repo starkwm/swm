@@ -6,6 +6,27 @@ import Testing
 @MainActor
 @Suite("TilingManager layout controls")
 struct TilingManagerLayoutControlTests {
+  @Test("setLayout: gives every tiled window the complete visible bounds in monocle")
+  func setLayoutPlansMonocleGeometry() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+
+    #expect(manager.setLayout(.monocle, for: 10))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+            2: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+            3: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+          ])
+        )
+    )
+  }
+
   @Test("setLayout: retains dwindle selection and plans its geometry")
   func setLayoutRetainsDwindleSelectionAndPlansItsGeometry() {
     let manager = makeManager(

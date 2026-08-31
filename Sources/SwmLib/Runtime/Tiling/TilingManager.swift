@@ -6,6 +6,7 @@ public final class TilingManager {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
 
   private let masterLayout = MasterLayout()
+  private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
   private let spaceManager: SpaceManager
@@ -528,6 +529,14 @@ public final class TilingManager {
           settings: spaceSettings,
           masterRatio: state.masterRatio,
           placement: state.masterPlacement
+        )
+      )
+    case .monocle:
+      return .layout(
+        monocleLayout.layout(
+          windowIDs: activeTree?.windowIDs ?? [],
+          in: display.visibleFrame,
+          settings: spaceSettings
         )
       )
     case .dwindle:
