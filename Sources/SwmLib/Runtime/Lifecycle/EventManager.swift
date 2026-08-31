@@ -6,7 +6,7 @@ public final class EventManager {
   public static let shared = EventManager()
 
   @MainActor
-  private var configuration: Configuration?
+  private var dependencies: EventManagerDependencies?
 
   private init() {}
 
@@ -20,7 +20,7 @@ public final class EventManager {
     displayManager: DisplayManager,
     tilingManager: TilingManager
   ) {
-    configuration = Configuration(
+    dependencies = EventManagerDependencies(
       workspace: workspace,
       processManager: processManager,
       windowManager: windowManager,
@@ -37,213 +37,65 @@ public final class EventManager {
     }
   }
 
-  /// Dispatch an event to its domain-specific lifecycle handler.
+  /// Capture transient signal state, dispatch the event, and emit its signal.
   @MainActor
   private func handle(_ event: RuntimeEvent) {
-    guard let configuration else {
+    guard let dependencies else {
       preconditionFailure("EventManager must be configured before handling events")
     }
 
-    let payloadBeforeHandling =
-      if case .window(.destroyed(let window)) = event {
-        windowPayload(event: .windowDestroyed, window: window, configuration: configuration)
-      } else {
-        Optional<SignalPayload>.none
-      }
+    let signalMapper = RuntimeEventSignalMapper(
+      windowManager: dependencies.windowManager,
+      spaceManager: dependencies.spaceManager,
+      displayManager: dependencies.displayManager
+    )
+    let payloadBeforeHandling = signalMapper.payload(beforeHandling: event)
 
-    switch event {
-    case .application(let event):
-      ApplicationLifecycleHandler(
-        workspace: configuration.workspace,
-        processManager: configuration.processManager,
-        windowManager: configuration.windowManager,
-        tilingManager: configuration.tilingManager
-      ).handle(event)
+    dispatch(event, dependencies: dependencies)
 
-    case .window(let event):
-      WindowLifecycleHandler(
-        windowManager: configuration.windowManager,
-        tilingManager: configuration.tilingManager
-      ).handle(event)
-
-    case .space(let event):
-      SpaceLifecycleHandler(
-        spaceManager: configuration.spaceManager,
-        windowManager: configuration.windowManager,
-        tilingManager: configuration.tilingManager
-      ).handle(event)
-
-    case .display(let event):
-      DisplayLifecycleHandler(
-        displayManager: configuration.displayManager,
-        tilingManager: configuration.tilingManager
-      ).handle(event)
-    }
-
-    if let payload = signalPayload(
-      event,
-      configuration: configuration,
-      payloadBeforeHandling: payloadBeforeHandling
-    ) {
+    if let payload = payloadBeforeHandling ?? signalMapper.payload(afterHandling: event) {
       SignalManager.shared.emit(payload)
     }
   }
 
-  /// Build a signal payload from the runtime event and current state.
+  /// Dispatch an event to its domain-specific lifecycle handler.
   @MainActor
-  private func signalPayload(
-    _ event: RuntimeEvent,
-    configuration: Configuration,
-    payloadBeforeHandling: SignalPayload?
-  ) -> SignalPayload? {
+  private func dispatch(_ event: RuntimeEvent, dependencies: EventManagerDependencies) {
     switch event {
-    case .application(.launched), .application(.terminated):
-      return nil
+    case .application(let event):
+      ApplicationLifecycleHandler(
+        workspace: dependencies.workspace,
+        processManager: dependencies.processManager,
+        windowManager: dependencies.windowManager,
+        tilingManager: dependencies.tilingManager
+      ).handle(event)
 
-    case .application(.frontSwitched(let process)):
-      return .application(
-        event: .applicationFrontSwitched,
-        processID: process.pid,
-        app: process.name,
-        active: true
-      )
+    case .window(let event):
+      WindowLifecycleHandler(
+        windowManager: dependencies.windowManager,
+        tilingManager: dependencies.tilingManager
+      ).handle(event)
 
-    case .window(.created(_, let windowID)):
-      return windowPayload(
-        event: .windowCreated,
-        windowID: windowID,
-        configuration: configuration
-      )
+    case .space(let event):
+      SpaceLifecycleHandler(
+        spaceManager: dependencies.spaceManager,
+        windowManager: dependencies.windowManager,
+        tilingManager: dependencies.tilingManager
+      ).handle(event)
 
-    case .window(.destroyed):
-      return payloadBeforeHandling
-
-    case .window(.focused(let windowID)):
-      return windowPayload(
-        event: .windowFocused,
-        windowID: windowID,
-        active: true,
-        configuration: configuration
-      )
-
-    case .window(.moved(let windowID)):
-      return windowPayload(
-        event: .windowMoved,
-        windowID: windowID,
-        configuration: configuration
-      )
-
-    case .window(.resized(let windowID)):
-      return windowPayload(
-        event: .windowResized,
-        windowID: windowID,
-        configuration: configuration
-      )
-
-    case .window(.minimized(let window)):
-      return windowPayload(event: .windowMinimized, window: window, configuration: configuration)
-
-    case .window(.deminimized(let window)):
-      return windowPayload(event: .windowDeminimized, window: window, configuration: configuration)
-
-    case .space(.changed(let space)):
-      let spaces = SpaceManager.all()
-      return .spaceChanged(
-        space: space,
-        currentIndex: spaces.firstIndex(where: { $0.id == space.id }),
-        recentSpaceID: configuration.spaceManager.lastActiveSpaceID,
-        recentIndex: configuration.spaceManager.lastActiveSpaceID.flatMap { recentID in
-          spaces.firstIndex { $0.id == recentID }
-        }
-      )
-
-    case .display(.changed):
-      return .displayChanged(
-        currentID: configuration.displayManager.currentActiveDisplayID,
-        recentID: configuration.displayManager.lastActiveDisplayID
-      )
-
-    case .display(.added(let displayID)):
-      return displayPayload(
-        event: .displayAdded,
-        displayID: displayID,
-        configuration: configuration
-      )
-
-    case .display(.removed(let displayID)):
-      return displayPayload(
-        event: .displayRemoved,
-        displayID: displayID,
-        configuration: configuration
-      )
-
-    case .display(.moved(let displayID)):
-      return displayPayload(
-        event: .displayMoved,
-        displayID: displayID,
-        configuration: configuration
-      )
-
-    case .display(.resized(let displayID)):
-      return displayPayload(
-        event: .displayResized,
-        displayID: displayID,
-        configuration: configuration
-      )
+    case .display(let event):
+      DisplayLifecycleHandler(
+        displayManager: dependencies.displayManager,
+        tilingManager: dependencies.tilingManager
+      ).handle(event)
     }
-  }
-
-  /// Build a window signal payload for the current known state.
-  @MainActor
-  private func windowPayload(
-    event: SignalEvent,
-    windowID: UInt32,
-    active: Bool? = nil,
-    configuration: Configuration
-  ) -> SignalPayload {
-    .window(
-      event: event,
-      windowID: windowID,
-      window: configuration.windowManager.window(by: windowID),
-      active: active ?? (configuration.windowManager.currentFocusedWindowID == windowID)
-    )
-  }
-
-  /// Build a window signal payload for an event that still has a window reference.
-  @MainActor
-  private func windowPayload(
-    event: SignalEvent,
-    window: Window,
-    configuration: Configuration
-  ) -> SignalPayload {
-    .window(
-      event: event,
-      windowID: window.id,
-      window: window,
-      active: configuration.windowManager.currentFocusedWindowID == window.id
-    )
-  }
-
-  /// Build a display signal payload for CoreGraphics reconfiguration callbacks.
-  @MainActor
-  private func displayPayload(
-    event: SignalEvent,
-    displayID: UInt32,
-    configuration: Configuration
-  ) -> SignalPayload {
-    .display(
-      event: event,
-      displayID: displayID,
-      currentID: configuration.displayManager.currentActiveDisplayID,
-      recentID: configuration.displayManager.lastActiveDisplayID
-    )
   }
 }
 
 extension EventManager: @unchecked Sendable {}
 
 /// Manager dependencies required by the event dispatcher.
-private struct Configuration {
+private struct EventManagerDependencies {
   let workspace: Workspace
   let processManager: ProcessManager
   let windowManager: WindowManager
