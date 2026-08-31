@@ -106,6 +106,19 @@ final class Window: NSObject {
     return true
   }
 
+  /// Focus the window through WindowServer without changing its stacking order.
+  @discardableResult
+  func focusWithoutRaise(from currentWindow: Window?) -> Bool {
+    guard let application else { return false }
+
+    return WindowServerClient.shared.focusWindowWithoutRaise(
+      processSerialNumber: application.processSerialNumber,
+      windowID: id,
+      currentProcessSerialNumber: currentWindow?.application?.processSerialNumber,
+      currentWindowID: currentWindow?.id
+    )
+  }
+
   /// Minimize the window through accessibility.
   @discardableResult
   func minimize() -> Bool {

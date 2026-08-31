@@ -79,6 +79,9 @@ final class Application: NSObject {
     application.processIdentifier
   }
 
+  /// Carbon process serial number used by private WindowServer operations.
+  private(set) var processSerialNumber: ProcessSerialNumber
+
   /// Accessibility observer currently registered for this application.
   private(set) var observer: AXObserver?
 
@@ -95,6 +98,7 @@ final class Application: NSObject {
 
   /// Create an application model for a process discovered by the process service.
   init?(for process: Process) {
+    processSerialNumber = process.psn
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
 
     guard let app = NSRunningApplication(processIdentifier: process.pid) else {

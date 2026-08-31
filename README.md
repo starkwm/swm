@@ -187,6 +187,7 @@ Config commands update every current Space and become the defaults for Spaces di
 
 ```sh
 swm -m config layout <float|master|monocle|dwindle>
+swm -m config focus-follows-mouse <off|autofocus|autoraise>
 swm -m config master-ratio <ratio>
 swm -m config master-placement <left|right|top|bottom>
 swm -m config preserve-split <on|off>
@@ -197,7 +198,7 @@ swm -m config left-padding <points>
 swm -m config right-padding <points>
 ```
 
-Built-in defaults are floating layout, `0.5` master ratio, master on the left, split preservation off, and zero padding and gaps. Negative padding or gap values are clamped to zero.
+Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, and zero padding and gaps. Negative padding or gap values are clamped to zero.
 
 ## Configuration file
 
@@ -209,6 +210,7 @@ The file can be any executable script. A shell script is the simplest option:
 #!/bin/sh
 
 swm -m config layout dwindle
+swm -m config focus-follows-mouse autofocus
 swm -m config window-gap 8
 swm -m config top-padding 8
 swm -m config bottom-padding 8
