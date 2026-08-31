@@ -9,7 +9,7 @@ public final class TilingManager {
   private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
   private let spaceManager: SpaceManager
-  private var frameReconciler: WindowFrameReconciler?
+  private let frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
   private var defaultMasterRatio: CGFloat = 0.5
@@ -29,23 +29,25 @@ public final class TilingManager {
           topology: spaceManager.snapshotTopology(for: windows.map(\.id))
         )
       },
-      spaceManager: spaceManager
-    )
-    frameReconciler = WindowFrameReconciler(
-      currentFrame: { windowManager.window(by: $0)?.frame() },
-      frameMutation: { windowID, targetFrame, currentFrame in
-        windowManager.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
-      }
+      spaceManager: spaceManager,
+      frameReconciler: WindowFrameReconciler(
+        currentFrame: { windowManager.window(by: $0)?.frame() },
+        frameMutation: { windowID, targetFrame, currentFrame in
+          windowManager.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
+        }
+      )
     )
   }
 
   /// Create a manager with an injectable reconciliation snapshot.
   init(
     snapshot: @escaping SnapshotProvider,
-    spaceManager: SpaceManager
+    spaceManager: SpaceManager,
+    frameReconciler: WindowFrameReconciler? = nil
   ) {
     self.snapshot = snapshot
     self.spaceManager = spaceManager
+    self.frameReconciler = frameReconciler
   }
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
@@ -265,6 +267,30 @@ public final class TilingManager {
     reflowVisibleDwindleLayouts()
   }
 
+  /// Swap a window with its closest neighbour in a direction.
+  @discardableResult
+  func swapWindow(_ windowID: CGWindowID, in direction: CardinalDirection) -> Bool {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard let state = layoutsByID[layoutID] else { return false }
+    if state.selection == .float || floatingOverrideWindowIDs.contains(windowID) {
+      return swapFloatingWindow(windowID, in: direction, layoutID: layoutID, state: state)
+    }
+    guard case .layout(.frames(let framesByWindowID)) = layoutPlan(for: layoutID) else {
+      return false
+    }
+    guard let neighborWindowID = direction.neighbor(of: windowID, in: framesByWindowID) else {
+      return false
+    }
+    guard var state = layoutsByID[layoutID], var tree = state.tree else { return false }
+    guard tree.swap(windowID, with: neighborWindowID) else { return false }
+
+    state.tree = tree
+    state.focusedWindowID = windowID
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Swap a tiled window with the current master pane.
   @discardableResult
   func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
@@ -436,6 +462,36 @@ public final class TilingManager {
   /// Return stable layout IDs for a Space.
   private func layoutIDs(for spaceID: UInt64) -> [SpaceLayoutID] {
     sorted(layoutsByID.keys.filter { $0.spaceID == spaceID })
+  }
+
+  /// Swap complete frames for neighbouring windows outside automatic layout geometry.
+  private func swapFloatingWindow(
+    _ windowID: CGWindowID,
+    in direction: CardinalDirection,
+    layoutID: SpaceLayoutID,
+    state: SpaceLayoutState
+  ) -> Bool {
+    guard currentTopology?.visibleLayoutIDs.contains(layoutID) == true else { return false }
+    guard let frameReconciler else { return false }
+
+    let candidateWindowIDs = (state.tree?.windowIDs ?? []).filter { candidateWindowID in
+      guard !state.omittedWindowIDs.contains(candidateWindowID) else { return false }
+      return state.selection == .float || floatingOverrideWindowIDs.contains(candidateWindowID)
+    }
+    let framesByWindowID = frameReconciler.frames(for: candidateWindowIDs)
+    guard
+      let sourceFrame = framesByWindowID[windowID],
+      let neighborWindowID = direction.neighbor(of: windowID, in: framesByWindowID),
+      let neighborFrame = framesByWindowID[neighborWindowID]
+    else {
+      return false
+    }
+
+    frameReconciler.apply([
+      windowID: neighborFrame,
+      neighborWindowID: sourceFrame,
+    ])
+    return true
   }
 
   /// Apply fresh master plans for every visible master layout.

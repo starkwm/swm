@@ -30,6 +30,8 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
       case "--layout":
         return try layout(request)
+      case "--swap":
+        return try swap(request)
       case "--swap-with-master":
         return try swapWithMaster(request)
       case "--split-ratio":
@@ -73,6 +75,21 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for window: \(window.id)")
     }
     return .success(id: request.id, message: layout.rawValue)
+  }
+
+  /// Swap the selected window with its neighbour in a direction.
+  private func swap(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseValueSelection(request.args, action: "swap")
+    guard let direction = CardinalDirection(rawValue: selection.value) else {
+      throw IPCCommandError.invalidRequest("invalid window swap direction: \(selection.value)")
+    }
+    let window = try selectedWindow(selector: selection.selector)
+    guard tilingManager.swapWindow(window.id, in: direction) else {
+      throw IPCCommandError.invalidRequest(
+        "window has no swappable neighbour in direction: \(direction.rawValue)"
+      )
+    }
+    return .success(id: request.id, message: "ok")
   }
 
   /// Swap the selected tiled window with the master pane.
