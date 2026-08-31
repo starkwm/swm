@@ -37,11 +37,6 @@ public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, S
   /// Runtime failures.
   case error
 
-  /// Compare log levels by severity.
-  public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
-    lhs.priority < rhs.priority
-  }
-
   /// Uppercase label used in log output.
   var label: String {
     rawValue.uppercased()
@@ -59,6 +54,11 @@ public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, S
     case .error:
       3
     }
+  }
+
+  /// Compare log levels by severity.
+  public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+    lhs.priority < rhs.priority
   }
 }
 

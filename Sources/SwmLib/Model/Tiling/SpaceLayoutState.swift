@@ -1,14 +1,5 @@
 import CoreGraphics
 
-/// Identifies one independently tiled display within a macOS Space.
-struct SpaceLayoutID: Hashable {
-  /// WindowServer Space ID.
-  let spaceID: UInt64
-
-  /// Core Graphics display UUID.
-  let displayID: String
-}
-
 /// Runtime automatic-tiling state retained for one Space and physical display.
 struct SpaceLayoutState {
   /// Selected floating or automatic layout.
@@ -30,6 +21,15 @@ struct SpaceLayoutState {
 
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
+}
+
+/// Identifies one independently tiled display within a macOS Space.
+struct SpaceLayoutID: Hashable {
+  /// WindowServer Space ID.
+  let spaceID: UInt64
+
+  /// Core Graphics display UUID.
+  let displayID: String
 }
 
 /// Edge occupied by the master pane in the master layout.

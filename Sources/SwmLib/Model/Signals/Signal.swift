@@ -115,10 +115,6 @@ struct Signal: Equatable, Sendable {
 
 /// Regex-backed text filter with optional inverted matching.
 struct SignalTextFilter: Equatable, @unchecked Sendable {
-  static func == (lhs: SignalTextFilter, rhs: SignalTextFilter) -> Bool {
-    lhs.pattern == rhs.pattern && lhs.inverted == rhs.inverted
-  }
-
   /// Original regular-expression pattern.
   let pattern: String
 
@@ -137,6 +133,10 @@ struct SignalTextFilter: Equatable, @unchecked Sendable {
 
     self.pattern = pattern
     self.inverted = inverted
+  }
+
+  static func == (lhs: SignalTextFilter, rhs: SignalTextFilter) -> Bool {
+    lhs.pattern == rhs.pattern && lhs.inverted == rhs.inverted
   }
 
   /// Return whether the optional value satisfies the filter.

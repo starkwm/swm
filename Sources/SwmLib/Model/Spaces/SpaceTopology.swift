@@ -14,11 +14,6 @@ struct SpaceTopology: Equatable {
   /// Attached physical displays keyed by Core Graphics UUID.
   let displaysByID: [String: SpaceTopologyDisplay]
 
-  private var windowServerDisplayIDs: Set<String> {
-    Set(spacesByID.values.map(\.displayID))
-      .union(visibleSpaceIDByDisplayID.keys)
-  }
-
   /// Every normal Space and physical display pair available for tiling.
   var layoutIDs: Set<SpaceLayoutID> {
     Set(
@@ -36,6 +31,11 @@ struct SpaceTopology: Equatable {
         return layoutIDs(spaceID: spaceID, windowServerDisplayID: displayID)
       }
     )
+  }
+
+  private var windowServerDisplayIDs: Set<String> {
+    Set(spacesByID.values.map(\.displayID))
+      .union(visibleSpaceIDByDisplayID.keys)
   }
 
   /// Normal Space membership for a managed window.

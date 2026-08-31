@@ -1,20 +1,5 @@
 import CoreGraphics
 
-/// Result of applying a window frame through separate accessibility mutations.
-enum WindowFrameMutationResult: Equatable {
-  /// Requested size and position changes completed.
-  case success
-
-  /// Resizing failed before any position change was attempted.
-  case resizeFailed
-
-  /// Moving failed with no remaining partial size change.
-  case moveFailed
-
-  /// Moving and the best-effort size rollback both failed.
-  case moveFailedAndRollbackFailed
-}
-
 /// Applies a frame change with best-effort rollback for partial failures.
 enum WindowFrameMutation {
   /// Resize then move a window, restoring its original size if moving fails.
@@ -38,4 +23,19 @@ enum WindowFrameMutation {
 
     return .success
   }
+}
+
+/// Result of applying a window frame through separate accessibility mutations.
+enum WindowFrameMutationResult: Equatable {
+  /// Requested size and position changes completed.
+  case success
+
+  /// Resizing failed before any position change was attempted.
+  case resizeFailed
+
+  /// Moving failed with no remaining partial size change.
+  case moveFailed
+
+  /// Moving and the best-effort size rollback both failed.
+  case moveFailedAndRollbackFailed
 }

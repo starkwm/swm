@@ -339,12 +339,6 @@ public final class WindowManager {
   }
 }
 
-/// Identifies whether discovery is initial or a retry for unresolved windows.
-private enum WindowDiscoveryMode {
-  case initialDiscovery
-  case refreshAttempt
-}
-
 /// Cursor for bounded passes over private accessibility remote-token IDs.
 struct WindowDiscoveryCursor: Equatable {
   static let batchSize = 4_096
@@ -359,4 +353,10 @@ struct WindowDiscoveryCursor: Equatable {
     nextTokenID = end == Self.maximumTokenID ? 0 : end + 1
     return start...end
   }
+}
+
+/// Identifies whether discovery is initial or a retry for unresolved windows.
+private enum WindowDiscoveryMode {
+  case initialDiscovery
+  case refreshAttempt
 }
