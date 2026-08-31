@@ -26,20 +26,15 @@ struct SignalCommandHandler {
 
   /// Remove an existing signal by one-based index or label.
   private func remove(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.count == 1 else {
-      throw IPCCommandError.invalidRequest("invalid signal remove arguments")
-    }
-
-    try SignalManager.shared.remove(selector: request.args[0])
+    let selector = try IPCArguments(request.args, context: "signal remove").requiredValue()
+    try SignalManager.shared.remove(selector: selector)
 
     return .success(id: request.id, message: "ok")
   }
 
   /// Return registered signals as sorted-key JSON.
   private func list(_ request: IPCRequest) throws -> IPCResponse {
-    guard request.args.isEmpty else {
-      throw IPCCommandError.invalidRequest("invalid signal list arguments")
-    }
+    try IPCArguments(request.args, context: "signal list").requireEmpty()
 
     let payload = SignalManager.shared.list().map(SignalSerializer.init)
     return try .json(id: request.id, payload: payload)

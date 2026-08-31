@@ -1,5 +1,5 @@
 /// Describes whether a numeric command argument replaces or adjusts a value.
-enum ChangeMode: String {
+enum NumericChangeMode: String {
   /// Treat command values as absolute replacements.
   case absolute = "abs"
 

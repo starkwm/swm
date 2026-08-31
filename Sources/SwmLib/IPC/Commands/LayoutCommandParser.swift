@@ -5,7 +5,7 @@ enum LayoutCommandParser {
   /// Parse an `abs:value` or `rel:value` ratio update.
   static func ratioChange(from argument: String) -> LayoutRatioChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-    guard parts.count == 2, let mode = ChangeMode(rawValue: parts[0]) else { return nil }
+    guard parts.count == 2, let mode = NumericChangeMode(rawValue: parts[0]) else { return nil }
     guard let value = Double(parts[1]), value.isFinite else { return nil }
 
     switch mode {
