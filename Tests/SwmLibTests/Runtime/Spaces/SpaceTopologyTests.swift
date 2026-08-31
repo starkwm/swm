@@ -18,14 +18,14 @@ struct SpaceTopologyTests {
 
     #expect(
       topology.layoutIDs == [
-        SpaceLayoutID(spaceID: 10, displayID: "display-a"),
-        SpaceLayoutID(spaceID: 20, displayID: "display-b"),
+        TilingLayoutID(spaceID: 10, displayID: "display-a"),
+        TilingLayoutID(spaceID: 20, displayID: "display-b"),
       ]
     )
     #expect(topology.visibleLayoutIDs == topology.layoutIDs)
     #expect(
       topology.layoutID(for: 1, on: "display-a")
-        == SpaceLayoutID(spaceID: 10, displayID: "display-a")
+        == TilingLayoutID(spaceID: 10, displayID: "display-a")
     )
     #expect(topology.layoutID(for: 1, on: "display-b") == nil)
   }
@@ -40,26 +40,26 @@ struct SpaceTopologyTests {
       visibleSpaceIDByDisplayID: ["shared": 10],
       spaceIDsByWindowID: [1: [10], 2: [10]]
     )
-    let visibleLayoutIDs: Set<SpaceLayoutID> = [
-      SpaceLayoutID(spaceID: 10, displayID: "display-a"),
-      SpaceLayoutID(spaceID: 10, displayID: "display-b"),
+    let visibleLayoutIDs: Set<TilingLayoutID> = [
+      TilingLayoutID(spaceID: 10, displayID: "display-a"),
+      TilingLayoutID(spaceID: 10, displayID: "display-b"),
     ]
 
     #expect(
       topology.layoutIDs
         == visibleLayoutIDs.union([
-          SpaceLayoutID(spaceID: 11, displayID: "display-a"),
-          SpaceLayoutID(spaceID: 11, displayID: "display-b"),
+          TilingLayoutID(spaceID: 11, displayID: "display-a"),
+          TilingLayoutID(spaceID: 11, displayID: "display-b"),
         ])
     )
     #expect(topology.visibleLayoutIDs == visibleLayoutIDs)
     #expect(
       topology.layoutID(for: 1, on: "display-a")
-        == SpaceLayoutID(spaceID: 10, displayID: "display-a")
+        == TilingLayoutID(spaceID: 10, displayID: "display-a")
     )
     #expect(
       topology.layoutID(for: 2, on: "display-b")
-        == SpaceLayoutID(spaceID: 10, displayID: "display-b")
+        == TilingLayoutID(spaceID: 10, displayID: "display-b")
     )
   }
 
