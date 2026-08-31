@@ -1,11 +1,13 @@
 /// Handles IPC commands that update global configuration for every known space.
 @MainActor
 struct ConfigCommandHandler {
+  private let windows: Windows
   private let spaces: Spaces
   private let tiling: Tiling
 
-  /// Create a config command handler backed by space and tiling services.
-  init(spaces: Spaces, tiling: Tiling) {
+  /// Create a config command handler backed by window, Space, and tiling services.
+  init(windows: Windows, spaces: Spaces, tiling: Tiling) {
+    self.windows = windows
     self.spaces = spaces
     self.tiling = tiling
   }
@@ -16,6 +18,8 @@ struct ConfigCommandHandler {
       switch request.command {
       case "layout":
         return try layout(request)
+      case "focus-follows-mouse":
+        return try focusFollowsMouse(request)
       case "master-ratio":
         return try masterRatio(request)
       case "master-placement":
@@ -36,6 +40,22 @@ struct ConfigCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
     }
+  }
+
+  /// Select how pointer movement focuses managed windows.
+  private func focusFollowsMouse(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(
+      request.args,
+      context: "config focus-follows-mouse"
+    ).requiredValue()
+    guard let mode = FocusFollowsMouseMode(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest(
+        "invalid config focus-follows-mouse value: \(argument)"
+      )
+    }
+
+    windows.setFocusFollowsMouseMode(mode)
+    return .success(id: request.id, message: mode.rawValue)
   }
 
   /// Set the master pane ratio for every current and future Space.

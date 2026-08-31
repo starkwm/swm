@@ -34,6 +34,7 @@ struct ConfigCommandHandlerTests {
     )
     tiling.initialize()
     let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace()),
       spaces: spaces,
       tiling: tiling
     )
@@ -103,6 +104,31 @@ struct ConfigCommandHandlerTests {
     #expect(ratio.ok)
     #expect(placement.ok && placement.message == "top")
     #expect(preserve.ok && preserve.message == "on")
+  }
+
+  @Test("dispatch: selects focus follows mouse mode")
+  func dispatchSelectsFocusFollowsMouseMode() {
+    let spaces = Spaces(activeSpaceID: nil)
+    let windows = Windows(workspace: Workspace())
+    let handler = ConfigCommandHandler(
+      windows: windows,
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces)
+    )
+
+    let autofocus = handler.dispatch(
+      request(command: "focus-follows-mouse", args: ["autofocus"])
+    )
+    let autoraise = handler.dispatch(
+      request(command: "focus-follows-mouse", args: ["autoraise"])
+    )
+    let disabled = handler.dispatch(request(command: "focus-follows-mouse", args: ["off"]))
+    let invalid = handler.dispatch(request(command: "focus-follows-mouse", args: ["on"]))
+
+    #expect(autofocus.ok && autofocus.message == "autofocus")
+    #expect(autoraise.ok && autoraise.message == "autoraise")
+    #expect(disabled.ok && disabled.message == "off")
+    #expect(!invalid.ok && invalid.errorCode == .invalidRequest)
   }
 
   @Test("dispatch: padding updates defaults and preserves other override sides")
@@ -194,6 +220,7 @@ struct ConfigCommandHandlerTests {
       handler.dispatch(request(command: "master-ratio", args: ["wide"])),
       handler.dispatch(request(command: "master-placement", args: ["center"])),
       handler.dispatch(request(command: "preserve-split", args: ["maybe"])),
+      handler.dispatch(request(command: "focus-follows-mouse", args: ["maybe"])),
     ]
 
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
@@ -209,6 +236,7 @@ struct ConfigCommandHandlerTests {
 
   private func handler(spaces: Spaces) -> ConfigCommandHandler {
     ConfigCommandHandler(
+      windows: Windows(workspace: Workspace()),
       spaces: spaces,
       tiling: makeTestTiling(spaces: spaces)
     )

@@ -30,6 +30,7 @@ struct IPCCommandDispatcher {
 
     case .config:
       return ConfigCommandHandler(
+        windows: windows,
         spaces: spaces,
         tiling: tiling
       ).dispatch(request)

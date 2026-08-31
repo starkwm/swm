@@ -24,6 +24,20 @@ func SLSCopyWindowsWithOptionsAndTags(
   _ clearTags: inout UInt64
 ) -> CFArray
 
+/// Return the frontmost window and its owner at a screen point.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("SLSFindWindowAndOwner") @discardableResult
+func SLSFindWindowAndOwner(
+  _ connectionID: Int32,
+  _ windowID: Int32,
+  _ options: Int32,
+  _ relativeWindowID: Int32,
+  _ screenPoint: inout CGPoint,
+  _ windowPoint: inout CGPoint,
+  _ foundWindowID: inout UInt32,
+  _ foundWindowConnectionID: inout Int32
+) -> OSStatus
+
 /// Return the active space.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSGetActiveSpace") @discardableResult
@@ -93,7 +107,24 @@ func SLSWindowQueryResultCopyWindows(_ query: CFTypeRef) -> CFTypeRef
 @_silgen_name("SLSWindowQueryWindows") @discardableResult
 func SLSWindowQueryWindows(_ connectionID: Int32, _ windows: CFArray, _ count: Int32) -> CFTypeRef
 
+/// Post a private process event record.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("SLPSPostEventRecordTo") @discardableResult
+func SLPSPostEventRecordTo(
+  _ psn: inout ProcessSerialNumber,
+  _ bytes: UnsafeMutablePointer<UInt8>
+) -> CGError
+
 /// Return the frontmost process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("_SLPSGetFrontProcess") @discardableResult
 func _SLPSGetFrontProcess(_ psn: inout ProcessSerialNumber) -> OSStatus
+
+/// Focus a process window using private WindowServer options.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("_SLPSSetFrontProcessWithOptions") @discardableResult
+func _SLPSSetFrontProcessWithOptions(
+  _ psn: inout ProcessSerialNumber,
+  _ windowID: UInt32,
+  _ options: UInt32
+) -> CGError

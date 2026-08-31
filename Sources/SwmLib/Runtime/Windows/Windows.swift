@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 import Carbon
 import Foundation
@@ -35,6 +36,9 @@ public final class Windows {
   }
 
   private let workspace: Workspace
+  private var mouseEventMonitor: Any?
+  private var pendingMouseFocusWindowID: CGWindowID?
+  private var focusFollowsMouseMode = FocusFollowsMouseMode.off
   private var focusedWindowState: TrackedState<CGWindowID>
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
@@ -80,7 +84,53 @@ public final class Windows {
   /// Update tracked focused-window state.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
+    pendingMouseFocusWindowID = nil
     focusedWindowState.update(to: windowID)
+  }
+
+  /// Select how pointer movement focuses managed windows.
+  func setFocusFollowsMouseMode(_ mode: FocusFollowsMouseMode) {
+    focusFollowsMouseMode = mode
+
+    if mode != .off {
+      guard mouseEventMonitor == nil else { return }
+
+      mouseEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) {
+        [weak self] event in
+        guard let location = event.cgEvent?.location else { return }
+
+        Task { @MainActor [weak self] in
+          self?.focusWindow(at: location)
+        }
+      }
+    } else {
+      pendingMouseFocusWindowID = nil
+      guard let mouseEventMonitor else { return }
+      NSEvent.removeMonitor(mouseEventMonitor)
+      self.mouseEventMonitor = nil
+    }
+  }
+
+  /// Focus the frontmost managed window beneath a global pointer location.
+  func focusWindow(at point: CGPoint) {
+    guard let windowID = WindowServerClient.shared.frontmostWindowID(at: point) else { return }
+    guard windowID != currentFocusedWindowID else { return }
+    guard windowID != pendingMouseFocusWindowID else { return }
+    guard let window = window(by: windowID), !window.isMinimized else { return }
+
+    let focused: Bool
+    switch focusFollowsMouseMode {
+    case .off:
+      return
+    case .autofocus:
+      focused = window.focusWithoutRaise(from: currentFocusedWindowID.flatMap(window(by:)))
+    case .autoraise:
+      focused = window.focus()
+    }
+
+    if focused {
+      pendingMouseFocusWindowID = windowID
+    }
   }
 
   /// Retry discovery for applications with unresolved windows.
