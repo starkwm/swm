@@ -70,6 +70,7 @@ a grid.
     swm -m window --swap [window-id|recent] <left|right|up|down>
     swm -m window --swap-with-master [window-id|recent]
     swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
+    swm -m window --toggle-split [window-id|recent]
 
 Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
 Use `--focus left`, `right`, `up`, or `down` to focus the nearest non-minimized window on the
@@ -86,6 +87,8 @@ In master and dwindle layouts it swaps their tiled positions; in a floating layo
 complete frames. `--swap-with-master` promotes the selected window in a master layout. In dwindle,
 `--split-ratio rel:0.05` grows the selected window's side of its nearest split; ratios are clamped
 to `0.1...0.9`.
+Use `--toggle-split` in a dwindle layout to toggle and retain the selected window's nearest split
+between columns and rows.
 
 **Space**
 
