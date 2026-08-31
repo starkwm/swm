@@ -92,4 +92,35 @@ struct TilingTreeTests {
         )
     )
   }
+
+  @Test("toggleSplitDirection: toggles the nearest resolved parent")
+  func toggleSplitDirectionTogglesNearestResolvedParent() {
+    var tree = TilingTree.branch(
+      .leaf(1),
+      .branch(
+        .leaf(2),
+        .leaf(3),
+        split: TilingSplit(ratio: 0.5, direction: .horizontal)
+      ),
+      split: TilingSplit(ratio: 0.5, direction: .vertical)
+    )
+
+    let toggled = tree.toggleSplitDirection(containing: 2)
+
+    #expect(toggled)
+    #expect(
+      tree
+        == .branch(
+          .leaf(1),
+          .branch(
+            .leaf(2),
+            .leaf(3),
+            split: TilingSplit(ratio: 0.5, direction: .vertical)
+          ),
+          split: TilingSplit(ratio: 0.5, direction: .vertical)
+        )
+    )
+    let missing = tree.toggleSplitDirection(containing: 99)
+    #expect(missing == false)
+  }
 }

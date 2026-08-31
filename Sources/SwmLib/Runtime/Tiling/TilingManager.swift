@@ -394,6 +394,29 @@ public final class TilingManager {
     return ratio
   }
 
+  /// Toggle and retain the selected window's nearest dwindle split direction.
+  @discardableResult
+  func toggleDwindleSplit(for windowID: CGWindowID) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard layoutsByID[layoutID]?.selection == .dwindle else { return false }
+    guard case .layout = layoutPlan(for: layoutID) else { return false }
+    guard var state = layoutsByID[layoutID], var tree = state.tree else { return false }
+    guard let display = currentTopology?.displaysByID[layoutID.displayID] else { return false }
+    tree =
+      dwindleLayout.resolvingSplitDirections(
+        in: tree,
+        bounds: display.visibleFrame,
+        settings: spaceManager.settings(for: layoutID.spaceID)
+      ) ?? tree
+    guard tree.toggleSplitDirection(containing: windowID) else { return false }
+
+    state.tree = tree
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }

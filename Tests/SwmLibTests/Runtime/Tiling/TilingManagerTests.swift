@@ -424,6 +424,40 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("dwindle controls: toggle and retain the nearest dynamic split")
+  func dwindleControlsToggleAndRetainNearestDynamicSplit() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.dwindle, for: 10)
+
+    #expect(manager.toggleDwindleSplit(for: 2))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 250, height: 800),
+            3: CGRect(x: 750, y: 0, width: 250, height: 800),
+          ])
+        )
+    )
+
+    #expect(manager.toggleDwindleSplit(for: 2))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            3: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
   @Test("window layout: float removes a window and tile restores it")
   func windowLayoutFloatsAndRestoresWindow() {
     let manager = makeManager(
