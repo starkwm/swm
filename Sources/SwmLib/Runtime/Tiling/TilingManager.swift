@@ -307,6 +307,14 @@ public final class TilingManager {
     return true
   }
 
+  /// Return the active master window in the selected window's layout.
+  func masterWindowID(inLayoutContaining windowID: CGWindowID) -> CGWindowID? {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
+    guard let state = layoutsByID[layoutID], state.selection == .master else { return nil }
+    let unavailableWindowIDs = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
+    return state.tree?.removing(unavailableWindowIDs)?.windowIDs.first
+  }
+
   /// Set a window's explicit floating or tiled participation.
   @discardableResult
   func setWindowLayout(_ selection: WindowLayoutSelection, for windowID: CGWindowID) -> Bool {

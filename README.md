@@ -69,6 +69,7 @@ a grid.
     swm -m window --swap-cycle <next|prev>
     swm -m window --swap [window-id|recent] <left|right|up|down>
     swm -m window --swap-with-master [window-id|recent]
+    swm -m window --focus-master [window-id|recent]
     swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
     swm -m window --toggle-split [window-id|recent]
     swm -m window --swap-split [window-id|recent]
@@ -92,6 +93,7 @@ Use `--toggle-split` in a dwindle layout to toggle and retain the selected windo
 between columns and rows.
 Use `--swap-split` to exchange the two sibling subtrees at the selected window's nearest dwindle
 split.
+Use `--focus-master` to focus the first available window in a master layout.
 
 **Space**
 
