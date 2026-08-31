@@ -48,19 +48,26 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  /// Set the master pane edge for the active Space.
+  /// Set or cycle the master pane edge for the active Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
     guard request.args.count == 1 else {
       throw IPCCommandError.invalidRequest("invalid space master-placement arguments")
     }
     let argument = request.args[0]
-    guard let placement = MasterPlacement(rawValue: argument) else {
-      throw IPCCommandError.invalidRequest("invalid space master-placement: \(argument)")
-    }
-
     let spaceID = try currentSpaceID()
-    guard tilingManager.setMasterPlacement(placement, for: spaceID) else {
-      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+    let placement: MasterPlacement
+    if let selectedPlacement = MasterPlacement(rawValue: argument) {
+      guard tilingManager.setMasterPlacement(selectedPlacement, for: spaceID) else {
+        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      }
+      placement = selectedPlacement
+    } else if let direction = CycleDirection(rawValue: argument) {
+      guard let cycledPlacement = tilingManager.cycleMasterPlacement(direction, for: spaceID) else {
+        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      }
+      placement = cycledPlacement
+    } else {
+      throw IPCCommandError.invalidRequest("invalid space master-placement: \(argument)")
     }
     return .success(id: request.id, message: placement.rawValue)
   }

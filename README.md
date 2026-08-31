@@ -101,7 +101,7 @@ Use space commands to select floating or automatic layout and change settings fo
 
     swm -m space --layout <float|master|dwindle>
     swm -m space --master-ratio <abs|rel>:<ratio>
-    swm -m space --master-placement <left|right|top|bottom>
+    swm -m space --master-placement <left|right|top|bottom|next|prev>
     swm -m space --preserve-split <on|off>
     swm -m space --padding abs:<top>:<right>:<bottom>:<left>
     swm -m space --gap abs:<number>
@@ -112,7 +112,8 @@ Spaces use unmanaged floating windows by default. Select the ordered master layo
 `swm -m space --layout master`, the tree-backed dwindle layout with
 `swm -m space --layout dwindle`, or stop automatic tiling with `swm -m space --layout float`.
 Master ratio changes are clamped to `0.1...0.9`. Master placement selects which edge contains the
-master pane. In dwindle, new windows split the focused tiled window; closing a window collapses its
+master pane; `next` and `prev` cycle clockwise or counter-clockwise. In dwindle, new windows split
+the focused tiled window; closing a window collapses its
 sibling branch. Each split follows the longest edge of its current bounds unless
 `--preserve-split on` retains the direction selected when that branch is first laid out. Each
 physical display is tiled independently, whether macOS's

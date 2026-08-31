@@ -132,20 +132,24 @@ struct SpaceCommandHandlerTests {
     let ratio = handler.dispatch(request(command: "--master-ratio", args: ["abs:0.6"]))
     let relativeRatio = handler.dispatch(request(command: "--master-ratio", args: ["rel:0.1"]))
     let placement = handler.dispatch(request(command: "--master-placement", args: ["bottom"]))
+    let cycledPlacement = handler.dispatch(
+      request(command: "--master-placement", args: ["next"])
+    )
     let preserve = handler.dispatch(request(command: "--preserve-split", args: ["on"]))
     let layout = handler.dispatch(request(command: "--layout", args: ["master"]))
 
     #expect(ratio.ok)
     #expect(relativeRatio.ok)
     #expect(placement.ok && placement.message == "bottom")
+    #expect(cycledPlacement.ok && cycledPlacement.message == "left")
     #expect(preserve.ok && preserve.message == "on")
     #expect(layout.ok)
     #expect(
       tilingManager.layoutPlan(for: layoutID(42))
         == .layout(
           .frames([
-            1: CGRect(x: 0, y: 240, width: 1_000, height: 560),
-            2: CGRect(x: 0, y: 0, width: 1_000, height: 240),
+            1: CGRect(x: 0, y: 0, width: 700, height: 800),
+            2: CGRect(x: 700, y: 0, width: 300, height: 800),
           ])
         )
     )

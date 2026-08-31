@@ -301,6 +301,19 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("master controls: cycle placement clockwise and counter-clockwise")
+  func masterControlsCyclePlacement() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2)],
+      memberships: [1: [10], 2: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.cycleMasterPlacement(.next, for: 10) == .top)
+    #expect(manager.cycleMasterPlacement(.prev, for: 10) == .left)
+  }
+
   @Test("master controls: swap a selected window with master")
   func masterControlsSwapSelectedWindowWithMaster() {
     let manager = makeManager(

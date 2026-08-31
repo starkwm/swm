@@ -224,6 +224,24 @@ public final class TilingManager {
     return true
   }
 
+  /// Cycle the master placement for one Space.
+  @discardableResult
+  func cycleMasterPlacement(
+    _ direction: CycleDirection,
+    for spaceID: UInt64
+  ) -> MasterPlacement? {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return nil }
+
+    let placement =
+      (layoutsByID[layoutIDs[0]]?.masterPlacement ?? defaultMasterPlacement).cycled(in: direction)
+    for layoutID in layoutIDs {
+      layoutsByID[layoutID]?.masterPlacement = placement
+    }
+    applyMasterPlans(for: layoutIDs)
+    return placement
+  }
+
   /// Set the default master placement for all current and future Spaces.
   func setMasterPlacementForAllSpaces(_ placement: MasterPlacement) {
     defaultMasterPlacement = placement
