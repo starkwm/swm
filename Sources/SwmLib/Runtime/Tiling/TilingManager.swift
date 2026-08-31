@@ -334,6 +334,26 @@ public final class TilingManager {
     return true
   }
 
+  /// Return the next available window in stable layout order.
+  func cycledWindowID(from windowID: CGWindowID, in direction: CycleDirection)
+    -> CGWindowID?
+  {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
+    guard let state = layoutsByID[layoutID], let tree = state.tree else { return nil }
+    let windowIDs = tree.windowIDs.filter { candidateWindowID in
+      guard !state.omittedWindowIDs.contains(candidateWindowID) else { return false }
+      return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateWindowID)
+    }
+    guard windowIDs.count > 1, let index = windowIDs.firstIndex(of: windowID) else { return nil }
+
+    switch direction {
+    case .next:
+      return windowIDs[(index + 1) % windowIDs.count]
+    case .prev:
+      return windowIDs[(index - 1 + windowIDs.count) % windowIDs.count]
+    }
+  }
+
   /// Set or adjust the nearest dwindle split containing a tiled window.
   @discardableResult
   func changeDwindleSplitRatio(

@@ -30,6 +30,8 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
       case "--layout":
         return try layout(request)
+      case "--cycle":
+        return try cycle(request)
       case "--swap":
         return try swap(request)
       case "--swap-with-master":
@@ -102,6 +104,26 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for window: \(window.id)")
     }
     return .success(id: request.id, message: layout.rawValue)
+  }
+
+  /// Focus the next available window in stable layout order.
+  private func cycle(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid window cycle arguments")
+    }
+    guard let direction = CycleDirection(rawValue: request.args[0]) else {
+      throw IPCCommandError.invalidRequest("invalid window cycle direction: \(request.args[0])")
+    }
+    let window = try selectedWindow(selector: nil)
+    guard let cycledWindowID = tilingManager.cycledWindowID(from: window.id, in: direction),
+      let cycledWindow = windowManager.window(by: cycledWindowID)
+    else {
+      throw IPCCommandError.invalidRequest("window has no cycle neighbour: \(window.id)")
+    }
+    guard cycledWindow.focus() else {
+      throw IPCCommandError.internalError("could not focus window: \(cycledWindow.id)")
+    }
+    return .success(id: request.id, message: "ok")
   }
 
   /// Swap the selected window with its neighbour in a direction.
