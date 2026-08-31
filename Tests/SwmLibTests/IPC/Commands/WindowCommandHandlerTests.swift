@@ -156,6 +156,7 @@ struct WindowCommandHandlerTests {
     let ratio = handler.dispatch(request(command: "--split-ratio", args: ["middle"]))
     let directionalSwap = handler.dispatch(request(command: "--swap", args: ["sideways"]))
     let cycle = handler.dispatch(request(command: "--cycle", args: ["sideways"]))
+    let cycleSwap = handler.dispatch(request(command: "--swap-cycle", args: ["sideways"]))
     let masterSwap = handler.dispatch(
       request(command: "--swap-with-master", args: ["1", "extra"])
     )
@@ -167,6 +168,10 @@ struct WindowCommandHandlerTests {
         && directionalSwap.message == "invalid window swap direction: sideways"
     )
     #expect(cycle.ok == false && cycle.message == "invalid window cycle direction: sideways")
+    #expect(
+      cycleSwap.ok == false
+        && cycleSwap.message == "invalid window swap-cycle direction: sideways"
+    )
     #expect(
       masterSwap.ok == false
         && masterSwap.message == "invalid window swap-with-master arguments"
@@ -180,6 +185,15 @@ struct WindowCommandHandlerTests {
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "invalid window cycle arguments")
+  }
+
+  @Test("dispatch: rejects a selector for layout-order swapping")
+  func dispatchRejectsSwapCycleSelector() {
+    let response = handler().dispatch(request(command: "--swap-cycle", args: ["42", "next"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "invalid window swap-cycle arguments")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {
