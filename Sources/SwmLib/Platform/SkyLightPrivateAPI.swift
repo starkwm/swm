@@ -1,6 +1,6 @@
 import Carbon
 
-// Private system functions imported from SkyLight, Accessibility, and Carbon.
+// Private system functions imported from SkyLight.
 
 /// Return display-space information.
 // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -92,32 +92,6 @@ func SLSWindowQueryResultCopyWindows(_ query: CFTypeRef) -> CFTypeRef
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSWindowQueryWindows") @discardableResult
 func SLSWindowQueryWindows(_ connectionID: Int32, _ windows: CFArray, _ count: Int32) -> CFTypeRef
-
-/// Return the window ID for the given accessibility UI element.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("_AXUIElementGetWindow") @discardableResult
-func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: inout UInt32) -> AXError
-
-/// Create an accessibility element from a remote token.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("_AXUIElementCreateWithRemoteToken") @discardableResult
-func _AXUIElementCreateWithRemoteToken(_ data: CFData) -> Unmanaged<AXUIElement>?
-
-/// Advance to the next running process.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("GetNextProcess") @discardableResult
-func GetNextProcess(_ psn: inout ProcessSerialNumber) -> OSStatus
-
-/// Return process information for the given process serial number.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("GetProcessInformation") @discardableResult
-func GetProcessInformation(_ psn: inout ProcessSerialNumber, _ info: inout ProcessInfoRec)
-  -> OSStatus
-
-/// Return the process ID for the given process serial number.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("GetProcessPID") @discardableResult
-func GetProcessPID(_ psn: inout ProcessSerialNumber, _ pid: inout pid_t) -> OSStatus
 
 /// Return the frontmost process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
