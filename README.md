@@ -57,7 +57,7 @@ Selector-only queries default to the matching result type: `--display` queries d
 Use window commands to focus, minimize, move, resize, control automatic tiling, or place windows on
 a grid.
 
-    swm -m window --focus [window-id|recent]
+    swm -m window --focus [window-id|recent|left|right|up|down]
     swm -m window --minimize [window-id|recent]
     swm -m window --unminimize [window-id|recent]
     swm -m window --move [window-id|recent] abs:<x>:<y>
@@ -70,6 +70,8 @@ a grid.
     swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
 
 Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
+Use `--focus left`, `right`, `up`, or `down` to focus the nearest non-minimized window on the
+currently visible Spaces in that direction.
 Use `--display next` to toggle the focused window between two attached displays. Numeric display targets are one-based and sorted by display arrangement.
 Use `--layout float` to remove one window from automatic tiling and `--layout tile` to return it.
 `--swap` exchanges the selected window with its nearest neighbour to the left, right, up, or down.

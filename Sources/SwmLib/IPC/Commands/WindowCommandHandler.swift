@@ -23,7 +23,7 @@ struct WindowCommandHandler {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
       case "--focus":
-        return try performWindowAction(request, action: "focus") { $0.focus() }
+        return try focus(request)
       case "--minimize":
         return try performWindowAction(request, action: "minimize") { $0.minimize() }
       case "--unminimize":
@@ -62,6 +62,33 @@ struct WindowCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
     }
+  }
+
+  /// Focus a selected window or the closest visible window in a direction.
+  private func focus(_ request: IPCRequest) throws -> IPCResponse {
+    guard let target = WindowFocusTarget(arguments: request.args) else {
+      throw IPCCommandError.invalidRequest("invalid window focus arguments")
+    }
+
+    let window: Window
+    switch target {
+    case .selected(let selector):
+      window = try selectedWindow(selector: selector)
+    case .direction(let direction):
+      let sourceWindow = try selectedWindow(selector: nil)
+      guard let directionalWindow = directionalWindow(from: sourceWindow, in: direction) else {
+        throw IPCCommandError.invalidRequest(
+          "window has no focusable neighbour in direction: \(direction.rawValue)"
+        )
+      }
+      window = directionalWindow
+    }
+
+    guard window.focus() else {
+      throw IPCCommandError.internalError("could not focus window: \(window.id)")
+    }
+
+    return .success(id: request.id, message: "ok")
   }
 
   /// Set the selected window's floating or tiled participation.
@@ -279,6 +306,34 @@ struct WindowCommandHandler {
     return window
   }
 
+  /// Resolve the closest non-minimized window on the currently visible Spaces.
+  private func directionalWindow(
+    from sourceWindow: Window,
+    in direction: CardinalDirection
+  ) -> Window? {
+    let windows = windowManager.allWindows()
+    let topology = spaceManager.snapshotTopology(for: windows.map(\.id))
+    let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
+    let framesByWindowID = Dictionary(
+      uniqueKeysWithValues: windows.compactMap { window -> (CGWindowID, CGRect)? in
+        guard !window.isMinimized else { return nil }
+        guard
+          let spaceIDs = topology.spaceIDsByWindowID[window.id],
+          !spaceIDs.isDisjoint(with: visibleSpaceIDs),
+          let frame = window.frame()
+        else {
+          return nil
+        }
+        return (window.id, frame)
+      }
+    )
+
+    guard let windowID = direction.neighbor(of: sourceWindow.id, in: framesByWindowID) else {
+      return nil
+    }
+    return windowManager.window(by: windowID)
+  }
+
   /// Parse an optional single window selector argument.
   private func parseSelector(_ args: [String], action: String) throws -> String? {
     guard args.count <= 1 else {
@@ -318,6 +373,25 @@ struct WindowCommandHandler {
     }
 
     return WindowGeometryChange(mode: mode, first: first, second: second)
+  }
+}
+
+/// Parsed target for focusing a selected or directional window.
+enum WindowFocusTarget: Equatable {
+  case selected(String?)
+  case direction(CardinalDirection)
+
+  /// Parse an optional window selector or cardinal direction.
+  init?(arguments: [String]) {
+    guard arguments.count <= 1 else { return nil }
+
+    if let argument = arguments.first,
+      let direction = CardinalDirection(rawValue: argument)
+    {
+      self = .direction(direction)
+    } else {
+      self = .selected(arguments.first)
+    }
   }
 }
 
