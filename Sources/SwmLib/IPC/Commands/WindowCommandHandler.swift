@@ -42,6 +42,8 @@ struct WindowCommandHandler {
         return try splitRatio(request)
       case "--toggle-split":
         return try toggleSplit(request)
+      case "--swap-split":
+        return try swapSplit(request)
       case "--move":
         return try performGeometryAction(request, action: "move") { window, change in
           switch change.mode {
@@ -193,6 +195,16 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest(
         "window has no retained dwindle split to toggle: \(window.id)"
       )
+    }
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Exchange the selected window's nearest dwindle sibling subtrees.
+  private func swapSplit(_ request: IPCRequest) throws -> IPCResponse {
+    let selector = try parseSelector(request.args, action: "swap-split")
+    let window = try selectedWindow(selector: selector)
+    guard tilingManager.swapDwindleSplit(for: window.id) else {
+      throw IPCCommandError.invalidRequest("window has no dwindle split to swap: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
   }

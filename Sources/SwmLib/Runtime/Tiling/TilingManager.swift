@@ -417,6 +417,23 @@ public final class TilingManager {
     return true
   }
 
+  /// Exchange the selected window's nearest dwindle sibling subtrees.
+  @discardableResult
+  func swapDwindleSplit(for windowID: CGWindowID) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard var state = layoutsByID[layoutID], state.selection == .dwindle, var tree = state.tree
+    else {
+      return false
+    }
+    guard tree.swapSplit(containing: windowID) else { return false }
+
+    state.tree = tree
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }

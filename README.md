@@ -71,6 +71,7 @@ a grid.
     swm -m window --swap-with-master [window-id|recent]
     swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
     swm -m window --toggle-split [window-id|recent]
+    swm -m window --swap-split [window-id|recent]
 
 Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
 Use `--focus left`, `right`, `up`, or `down` to focus the nearest non-minimized window on the
@@ -89,6 +90,8 @@ complete frames. `--swap-with-master` promotes the selected window in a master l
 to `0.1...0.9`.
 Use `--toggle-split` in a dwindle layout to toggle and retain the selected window's nearest split
 between columns and rows.
+Use `--swap-split` to exchange the two sibling subtrees at the selected window's nearest dwindle
+split.
 
 **Space**
 

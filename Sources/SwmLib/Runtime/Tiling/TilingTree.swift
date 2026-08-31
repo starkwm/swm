@@ -125,6 +125,37 @@ indirect enum TilingTree: Equatable {
     }
   }
 
+  /// Exchange the two subtrees of the nearest parent containing a window leaf.
+  mutating func swapSplit(containing windowID: CGWindowID) -> Bool {
+    switch self {
+    case .leaf:
+      return false
+    case .branch(var first, var second, let split):
+      let containsDirectLeaf: Bool
+      switch (first, second) {
+      case (.leaf(let candidate), _) where candidate == windowID,
+        (_, .leaf(let candidate)) where candidate == windowID:
+        containsDirectLeaf = true
+      default:
+        containsDirectLeaf = false
+      }
+
+      if containsDirectLeaf {
+        self = .branch(second, first, split: split)
+        return true
+      }
+      if first.swapSplit(containing: windowID) {
+        self = .branch(first, second, split: split)
+        return true
+      }
+      if second.swapSplit(containing: windowID) {
+        self = .branch(first, second, split: split)
+        return true
+      }
+      return false
+    }
+  }
+
   /// Return a copy whose branches dynamically resolve their split directions.
   func clearingSplitDirections() -> TilingTree {
     switch self {

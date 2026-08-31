@@ -123,4 +123,27 @@ struct TilingTreeTests {
     let missing = tree.toggleSplitDirection(containing: 99)
     #expect(missing == false)
   }
+
+  @Test("swapSplit: exchanges the nearest parent subtrees")
+  func swapSplitExchangesNearestParentSubtrees() {
+    var tree = TilingTree.branch(
+      .leaf(1),
+      .branch(.leaf(2), .leaf(3)),
+      split: TilingSplit(ratio: 0.7, direction: .vertical)
+    )
+
+    let swapped = tree.swapSplit(containing: 2)
+
+    #expect(swapped)
+    #expect(
+      tree
+        == .branch(
+          .leaf(1),
+          .branch(.leaf(3), .leaf(2)),
+          split: TilingSplit(ratio: 0.7, direction: .vertical)
+        )
+    )
+    let missing = tree.swapSplit(containing: 99)
+    #expect(missing == false)
+  }
 }
