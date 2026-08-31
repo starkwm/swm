@@ -223,8 +223,8 @@ struct SpaceCommandHandlerTests {
     IPCRequest(id: "request-id", domain: .space, command: command, args: args)
   }
 
-  private func layoutID(_ spaceID: UInt64) -> SpaceLayoutID {
-    SpaceLayoutID(spaceID: spaceID, displayID: "display")
+  private func layoutID(_ spaceID: UInt64) -> TilingLayoutID {
+    TilingLayoutID(spaceID: spaceID, displayID: "display")
   }
 
   private func handler(spaceManager: SpaceManager) -> SpaceCommandHandler {

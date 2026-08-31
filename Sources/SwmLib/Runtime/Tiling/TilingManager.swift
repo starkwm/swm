@@ -16,8 +16,8 @@ public final class TilingManager {
   private var defaultMasterPlacement = MasterPlacement.left
   private var defaultPreserveSplitDirections = false
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
-  private var layoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
-  private var layoutsByID = [SpaceLayoutID: SpaceLayoutState]()
+  private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
+  private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
 
   /// Create a manager backed by the live runtime models.
   public convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
@@ -82,13 +82,13 @@ public final class TilingManager {
       )
     }
 
-    var retainedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
-    var omittedWindowIDsByLayoutID = [SpaceLayoutID: Set<CGWindowID>]()
-    var newLayoutIDByWindowID = [CGWindowID: SpaceLayoutID]()
+    var retainedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
+    var omittedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
+    var newLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
 
     for window in windows {
       let disposition = WindowEligibilityPolicy.disposition(for: window, topology: topology)
-      let placement: (layoutID: SpaceLayoutID, isOmitted: Bool)
+      let placement: (layoutID: TilingLayoutID, isOmitted: Bool)
 
       switch disposition {
       case .tiled:
@@ -498,7 +498,7 @@ public final class TilingManager {
   }
 
   /// Calculate the current plan for an enabled, visible layout without applying frames.
-  func layoutPlan(for layoutID: SpaceLayoutID) -> TilingLayoutPlan {
+  func layoutPlan(for layoutID: TilingLayoutID) -> TilingLayoutPlan {
     guard var state = layoutsByID[layoutID] else { return .unknownSpace }
     guard state.selection != .float else { return .disabled }
     guard let topology = currentTopology else { return .unknownSpace }
@@ -542,7 +542,7 @@ public final class TilingManager {
   }
 
   /// Apply actionable plans for a stable sequence of layouts.
-  private func applyPlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+  private func applyPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     for layoutID in layoutIDs {
       guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
       frameReconciler?.apply(frames)
@@ -551,16 +551,16 @@ public final class TilingManager {
 
   /// Create empty layout state, inheriting per-Space controls when a display changes.
   private func initialState(
-    for layoutID: SpaceLayoutID,
-    previousLayoutsByID: [SpaceLayoutID: SpaceLayoutState]
-  ) -> SpaceLayoutState {
+    for layoutID: TilingLayoutID,
+    previousLayoutsByID: [TilingLayoutID: TilingLayoutState]
+  ) -> TilingLayoutState {
     let inheritedState =
       previousLayoutsByID
       .filter { $0.key.spaceID == layoutID.spaceID }
       .min { $0.key.displayID < $1.key.displayID }?
       .value
 
-    return SpaceLayoutState(
+    return TilingLayoutState(
       selection: inheritedState?.selection ?? defaultSelection,
       masterRatio: inheritedState?.masterRatio ?? defaultMasterRatio,
       masterPlacement: inheritedState?.masterPlacement ?? defaultMasterPlacement,
@@ -573,7 +573,7 @@ public final class TilingManager {
   }
 
   /// Return stable layout IDs for a Space.
-  private func layoutIDs(for spaceID: UInt64) -> [SpaceLayoutID] {
+  private func layoutIDs(for spaceID: UInt64) -> [TilingLayoutID] {
     sorted(layoutsByID.keys.filter { $0.spaceID == spaceID })
   }
 
@@ -581,8 +581,8 @@ public final class TilingManager {
   private func swapFloatingWindow(
     _ windowID: CGWindowID,
     in direction: CardinalDirection,
-    layoutID: SpaceLayoutID,
-    state: SpaceLayoutState
+    layoutID: TilingLayoutID,
+    state: TilingLayoutState
   ) -> Bool {
     guard currentTopology?.visibleLayoutIDs.contains(layoutID) == true else { return false }
     guard let frameReconciler else { return false }
@@ -614,7 +614,7 @@ public final class TilingManager {
   }
 
   /// Apply fresh plans only where the master settings affect geometry.
-  private func applyMasterPlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+  private func applyMasterPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .master })
   }
 
@@ -625,12 +625,12 @@ public final class TilingManager {
   }
 
   /// Apply fresh plans only where dwindle settings affect geometry.
-  private func applyDwindlePlans(for layoutIDs: some Sequence<SpaceLayoutID>) {
+  private func applyDwindlePlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .dwindle })
   }
 
   /// Sort composite IDs for deterministic reconciliation and frame application.
-  private func sorted(_ layoutIDs: some Sequence<SpaceLayoutID>) -> [SpaceLayoutID] {
+  private func sorted(_ layoutIDs: some Sequence<TilingLayoutID>) -> [TilingLayoutID] {
     layoutIDs.sorted {
       if $0.spaceID != $1.spaceID {
         return $0.spaceID < $1.spaceID

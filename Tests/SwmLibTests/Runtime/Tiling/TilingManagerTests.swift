@@ -784,8 +784,8 @@ struct TilingManagerTests {
 private func layoutID(
   _ spaceID: UInt64,
   displayID: String = "display"
-) -> SpaceLayoutID {
-  SpaceLayoutID(spaceID: spaceID, displayID: displayID)
+) -> TilingLayoutID {
+  TilingLayoutID(spaceID: spaceID, displayID: displayID)
 }
 
 private func window(

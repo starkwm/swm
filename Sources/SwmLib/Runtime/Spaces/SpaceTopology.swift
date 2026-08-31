@@ -15,7 +15,7 @@ struct SpaceTopology: Equatable {
   let displaysByID: [String: SpaceTopologyDisplay]
 
   /// Every normal Space and physical display pair available for tiling.
-  var layoutIDs: Set<SpaceLayoutID> {
+  var layoutIDs: Set<TilingLayoutID> {
     Set(
       spacesByID.values
         .filter { $0.type == .normal }
@@ -24,10 +24,10 @@ struct SpaceTopology: Equatable {
   }
 
   /// Every visible normal Space and physical display pair available for tiling.
-  var visibleLayoutIDs: Set<SpaceLayoutID> {
+  var visibleLayoutIDs: Set<TilingLayoutID> {
     Set(
       visibleSpaceIDByDisplayID.flatMap { displayID, spaceID in
-        guard spacesByID[spaceID]?.type == .normal else { return [SpaceLayoutID]() }
+        guard spacesByID[spaceID]?.type == .normal else { return [TilingLayoutID]() }
         return layoutIDs(spaceID: spaceID, windowServerDisplayID: displayID)
       }
     )
@@ -44,25 +44,25 @@ struct SpaceTopology: Equatable {
   }
 
   /// Resolve an eligible window to its Space and physical display layout.
-  func layoutID(for windowID: CGWindowID, on displayID: String?) -> SpaceLayoutID? {
+  func layoutID(for windowID: CGWindowID, on displayID: String?) -> TilingLayoutID? {
     guard let displayID, displaysByID[displayID] != nil else { return nil }
     let normalSpaceIDs = normalSpaceIDs(for: windowID)
     guard normalSpaceIDs.count == 1, let spaceID = normalSpaceIDs.first else { return nil }
-    let layoutID = SpaceLayoutID(spaceID: spaceID, displayID: displayID)
+    let layoutID = TilingLayoutID(spaceID: spaceID, displayID: displayID)
     return layoutIDs.contains(layoutID) ? layoutID : nil
   }
 
   private func layoutIDs(
     spaceID: UInt64,
     windowServerDisplayID: String
-  ) -> [SpaceLayoutID] {
+  ) -> [TilingLayoutID] {
     if displaysByID[windowServerDisplayID] != nil {
-      return [SpaceLayoutID(spaceID: spaceID, displayID: windowServerDisplayID)]
+      return [TilingLayoutID(spaceID: spaceID, displayID: windowServerDisplayID)]
     }
 
     // Without separate Spaces, WindowServer reports one logical display group for every screen.
     guard windowServerDisplayIDs == [windowServerDisplayID] else { return [] }
-    return displaysByID.keys.map { SpaceLayoutID(spaceID: spaceID, displayID: $0) }
+    return displaysByID.keys.map { TilingLayoutID(spaceID: spaceID, displayID: $0) }
   }
 }
 
