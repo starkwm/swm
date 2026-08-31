@@ -324,6 +324,83 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("directional swap: exchanges neighbouring windows in master")
+  func directionalSwapExchangesMasterNeighbors() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.swapWindow(2, in: .down))
+    #expect(manager.swapWindow(2, in: .down) == false)
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 400),
+            2: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("directional swap: exchanges neighbouring windows in dwindle")
+  func directionalSwapExchangesDwindleNeighbors() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.dwindle, for: 10)
+
+    #expect(manager.swapWindow(2, in: .down))
+    #expect(manager.swapWindow(99, in: .left) == false)
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 400),
+            2: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("directional swap: exchanges complete frames in a floating layout")
+  func directionalSwapExchangesFloatingFrames() {
+    var framesByWindowID: [CGWindowID: CGRect] = [
+      1: CGRect(x: 0, y: 0, width: 400, height: 300),
+      2: CGRect(x: 500, y: 100, width: 300, height: 200),
+    ]
+    let frameReconciler = WindowFrameReconciler(
+      currentFrame: { framesByWindowID[$0] },
+      frameMutation: { windowID, targetFrame, _ in
+        framesByWindowID[windowID] = targetFrame
+        return .success
+      }
+    )
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2)],
+      memberships: [1: [10], 2: [10]],
+      frameReconciler: frameReconciler
+    )
+    manager.start()
+
+    #expect(manager.swapWindow(1, in: .right))
+    #expect(
+      framesByWindowID
+        == [
+          1: CGRect(x: 500, y: 100, width: 300, height: 200),
+          2: CGRect(x: 0, y: 0, width: 400, height: 300),
+        ]
+    )
+    #expect(manager.swapWindow(1, in: .right) == false)
+  }
+
   @Test("dwindle controls: adjust a window's nearest split")
   func dwindleControlsAdjustNearestSplit() {
     let manager = makeManager(
@@ -467,19 +544,22 @@ struct TilingManagerTests {
   private func makeManager(
     windows: [TilingWindowSnapshot] = [window(id: 1)],
     memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
-    visibleSpaceID: UInt64 = 10
+    visibleSpaceID: UInt64 = 10,
+    frameReconciler: WindowFrameReconciler? = nil
   ) -> TilingManager {
     makeManager(
       windows: { windows },
       memberships: { memberships },
-      visibleSpaceID: visibleSpaceID
+      visibleSpaceID: visibleSpaceID,
+      frameReconciler: frameReconciler
     )
   }
 
   private func makeManager(
     windows: @escaping () -> [TilingWindowSnapshot],
     memberships: @escaping () -> [CGWindowID: Set<UInt64>],
-    visibleSpaceID: UInt64 = 10
+    visibleSpaceID: UInt64 = 10,
+    frameReconciler: WindowFrameReconciler? = nil
   ) -> TilingManager {
     let spaceManager = SpaceManager(activeSpaceID: nil)
     return TilingManager(
@@ -502,7 +582,8 @@ struct TilingManagerTests {
           )
         )
       },
-      spaceManager: spaceManager
+      spaceManager: spaceManager,
+      frameReconciler: frameReconciler
     )
   }
 

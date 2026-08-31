@@ -154,13 +154,21 @@ struct WindowCommandHandlerTests {
     let handler = handler()
     let layout = handler.dispatch(request(command: "--layout", args: ["stack"]))
     let ratio = handler.dispatch(request(command: "--split-ratio", args: ["middle"]))
-    let swap = handler.dispatch(
+    let directionalSwap = handler.dispatch(request(command: "--swap", args: ["sideways"]))
+    let masterSwap = handler.dispatch(
       request(command: "--swap-with-master", args: ["1", "extra"])
     )
 
     #expect(layout.ok == false && layout.message == "invalid window layout: stack")
     #expect(ratio.ok == false && ratio.message == "invalid window split-ratio value: middle")
-    #expect(swap.ok == false && swap.message == "invalid window swap-with-master arguments")
+    #expect(
+      directionalSwap.ok == false
+        && directionalSwap.message == "invalid window swap direction: sideways"
+    )
+    #expect(
+      masterSwap.ok == false
+        && masterSwap.message == "invalid window swap-with-master arguments"
+    )
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {

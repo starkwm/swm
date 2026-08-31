@@ -75,6 +75,15 @@ final class WindowFrameReconciler {
     }
   }
 
+  /// Return current frames for the requested windows when Accessibility can read them.
+  func frames(for windowIDs: some Sequence<CGWindowID>) -> [CGWindowID: CGRect] {
+    var framesByWindowID = [CGWindowID: CGRect]()
+    for windowID in windowIDs {
+      framesByWindowID[windowID] = currentFrame(windowID)
+    }
+    return framesByWindowID
+  }
+
   /// Return whether a frame notification belongs to a pending SWM mutation.
   ///
   /// Intermediate move or resize notifications remain suppressed until the target frame arrives
