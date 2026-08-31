@@ -160,6 +160,9 @@ struct WindowCommandHandlerTests {
     let masterSwap = handler.dispatch(
       request(command: "--swap-with-master", args: ["1", "extra"])
     )
+    let masterFocus = handler.dispatch(
+      request(command: "--focus-master", args: ["1", "extra"])
+    )
 
     #expect(layout.ok == false && layout.message == "invalid window layout: stack")
     #expect(ratio.ok == false && ratio.message == "invalid window split-ratio value: middle")
@@ -175,6 +178,10 @@ struct WindowCommandHandlerTests {
     #expect(
       masterSwap.ok == false
         && masterSwap.message == "invalid window swap-with-master arguments"
+    )
+    #expect(
+      masterFocus.ok == false
+        && masterFocus.message == "invalid window focus-master arguments"
     )
   }
 

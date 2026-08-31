@@ -324,6 +324,23 @@ struct TilingManagerTests {
     )
   }
 
+  @Test("master controls: find the first available master window")
+  func masterControlsFindAvailableMasterWindow() {
+    let manager = makeManager(
+      windows: [window(id: 1, isMinimized: true), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.masterWindowID(inLayoutContaining: 3) == 2)
+    #expect(manager.setWindowLayout(.float, for: 2))
+    #expect(manager.masterWindowID(inLayoutContaining: 3) == 3)
+
+    manager.setLayout(.dwindle, for: 10)
+    #expect(manager.masterWindowID(inLayoutContaining: 3) == nil)
+  }
+
   @Test("directional swap: exchanges neighbouring windows in master")
   func directionalSwapExchangesMasterNeighbors() {
     let manager = makeManager(

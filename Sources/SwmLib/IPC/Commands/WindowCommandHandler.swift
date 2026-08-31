@@ -38,6 +38,8 @@ struct WindowCommandHandler {
         return try swapCycle(request)
       case "--swap-with-master":
         return try swapWithMaster(request)
+      case "--focus-master":
+        return try focusMaster(request)
       case "--split-ratio":
         return try splitRatio(request)
       case "--toggle-split":
@@ -170,6 +172,21 @@ struct WindowCommandHandler {
     let window = try selectedWindow(selector: selector)
     guard tilingManager.swapWindowWithMaster(window.id) else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
+    }
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Focus the master window in the selected window's layout.
+  private func focusMaster(_ request: IPCRequest) throws -> IPCResponse {
+    let selector = try parseSelector(request.args, action: "focus-master")
+    let window = try selectedWindow(selector: selector)
+    guard let masterWindowID = tilingManager.masterWindowID(inLayoutContaining: window.id),
+      let masterWindow = windowManager.window(by: masterWindowID)
+    else {
+      throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
+    }
+    guard masterWindow.focus() else {
+      throw IPCCommandError.internalError("could not focus window: \(masterWindow.id)")
     }
     return .success(id: request.id, message: "ok")
   }
