@@ -2,187 +2,278 @@
 
 [![CI](https://github.com/starkwm/swm/actions/workflows/ci.yml/badge.svg)](https://github.com/starkwm/swm/actions/workflows/ci.yml)
 
-**Stark Window Manager for macOS**
+Stark Window Manager for macOS.
 
-`swm` is inspired by [Yabai][yabai] as a client and daemon program for managing windows on macOS. While `swm` doesn't do the tiling window management, it uses similar methods for maintaining state for managing windows.
+`swm` is a command-line window manager with optional automatic tiling. One `swm` process runs as a daemon and tracks applications, displays, Spaces, and windows. Other invocations send commands to that daemon.
 
-[yabai]: https://github.com/asmvik/yabai
+It is inspired by [yabai](https://github.com/asmvik/yabai) and replaces the JavaScript configuration used by its predecessor, [Stark](https://github.com/starkwm/stark), with a small shell-based command interface.
 
-My original window manager for macOS was [Stark][stark], which I started back at the start of 2016. I wanted to move away from the JavaScript based configuration and having to maintain a public API mapping to Swift code. I ended up slowly writing this project from scratch.
+## Requirements
 
-[stark]: https://github.com/starkwm/stark
+- macOS 26 or later
+- Accessibility permission for `swm`
+- Xcode 26 or later when building from source
 
-## Installation
+`swm` uses private macOS frameworks. A macOS update may change behavior that it relies on.
 
-The recommended way to get `swm` installed is using [Homebrew](https://brew.sh).
+## Install
 
-    brew tap starkwm/formulae
-    brew install starkwm/formulae/swm
+Install the latest release with Homebrew:
 
-If installed with Homebrew, you can use `brew services` to manage running `swm` in the background.
+```sh
+brew tap starkwm/formulae
+brew install starkwm/formulae/swm
+```
 
-Alternatively you can build from source, which requires the latest Xcode to be installed.
+Start it now and at login:
 
-    git clone git@github.com:starkwm/swm.git
-    cd swm
-    make # output is in .build/debug
+```sh
+brew services start swm
+```
 
-If you build from source, you'll need to create a Launch Agent `.plist` file to run `swm` in the background.
+Or build from source:
 
-## Usage
+```sh
+git clone https://github.com/starkwm/swm.git
+cd swm
+make build
+```
 
-`swm` runs as a daemon. Commands are sent to the daemon with `-m`/`--message`.
+The development binary is written to `.build/debug/swm`. Run it once and grant the requested Accessibility permission:
 
-    swm --help
-    swm --version
+```sh
+.build/debug/swm
+```
 
-**Query**
+A source build is not installed as a background service automatically.
 
-Use query commands to inspect the tracked displays, spaces, and windows. Add one selector to filter the result.
+## How commands work
 
-    swm -m query --displays
-    swm -m query --spaces
-    swm -m query --windows
-    swm -m query --displays [--display <display-index>|--space <space-index>|--window <window-id>]
-    swm -m query --spaces [--display <display-index>|--space <space-index>|--window <window-id>]
-    swm -m query --windows [--display <display-index>|--space <space-index>|--window <window-id>]
-    swm -m query --display [display-index]
-    swm -m query --space [space-index]
-    swm -m query --window <window-id>
+Run `swm` without `--message` to start the daemon:
 
-Selector-only queries default to the matching result type: `--display` queries displays, `--space` queries spaces, and `--window` queries windows. Display indexes are one-based and sorted by display arrangement.
+```sh
+swm [--config <path>] [--log-level <level>]
+```
 
-**Window**
+Send a command to the running daemon with `--message` or `-m`:
 
-Use window commands to focus, minimize, move, resize, control automatic tiling, or place windows on
-a grid.
+```sh
+swm -m <domain> <command> [arguments]
+```
 
-    swm -m window --focus [window-id|recent|left|right|up|down]
-    swm -m window --minimize [window-id|recent]
-    swm -m window --unminimize [window-id|recent]
-    swm -m window --move [window-id|recent] abs:<x>:<y>
-    swm -m window --resize [window-id|recent] abs:<width>:<height>
-    swm -m window --grid [window-id|recent] <columns>:<rows>:<x>:<y>:<width>:<height>
-    swm -m window --display [window-id|recent] <next|prev|display-index>
-    swm -m window --layout [window-id|recent] <float|tile|toggle>
-    swm -m window --cycle <next|prev>
-    swm -m window --swap-cycle <next|prev>
-    swm -m window --swap [window-id|recent] <left|right|up|down>
-    swm -m window --swap-with-master [window-id|recent]
-    swm -m window --focus-master [window-id|recent]
-    swm -m window --split-ratio [window-id|recent] <abs|rel>:<ratio>
-    swm -m window --toggle-split [window-id|recent]
-    swm -m window --swap-split [window-id|recent]
+The available domains are `query`, `window`, `space`, `config`, and `signal`. Commands print their result to standard output and return a non-zero exit status on failure.
 
-Use `rel:<x>:<y>` with `--move` or `rel:<width>:<height>` with `--resize` for relative changes.
-Use `--focus left`, `right`, `up`, or `down` to focus the nearest non-minimized window on the
-currently visible Spaces in that direction.
-Use `--display next` to toggle the focused window between two attached displays. Numeric display targets are one-based and sorted by display arrangement.
-Use `--layout float` to remove one window from automatic tiling, `--layout tile` to return it, or
-`--layout toggle` to alternate between the two.
-Use `--cycle next` or `--cycle prev` to focus another available window from the currently focused
-window in stable layout order, wrapping at either end.
-Use `--swap-cycle` to exchange the focused tiled window with its neighbour in stable layout order,
-also wrapping at either end.
-`--swap` exchanges the selected window with its nearest neighbour to the left, right, up, or down.
-In master and dwindle layouts it swaps their tiled positions; in a floating layout it swaps their
-complete frames. `--swap-with-master` promotes the selected window in a master layout. In dwindle,
-`--split-ratio rel:0.05` grows the selected window's side of its nearest split; ratios are clamped
-to `0.1...0.9`.
-Use `--toggle-split` in a dwindle layout to toggle and retain the selected window's nearest split
-between columns and rows.
-Use `--swap-split` to exchange the two sibling subtrees at the selected window's nearest dwindle
-split.
-Use `--focus-master` to focus the first available window in a master layout.
+Other top-level options:
 
-**Space**
+```text
+-h, --help                 Show help
+-v, --version              Show the version
+-c, --config <path>        Use a different startup configuration file
+    --log-level <level>    debug, info, warn, or error (default: info)
+```
 
-Use space commands to select floating or automatic layout and change settings for the active space.
+Window commands use the focused window when `[window]` is omitted. Supply a numeric window ID, or `recent` for the previously focused window.
 
-    swm -m space --layout <float|master|monocle|dwindle>
-    swm -m space --master-ratio <abs|rel>:<ratio>
-    swm -m space --master-placement <left|right|top|bottom|next|prev>
-    swm -m space --preserve-split <on|off>
-    swm -m space --padding abs:<top>:<right>:<bottom>:<left>
-    swm -m space --gap abs:<number>
+## Query state
 
-Use `rel:` instead of `abs:` for relative padding and gap changes.
+Queries return JSON. Query all tracked objects of one type:
 
-Spaces use unmanaged floating windows by default. Select the ordered master layout with
-`swm -m space --layout master`, the tree-backed dwindle layout with
-`swm -m space --layout dwindle`, the full-bounds overlapping monocle layout with
-`swm -m space --layout monocle`, or stop automatic tiling with `swm -m space --layout float`.
-Master ratio changes are clamped to `0.1...0.9`. Master placement selects which edge contains the
-master pane; `next` and `prev` cycle clockwise or counter-clockwise. In dwindle, new windows split
-the focused tiled window; closing a window collapses its
-sibling branch. Each split follows the longest edge of its current bounds unless
-`--preserve-split on` retains the direction selected when that branch is first laid out. Each
-physical display is tiled independently, whether macOS's
-**Displays have separate Spaces** setting is enabled or disabled. Space commands apply the selected
-layout and settings to every display showing the active Space. Moving a window to another display
-moves it into that display's layout; moving or resizing it manually snaps it back into place.
+```sh
+swm -m query --displays
+swm -m query --spaces
+swm -m query --windows
+```
 
-**Config**
+Add at most one selector to filter the result:
 
-Use config commands to update defaults for all spaces.
+```sh
+swm -m query --windows --display 1
+swm -m query --windows --space 0
+swm -m query --windows --window 12345
+```
 
-    swm -m config layout <float|master|monocle|dwindle>
-    swm -m config master-ratio <ratio>
-    swm -m config master-placement <left|right|top|bottom>
-    swm -m config preserve-split <on|off>
-    swm -m config window-gap <number>
-    swm -m config top-padding <number>
-    swm -m config right-padding <number>
-    swm -m config bottom-padding <number>
-    swm -m config left-padding <number>
+A selector can be used on its own. Without a value it selects the focused object:
 
-**Signal**
+```sh
+swm -m query --display [display-index]
+swm -m query --space [space-index]
+swm -m query --window [window-id]
+```
 
-Use signal commands to run shell actions after observed runtime events.
+Display indexes are one-based and follow the physical display arrangement. Space indexes are zero-based. A filtered query returns one JSON object when the selector identifies the same type as the query; otherwise it returns an array of related objects.
 
-    swm -m signal --add event=window-focused action='echo $SWM_WINDOW_ID'
-    swm -m signal --add event=window-created action='echo "$SWM_PROCESS_ID $SWM_WINDOW_ID"' label=created app=Safari
-    swm -m signal --list
-    swm -m signal --remove created
+## Manage windows
 
-Signal actions run asynchronously through `/usr/bin/env sh -c`. Event values are exposed as
-`SWM_*` environment variables, such as `SWM_PROCESS_ID`, `SWM_WINDOW_ID`, `SWM_SPACE_ID`,
-`SWM_RECENT_SPACE_ID`, `SWM_DISPLAY_ID`, and `SWM_RECENT_DISPLAY_ID`.
-Up to four actions run concurrently and 128 may wait; additional actions are dropped with a
-warning instead of creating unbounded processes.
+### Focus and minimize
 
-**Keyboard Shortcuts**
+```sh
+swm -m window --focus [window|recent|left|right|up|down]
+swm -m window --minimize [window|recent]
+swm -m window --unminimize [window|recent]
+```
 
-`swm` does not bind keyboard shortcuts itself. Use a key binding daemon like [skbd][skbd] to run `swm` commands from shortcuts.
+Directional focus chooses the nearest non-minimized window on the currently visible Spaces.
 
-    hyper + h: swm -m window --grid 2:1:0:0:1:1
-    hyper + l: swm -m window --grid 2:1:1:0:1:1
-    hyper + f: swm -m window --grid 1:1:0:0:1:1
-    hyper + r: swm -m window --focus recent
+### Move, resize, and place
 
-[skbd]: https://github.com/starkwm/skbd
+```sh
+swm -m window --move [window|recent] <abs|rel>:<x>:<y>
+swm -m window --resize [window|recent] <abs|rel>:<width>:<height>
+swm -m window --grid [window|recent] <columns>:<rows>:<x>:<y>:<width>:<height>
+swm -m window --display [window|recent] <next|prev|display-index>
+```
 
-## Configuration
+`abs` sets coordinates or dimensions; `rel` adds signed values to the current frame. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
 
-Configuration is optional. Without a configuration file, `swm` starts with built-in defaults. If `~/.config/swm/swmrc` exists, `swm` executes it at startup. Use `--config <path>` to execute a different file; an explicitly selected file must exist. Configuration files should be executable shell scripts and can call the `swm` binary to configure options.
+```sh
+swm -m window --grid 2:1:1:0:1:1
+```
 
-**Window Gaps**
+Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 
-You can use `swm -m config window-gap <number>` to configure the size of the gap between windows, when using the `-m window --grid` command.
+### Control tiling
 
-**Automatic Tiling Layout**
+```sh
+swm -m window --layout [window|recent] <float|tile|toggle>
+swm -m window --cycle <next|prev>
+swm -m window --swap-cycle <next|prev>
+swm -m window --swap [window|recent] <left|right|up|down>
+swm -m window --swap-with-master [window|recent]
+swm -m window --focus-master [window|recent]
+swm -m window --split-ratio [window|recent] <abs|rel>:<ratio>
+swm -m window --toggle-split [window|recent]
+swm -m window --swap-split [window|recent]
+```
 
-Use `swm -m config layout <float|master|monocle|dwindle>` to select floating or automatic layout for every Space. The selection also applies to Spaces created later while the daemon is running.
+- `--layout` floats a window, returns it to tiling, or toggles its state.
+- `--cycle` focuses the next or previous window in stable layout order.
+- `--swap-cycle` swaps the focused tiled window with its ordered neighbour.
+- `--swap` swaps tiled positions, or complete frames in a floating layout.
+- `--swap-with-master` promotes a window in a master layout.
+- `--focus-master` focuses the master window for the selected window's layout.
+- `--split-ratio` changes the nearest dwindle split; ratios are clamped to `0.1...0.9`.
+- `--toggle-split` switches the nearest retained dwindle split between columns and rows.
+- `--swap-split` exchanges the two subtrees at the nearest dwindle split.
 
-Use `master-ratio`, `master-placement`, and `preserve-split` to set the corresponding automatic
-layout defaults for every current and future Space. Per-Space commands override those defaults for
-the active Space during the daemon run.
+## Configure the active Space
 
-**Padding**
+Space commands affect the active Space for the current daemon run:
 
-You can use the following commands to configure the padding around each edge of a macOS space.
+```sh
+swm -m space --layout <float|master|monocle|dwindle>
+swm -m space --master-ratio <abs|rel>:<ratio>
+swm -m space --master-placement <left|right|top|bottom|next|prev>
+swm -m space --preserve-split <on|off>
+swm -m space --padding <abs|rel>:<top>:<bottom>:<left>:<right>
+swm -m space --gap <abs|rel>:<points>
+```
 
-- `swm -m config top-padding <number>`
-- `swm -m config right-padding <number>`
-- `swm -m config bottom-padding <number>`
-- `swm -m config left-padding <number>`
+Padding, gaps, and ratios are clamped to valid values. Space settings apply to every display showing that Space.
+
+The layouts are:
+
+- `float`: do not arrange windows automatically.
+- `master`: place one window at the selected edge and the others in a stack.
+- `monocle`: overlap every tiled window across the available bounds.
+- `dwindle`: recursively split the available bounds around the focused window.
+
+In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `--preserve-split on` retains each branch's chosen direction so it can be changed with `window --toggle-split`.
+
+Each physical display has an independent tiling layout, including when macOS's **Displays have separate Spaces** setting is disabled. Moving a tiled window between displays moves it into the destination layout. Manually moving or resizing a tiled window causes it to snap back into place.
+
+## Set global defaults
+
+Config commands update every current Space and become the defaults for Spaces discovered later:
+
+```sh
+swm -m config layout <float|master|monocle|dwindle>
+swm -m config master-ratio <ratio>
+swm -m config master-placement <left|right|top|bottom>
+swm -m config preserve-split <on|off>
+swm -m config window-gap <points>
+swm -m config top-padding <points>
+swm -m config bottom-padding <points>
+swm -m config left-padding <points>
+swm -m config right-padding <points>
+```
+
+Built-in defaults are floating layout, `0.5` master ratio, master on the left, split preservation off, and zero padding and gaps. Negative padding or gap values are clamped to zero.
+
+## Configuration file
+
+At startup, the daemon executes `~/.config/swm/swmrc` if it exists. Use `--config <path>` to select another file; an explicitly selected file must exist. `swm` makes the file owner-executable when needed and stops if it exits unsuccessfully.
+
+The file can be any executable script. A shell script is the simplest option:
+
+```sh
+#!/bin/sh
+
+swm -m config layout dwindle
+swm -m config window-gap 8
+swm -m config top-padding 8
+swm -m config bottom-padding 8
+swm -m config left-padding 8
+swm -m config right-padding 8
+```
+
+## Run commands on events
+
+Signals run shell actions after matching runtime events:
+
+```sh
+swm -m signal --add event=window-focused action='echo "$SWM_WINDOW_ID"'
+swm -m signal --add event=window-created app='^Safari$' label=safari-created action='echo "$SWM_WINDOW_ID"'
+swm -m signal --list
+swm -m signal --remove <index|label>
+```
+
+`--add` requires `event` and `action`. It also accepts:
+
+- `label=<text>`: unique name used by `--remove`.
+- `app=<regex>` and `title=<regex>`: require a regular-expression match.
+- `app!=<regex>` and `title!=<regex>`: require the value not to match.
+- `active=yes|no`: filter application and window events by active or focused state.
+
+Supported events:
+
+- `application-launched`
+- `application-terminated`
+- `application-front-switched`
+- `window-created`
+- `window-destroyed`
+- `window-focused`
+- `window-moved`
+- `window-resized`
+- `window-minimized`
+- `window-deminimized`
+- `space-changed`
+- `display-changed`
+- `display-added`
+- `display-removed`
+- `display-moved`
+- `display-resized`
+
+Actions run asynchronously through `/usr/bin/env sh -c`. Depending on the event, the action receives these environment variables:
+
+- `SWM_PROCESS_ID`
+- `SWM_WINDOW_ID`
+- `SWM_SPACE_ID`
+- `SWM_SPACE_INDEX`
+- `SWM_RECENT_SPACE_ID`
+- `SWM_RECENT_SPACE_INDEX`
+- `SWM_DISPLAY_ID`
+- `SWM_RECENT_DISPLAY_ID`
+- `SWM_EVENT_DISPLAY_ID`
+
+Signal registrations exist only for the current daemon run, so put persistent registrations in `swmrc`.
+
+## Keyboard shortcuts
+
+`swm` does not bind keys. Use a hotkey daemon such as [skbd](https://github.com/starkwm/skbd) to invoke its commands:
+
+```text
+hyper + h: swm -m window --grid 2:1:0:0:1:1
+hyper + l: swm -m window --grid 2:1:1:0:1:1
+hyper + f: swm -m window --grid 1:1:0:0:1:1
+hyper + r: swm -m window --focus recent
+```
