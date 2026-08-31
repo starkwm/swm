@@ -1,67 +1,76 @@
-/// Handles IPC commands that update the active space.
+/// Handles IPC commands that update the selected space.
 @MainActor
 struct SpaceCommandHandler {
   private let spaces: Spaces
   private let tiling: Tiling
+  private let spaceIDProvider: () -> [UInt64]
 
   /// Create a space command handler backed by space and tiling services.
-  init(spaces: Spaces, tiling: Tiling) {
+  init(
+    spaces: Spaces,
+    tiling: Tiling,
+    spaceIDProvider: @escaping () -> [UInt64] = { Spaces.all().map(\.id) }
+  ) {
     self.spaces = spaces
     self.tiling = tiling
+    self.spaceIDProvider = spaceIDProvider
   }
 
-  /// Dispatch a space IPC request to the matching active-space update.
+  /// Dispatch a space IPC request to the matching selected-space update.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
+      let operation: (IPCRequest, UInt64) throws -> IPCResponse
+
       switch request.command {
       case "--layout":
-        return try layout(request)
+        operation = layout
       case "--master-ratio":
-        return try masterRatio(request)
+        operation = masterRatio
       case "--master-placement":
-        return try masterPlacement(request)
+        operation = masterPlacement
       case "--preserve-split":
-        return try preserveSplitDirections(request)
+        operation = preserveSplitDirections
       case "--padding":
-        return try padding(request)
+        operation = padding
       case "--gap":
-        return try gap(request)
+        operation = gap
       default:
         throw IPCCommandError.unsupportedCommand("unsupported space command: \(request.command)")
       }
+
+      let (targetedRequest, spaceID) = try targetedRequest(request)
+      return try operation(targetedRequest, spaceID)
     }
   }
 
-  /// Set or adjust the master pane ratio for the active Space.
-  private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
+  /// Set or adjust the master pane ratio for the selected Space.
+  private func masterRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space master-ratio").requiredValue()
     guard let change = CommandValueParser.ratioChange(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(argument)")
     }
 
-    let spaceID = try currentSpaceID()
     guard tiling.changeMasterRatio(change, for: spaceID) else {
-      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
     return .success(id: request.id, message: "ok")
   }
 
-  /// Set or cycle the master pane edge for the active Space.
-  private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
+  /// Set or cycle the master pane edge for the selected Space.
+  private func masterPlacement(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(
       request.args,
       context: "space master-placement"
     ).requiredValue()
-    let spaceID = try currentSpaceID()
     let placement: MasterPlacement
     if let selectedPlacement = MasterPlacement(rawValue: argument) {
       guard tiling.setMasterPlacement(selectedPlacement, for: spaceID) else {
-        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+        throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
       }
       placement = selectedPlacement
     } else if let direction = CycleDirection(rawValue: argument) {
       guard let cycledPlacement = tiling.cycleMasterPlacement(direction, for: spaceID) else {
-        throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+        throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
       }
       placement = cycledPlacement
     } else {
@@ -70,8 +79,9 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: placement.rawValue)
   }
 
-  /// Set whether dwindle branches preserve their resolved direction on the active Space.
-  private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
+  /// Set whether dwindle branches preserve their resolved direction on the selected Space.
+  private func preserveSplitDirections(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse
+  {
     let argument = try IPCArguments(
       request.args,
       context: "space preserve-split"
@@ -80,36 +90,32 @@ struct SpaceCommandHandler {
       throw IPCCommandError.invalidRequest("invalid space preserve-split value: \(argument)")
     }
 
-    let spaceID = try currentSpaceID()
     guard tiling.setSplitDirectionPreservation(enabled, for: spaceID) else {
-      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
     return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
-  /// Select floating or automatic layout for the active Space.
-  private func layout(_ request: IPCRequest) throws -> IPCResponse {
+  /// Select floating or automatic layout for the selected Space.
+  private func layout(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space layout").requiredValue()
     guard let selection = LayoutSelection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
     }
 
-    let spaceID = try currentSpaceID()
     guard tiling.setLayout(selection, for: spaceID) else {
-      throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
 
     return .success(id: request.id, message: selection.rawValue)
   }
 
-  /// Set or adjust padding for the active space.
-  private func padding(_ request: IPCRequest) throws -> IPCResponse {
+  /// Set or adjust padding for the selected space.
+  private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space padding").requiredValue()
     guard let change = parsePaddingChange(argument) else {
       throw IPCCommandError.invalidRequest("invalid space padding value: \(argument)")
     }
-
-    let spaceID = try currentSpaceID()
 
     switch change.mode {
     case .absolute:
@@ -123,14 +129,12 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  /// Set or adjust the window gap for the active space.
-  private func gap(_ request: IPCRequest) throws -> IPCResponse {
+  /// Set or adjust the window gap for the selected space.
+  private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space gap").requiredValue()
     guard let change = parseGapChange(argument) else {
       throw IPCCommandError.invalidRequest("invalid space gap value: \(argument)")
     }
-
-    let spaceID = try currentSpaceID()
 
     switch change.mode {
     case .absolute:
@@ -151,6 +155,33 @@ struct SpaceCommandHandler {
     }
 
     return id
+  }
+
+  /// Resolve an optional zero-based space selector and remove it from command arguments.
+  private func targetedRequest(_ request: IPCRequest) throws -> (IPCRequest, UInt64) {
+    guard request.args.first == "--space" else {
+      return (request, try currentSpaceID())
+    }
+
+    guard request.args.count >= 2, let index = Int(request.args[1]), index >= 0 else {
+      throw IPCCommandError.invalidRequest("invalid space index")
+    }
+
+    let spaceIDs = spaceIDProvider()
+    guard spaceIDs.indices.contains(index) else {
+      throw IPCCommandError.invalidRequest("space index out of range: \(index)")
+    }
+
+    return (
+      IPCRequest(
+        version: request.version,
+        id: request.id,
+        domain: request.domain,
+        command: request.command,
+        args: Array(request.args.dropFirst(2))
+      ),
+      spaceIDs[index]
+    )
   }
 
   /// Parse a padding change in `mode:top:bottom:left:right` format.

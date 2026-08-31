@@ -215,6 +215,47 @@ struct SpaceCommandHandlerTests {
     #expect(spaces.settings(for: 2).gap == 10)
   }
 
+  @Test("dispatch: updates a selected space by index")
+  func dispatchUpdatesSelectedSpaceByIndex() {
+    let spaces = Spaces(activeSpaceID: 1)
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces),
+      spaceIDProvider: { [1, 2] }
+    )
+
+    let response = handler.dispatch(
+      request(command: "--gap", args: ["--space", "1", "abs:10"])
+    )
+
+    #expect(response.ok)
+    #expect(spaces.settings(for: 1).gap == 0)
+    #expect(spaces.settings(for: 2).gap == 10)
+  }
+
+  @Test("dispatch: rejects invalid space indexes")
+  func dispatchRejectsInvalidSpaceIndexes() {
+    let spaces = Spaces(activeSpaceID: 1)
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces),
+      spaceIDProvider: { [1, 2] }
+    )
+
+    let missing = handler.dispatch(request(command: "--gap", args: ["--space"]))
+    let negative = handler.dispatch(
+      request(command: "--gap", args: ["--space", "-1", "abs:10"])
+    )
+    let outOfRange = handler.dispatch(
+      request(command: "--gap", args: ["--space", "2", "abs:10"])
+    )
+
+    #expect(missing.errorCode == .invalidRequest)
+    #expect(negative.errorCode == .invalidRequest)
+    #expect(outOfRange.errorCode == .invalidRequest)
+    #expect(outOfRange.message == "space index out of range: 2")
+  }
+
   @Test("dispatch: rejects active-space mutation without active space")
   func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() {
     let handler = handler(spaces: Spaces(activeSpaceID: nil))

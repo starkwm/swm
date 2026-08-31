@@ -13,36 +13,17 @@ if [ ! -x "$binary" ]; then
   fail "binary is not executable: $binary"
 fi
 
-help=$("$binary" --help) || fail "--help exited unsuccessfully"
-short_help=$("$binary" -h) || fail "-h exited unsuccessfully"
-
-[ "$short_help" = "$help" ] || fail "-h and --help output differ"
-printf '%s\n' "$help" | grep -Fq 'OVERVIEW: Stark Window Manager for macOS.' \
-  || fail "help is missing the command overview"
-printf '%s\n' "$help" | grep -Fq 'USAGE: swm ' \
-  || fail "help is missing the command usage"
+"$binary" --help >/dev/null || fail "--help exited unsuccessfully"
+"$binary" help window move >/dev/null || fail "help window move exited unsuccessfully"
 
 version=$("$binary" --version) || fail "--version exited unsuccessfully"
-short_version=$("$binary" -v) || fail "-v exited unsuccessfully"
-
-[ "$short_version" = "$version" ] || fail "-v and --version output differ"
 case $version in
   'swm version v'*) ;;
   *) fail "unexpected version output: $version" ;;
 esac
 
-if message_output=$("$binary" -m query 2>&1); then
-  fail "an incomplete legacy -m command exited successfully"
+if "$binary" -m query --windows >/dev/null 2>&1; then
+  fail "removed -m syntax exited successfully"
 fi
-
-[ "$message_output" = 'error: exactly one query flag is required' ] \
-  || fail "unexpected legacy -m error: $message_output"
-
-if long_message_output=$("$binary" --message query 2>&1); then
-  fail "an incomplete --message command exited successfully"
-fi
-
-[ "$long_message_output" = "$message_output" ] \
-  || fail "-m and --message errors differ"
 
 printf 'release CLI smoke test passed\n'

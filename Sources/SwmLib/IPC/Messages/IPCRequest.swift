@@ -6,7 +6,7 @@ struct IPCRequest: Codable, Equatable {
   static let currentVersion = 1
 
   /// Build a request from a command domain and command-line style arguments.
-  static func make(domain: MessageDomain, arguments: [String]) throws -> IPCRequest {
+  static func make(domain: CommandDomain, arguments: [String]) throws -> IPCRequest {
     if domain == .query {
       let (command, selection) = try QuerySelection.parseRequest(arguments: arguments)
 
@@ -31,7 +31,7 @@ struct IPCRequest: Codable, Equatable {
   let id: String
 
   /// Command domain that should handle the request.
-  let domain: MessageDomain
+  let domain: CommandDomain
 
   /// Domain-specific command name or flag.
   let command: String
@@ -43,7 +43,7 @@ struct IPCRequest: Codable, Equatable {
   init(
     version: Int = IPCRequest.currentVersion,
     id: String = UUID().uuidString,
-    domain: MessageDomain,
+    domain: CommandDomain,
     command: String,
     args: [String]
   ) {

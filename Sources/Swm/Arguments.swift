@@ -2,12 +2,35 @@ import ArgumentParser
 import Foundation
 import SwmLib
 
-/// Command-line arguments accepted by the swm executable.
+/// Root command for the swm executable.
 struct Arguments: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "swm",
     abstract: "Stark Window Manager for macOS.",
-    helpNames: []
+    groupedSubcommands: [
+      CommandGroup(name: "DAEMON", subcommands: [StartCommand.self]),
+      CommandGroup(
+        name: "WINDOW",
+        subcommands: [SpaceCommand.self, WindowCommand.self]
+      ),
+      CommandGroup(
+        name: "OTHER",
+        subcommands: [ConfigCommand.self, QueryCommand.self, SignalCommand.self]
+      ),
+    ],
+    defaultSubcommand: StartCommand.self
+  )
+
+  /// Show version information.
+  @Flag(name: .long, help: "Show the version.")
+  var version = false
+}
+
+/// Start the window manager daemon.
+struct StartCommand: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    commandName: "start",
+    abstract: "Start the window manager daemon."
   )
 
   /// Conventional configuration path used when `--config` is omitted.
@@ -17,14 +40,6 @@ struct Arguments: ParsableCommand {
     .appending(path: ".config/swm/swmrc")
     .path()
 
-  /// Show command-line help.
-  @Flag(name: .shortAndLong, help: "Show help information.")
-  var help = false
-
-  /// Show version information.
-  @Flag(name: .shortAndLong, help: "Show version information.")
-  var version = false
-
   /// Path to the user configuration file executed at daemon startup.
   @Option(
     name: .shortAndLong,
@@ -32,30 +47,14 @@ struct Arguments: ParsableCommand {
   )
   var config: String?
 
-  /// IPC message domain to send instead of starting the daemon.
-  @Option(name: .shortAndLong, help: "Send a command to the daemon instead of starting it.")
-  var message: MessageDomain?
-
   /// Minimum runtime log level.
   @Option(name: .long, help: "Minimum log level: debug, info, warn, or error.")
   var logLevel: LogLevel = .info
 
-  /// Arguments passed through to IPC command handlers.
-  @Argument(parsing: .captureForPassthrough)
-  var args: [String] = []
-
-  /// Execute the parsed daemon or client invocation.
+  /// Start the daemon using the parsed options.
   mutating func run() {
-    if help {
-      print(Self.helpMessage())
-      return
-    }
-
-    let arguments = self
-    // `ParsableCommand.main()` invokes the root command synchronously from the
-    // process main entrypoint, where AppKit runtime setup is permitted.
     MainActor.assumeIsolated {
-      runSwm(with: arguments)
+      runSwm(with: self)
     }
   }
 }

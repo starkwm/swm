@@ -1,33 +1,17 @@
 import AppKit
 import SwmLib
 
-Arguments.main()
+if CommandLine.arguments.dropFirst() == ["--version"] {
+  print("swm version \(Version.current.value)")
+} else {
+  Arguments.main()
+}
 
 /// Execute one parsed client or daemon invocation.
 @MainActor
-func runSwm(with arguments: Arguments) {
+func runSwm(with arguments: StartCommand) {
   setMinimumLogLevel(arguments.logLevel)
 
-  if arguments.version {
-    print("swm version \(Version.current.value)")
-    return
-  }
-
-  if let message = arguments.message {
-    let result = Client.send(message: message, args: arguments.args)
-
-    if let outputMessage = result.outputMessage {
-      let stream = result.ok ? stdout : stderr
-      fputs("\(outputMessage)\n", stream)
-    }
-
-    if !result.ok {
-      exit(EXIT_FAILURE)
-    }
-    return
-  }
-
-  // Daemon mode starts here.
   if getuid() == 0 || geteuid() == 0 {
     fail("running as root is not allowed")
   }
@@ -99,7 +83,7 @@ func runSwm(with arguments: Arguments) {
         if let configPath = arguments.config {
           try Config.exec(path: configPath)
         } else {
-          try Config.execIfPresent(path: Arguments.defaultConfigPath)
+          try Config.execIfPresent(path: StartCommand.defaultConfigPath)
         }
       } catch {
         DispatchQueue.main.async {

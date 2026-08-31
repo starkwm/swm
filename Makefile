@@ -4,7 +4,7 @@ VERSION_FILE=Sources/Swm/Version.swift
 build:
 	@swift build
 
-release: clean
+release:
 	@swift build --configuration release --disable-sandbox
 
 format:
