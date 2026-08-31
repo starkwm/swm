@@ -354,6 +354,26 @@ public final class TilingManager {
     }
   }
 
+  /// Swap a tiled window with its neighbour in stable layout order.
+  @discardableResult
+  func swapWindowInOrder(_ windowID: CGWindowID, in direction: CycleDirection) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard var state = layoutsByID[layoutID], state.selection != .float, var tree = state.tree else {
+      return false
+    }
+    guard let neighborWindowID = cycledWindowID(from: windowID, in: direction) else {
+      return false
+    }
+    guard tree.swap(windowID, with: neighborWindowID) else { return false }
+
+    state.tree = tree
+    state.focusedWindowID = windowID
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
   /// Set or adjust the nearest dwindle split containing a tiled window.
   @discardableResult
   func changeDwindleSplitRatio(

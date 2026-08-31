@@ -34,6 +34,8 @@ struct WindowCommandHandler {
         return try cycle(request)
       case "--swap":
         return try swap(request)
+      case "--swap-cycle":
+        return try swapCycle(request)
       case "--swap-with-master":
         return try swapWithMaster(request)
       case "--split-ratio":
@@ -137,6 +139,23 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest(
         "window has no swappable neighbour in direction: \(direction.rawValue)"
       )
+    }
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Swap the focused tiled window with its neighbour in stable layout order.
+  private func swapCycle(_ request: IPCRequest) throws -> IPCResponse {
+    guard request.args.count == 1 else {
+      throw IPCCommandError.invalidRequest("invalid window swap-cycle arguments")
+    }
+    guard let direction = CycleDirection(rawValue: request.args[0]) else {
+      throw IPCCommandError.invalidRequest(
+        "invalid window swap-cycle direction: \(request.args[0])"
+      )
+    }
+    let window = try selectedWindow(selector: nil)
+    guard tilingManager.swapWindowInOrder(window.id, in: direction) else {
+      throw IPCCommandError.invalidRequest("window has no swap-cycle neighbour: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
   }

@@ -487,6 +487,31 @@ struct TilingManagerTests {
     #expect(manager.cycledWindowID(from: 1, in: .next) == nil)
   }
 
+  @Test("window swap cycle: exchanges adjacent leaves and wraps")
+  func windowSwapCycleExchangesAdjacentLeaves() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.master, for: 10)
+
+    #expect(manager.swapWindowInOrder(1, in: .prev))
+    #expect(
+      manager.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            3: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            1: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+
+    manager.setLayout(.float, for: 10)
+    #expect(manager.swapWindowInOrder(1, in: .next) == false)
+  }
+
   @Test("window layout: floating the insertion anchor excludes it from focused insertion")
   func windowLayoutFloatingInsertionAnchor() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
