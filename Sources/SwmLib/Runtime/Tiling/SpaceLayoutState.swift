@@ -91,3 +91,12 @@ enum WindowLayoutSelection: String, Equatable {
   /// Toggle the window between floating and tiled geometry.
   case toggle
 }
+
+/// Direction through a cyclic sequence.
+enum CycleDirection: String, Equatable {
+  /// Select the following value, wrapping at the end.
+  case next
+
+  /// Select the preceding value, wrapping at the beginning.
+  case prev
+}

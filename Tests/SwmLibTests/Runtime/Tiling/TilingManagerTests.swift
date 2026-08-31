@@ -470,6 +470,23 @@ struct TilingManagerTests {
     #expect(manager.layoutPlan(for: layoutID(10)) == tiledPlan)
   }
 
+  @Test("window cycle: follows layout order, wraps, and skips unavailable windows")
+  func windowCycleFollowsAvailableLayoutOrder() {
+    let manager = makeManager(
+      windows: [window(id: 1), window(id: 2), window(id: 3, isMinimized: true)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    manager.start()
+    manager.setLayout(.dwindle, for: 10)
+
+    #expect(manager.cycledWindowID(from: 1, in: .next) == 2)
+    #expect(manager.cycledWindowID(from: 2, in: .next) == 1)
+    #expect(manager.cycledWindowID(from: 1, in: .prev) == 2)
+
+    #expect(manager.setWindowLayout(.float, for: 2))
+    #expect(manager.cycledWindowID(from: 1, in: .next) == nil)
+  }
+
   @Test("window layout: floating the insertion anchor excludes it from focused insertion")
   func windowLayoutFloatingInsertionAnchor() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
