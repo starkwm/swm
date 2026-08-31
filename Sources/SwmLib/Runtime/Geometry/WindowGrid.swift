@@ -73,3 +73,24 @@ struct WindowGrid: Equatable {
     )
   }
 }
+
+extension WindowGrid {
+  /// Parse a grid placement in `columns:rows:x:y:width:height` format.
+  init?(argument: String) {
+    let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
+
+    guard
+      parts.count == 6,
+      let columns = Int(parts[0]),
+      let rows = Int(parts[1]),
+      let x = Int(parts[2]),
+      let y = Int(parts[3]),
+      let width = Int(parts[4]),
+      let height = Int(parts[5])
+    else {
+      return nil
+    }
+
+    self.init(rows: rows, columns: columns, x: x, y: y, width: width, height: height)
+  }
+}
