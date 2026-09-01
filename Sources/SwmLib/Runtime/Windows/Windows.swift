@@ -49,8 +49,8 @@ public final class Windows {
     focusedWindowState = TrackedState(current: Self.focusedWindowID())
   }
 
-  /// Start managing all supplied processes.
-  public func start(processes: [Process]) {
+  /// Discover and observe windows from all supplied processes.
+  public func discover(from processes: [Process]) {
     for process in processes {
       guard let application = manage(process) else { continue }
       reconcileWindows(for: application, mode: .initialDiscovery)

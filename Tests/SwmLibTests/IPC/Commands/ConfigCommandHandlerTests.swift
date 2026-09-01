@@ -32,7 +32,7 @@ struct ConfigCommandHandlerTests {
       },
       spaces: spaces
     )
-    tiling.start()
+    tiling.initialize()
     let handler = ConfigCommandHandler(
       spaces: spaces,
       tiling: tiling

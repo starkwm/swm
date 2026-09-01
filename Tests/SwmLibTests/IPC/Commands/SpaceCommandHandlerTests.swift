@@ -24,7 +24,7 @@ struct SpaceCommandHandlerTests {
         ]
       )
     )
-    tiling.start()
+    tiling.initialize()
     let handler = SpaceCommandHandler(
       spaces: spaces,
       tiling: tiling
@@ -129,7 +129,7 @@ struct SpaceCommandHandlerTests {
       },
       spaces: spaces
     )
-    tiling.start()
+    tiling.initialize()
     let handler = SpaceCommandHandler(
       spaces: spaces,
       tiling: tiling

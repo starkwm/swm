@@ -56,16 +56,16 @@ func runSwm(with arguments: Arguments) {
     tiling: tiling
   )
 
-  if case .failure(let error) = displays.start() {
+  if case .failure(let error) = displays.observe() {
     fail("unable to start display observation - \(error)")
   }
 
-  if case .failure(let error) = processes.start() {
+  if case .failure(let error) = processes.observe() {
     fail("unable to start process observation - \(error)")
   }
 
-  windows.start(processes: processes.all())
-  tiling.start()
+  windows.discover(from: processes.all())
+  tiling.initialize()
 
   let daemon = Daemon(
     windows: windows,

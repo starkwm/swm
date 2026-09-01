@@ -12,7 +12,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.swapWindowWithMaster(3))
@@ -35,7 +35,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1, isMinimized: true), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.masterWindowID(inLayoutContaining: 3) == 2)
@@ -52,7 +52,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.swapWindow(2, in: .down))
@@ -75,7 +75,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     #expect(tiling.swapWindow(2, in: .down))
@@ -98,7 +98,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
     let initialPlan = tiling.layoutPlan(for: layoutID(10))
 
@@ -124,7 +124,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
     let tiledPlan = tiling.layoutPlan(for: layoutID(10))
 
@@ -144,7 +144,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3, isMinimized: true)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
@@ -161,7 +161,7 @@ struct TilingWindowControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.swapWindowInOrder(1, in: .prev))
@@ -187,7 +187,7 @@ struct TilingWindowControlTests {
       windows: { windows },
       memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
     tiling.windowDidFocus(1)
 

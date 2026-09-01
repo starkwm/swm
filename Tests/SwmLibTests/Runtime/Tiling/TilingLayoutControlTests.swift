@@ -12,7 +12,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
 
     #expect(tiling.setLayout(.monocle, for: 10))
     #expect(
@@ -33,7 +33,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3), window(id: 4)],
       memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
     )
-    tiling.start()
+    tiling.initialize()
 
     #expect(tiling.setLayout(.dwindle, for: 10))
     #expect(tiling.setLayout(.dwindle, for: 99) == false)
@@ -71,7 +71,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.changeMasterRatio(.absolute(0.6), for: 10))
@@ -94,7 +94,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(tiling.cycleMasterPlacement(.next, for: 10) == .top)
@@ -107,7 +107,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     #expect(tiling.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
@@ -130,7 +130,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     #expect(tiling.toggleDwindleSplit(for: 2))
@@ -164,7 +164,7 @@ struct TilingLayoutControlTests {
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     #expect(tiling.swapDwindleSplit(for: 2))
@@ -208,7 +208,7 @@ struct TilingLayoutControlTests {
       },
       spaces: spaces
     )
-    tiling.start()
+    tiling.initialize()
 
     tiling.setLayoutForSpaces(.master)
     tiling.setMasterRatioForAllSpaces(0.65)

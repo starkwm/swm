@@ -22,7 +22,7 @@ public final class Processes {
   public init() {}
 
   /// Seed the process list and start observing Carbon application events.
-  public func start() -> Result<Void, ProcessesError> {
+  public func observe() -> Result<Void, ProcessesError> {
     addRunningProcesses()
 
     let eventTypes = [

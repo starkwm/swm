@@ -24,7 +24,7 @@ struct TilingFrameReflowTests {
       memberships: [1: [10], 2: [10]],
       frameReconciler: frameReconciler
     )
-    tiling.start()
+    tiling.initialize()
 
     #expect(tiling.swapWindow(1, in: .right))
     #expect(

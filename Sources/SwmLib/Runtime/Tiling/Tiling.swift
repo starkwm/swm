@@ -52,7 +52,7 @@ public final class Tiling {
   }
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
-  public func start() {
+  public func initialize() {
     reconcile()
     reflowVisibleSpaces()
   }

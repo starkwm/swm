@@ -6,14 +6,14 @@ import Testing
 @MainActor
 @Suite("Tiling reconciliation")
 struct TilingReconciliationTests {
-  @Test("start: excludes ineligible windows from disabled Space geometry")
+  @Test("initialize: excludes ineligible windows from disabled Space geometry")
   func startExcludesIneligibleWindowsFromDisabledSpaceGeometry() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10, 11], 3: []]
     )
 
-    tiling.start()
+    tiling.initialize()
 
     #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
     #expect(tiling.setLayout(.master, for: 10))
@@ -31,7 +31,7 @@ struct TilingReconciliationTests {
       windows: { windows },
       memberships: { memberships }
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
     tiling.windowDidFocus(1)
 
@@ -59,7 +59,7 @@ struct TilingReconciliationTests {
       windows: { windows },
       memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
     tiling.windowDidFocus(1)
 
@@ -83,7 +83,7 @@ struct TilingReconciliationTests {
   func reconcilePreservesMinimizedLeavesButOmitsThemFromGeometry() {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]
     let tiling = makeTiling(windows: { windows }, memberships: { [1: [10], 2: [10]] })
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
 
     #expect(
@@ -110,7 +110,7 @@ struct TilingReconciliationTests {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [10]]
     let tiling = makeTiling(windows: { windows }, memberships: { memberships })
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.master, for: 10)
     tiling.windowDidFocus(3)
     let initialPlan = tiling.layoutPlan(for: layoutID(10))
@@ -152,7 +152,7 @@ struct TilingReconciliationTests {
       },
       spaces: spaces
     )
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
     let initialPlan = tiling.layoutPlan(for: layoutID(10))
 
@@ -168,7 +168,7 @@ struct TilingReconciliationTests {
   @Test("layoutPlan: requires a visible Space")
   func layoutPlanRequiresVisibleSpace() {
     let hiddenTiling = makeTiling(visibleSpaceID: 11)
-    hiddenTiling.start()
+    hiddenTiling.initialize()
     hiddenTiling.setLayout(.master, for: 10)
 
     #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
@@ -182,7 +182,7 @@ struct TilingReconciliationTests {
       window(id: 3, displayID: "display-b"),
     ]
     let tiling = makeSharedSpaceTiling(windows: { windows })
-    tiling.start()
+    tiling.initialize()
 
     #expect(tiling.setLayout(.master, for: 10))
     #expect(
@@ -227,7 +227,7 @@ struct TilingReconciliationTests {
       )
     ]
     let tiling = makeSharedSpaceTiling(windows: { [] }, displays: { displays })
-    tiling.start()
+    tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
 
     displays["display-b"] = SpaceTopologyDisplay(

@@ -34,7 +34,7 @@ public final class Displays {
   }
 
   /// Start observing CoreGraphics display reconfiguration callbacks.
-  public func start() -> Result<Void, DisplaysError> {
+  public func observe() -> Result<Void, DisplaysError> {
     let result = CGDisplayRegisterReconfigurationCallback(
       displayReconfigurationCallback,
       Unmanaged.passUnretained(self).toOpaque()
