@@ -1,7 +1,7 @@
 import CoreGraphics
 
-/// Parses shared automatic-layout command values.
-enum LayoutCommandParser {
+/// Parses shared command argument values.
+enum CommandValueParser {
   /// Parse an `abs:value` or `rel:value` ratio update.
   static func ratioChange(from argument: String) -> LayoutRatioChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)

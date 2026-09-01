@@ -35,7 +35,7 @@ struct SpaceCommandHandler {
   /// Set or adjust the master pane ratio for the active Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space master-ratio").requiredValue()
-    guard let change = LayoutCommandParser.ratioChange(from: argument) else {
+    guard let change = CommandValueParser.ratioChange(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(argument)")
     }
 
@@ -76,7 +76,7 @@ struct SpaceCommandHandler {
       request.args,
       context: "space preserve-split"
     ).requiredValue()
-    guard let enabled = LayoutCommandParser.boolean(from: argument) else {
+    guard let enabled = CommandValueParser.boolean(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid space preserve-split value: \(argument)")
     }
 
