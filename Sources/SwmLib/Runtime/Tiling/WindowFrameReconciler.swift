@@ -7,7 +7,6 @@ final class WindowFrameReconciler {
   typealias FrameMutation = (CGWindowID, CGRect, CGRect) -> WindowFrameMutationResult?
 
   private static let expectationLifetime = Duration.seconds(1)
-  private static let tolerance = CGFloat(1)
 
   private let currentFrame: CurrentFrameProvider
   private let frameMutation: FrameMutation
@@ -35,7 +34,7 @@ final class WindowFrameReconciler {
         )
         continue
       }
-      guard !framesMatch(currentFrame, targetFrame) else { continue }
+      guard !currentFrame.matches(targetFrame, tolerance: 1) else { continue }
       changedFrames[windowID] = FrameApplicationTarget(
         currentFrame: currentFrame,
         targetFrame: targetFrame
@@ -68,7 +67,7 @@ final class WindowFrameReconciler {
       // Some apps clamp a resize at the old origin before accepting the accompanying move.
       if result == .success,
         let appliedFrame = self.currentFrame(windowID),
-        !framesMatch(appliedFrame, target.targetFrame)
+        !appliedFrame.matches(target.targetFrame, tolerance: 1)
       {
         _ = frameMutation(windowID, target.targetFrame, appliedFrame)
       }
@@ -92,7 +91,7 @@ final class WindowFrameReconciler {
     expireExpectations()
     guard let expectation = pendingMutations[windowID] else { return false }
 
-    if let actualFrame, framesMatch(actualFrame, expectation.target) {
+    if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
       pendingMutations.removeValue(forKey: windowID)
     }
 
@@ -110,13 +109,6 @@ final class WindowFrameReconciler {
     pendingMutations = pendingMutations.filter { $0.value.expiresAt > now }
   }
 
-  /// Compare complete frames using the configured point tolerance.
-  private func framesMatch(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
-    abs(lhs.minX - rhs.minX) <= Self.tolerance
-      && abs(lhs.minY - rhs.minY) <= Self.tolerance
-      && abs(lhs.width - rhs.width) <= Self.tolerance
-      && abs(lhs.height - rhs.height) <= Self.tolerance
-  }
 }
 
 /// Expected frame notification registered before an Accessibility mutation.

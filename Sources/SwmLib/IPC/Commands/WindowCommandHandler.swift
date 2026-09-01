@@ -340,7 +340,15 @@ struct WindowCommandHandler {
     window: Window,
     failureMessage: String
   ) throws {
-    switch window.setFrame(targetFrame, from: currentFrame) {
+    var result = window.setFrame(targetFrame, from: currentFrame)
+    if result == .success,
+      let appliedFrame = window.frame(),
+      !appliedFrame.matches(targetFrame, tolerance: 1)
+    {
+      result = window.setFrame(targetFrame, from: appliedFrame)
+    }
+
+    switch result {
     case .success:
       return
     case .resizeFailed, .moveFailed:
