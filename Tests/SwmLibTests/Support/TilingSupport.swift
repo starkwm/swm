@@ -3,8 +3,8 @@ import CoreGraphics
 @testable import SwmLib
 
 @MainActor
-func makeTestTilingManager(
-  spaceManager: Spaces,
+func makeTestTiling(
+  spaces: Spaces,
   windows: [TilingWindowSnapshot] = [],
   topology: SpaceTopology = SpaceTopology(
     spacesByID: [:],
@@ -20,18 +20,18 @@ func makeTestTilingManager(
         topology: topology
       )
     },
-    spaceManager: spaceManager
+    spaces: spaces
   )
 }
 
 @MainActor
-func makeManager(
+func makeTiling(
   windows: [TilingWindowSnapshot] = [window(id: 1)],
   memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
   visibleSpaceID: UInt64 = 10,
   frameReconciler: WindowFrameReconciler? = nil
 ) -> Tiling {
-  makeManager(
+  makeTiling(
     windows: { windows },
     memberships: { memberships },
     visibleSpaceID: visibleSpaceID,
@@ -40,13 +40,13 @@ func makeManager(
 }
 
 @MainActor
-func makeManager(
+func makeTiling(
   windows: @escaping () -> [TilingWindowSnapshot],
   memberships: @escaping () -> [CGWindowID: Set<UInt64>],
   visibleSpaceID: UInt64 = 10,
   frameReconciler: WindowFrameReconciler? = nil
 ) -> Tiling {
-  let spaceManager = Spaces(activeSpaceID: nil)
+  let spaces = Spaces(activeSpaceID: nil)
   return Tiling(
     snapshot: {
       TilingReconciliationSnapshot(
@@ -67,16 +67,16 @@ func makeManager(
         )
       )
     },
-    spaceManager: spaceManager,
+    spaces: spaces,
     frameReconciler: frameReconciler
   )
 }
 
 @MainActor
-func makeSharedSpaceManager(
+func makeSharedSpaceTiling(
   windows: @escaping () -> [TilingWindowSnapshot]
 ) -> Tiling {
-  makeSharedSpaceManager(
+  makeSharedSpaceTiling(
     windows: windows,
     displays: {
       [
@@ -92,11 +92,11 @@ func makeSharedSpaceManager(
 }
 
 @MainActor
-func makeSharedSpaceManager(
+func makeSharedSpaceTiling(
   windows: @escaping () -> [TilingWindowSnapshot],
   displays: @escaping () -> [String: SpaceTopologyDisplay]
 ) -> Tiling {
-  let spaceManager = Spaces(activeSpaceID: nil)
+  let spaces = Spaces(activeSpaceID: nil)
   return Tiling(
     snapshot: {
       let windows = windows()
@@ -115,7 +115,7 @@ func makeSharedSpaceManager(
         )
       )
     },
-    spaceManager: spaceManager
+    spaces: spaces
   )
 }
 

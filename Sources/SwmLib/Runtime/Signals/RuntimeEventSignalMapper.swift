@@ -1,16 +1,16 @@
 import CoreGraphics
 
-/// Projects runtime events and current manager state into signal payloads.
+/// Projects runtime events and current runtime state into signal payloads.
 @MainActor
 struct RuntimeEventSignalMapper {
   /// Window state used to enrich window signals.
-  let windowManager: Windows
+  let windows: Windows
 
   /// Space state used to describe active-space changes.
-  let spaceManager: Spaces
+  let spaces: Spaces
 
   /// Display state used to describe active and reconfigured displays.
-  let displayManager: Displays
+  let displays: Displays
 
   /// Capture payload data that lifecycle handling would invalidate.
   func payload(beforeHandling event: RuntimeEvent) -> SignalPayload? {
@@ -59,20 +59,20 @@ struct RuntimeEventSignalMapper {
       return windowPayload(event: .windowDeminimized, windowID: window.id, window: window)
 
     case .space(.changed(let space)):
-      let spaces = Spaces.all()
+      let allSpaces = Spaces.all()
       return .spaceChanged(
         space: space,
-        currentIndex: spaces.firstIndex(where: { $0.id == space.id }),
-        recentSpaceID: spaceManager.lastActiveSpaceID,
-        recentIndex: spaceManager.lastActiveSpaceID.flatMap { recentID in
-          spaces.firstIndex { $0.id == recentID }
+        currentIndex: allSpaces.firstIndex(where: { $0.id == space.id }),
+        recentSpaceID: spaces.lastActiveSpaceID,
+        recentIndex: spaces.lastActiveSpaceID.flatMap { recentID in
+          allSpaces.firstIndex { $0.id == recentID }
         }
       )
 
     case .display(.changed):
       return .displayChanged(
-        currentID: displayManager.currentActiveDisplayID,
-        recentID: displayManager.lastActiveDisplayID
+        currentID: displays.currentActiveDisplayID,
+        recentID: displays.lastActiveDisplayID
       )
 
     case .display(.added(let displayID)):
@@ -99,8 +99,8 @@ struct RuntimeEventSignalMapper {
     .window(
       event: event,
       windowID: windowID,
-      window: window ?? windowManager.window(by: windowID),
-      active: active ?? (windowManager.currentFocusedWindowID == windowID)
+      window: window ?? windows.window(by: windowID),
+      active: active ?? (windows.currentFocusedWindowID == windowID)
     )
   }
 
@@ -112,8 +112,8 @@ struct RuntimeEventSignalMapper {
     .display(
       event: event,
       displayID: displayID,
-      currentID: displayManager.currentActiveDisplayID,
-      recentID: displayManager.lastActiveDisplayID
+      currentID: displays.currentActiveDisplayID,
+      recentID: displays.lastActiveDisplayID
     )
   }
 }

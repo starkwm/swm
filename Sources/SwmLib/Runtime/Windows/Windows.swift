@@ -43,7 +43,7 @@ public final class Windows {
   private var lostFocusedWindowIDs = Set<CGWindowID>()
   private var remoteTokenCursors = [pid_t: WindowDiscoveryCursor]()
 
-  /// Create a window manager for a workspace.
+  /// Create the window service for a workspace.
   public init(workspace: Workspace) {
     self.workspace = workspace
     focusedWindowState = TrackedState(current: Self.focusedWindowID())

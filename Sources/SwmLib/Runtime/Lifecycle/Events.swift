@@ -2,31 +2,31 @@ import Foundation
 
 /// Main-thread dispatcher for runtime events.
 public final class Events {
-  /// Shared event manager used by model callbacks.
+  /// Shared event service used by model callbacks.
   public static let shared = Events()
 
   @MainActor
-  private var dependencies: EventManagerDependencies?
+  private var dependencies: EventDependencies?
 
   private init() {}
 
-  /// Configure the managers used to handle runtime events.
+  /// Configure the services used to handle runtime events.
   @MainActor
   public func configure(
     workspace: Workspace,
-    processManager: Processes,
-    windowManager: Windows,
-    spaceManager: Spaces,
-    displayManager: Displays,
-    tilingManager: Tiling
+    processes: Processes,
+    windows: Windows,
+    spaces: Spaces,
+    displays: Displays,
+    tiling: Tiling
   ) {
-    dependencies = EventManagerDependencies(
+    dependencies = EventDependencies(
       workspace: workspace,
-      processManager: processManager,
-      windowManager: windowManager,
-      spaceManager: spaceManager,
-      displayManager: displayManager,
-      tilingManager: tilingManager
+      processes: processes,
+      windows: windows,
+      spaces: spaces,
+      displays: displays,
+      tiling: tiling
     )
   }
 
@@ -45,9 +45,9 @@ public final class Events {
     }
 
     let signalMapper = RuntimeEventSignalMapper(
-      windowManager: dependencies.windowManager,
-      spaceManager: dependencies.spaceManager,
-      displayManager: dependencies.displayManager
+      windows: dependencies.windows,
+      spaces: dependencies.spaces,
+      displays: dependencies.displays
     )
     let payloadBeforeHandling = signalMapper.payload(beforeHandling: event)
 
@@ -60,33 +60,33 @@ public final class Events {
 
   /// Dispatch an event to its domain-specific lifecycle handler.
   @MainActor
-  private func dispatch(_ event: RuntimeEvent, dependencies: EventManagerDependencies) {
+  private func dispatch(_ event: RuntimeEvent, dependencies: EventDependencies) {
     switch event {
     case .application(let event):
       ApplicationLifecycleHandler(
         workspace: dependencies.workspace,
-        processManager: dependencies.processManager,
-        windowManager: dependencies.windowManager,
-        tilingManager: dependencies.tilingManager
+        processes: dependencies.processes,
+        windows: dependencies.windows,
+        tiling: dependencies.tiling
       ).handle(event)
 
     case .window(let event):
       WindowLifecycleHandler(
-        windowManager: dependencies.windowManager,
-        tilingManager: dependencies.tilingManager
+        windows: dependencies.windows,
+        tiling: dependencies.tiling
       ).handle(event)
 
     case .space(let event):
       SpaceLifecycleHandler(
-        spaceManager: dependencies.spaceManager,
-        windowManager: dependencies.windowManager,
-        tilingManager: dependencies.tilingManager
+        spaces: dependencies.spaces,
+        windows: dependencies.windows,
+        tiling: dependencies.tiling
       ).handle(event)
 
     case .display(let event):
       DisplayLifecycleHandler(
-        displayManager: dependencies.displayManager,
-        tilingManager: dependencies.tilingManager
+        displays: dependencies.displays,
+        tiling: dependencies.tiling
       ).handle(event)
     }
   }
@@ -94,12 +94,12 @@ public final class Events {
 
 extension Events: @unchecked Sendable {}
 
-/// Manager dependencies required by the event dispatcher.
-private struct EventManagerDependencies {
+/// Runtime dependencies required by the event dispatcher.
+private struct EventDependencies {
   let workspace: Workspace
-  let processManager: Processes
-  let windowManager: Windows
-  let spaceManager: Spaces
-  let displayManager: Displays
-  let tilingManager: Tiling
+  let processes: Processes
+  let windows: Windows
+  let spaces: Spaces
+  let displays: Displays
+  let tiling: Tiling
 }

@@ -2,7 +2,7 @@ import AppKit
 
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
 
-/// Forward accessibility window notifications into swm's event manager.
+/// Forward accessibility window notifications into swm's event service.
 private func accessibilityObserverCallback(
   _ observer: AXObserver,
   _ element: AXUIElement,
@@ -93,7 +93,7 @@ final class Application: NSObject {
   private var observedNotifications = Set<String>()
   private var observing = false
 
-  /// Create an application model for a process discovered by the process manager.
+  /// Create an application model for a process discovered by the process service.
   init?(for process: Process) {
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
 

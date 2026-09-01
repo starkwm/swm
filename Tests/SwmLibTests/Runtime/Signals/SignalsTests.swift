@@ -3,17 +3,17 @@ import Testing
 @testable import SwmLib
 
 @Suite("Signals")
-struct SignalManagerTests {
+struct SignalsTests {
   @Test("add: rejects duplicate labels")
   func addRejectsDuplicateLabels() throws {
-    let manager = Signals()
+    let signals = Signals()
     let first = try signal(label: "same", action: "one")
     let second = try signal(label: "same", action: "two")
 
-    try manager.add(first)
+    try signals.add(first)
 
     do {
-      try manager.add(second)
+      try signals.add(second)
       Issue.record("Expected duplicate label rejection")
     } catch let error as IPCCommandError {
       #expect(error.message == "signal label already exists: same")
@@ -25,17 +25,17 @@ struct SignalManagerTests {
 
   @Test("remove: removes by one-based index and label")
   func removeRemovesByIndexAndLabel() throws {
-    let manager = Signals()
+    let signals = Signals()
 
-    try manager.add(signal(label: "first", action: "one"))
-    try manager.add(signal(label: "second", action: "two"))
-    try manager.add(signal(label: "third", action: "three"))
+    try signals.add(signal(label: "first", action: "one"))
+    try signals.add(signal(label: "second", action: "two"))
+    try signals.add(signal(label: "third", action: "three"))
 
-    try manager.remove(selector: "2")
-    #expect(manager.list().map(\.signal.label) == ["first", "third"])
+    try signals.remove(selector: "2")
+    #expect(signals.list().map(\.signal.label) == ["first", "third"])
 
-    try manager.remove(selector: "third")
-    #expect(manager.list().map(\.signal.label) == ["first"])
+    try signals.remove(selector: "third")
+    #expect(signals.list().map(\.signal.label) == ["first"])
   }
 
   private func signal(

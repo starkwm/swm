@@ -1,37 +1,37 @@
 /// Routes IPC requests to the command handler for their domain.
 @MainActor
 struct IPCCommandDispatcher {
-  private let windowManager: Windows
-  private let spaceManager: Spaces
-  private let tilingManager: Tiling
+  private let windows: Windows
+  private let spaces: Spaces
+  private let tiling: Tiling
 
-  /// Create a dispatcher backed by explicit window and space managers.
+  /// Create a dispatcher backed by explicit window and Space services.
   init(
-    windowManager: Windows,
-    spaceManager: Spaces,
-    tilingManager: Tiling
+    windows: Windows,
+    spaces: Spaces,
+    tiling: Tiling
   ) {
-    self.windowManager = windowManager
-    self.spaceManager = spaceManager
-    self.tilingManager = tilingManager
+    self.windows = windows
+    self.spaces = spaces
+    self.tiling = tiling
   }
 
   /// Dispatch a request to its domain-specific command handler.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     switch request.domain {
     case .query:
-      return QueryCommandHandler(windowManager: windowManager).dispatch(request)
+      return QueryCommandHandler(windows: windows).dispatch(request)
 
     case .space:
       return SpaceCommandHandler(
-        spaceManager: spaceManager,
-        tilingManager: tilingManager
+        spaces: spaces,
+        tiling: tiling
       ).dispatch(request)
 
     case .config:
       return ConfigCommandHandler(
-        spaceManager: spaceManager,
-        tilingManager: tilingManager
+        spaces: spaces,
+        tiling: tiling
       ).dispatch(request)
 
     case .display:
@@ -39,9 +39,9 @@ struct IPCCommandDispatcher {
 
     case .window:
       return WindowCommandHandler(
-        windowManager: windowManager,
-        spaceManager: spaceManager,
-        tilingManager: tilingManager
+        windows: windows,
+        spaces: spaces,
+        tiling: tiling
       ).dispatch(request)
 
     case .signal:

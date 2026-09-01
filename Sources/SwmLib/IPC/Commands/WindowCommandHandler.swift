@@ -3,19 +3,19 @@ import AppKit
 /// Handles IPC commands that focus, minimize, move, resize, tile, and grid windows.
 @MainActor
 struct WindowCommandHandler {
-  private let windowManager: Windows
-  private let spaceManager: Spaces
-  private let tilingManager: Tiling
+  private let windows: Windows
+  private let spaces: Spaces
+  private let tiling: Tiling
 
-  /// Create a window command handler backed by window, Space, and tiling managers.
+  /// Create a window command handler backed by window, Space, and tiling services.
   init(
-    windowManager: Windows,
-    spaceManager: Spaces,
-    tilingManager: Tiling
+    windows: Windows,
+    spaces: Spaces,
+    tiling: Tiling
   ) {
-    self.windowManager = windowManager
-    self.spaceManager = spaceManager
-    self.tilingManager = tilingManager
+    self.windows = windows
+    self.spaces = spaces
+    self.tiling = tiling
   }
 
   /// Dispatch a window IPC request to the matching window operation.
@@ -108,7 +108,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("invalid window layout: \(selection.value)")
     }
     let window = try selectedWindow(selector: selection.selector)
-    guard tilingManager.setWindowLayout(layout, for: window.id) else {
+    guard tiling.setWindowLayout(layout, for: window.id) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for window: \(window.id)")
     }
     return .success(id: request.id, message: layout.rawValue)
@@ -121,8 +121,8 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("invalid window cycle direction: \(argument)")
     }
     let window = try selectedWindow(selector: nil)
-    guard let cycledWindowID = tilingManager.cycledWindowID(from: window.id, in: direction),
-      let cycledWindow = windowManager.window(by: cycledWindowID)
+    guard let cycledWindowID = tiling.cycledWindowID(from: window.id, in: direction),
+      let cycledWindow = windows.window(by: cycledWindowID)
     else {
       throw IPCCommandError.invalidRequest("window has no cycle neighbour: \(window.id)")
     }
@@ -139,7 +139,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("invalid window swap direction: \(selection.value)")
     }
     let window = try selectedWindow(selector: selection.selector)
-    guard tilingManager.swapWindow(window.id, in: direction) else {
+    guard tiling.swapWindow(window.id, in: direction) else {
       throw IPCCommandError.invalidRequest(
         "window has no swappable neighbour in direction: \(direction.rawValue)"
       )
@@ -156,7 +156,7 @@ struct WindowCommandHandler {
       )
     }
     let window = try selectedWindow(selector: nil)
-    guard tilingManager.swapWindowInOrder(window.id, in: direction) else {
+    guard tiling.swapWindowInOrder(window.id, in: direction) else {
       throw IPCCommandError.invalidRequest("window has no swap-cycle neighbour: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
@@ -166,7 +166,7 @@ struct WindowCommandHandler {
   private func swapWithMaster(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "swap-with-master")
     let window = try selectedWindow(selector: selector)
-    guard tilingManager.swapWindowWithMaster(window.id) else {
+    guard tiling.swapWindowWithMaster(window.id) else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
@@ -176,8 +176,8 @@ struct WindowCommandHandler {
   private func focusMaster(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "focus-master")
     let window = try selectedWindow(selector: selector)
-    guard let masterWindowID = tilingManager.masterWindowID(inLayoutContaining: window.id),
-      let masterWindow = windowManager.window(by: masterWindowID)
+    guard let masterWindowID = tiling.masterWindowID(inLayoutContaining: window.id),
+      let masterWindow = windows.window(by: masterWindowID)
     else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
     }
@@ -194,7 +194,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("invalid window split-ratio value: \(selection.value)")
     }
     let window = try selectedWindow(selector: selection.selector)
-    guard tilingManager.changeDwindleSplitRatio(change, for: window.id) != nil else {
+    guard tiling.changeDwindleSplitRatio(change, for: window.id) != nil else {
       throw IPCCommandError.invalidRequest("window has no dwindle split: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
@@ -204,7 +204,7 @@ struct WindowCommandHandler {
   private func toggleSplit(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "toggle-split")
     let window = try selectedWindow(selector: selector)
-    guard tilingManager.toggleDwindleSplit(for: window.id) else {
+    guard tiling.toggleDwindleSplit(for: window.id) else {
       throw IPCCommandError.invalidRequest(
         "window has no retained dwindle split to toggle: \(window.id)"
       )
@@ -216,7 +216,7 @@ struct WindowCommandHandler {
   private func swapSplit(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "swap-split")
     let window = try selectedWindow(selector: selector)
-    guard tilingManager.swapDwindleSplit(for: window.id) else {
+    guard tiling.swapDwindleSplit(for: window.id) else {
       throw IPCCommandError.invalidRequest("window has no dwindle split to swap: \(window.id)")
     }
     return .success(id: request.id, message: "ok")
@@ -319,7 +319,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.internalError("could not grid window: \(window.id)")
     }
 
-    let settings = spaceManager.settings(for: spaceID)
+    let settings = spaces.settings(for: spaceID)
     let bounds = screen.axVisibleFrame
     let targetFrame = grid.frame(in: bounds, settings: settings)
 
@@ -359,7 +359,7 @@ struct WindowCommandHandler {
     if let selector {
       switch selector {
       case "recent":
-        guard let recentWindowID = windowManager.lastFocusedWindowID else {
+        guard let recentWindowID = windows.lastFocusedWindowID else {
           throw IPCCommandError.invalidRequest("no recent window")
         }
 
@@ -379,7 +379,7 @@ struct WindowCommandHandler {
       windowID = focusedWindowID
     }
 
-    guard let window = windowManager.window(by: windowID) else {
+    guard let window = windows.window(by: windowID) else {
       throw IPCCommandError.invalidRequest("window not found: \(windowID)")
     }
 
@@ -391,11 +391,11 @@ struct WindowCommandHandler {
     from sourceWindow: Window,
     in direction: CardinalDirection
   ) -> Window? {
-    let windows = windowManager.allWindows()
-    let topology = spaceManager.snapshotTopology(for: windows.map(\.id))
+    let candidateWindows = windows.allWindows()
+    let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
     let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
     let framesByWindowID = Dictionary(
-      uniqueKeysWithValues: windows.compactMap { window -> (CGWindowID, CGRect)? in
+      uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
         guard !window.isMinimized else { return nil }
         guard
           let spaceIDs = topology.spaceIDsByWindowID[window.id],
@@ -411,7 +411,7 @@ struct WindowCommandHandler {
     guard let windowID = direction.neighbor(of: sourceWindow.id, in: framesByWindowID) else {
       return nil
     }
-    return windowManager.window(by: windowID)
+    return windows.window(by: windowID)
   }
 
   /// Parse an optional single window selector argument.

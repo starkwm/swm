@@ -208,13 +208,13 @@ struct WindowCommandHandlerTests {
   }
 
   private func handler(
-    windowManager: Windows = Windows(workspace: Workspace())
+    windows: Windows = Windows(workspace: Workspace())
   ) -> WindowCommandHandler {
-    let spaceManager = Spaces(activeSpaceID: nil)
+    let spaces = Spaces(activeSpaceID: nil)
     return WindowCommandHandler(
-      windowManager: windowManager,
-      spaceManager: spaceManager,
-      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
+      windows: windows,
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces)
     )
   }
 }

@@ -5,7 +5,7 @@ import Testing
 
 @MainActor
 @Suite("Tiling frame reflow")
-struct TilingManagerFrameReflowTests {
+struct TilingFrameReflowTests {
   @Test("directional swap: exchanges complete frames in a floating layout")
   func directionalSwapExchangesFloatingFrames() {
     var framesByWindowID: [CGWindowID: CGRect] = [
@@ -19,14 +19,14 @@ struct TilingManagerFrameReflowTests {
         return .success
       }
     )
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]],
       frameReconciler: frameReconciler
     )
-    manager.start()
+    tiling.start()
 
-    #expect(manager.swapWindow(1, in: .right))
+    #expect(tiling.swapWindow(1, in: .right))
     #expect(
       framesByWindowID
         == [
@@ -34,6 +34,6 @@ struct TilingManagerFrameReflowTests {
           2: CGRect(x: 0, y: 0, width: 400, height: 300),
         ]
     )
-    #expect(manager.swapWindow(1, in: .right) == false)
+    #expect(tiling.swapWindow(1, in: .right) == false)
   }
 }

@@ -9,7 +9,7 @@ public final class Signals {
   private let executionQueue: SignalExecutionQueue
   private var signals = [Signal]()
 
-  /// Create an empty signal manager.
+  /// Create an empty signal service.
   init(executionQueue: SignalExecutionQueue = SignalExecutionQueue()) {
     self.executionQueue = executionQueue
   }

@@ -41,36 +41,36 @@ func runSwm(with arguments: Arguments) {
   }
 
   let workspace = Workspace()
-  let processManager = Processes()
-  let windowManager = Windows(workspace: workspace)
-  let spaceManager = Spaces()
-  let displayManager = Displays()
-  let tilingManager = Tiling(windowManager: windowManager, spaceManager: spaceManager)
+  let processes = Processes()
+  let windows = Windows(workspace: workspace)
+  let spaces = Spaces()
+  let displays = Displays()
+  let tiling = Tiling(windows: windows, spaces: spaces)
 
   Events.shared.configure(
     workspace: workspace,
-    processManager: processManager,
-    windowManager: windowManager,
-    spaceManager: spaceManager,
-    displayManager: displayManager,
-    tilingManager: tilingManager
+    processes: processes,
+    windows: windows,
+    spaces: spaces,
+    displays: displays,
+    tiling: tiling
   )
 
-  if case .failure(let error) = displayManager.start() {
-    fail("unable to start display manager - \(error)")
+  if case .failure(let error) = displays.start() {
+    fail("unable to start display observation - \(error)")
   }
 
-  if case .failure(let error) = processManager.start() {
-    fail("unable to start process manager - \(error)")
+  if case .failure(let error) = processes.start() {
+    fail("unable to start process observation - \(error)")
   }
 
-  windowManager.start(processes: processManager.all())
-  tilingManager.start()
+  windows.start(processes: processes.all())
+  tiling.start()
 
   let daemon = Daemon(
-    windowManager: windowManager,
-    spaceManager: spaceManager,
-    tilingManager: tilingManager
+    windows: windows,
+    spaces: spaces,
+    tiling: tiling
   )
 
   runOrFail("unable to run messaging daemon") {

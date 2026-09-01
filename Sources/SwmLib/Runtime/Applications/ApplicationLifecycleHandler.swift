@@ -6,14 +6,14 @@ struct ApplicationLifecycleHandler {
   /// Workspace bridge used for AppKit readiness and observability checks.
   let workspace: Workspace
 
-  /// Process manager used to retry launch handling.
-  let processManager: Processes
+  /// Process service used to retry launch handling.
+  let processes: Processes
 
-  /// Window manager updated by application lifecycle changes.
-  let windowManager: Windows
+  /// Window service updated by application lifecycle changes.
+  let windows: Windows
 
   /// Tiling coordinator reconciled after application inventory changes.
-  let tilingManager: Tiling
+  let tiling: Tiling
 
   /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
@@ -30,7 +30,7 @@ struct ApplicationLifecycleHandler {
   /// Make a launched process observable and discover its windows.
   private func applicationLaunched(for process: Process) {
     if process.terminated {
-      windowManager.removeLostFrontSwitchedEvent(for: process.pid)
+      windows.removeLostFrontSwitchedEvent(for: process.pid)
       log("application terminated during launch \(process)", level: .info)
       return
     }
@@ -50,23 +50,23 @@ struct ApplicationLifecycleHandler {
     }
 
     guard
-      let application = windowManager.manage(
+      let application = windows.manage(
         process,
         retryObservation: {
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            [processManager, psn = process.psn] in
-            guard let process = processManager.find(by: psn) else { return }
+            [processes, psn = process.psn] in
+            guard let process = processes.find(by: psn) else { return }
             Events.shared.post(.application(.launched(process)))
           }
         }
       )
     else { return }
 
-    windowManager.addWindows(for: application)
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    windows.addWindows(for: application)
+    tiling.reconcileAndReflowVisibleSpaces()
     emitApplicationSignal(.applicationLaunched, application: application)
 
-    if windowManager.removeLostFrontSwitchedEvent(for: process.pid) {
+    if windows.removeLostFrontSwitchedEvent(for: process.pid) {
       Events.shared.post(.application(.frontSwitched(process)))
     }
 
@@ -77,24 +77,24 @@ struct ApplicationLifecycleHandler {
   private func applicationTerminated(for process: Process) {
     workspace.unobserveActivationPolicy(process)
     workspace.unobserveFinishedLaunching(process)
-    windowManager.removeLostFrontSwitchedEvent(for: process.pid)
+    windows.removeLostFrontSwitchedEvent(for: process.pid)
 
-    guard let application = windowManager.application(by: process.pid) else { return }
+    guard let application = windows.application(by: process.pid) else { return }
 
     log("application terminated \(application)")
 
-    windowManager.remove(application: application)
+    windows.remove(application: application)
     emitApplicationSignal(.applicationTerminated, application: application)
 
-    let windows = windowManager.allWindows(for: application)
+    let applicationWindows = windows.allWindows(for: application)
 
-    for window in windows {
-      windowManager.remove(by: window.id)
+    for window in applicationWindows {
+      windows.remove(by: window.id)
     }
 
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
 
-    for window in windows {
+    for window in applicationWindows {
       window.invalidate()
     }
 
@@ -103,20 +103,20 @@ struct ApplicationLifecycleHandler {
 
   /// Refresh windows and publish focused-window events after a frontmost app switch.
   private func applicationFrontSwitched(for process: Process) {
-    guard let application = windowManager.application(by: process.pid) else {
-      windowManager.addLostFrontSwitchedEvent(for: process.pid)
+    guard let application = windows.application(by: process.pid) else {
+      windows.addLostFrontSwitchedEvent(for: process.pid)
       log("frontmost application switched before launch completed \(process)", level: .info)
       return
     }
 
-    windowManager.refreshWindows(for: application)
+    windows.refreshWindows(for: application)
 
     if let focusedWindowID = application.focusedWindowID() {
       Events.shared.post(.window(.focused(focusedWindowID)))
     }
 
     log(
-      "frontmost application switched \(application), current focused window: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+      "frontmost application switched \(application), current focused window: \(windows.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windows.lastFocusedWindowID.map(String.init) ?? "nil")"
     )
   }
 

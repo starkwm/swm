@@ -5,18 +5,18 @@ import Testing
 
 @MainActor
 @Suite("Tiling layout controls")
-struct TilingManagerLayoutControlTests {
+struct TilingLayoutControlTests {
   @Test("setLayout: gives every tiled window the complete visible bounds in monocle")
   func setLayoutPlansMonocleGeometry() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    manager.start()
+    tiling.start()
 
-    #expect(manager.setLayout(.monocle, for: 10))
+    #expect(tiling.setLayout(.monocle, for: 10))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 1_000, height: 800),
@@ -29,17 +29,17 @@ struct TilingManagerLayoutControlTests {
 
   @Test("setLayout: retains dwindle selection and plans its geometry")
   func setLayoutRetainsDwindleSelectionAndPlansItsGeometry() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3), window(id: 4)],
       memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
     )
-    manager.start()
+    tiling.start()
 
-    #expect(manager.setLayout(.dwindle, for: 10))
-    #expect(manager.setLayout(.dwindle, for: 99) == false)
+    #expect(tiling.setLayout(.dwindle, for: 10))
+    #expect(tiling.setLayout(.dwindle, for: 99) == false)
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -50,10 +50,10 @@ struct TilingManagerLayoutControlTests {
         )
     )
 
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -67,17 +67,17 @@ struct TilingManagerLayoutControlTests {
 
   @Test("master controls: update ratio and placement for a Space")
   func masterControlsUpdateRatioAndPlacement() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    manager.start()
-    manager.setLayout(.master, for: 10)
+    tiling.start()
+    tiling.setLayout(.master, for: 10)
 
-    #expect(manager.changeMasterRatio(.absolute(0.6), for: 10))
-    #expect(manager.setMasterPlacement(.right, for: 10))
+    #expect(tiling.changeMasterRatio(.absolute(0.6), for: 10))
+    #expect(tiling.setMasterPlacement(.right, for: 10))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 400, y: 0, width: 600, height: 800),
@@ -90,30 +90,30 @@ struct TilingManagerLayoutControlTests {
 
   @Test("master controls: cycle placement clockwise and counter-clockwise")
   func masterControlsCyclePlacement() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]]
     )
-    manager.start()
-    manager.setLayout(.master, for: 10)
+    tiling.start()
+    tiling.setLayout(.master, for: 10)
 
-    #expect(manager.cycleMasterPlacement(.next, for: 10) == .top)
-    #expect(manager.cycleMasterPlacement(.prev, for: 10) == .left)
+    #expect(tiling.cycleMasterPlacement(.next, for: 10) == .top)
+    #expect(tiling.cycleMasterPlacement(.prev, for: 10) == .left)
   }
 
   @Test("dwindle controls: adjust a window's nearest split")
   func dwindleControlsAdjustNearestSplit() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
 
-    #expect(manager.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
-    #expect(manager.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
+    #expect(tiling.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
+    #expect(tiling.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 700, height: 800),
@@ -126,16 +126,16 @@ struct TilingManagerLayoutControlTests {
 
   @Test("dwindle controls: toggle and retain the nearest dynamic split")
   func dwindleControlsToggleAndRetainNearestDynamicSplit() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
 
-    #expect(manager.toggleDwindleSplit(for: 2))
+    #expect(tiling.toggleDwindleSplit(for: 2))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -145,9 +145,9 @@ struct TilingManagerLayoutControlTests {
         )
     )
 
-    #expect(manager.toggleDwindleSplit(for: 2))
+    #expect(tiling.toggleDwindleSplit(for: 2))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -160,16 +160,16 @@ struct TilingManagerLayoutControlTests {
 
   @Test("dwindle controls: swap the nearest sibling subtrees")
   func dwindleControlsSwapNearestSiblingSubtrees() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
 
-    #expect(manager.swapDwindleSplit(for: 2))
+    #expect(tiling.swapDwindleSplit(for: 2))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -185,8 +185,8 @@ struct TilingManagerLayoutControlTests {
     var spaceIDs = Set([UInt64(10)])
     var visibleSpaceID = UInt64(10)
     var visibleFrame = CGRect(x: 0, y: 0, width: 1_000, height: 800)
-    let spaceManager = Spaces(activeSpaceID: nil)
-    let manager = Tiling(
+    let spaces = Spaces(activeSpaceID: nil)
+    let tiling = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: [window(id: 1), window(id: 2)],
@@ -206,14 +206,14 @@ struct TilingManagerLayoutControlTests {
           )
         )
       },
-      spaceManager: spaceManager
+      spaces: spaces
     )
-    manager.start()
+    tiling.start()
 
-    manager.setLayoutForSpaces(.master)
-    manager.setMasterRatioForAllSpaces(0.65)
-    manager.setMasterPlacementForAllSpaces(.bottom)
-    manager.setSplitDirectionPreservationForAllSpaces(true)
+    tiling.setLayoutForSpaces(.master)
+    tiling.setMasterRatioForAllSpaces(0.65)
+    tiling.setMasterPlacementForAllSpaces(.bottom)
+    tiling.setSplitDirectionPreservationForAllSpaces(true)
 
     let expectedPlan = TilingLayoutPlan.layout(
       .frames([
@@ -221,20 +221,20 @@ struct TilingManagerLayoutControlTests {
         2: CGRect(x: 0, y: 0, width: 1_000, height: 280),
       ])
     )
-    #expect(manager.layoutPlan(for: layoutID(10)) == expectedPlan)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == expectedPlan)
 
     spaceIDs.insert(11)
     visibleSpaceID = 11
-    manager.reconcile()
+    tiling.reconcile()
 
-    #expect(manager.layoutPlan(for: layoutID(11)) == expectedPlan)
+    #expect(tiling.layoutPlan(for: layoutID(11)) == expectedPlan)
 
-    manager.setLayout(.dwindle, for: 11)
+    tiling.setLayout(.dwindle, for: 11)
     visibleFrame = CGRect(x: 0, y: 0, width: 600, height: 1_000)
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(11))
+      tiling.layoutPlan(for: layoutID(11))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 300, height: 1_000),

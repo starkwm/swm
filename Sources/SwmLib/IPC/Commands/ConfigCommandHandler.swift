@@ -1,13 +1,13 @@
 /// Handles IPC commands that update global configuration for every known space.
 @MainActor
 struct ConfigCommandHandler {
-  private let spaceManager: Spaces
-  private let tilingManager: Tiling
+  private let spaces: Spaces
+  private let tiling: Tiling
 
-  /// Create a config command handler backed by space and tiling managers.
-  init(spaceManager: Spaces, tilingManager: Tiling) {
-    self.spaceManager = spaceManager
-    self.tilingManager = tilingManager
+  /// Create a config command handler backed by space and tiling services.
+  init(spaces: Spaces, tiling: Tiling) {
+    self.spaces = spaces
+    self.tiling = tiling
   }
 
   /// Dispatch a config IPC request to the matching setting update.
@@ -44,7 +44,7 @@ struct ConfigCommandHandler {
     guard let ratio = LayoutCommandParser.ratio(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(argument)")
     }
-    tilingManager.setMasterRatioForAllSpaces(ratio)
+    tiling.setMasterRatioForAllSpaces(ratio)
     return .success(id: request.id, message: "ok")
   }
 
@@ -57,7 +57,7 @@ struct ConfigCommandHandler {
     guard let placement = MasterPlacement(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid config master-placement: \(argument)")
     }
-    tilingManager.setMasterPlacementForAllSpaces(placement)
+    tiling.setMasterPlacementForAllSpaces(placement)
     return .success(id: request.id, message: placement.rawValue)
   }
 
@@ -70,7 +70,7 @@ struct ConfigCommandHandler {
     guard let enabled = LayoutCommandParser.boolean(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config preserve-split value: \(argument)")
     }
-    tilingManager.setSplitDirectionPreservationForAllSpaces(enabled)
+    tiling.setSplitDirectionPreservationForAllSpaces(enabled)
     return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
@@ -81,7 +81,7 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("invalid config layout: \(argument)")
     }
 
-    tilingManager.setLayoutForSpaces(selection)
+    tiling.setLayoutForSpaces(selection)
 
     return .success(id: request.id, message: selection.rawValue)
   }
@@ -93,10 +93,10 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("invalid config window-gap value: \(argument)")
     }
 
-    spaceManager.updateAllSettings { settings in
+    spaces.updateAllSettings { settings in
       settings.gap = max(0, gap)
     }
-    tilingManager.reflowVisibleSpaces()
+    tiling.reflowVisibleSpaces()
 
     return .success(id: request.id, message: "ok")
   }
@@ -113,7 +113,7 @@ struct ConfigCommandHandler {
       )
     }
 
-    spaceManager.updateAllSettings { settings in
+    spaces.updateAllSettings { settings in
       switch side {
       case .top:
         settings.padding.top = max(0, value)
@@ -125,7 +125,7 @@ struct ConfigCommandHandler {
         settings.padding.right = max(0, value)
       }
     }
-    tilingManager.reflowVisibleSpaces()
+    tiling.reflowVisibleSpaces()
 
     return .success(id: request.id, message: "ok")
   }

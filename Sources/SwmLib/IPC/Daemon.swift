@@ -17,18 +17,18 @@ public final class Daemon {
   }
   private var listen: Socket?
 
-  /// Create a daemon using the runtime managers that handle command side effects.
+  /// Create a daemon using the runtime services that handle command side effects.
   @MainActor
   public convenience init(
-    windowManager: Windows,
-    spaceManager: Spaces,
-    tilingManager: Tiling
+    windows: Windows,
+    spaces: Spaces,
+    tiling: Tiling
   ) {
     self.init(
       dispatcher: IPCCommandDispatcher(
-        windowManager: windowManager,
-        spaceManager: spaceManager,
-        tilingManager: tilingManager
+        windows: windows,
+        spaces: spaces,
+        tiling: tiling
       )
     )
   }

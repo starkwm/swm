@@ -1,14 +1,14 @@
 /// Handles space lifecycle events.
 @MainActor
 struct SpaceLifecycleHandler {
-  /// Space manager updated by space events.
-  let spaceManager: Spaces
+  /// Space service updated by space events.
+  let spaces: Spaces
 
-  /// Window manager refreshed after space changes.
-  let windowManager: Windows
+  /// Window service refreshed after space changes.
+  let windows: Windows
 
   /// Tiling coordinator refreshed after Space topology changes.
-  let tilingManager: Tiling
+  let tiling: Tiling
 
   /// Handle one space lifecycle event.
   func handle(_ event: SpaceEvent) {
@@ -20,24 +20,24 @@ struct SpaceLifecycleHandler {
 
   /// Update active-space tracking, refresh windows, and replay deferred focus.
   private func spaceChanged(with space: Space) {
-    spaceManager.activeSpaceDidChange(to: space.id)
-    spaceManager.retainSettings(for: Set(Spaces.all().map(\.id)))
-    windowManager.refreshWindows()
+    spaces.activeSpaceDidChange(to: space.id)
+    spaces.retainSettings(for: Set(Spaces.all().map(\.id)))
+    windows.refreshWindows()
     replayLostFocusedEvent()
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
 
     log(
-      "space changed \(space) current: \(spaceManager.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaceManager.lastActiveSpaceID.map(String.init) ?? "nil")"
+      "space changed \(space) current: \(spaces.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaces.lastActiveSpaceID.map(String.init) ?? "nil")"
     )
   }
 
   /// Replay focused-window events that arrived before their windows were manageable.
   private func replayLostFocusedEvent() {
-    for windowID in windowManager.lostFocusedWindowIDsSnapshot() {
-      guard let window = windowManager.window(by: windowID) else { continue }
+    for windowID in windows.lostFocusedWindowIDsSnapshot() {
+      guard let window = windows.window(by: windowID) else { continue }
       guard !window.isMinimized else { continue }
 
-      windowManager.removeLostFocusedEvent(for: windowID)
+      windows.removeLostFocusedEvent(for: windowID)
       Events.shared.post(.window(.focused(windowID)))
     }
   }

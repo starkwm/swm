@@ -1,11 +1,11 @@
 /// Handles display lifecycle events.
 @MainActor
 struct DisplayLifecycleHandler {
-  /// Display manager updated by display events.
-  let displayManager: Displays
+  /// Display service updated by display events.
+  let displays: Displays
 
   /// Tiling coordinator refreshed after display topology changes.
-  let tilingManager: Tiling
+  let tiling: Tiling
 
   /// Handle one display lifecycle event.
   func handle(_ event: DisplayEvent) {
@@ -25,19 +25,19 @@ struct DisplayLifecycleHandler {
 
   /// Update active-display tracking.
   private func displayChanged() {
-    displayManager.activeDisplayDidChange()
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    displays.activeDisplayDidChange()
+    tiling.reconcileAndReflowVisibleSpaces()
 
     log(
-      "display changed current: \(displayManager.currentActiveDisplayID ?? "nil"), last: \(displayManager.lastActiveDisplayID ?? "nil")"
+      "display changed current: \(displays.currentActiveDisplayID ?? "nil"), last: \(displays.lastActiveDisplayID ?? "nil")"
     )
   }
 
   /// Log display reconfiguration without mutating active-display tracking.
   private func displayReconfigured(displayID: UInt32, message: String) {
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
     log(
-      "\(message) id: \(displayID), current: \(displayManager.currentActiveDisplayID ?? "nil"), last: \(displayManager.lastActiveDisplayID ?? "nil")"
+      "\(message) id: \(displayID), current: \(displays.currentActiveDisplayID ?? "nil"), last: \(displays.lastActiveDisplayID ?? "nil")"
     )
   }
 }

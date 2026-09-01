@@ -5,20 +5,20 @@ import Testing
 
 @MainActor
 @Suite("Tiling reconciliation")
-struct TilingManagerReconciliationTests {
+struct TilingReconciliationTests {
   @Test("start: excludes ineligible windows from disabled Space geometry")
   func startExcludesIneligibleWindowsFromDisabledSpaceGeometry() {
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10, 11], 3: []]
     )
 
-    manager.start()
+    tiling.start()
 
-    #expect(manager.layoutPlan(for: layoutID(10)) == .disabled)
-    #expect(manager.setLayout(.master, for: 10))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
+    #expect(tiling.setLayout(.master, for: 10))
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
     )
   }
@@ -27,21 +27,21 @@ struct TilingManagerReconciliationTests {
   func reconcilePreservesSurvivingOrderAndEnablementAcrossMigration() {
     var windows = [window(id: 1), window(id: 2)]
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: { windows },
       memberships: { memberships }
     )
-    manager.start()
-    manager.setLayout(.master, for: 10)
-    manager.windowDidFocus(1)
+    tiling.start()
+    tiling.setLayout(.master, for: 10)
+    tiling.windowDidFocus(1)
 
     windows.append(window(id: 3))
     memberships[2] = [11]
     memberships[3] = [10]
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -49,25 +49,25 @@ struct TilingManagerReconciliationTests {
           ])
         )
     )
-    #expect(manager.layoutPlan(for: layoutID(11)) == .disabled)
+    #expect(tiling.layoutPlan(for: layoutID(11)) == .disabled)
   }
 
   @Test("dwindle: a new window splits the focused leaf")
   func dwindleNewWindowSplitsFocusedLeaf() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
-    let manager = makeManager(
+    let tiling = makeTiling(
       windows: { windows },
       memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
     )
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
-    manager.windowDidFocus(1)
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
+    tiling.windowDidFocus(1)
 
     windows.append(window(id: 4))
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 400),
@@ -82,20 +82,20 @@ struct TilingManagerReconciliationTests {
   @Test("reconcile: preserves minimized leaves but omits them from geometry")
   func reconcilePreservesMinimizedLeavesButOmitsThemFromGeometry() {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]
-    let manager = makeManager(windows: { windows }, memberships: { [1: [10], 2: [10]] })
-    manager.start()
-    manager.setLayout(.master, for: 10)
+    let tiling = makeTiling(windows: { windows }, memberships: { [1: [10], 2: [10]] })
+    tiling.start()
+    tiling.setLayout(.master, for: 10)
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
     )
 
     windows[1] = window(id: 2, isMinimized: false)
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10))
+      tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -109,26 +109,26 @@ struct TilingManagerReconciliationTests {
   func reconcilePreservesNativeFullscreenLeafPosition() {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [10]]
-    let manager = makeManager(windows: { windows }, memberships: { memberships })
-    manager.start()
-    manager.setLayout(.master, for: 10)
-    manager.windowDidFocus(3)
-    let initialPlan = manager.layoutPlan(for: layoutID(10))
+    let tiling = makeTiling(windows: { windows }, memberships: { memberships })
+    tiling.start()
+    tiling.setLayout(.master, for: 10)
+    tiling.windowDidFocus(3)
+    let initialPlan = tiling.layoutPlan(for: layoutID(10))
 
     memberships[1] = [12]
-    manager.reconcile()
+    tiling.reconcile()
     memberships[1] = [10]
-    manager.reconcile()
+    tiling.reconcile()
 
-    #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
   @Test("reconcile: preserves state while display ownership is unresolved")
   func reconcilePreservesStateWhileDisplayOwnershipIsUnresolved() {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var windowServerDisplayID = "display"
-    let spaceManager = Spaces(activeSpaceID: nil)
-    let manager = Tiling(
+    let spaces = Spaces(activeSpaceID: nil)
+    let tiling = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: windows,
@@ -150,28 +150,28 @@ struct TilingManagerReconciliationTests {
           )
         )
       },
-      spaceManager: spaceManager
+      spaces: spaces
     )
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
-    let initialPlan = manager.layoutPlan(for: layoutID(10))
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
+    let initialPlan = tiling.layoutPlan(for: layoutID(10))
 
     windowServerDisplayID = "stale-display"
-    manager.reconcile()
+    tiling.reconcile()
 
     windowServerDisplayID = "display"
-    manager.reconcile()
+    tiling.reconcile()
 
-    #expect(manager.layoutPlan(for: layoutID(10)) == initialPlan)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
   @Test("layoutPlan: requires a visible Space")
   func layoutPlanRequiresVisibleSpace() {
-    let hiddenManager = makeManager(visibleSpaceID: 11)
-    hiddenManager.start()
-    hiddenManager.setLayout(.master, for: 10)
+    let hiddenTiling = makeTiling(visibleSpaceID: 11)
+    hiddenTiling.start()
+    hiddenTiling.setLayout(.master, for: 10)
 
-    #expect(hiddenManager.layoutPlan(for: layoutID(10)) == .notVisible)
+    #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
   }
 
   @Test("shared Space: tiles and migrates windows independently per monitor")
@@ -181,12 +181,12 @@ struct TilingManagerReconciliationTests {
       window(id: 2, displayID: "display-a"),
       window(id: 3, displayID: "display-b"),
     ]
-    let manager = makeSharedSpaceManager(windows: { windows })
-    manager.start()
+    let tiling = makeSharedSpaceTiling(windows: { windows })
+    tiling.start()
 
-    #expect(manager.setLayout(.master, for: 10))
+    #expect(tiling.setLayout(.master, for: 10))
     #expect(
-      manager.layoutPlan(for: layoutID(10, displayID: "display-a"))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-a"))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 500, height: 800),
@@ -195,19 +195,19 @@ struct TilingManagerReconciliationTests {
         )
     )
     #expect(
-      manager.layoutPlan(for: layoutID(10, displayID: "display-b"))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
         == .layout(.frames([3: CGRect(x: 1_000, y: 0, width: 800, height: 800)]))
     )
 
     windows[1] = window(id: 2, displayID: "display-b")
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10, displayID: "display-a"))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-a"))
         == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
     )
     #expect(
-      manager.layoutPlan(for: layoutID(10, displayID: "display-b"))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
         == .layout(
           .frames([
             3: CGRect(x: 1_000, y: 0, width: 400, height: 800),
@@ -216,7 +216,7 @@ struct TilingManagerReconciliationTests {
         )
     )
 
-    #expect(manager.setLayout(.dwindle, for: 10))
+    #expect(tiling.setLayout(.dwindle, for: 10))
   }
 
   @Test("shared Space: a new monitor inherits the layout selection")
@@ -226,17 +226,17 @@ struct TilingManagerReconciliationTests {
         visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
       )
     ]
-    let manager = makeSharedSpaceManager(windows: { [] }, displays: { displays })
-    manager.start()
-    manager.setLayout(.dwindle, for: 10)
+    let tiling = makeSharedSpaceTiling(windows: { [] }, displays: { displays })
+    tiling.start()
+    tiling.setLayout(.dwindle, for: 10)
 
     displays["display-b"] = SpaceTopologyDisplay(
       visibleFrame: CGRect(x: 1_000, y: 0, width: 800, height: 800)
     )
-    manager.reconcile()
+    tiling.reconcile()
 
     #expect(
-      manager.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
     )
   }
 }

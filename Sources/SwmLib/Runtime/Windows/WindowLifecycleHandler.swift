@@ -3,11 +3,11 @@ import ApplicationServices
 /// Handles window lifecycle and focus events.
 @MainActor
 struct WindowLifecycleHandler {
-  /// Window manager updated by window events.
-  let windowManager: Windows
+  /// Window service updated by window events.
+  let windows: Windows
 
   /// Tiling coordinator updated by window lifecycle events.
-  let tilingManager: Tiling
+  let tiling: Tiling
 
   /// Handle one window lifecycle event.
   func handle(_ event: WindowEvent) {
@@ -30,15 +30,15 @@ struct WindowLifecycleHandler {
   /// Add a newly created window and replay any deferred focus event for it.
   private func windowCreated(for pid: pid_t, with windowID: CGWindowID) {
     guard windowID != 0 else { return }
-    guard windowManager.window(by: windowID) == nil else { return }
-    guard let application = windowManager.application(by: pid) else { return }
+    guard windows.window(by: windowID) == nil else { return }
+    guard let application = windows.application(by: pid) else { return }
 
-    guard let window = windowManager.addWindow(with: windowID, for: application) else { return }
+    guard let window = windows.addWindow(with: windowID, for: application) else { return }
 
     log("window created \(window)")
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
 
-    if windowManager.removeLostFocusedEvent(for: window.id) {
+    if windows.removeLostFocusedEvent(for: window.id) {
       Events.shared.post(.window(.focused(window.id)))
     }
   }
@@ -49,8 +49,8 @@ struct WindowLifecycleHandler {
 
     log("window destroyed \(window)")
 
-    windowManager.remove(by: window.id)
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    windows.remove(by: window.id)
+    tiling.reconcileAndReflowVisibleSpaces()
     window.invalidate()
   }
 
@@ -58,45 +58,45 @@ struct WindowLifecycleHandler {
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
-    guard let window = windowManager.window(by: windowID) else {
-      windowManager.addLostFocusedEvent(for: windowID)
+    guard let window = windows.window(by: windowID) else {
+      windows.addLostFocusedEvent(for: windowID)
       log("window focused before it was managed id: \(windowID)", level: .info)
       return
     }
 
     guard !window.isMinimized else {
-      windowManager.addLostFocusedEvent(for: windowID)
+      windows.addLostFocusedEvent(for: windowID)
       log("window focused while minimized \(window)", level: .info)
       return
     }
 
-    windowManager.removeLostFocusedEvent(for: windowID)
-    windowManager.focusedWindowDidChange(to: windowID)
-    tilingManager.windowDidFocus(windowID)
+    windows.removeLostFocusedEvent(for: windowID)
+    windows.focusedWindowDidChange(to: windowID)
+    tiling.windowDidFocus(windowID)
 
     log(
-      "window focused \(window) current: \(windowManager.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windowManager.lastFocusedWindowID.map(String.init) ?? "nil")"
+      "window focused \(window) current: \(windows.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windows.lastFocusedWindowID.map(String.init) ?? "nil")"
     )
   }
 
   /// Handle a window move or resize notification.
   private func windowFrameChanged(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
-    tilingManager.windowFrameDidChange(windowID)
+    tiling.windowFrameDidChange(windowID)
   }
 
   /// Handle a window minimization notification.
   private func windowMinimized(with window: Window) {
     log("window minimized \(window)")
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
   }
 
   /// Handle a window restore notification and replay deferred focus.
   private func windowDeminimized(with window: Window) {
     log("window deminimized \(window)")
-    tilingManager.reconcileAndReflowVisibleSpaces()
+    tiling.reconcileAndReflowVisibleSpaces()
 
-    if windowManager.removeLostFocusedEvent(for: window.id) {
+    if windows.removeLostFocusedEvent(for: window.id) {
       Events.shared.post(.window(.focused(window.id)))
     }
   }

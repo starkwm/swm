@@ -7,9 +7,9 @@ private func displayReconfigurationCallback(
 ) {
   guard let userInfo else { return }
 
-  let displayManager = Unmanaged<Displays>.fromOpaque(userInfo).takeUnretainedValue()
+  let displays = Unmanaged<Displays>.fromOpaque(userInfo).takeUnretainedValue()
   Task { @MainActor in
-    displayManager.displayReconfiguration(displayID: displayID, flags: flags)
+    displays.displayReconfiguration(displayID: displayID, flags: flags)
   }
 }
 
@@ -28,7 +28,7 @@ public final class Displays {
 
   private var activeDisplay: TrackedState<String>
 
-  /// Create a display manager seeded from the active space.
+  /// Create a display observation seeded from the active space.
   public init() {
     activeDisplay = TrackedState(current: Spaces.display(for: Spaces.active()))
   }
@@ -78,7 +78,7 @@ public enum DisplaysError: Error, CustomStringConvertible {
   /// Display observation could not be started or accessed.
   case accessFailed(String)
 
-  /// Human-readable display manager failure description.
+  /// Human-readable display observation failure description.
   public var description: String {
     switch self {
     case .accessFailed(let message):

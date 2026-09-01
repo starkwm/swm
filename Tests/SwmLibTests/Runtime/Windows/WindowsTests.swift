@@ -6,30 +6,30 @@ import Testing
 
 @Suite("Windows")
 @MainActor
-struct WindowManagerTests {
+struct WindowsTests {
   @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
   func addAndRemoveLostFrontSwitchedEventConsumesOnce() {
-    let manager = Windows(workspace: Workspace())
+    let windows = Windows(workspace: Workspace())
     let processID: pid_t = 42
 
-    #expect(manager.removeLostFrontSwitchedEvent(for: processID) == false)
+    #expect(windows.removeLostFrontSwitchedEvent(for: processID) == false)
 
-    manager.addLostFrontSwitchedEvent(for: processID)
+    windows.addLostFrontSwitchedEvent(for: processID)
 
-    #expect(manager.removeLostFrontSwitchedEvent(for: processID))
-    #expect(manager.removeLostFrontSwitchedEvent(for: processID) == false)
+    #expect(windows.removeLostFrontSwitchedEvent(for: processID))
+    #expect(windows.removeLostFrontSwitchedEvent(for: processID) == false)
   }
 
   @Test("addLostFocusedEvent/removeLostFocusedEvent: tracks and consumes once")
   func addAndRemoveLostFocusedEventTracksAndConsumesOnce() {
-    let manager = Windows(workspace: Workspace())
+    let windows = Windows(workspace: Workspace())
     let windowID: CGWindowID = 42
 
-    #expect(manager.removeLostFocusedEvent(for: windowID) == false)
+    #expect(windows.removeLostFocusedEvent(for: windowID) == false)
 
-    manager.addLostFocusedEvent(for: windowID)
+    windows.addLostFocusedEvent(for: windowID)
 
-    #expect(manager.removeLostFocusedEvent(for: windowID))
-    #expect(manager.removeLostFocusedEvent(for: windowID) == false)
+    #expect(windows.removeLostFocusedEvent(for: windowID))
+    #expect(windows.removeLostFocusedEvent(for: windowID) == false)
   }
 }

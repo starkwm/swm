@@ -1,6 +1,6 @@
 import Carbon
 
-/// Forward Carbon process events to a process manager instance.
+/// Forward Carbon process events to a process observation instance.
 private func processEventHandler(
   _: EventHandlerCallRef?,
   event: EventRef?,
@@ -9,8 +9,8 @@ private func processEventHandler(
   guard let event = event else { return noErr }
   guard let context else { return noErr }
 
-  let processManager = Unmanaged<Processes>.fromOpaque(context).takeUnretainedValue()
-  return processManager.handle(event: event)
+  let processes = Unmanaged<Processes>.fromOpaque(context).takeUnretainedValue()
+  return processes.handle(event: event)
 }
 
 /// Tracks running application processes and publishes process lifecycle events.
@@ -18,7 +18,7 @@ private func processEventHandler(
 public final class Processes {
   private var processes = [UInt32: Process]()
 
-  /// Create an empty process manager.
+  /// Create an empty process observation.
   public init() {}
 
   /// Seed the process list and start observing Carbon application events.
@@ -145,7 +145,7 @@ public enum ProcessesError: Error, CustomStringConvertible {
   /// Process observation could not be started or accessed.
   case accessFailed(String)
 
-  /// Human-readable process manager failure description.
+  /// Human-readable process observation failure description.
   public var description: String {
     switch self {
     case .accessFailed(let message):

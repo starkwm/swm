@@ -33,12 +33,12 @@ public final class Spaces {
   private var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
-  /// Create a space manager seeded from the active space.
+  /// Create a Space service seeded from the active space.
   public convenience init() {
     self.init(activeSpaceID: Self.active().id)
   }
 
-  /// Create a space manager with an explicit active space ID.
+  /// Create a Space service with an explicit active space ID.
   init(activeSpaceID: UInt64?) {
     activeSpace = TrackedState(current: activeSpaceID)
   }

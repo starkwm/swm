@@ -1,13 +1,13 @@
 /// Handles IPC commands that update the active space.
 @MainActor
 struct SpaceCommandHandler {
-  private let spaceManager: Spaces
-  private let tilingManager: Tiling
+  private let spaces: Spaces
+  private let tiling: Tiling
 
-  /// Create a space command handler backed by space and tiling managers.
-  init(spaceManager: Spaces, tilingManager: Tiling) {
-    self.spaceManager = spaceManager
-    self.tilingManager = tilingManager
+  /// Create a space command handler backed by space and tiling services.
+  init(spaces: Spaces, tiling: Tiling) {
+    self.spaces = spaces
+    self.tiling = tiling
   }
 
   /// Dispatch a space IPC request to the matching active-space update.
@@ -40,7 +40,7 @@ struct SpaceCommandHandler {
     }
 
     let spaceID = try currentSpaceID()
-    guard tilingManager.changeMasterRatio(change, for: spaceID) else {
+    guard tiling.changeMasterRatio(change, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
     }
     return .success(id: request.id, message: "ok")
@@ -55,12 +55,12 @@ struct SpaceCommandHandler {
     let spaceID = try currentSpaceID()
     let placement: MasterPlacement
     if let selectedPlacement = MasterPlacement(rawValue: argument) {
-      guard tilingManager.setMasterPlacement(selectedPlacement, for: spaceID) else {
+      guard tiling.setMasterPlacement(selectedPlacement, for: spaceID) else {
         throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
       }
       placement = selectedPlacement
     } else if let direction = CycleDirection(rawValue: argument) {
-      guard let cycledPlacement = tilingManager.cycleMasterPlacement(direction, for: spaceID) else {
+      guard let cycledPlacement = tiling.cycleMasterPlacement(direction, for: spaceID) else {
         throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
       }
       placement = cycledPlacement
@@ -81,7 +81,7 @@ struct SpaceCommandHandler {
     }
 
     let spaceID = try currentSpaceID()
-    guard tilingManager.setSplitDirectionPreservation(enabled, for: spaceID) else {
+    guard tiling.setSplitDirectionPreservation(enabled, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
     }
     return .success(id: request.id, message: enabled ? "on" : "off")
@@ -95,7 +95,7 @@ struct SpaceCommandHandler {
     }
 
     let spaceID = try currentSpaceID()
-    guard tilingManager.setLayout(selection, for: spaceID) else {
+    guard tiling.setLayout(selection, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for active space")
     }
 
@@ -113,12 +113,12 @@ struct SpaceCommandHandler {
 
     switch change.mode {
     case .absolute:
-      spaceManager.setPadding(change.padding, for: spaceID)
+      spaces.setPadding(change.padding, for: spaceID)
     case .relative:
-      spaceManager.adjustPadding(change.padding, for: spaceID)
+      spaces.adjustPadding(change.padding, for: spaceID)
     }
 
-    tilingManager.reflow(spaceID: spaceID)
+    tiling.reflow(spaceID: spaceID)
 
     return .success(id: request.id, message: "ok")
   }
@@ -134,19 +134,19 @@ struct SpaceCommandHandler {
 
     switch change.mode {
     case .absolute:
-      spaceManager.setGap(change.value, for: spaceID)
+      spaces.setGap(change.value, for: spaceID)
     case .relative:
-      spaceManager.adjustGap(change.value, for: spaceID)
+      spaces.adjustGap(change.value, for: spaceID)
     }
 
-    tilingManager.reflow(spaceID: spaceID)
+    tiling.reflow(spaceID: spaceID)
 
     return .success(id: request.id, message: "ok")
   }
 
   /// Return the currently active space ID.
   private func currentSpaceID() throws -> UInt64 {
-    guard let id = spaceManager.currentActiveSpaceID else {
+    guard let id = spaces.currentActiveSpaceID else {
       throw IPCCommandError.invalidRequest("no active space")
     }
 

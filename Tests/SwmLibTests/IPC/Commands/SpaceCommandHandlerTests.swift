@@ -8,9 +8,9 @@ import Testing
 struct SpaceCommandHandlerTests {
   @Test("dispatch: selects floating or automatic layout for the active Space")
   func dispatchSelectsLayout() {
-    let spaceManager = Spaces(activeSpaceID: 42)
-    let tilingManager = makeTestTilingManager(
-      spaceManager: spaceManager,
+    let spaces = Spaces(activeSpaceID: 42)
+    let tiling = makeTestTiling(
+      spaces: spaces,
       topology: SpaceTopology(
         spacesByID: [
           42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
@@ -24,41 +24,41 @@ struct SpaceCommandHandlerTests {
         ]
       )
     )
-    tilingManager.start()
+    tiling.start()
     let handler = SpaceCommandHandler(
-      spaceManager: spaceManager,
-      tilingManager: tilingManager
+      spaces: spaces,
+      tiling: tiling
     )
 
     let dwindle = handler.dispatch(request(command: "--layout", args: ["dwindle"]))
 
     #expect(dwindle.ok)
     #expect(dwindle.message == "dwindle")
-    #expect(tilingManager.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
     let master = handler.dispatch(request(command: "--layout", args: ["master"]))
 
     #expect(master.ok)
     #expect(master.message == "master")
-    #expect(tilingManager.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
     let monocle = handler.dispatch(request(command: "--layout", args: ["monocle"]))
 
     #expect(monocle.ok)
     #expect(monocle.message == "monocle")
-    #expect(tilingManager.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
     let float = handler.dispatch(request(command: "--layout", args: ["float"]))
 
     #expect(float.ok)
     #expect(float.message == "float")
-    #expect(tilingManager.layoutPlan(for: layoutID(42)) == .disabled)
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .disabled)
   }
 
   @Test("dispatch: accepts padding commands")
   func dispatchAcceptsPaddingCommands() throws {
-    let manager = Spaces(activeSpaceID: 42)
-    let handler = handler(spaceManager: manager)
+    let spaces = Spaces(activeSpaceID: 42)
+    let handler = handler(spaces: spaces)
 
     let absolute = handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
     let relative = handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
@@ -69,14 +69,14 @@ struct SpaceCommandHandlerTests {
     #expect(relative.message == "ok")
 
     #expect(
-      manager.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
+      spaces.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
     )
   }
 
   @Test("dispatch: accepts gap commands")
   func dispatchAcceptsGapCommands() throws {
-    let manager = Spaces(activeSpaceID: 42)
-    let handler = handler(spaceManager: manager)
+    let spaces = Spaces(activeSpaceID: 42)
+    let handler = handler(spaces: spaces)
 
     let absolute = handler.dispatch(request(command: "--gap", args: ["abs:0"]))
     let relative = handler.dispatch(request(command: "--gap", args: ["rel:10"]))
@@ -86,13 +86,13 @@ struct SpaceCommandHandlerTests {
     #expect(absolute.message == "ok")
     #expect(relative.message == "ok")
 
-    #expect(manager.settings(for: 42).gap == 10)
+    #expect(spaces.settings(for: 42).gap == 10)
   }
 
   @Test("dispatch: updates layout controls")
   func dispatchUpdatesLayoutControls() {
-    let spaceManager = Spaces(activeSpaceID: 42)
-    let tilingManager = Tiling(
+    let spaces = Spaces(activeSpaceID: 42)
+    let tiling = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: [
@@ -127,12 +127,12 @@ struct SpaceCommandHandlerTests {
           )
         )
       },
-      spaceManager: spaceManager
+      spaces: spaces
     )
-    tilingManager.start()
+    tiling.start()
     let handler = SpaceCommandHandler(
-      spaceManager: spaceManager,
-      tilingManager: tilingManager
+      spaces: spaces,
+      tiling: tiling
     )
 
     let ratio = handler.dispatch(request(command: "--master-ratio", args: ["abs:0.6"]))
@@ -151,7 +151,7 @@ struct SpaceCommandHandlerTests {
     #expect(preserve.ok && preserve.message == "on")
     #expect(layout.ok)
     #expect(
-      tilingManager.layoutPlan(for: layoutID(42))
+      tiling.layoutPlan(for: layoutID(42))
         == .layout(
           .frames([
             1: CGRect(x: 0, y: 0, width: 700, height: 800),
@@ -163,7 +163,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() {
-    let handler = handler(spaceManager: Spaces(activeSpaceID: 42))
+    let handler = handler(spaces: Spaces(activeSpaceID: 42))
 
     let responses = [
       handler.dispatch(request(command: "--layout", args: [])),
@@ -182,7 +182,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects unsupported space commands")
   func dispatchRejectsUnsupportedSpaceCommands() {
-    let handler = handler(spaceManager: Spaces(activeSpaceID: 42))
+    let handler = handler(spaces: Spaces(activeSpaceID: 42))
     let unknown = handler.dispatch(request(command: "--unknown", args: []))
     let toggle = handler.dispatch(request(command: "--toggle", args: ["tiling"]))
 
@@ -196,7 +196,7 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: rejects focus command as unsupported")
   func dispatchRejectsFocusCommandAsUnsupported() {
-    let handler = handler(spaceManager: Spaces(activeSpaceID: 42))
+    let handler = handler(spaces: Spaces(activeSpaceID: 42))
     let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
 
     #expect(response.ok == false)
@@ -206,18 +206,18 @@ struct SpaceCommandHandlerTests {
 
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
-    let manager = Spaces(activeSpaceID: 2)
-    let handler = handler(spaceManager: manager)
+    let spaces = Spaces(activeSpaceID: 2)
+    let handler = handler(spaces: spaces)
 
     _ = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
-    #expect(manager.settings(for: 1).gap == 0)
-    #expect(manager.settings(for: 2).gap == 10)
+    #expect(spaces.settings(for: 1).gap == 0)
+    #expect(spaces.settings(for: 2).gap == 10)
   }
 
   @Test("dispatch: rejects active-space mutation without active space")
   func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() {
-    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
+    let handler = handler(spaces: Spaces(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
     #expect(response.ok == false)
@@ -233,10 +233,10 @@ struct SpaceCommandHandlerTests {
     TilingLayoutID(spaceID: spaceID, displayID: "display")
   }
 
-  private func handler(spaceManager: Spaces) -> SpaceCommandHandler {
+  private func handler(spaces: Spaces) -> SpaceCommandHandler {
     SpaceCommandHandler(
-      spaceManager: spaceManager,
-      tilingManager: makeTestTilingManager(spaceManager: spaceManager)
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces)
     )
   }
 }

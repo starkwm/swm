@@ -9,7 +9,7 @@ public final class Tiling {
   private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
-  private let spaceManager: Spaces
+  private let spaces: Spaces
   private let frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
@@ -20,34 +20,34 @@ public final class Tiling {
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
 
-  /// Create a manager backed by the live runtime models.
-  public convenience init(windowManager: Windows, spaceManager: Spaces) {
+  /// Create tiling backed by the live runtime models.
+  public convenience init(windows: Windows, spaces: Spaces) {
     self.init(
       snapshot: {
-        let windows = windowManager.allWindows().map { $0.tilingSnapshot() }
+        let windowSnapshots = windows.allWindows().map { $0.tilingSnapshot() }
         return TilingReconciliationSnapshot(
-          windows: windows,
-          topology: spaceManager.snapshotTopology(for: windows.map(\.id))
+          windows: windowSnapshots,
+          topology: spaces.snapshotTopology(for: windowSnapshots.map(\.id))
         )
       },
-      spaceManager: spaceManager,
+      spaces: spaces,
       frameReconciler: WindowFrameReconciler(
-        currentFrame: { windowManager.window(by: $0)?.frame() },
+        currentFrame: { windows.window(by: $0)?.frame() },
         frameMutation: { windowID, targetFrame, currentFrame in
-          windowManager.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
+          windows.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
         }
       )
     )
   }
 
-  /// Create a manager with an injectable reconciliation snapshot.
+  /// Create tiling with an injectable reconciliation snapshot.
   init(
     snapshot: @escaping SnapshotProvider,
-    spaceManager: Spaces,
+    spaces: Spaces,
     frameReconciler: WindowFrameReconciler? = nil
   ) {
     self.snapshot = snapshot
-    self.spaceManager = spaceManager
+    self.spaces = spaces
     self.frameReconciler = frameReconciler
   }
 
@@ -434,7 +434,7 @@ public final class Tiling {
       dwindleLayout.resolvingSplitDirections(
         in: tree,
         bounds: display.visibleFrame,
-        settings: spaceManager.settings(for: layoutID.spaceID)
+        settings: spaces.settings(for: layoutID.spaceID)
       ) ?? tree
     guard tree.toggleSplitDirection(containing: windowID) else { return false }
 
@@ -507,7 +507,7 @@ public final class Tiling {
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
     let omittedWindowIDs = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
-    let spaceSettings = spaceManager.settings(for: layoutID.spaceID)
+    let spaceSettings = spaces.settings(for: layoutID.spaceID)
     if state.selection == .dwindle, state.preserveSplitDirections {
       state.tree = dwindleLayout.resolvingSplitDirections(
         in: state.tree,
