@@ -4,10 +4,10 @@ import ApplicationServices
 @MainActor
 struct WindowLifecycleHandler {
   /// Window manager updated by window events.
-  let windowManager: WindowManager
+  let windowManager: Windows
 
   /// Tiling coordinator updated by window lifecycle events.
-  let tilingManager: TilingManager
+  let tilingManager: Tiling
 
   /// Handle one window lifecycle event.
   func handle(_ event: WindowEvent) {
@@ -39,7 +39,7 @@ struct WindowLifecycleHandler {
     tilingManager.reconcileAndReflowVisibleSpaces()
 
     if windowManager.removeLostFocusedEvent(for: window.id) {
-      EventManager.shared.post(.window(.focused(window.id)))
+      Events.shared.post(.window(.focused(window.id)))
     }
   }
 
@@ -97,7 +97,7 @@ struct WindowLifecycleHandler {
     tilingManager.reconcileAndReflowVisibleSpaces()
 
     if windowManager.removeLostFocusedEvent(for: window.id) {
-      EventManager.shared.post(.window(.focused(window.id)))
+      Events.shared.post(.window(.focused(window.id)))
     }
   }
 }

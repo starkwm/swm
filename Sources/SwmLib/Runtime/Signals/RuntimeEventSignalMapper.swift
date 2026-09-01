@@ -4,13 +4,13 @@ import CoreGraphics
 @MainActor
 struct RuntimeEventSignalMapper {
   /// Window state used to enrich window signals.
-  let windowManager: WindowManager
+  let windowManager: Windows
 
   /// Space state used to describe active-space changes.
-  let spaceManager: SpaceManager
+  let spaceManager: Spaces
 
   /// Display state used to describe active and reconfigured displays.
-  let displayManager: DisplayManager
+  let displayManager: Displays
 
   /// Capture payload data that lifecycle handling would invalidate.
   func payload(beforeHandling event: RuntimeEvent) -> SignalPayload? {
@@ -59,7 +59,7 @@ struct RuntimeEventSignalMapper {
       return windowPayload(event: .windowDeminimized, windowID: window.id, window: window)
 
     case .space(.changed(let space)):
-      let spaces = SpaceManager.all()
+      let spaces = Spaces.all()
       return .spaceChanged(
         space: space,
         currentIndex: spaces.firstIndex(where: { $0.id == space.id }),

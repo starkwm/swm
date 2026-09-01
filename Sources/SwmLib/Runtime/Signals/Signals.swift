@@ -1,9 +1,9 @@
 import Foundation
 
 /// Thread-safe in-memory registry for user signals.
-public final class SignalManager {
+public final class Signals {
   /// Shared signal registry used by the daemon.
-  public static let shared = SignalManager()
+  public static let shared = Signals()
 
   private let lock = NSLock()
   private let executionQueue: SignalExecutionQueue
@@ -69,7 +69,7 @@ public final class SignalManager {
   }
 }
 
-extension SignalManager: @unchecked Sendable {}
+extension Signals: @unchecked Sendable {}
 
 /// A signal paired with its current registry index.
 struct IndexedSignal: Equatable, Sendable {

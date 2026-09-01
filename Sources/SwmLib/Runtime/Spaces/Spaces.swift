@@ -3,7 +3,7 @@ import CoreGraphics
 
 /// Owns active Space state, per-Space settings, and runtime topology observations.
 @MainActor
-public final class SpaceManager {
+public final class Spaces {
   /// Return all known WindowServer spaces.
   nonisolated static func all() -> [Space] {
     WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))

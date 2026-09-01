@@ -67,9 +67,9 @@ struct RuntimeEventSignalMapperTests {
 
   private func mapper() -> RuntimeEventSignalMapper {
     RuntimeEventSignalMapper(
-      windowManager: WindowManager(workspace: Workspace()),
-      spaceManager: SpaceManager(activeSpaceID: nil),
-      displayManager: DisplayManager()
+      windowManager: Windows(workspace: Workspace()),
+      spaceManager: Spaces(activeSpaceID: nil),
+      displayManager: Displays()
     )
   }
 }

@@ -7,7 +7,7 @@ private func displayReconfigurationCallback(
 ) {
   guard let userInfo else { return }
 
-  let displayManager = Unmanaged<DisplayManager>.fromOpaque(userInfo).takeUnretainedValue()
+  let displayManager = Unmanaged<Displays>.fromOpaque(userInfo).takeUnretainedValue()
   Task { @MainActor in
     displayManager.displayReconfiguration(displayID: displayID, flags: flags)
   }
@@ -15,7 +15,7 @@ private func displayReconfigurationCallback(
 
 /// Tracks the current and previous active display.
 @MainActor
-public final class DisplayManager {
+public final class Displays {
   /// Display ID for the currently active display.
   var currentActiveDisplayID: String? {
     activeDisplay.current
@@ -30,11 +30,11 @@ public final class DisplayManager {
 
   /// Create a display manager seeded from the active space.
   public init() {
-    activeDisplay = TrackedState(current: SpaceManager.display(for: SpaceManager.active()))
+    activeDisplay = TrackedState(current: Spaces.display(for: Spaces.active()))
   }
 
   /// Start observing CoreGraphics display reconfiguration callbacks.
-  public func start() -> Result<Void, DisplayManagerError> {
+  public func start() -> Result<Void, DisplaysError> {
     let result = CGDisplayRegisterReconfigurationCallback(
       displayReconfigurationCallback,
       Unmanaged.passUnretained(self).toOpaque()
@@ -46,7 +46,7 @@ public final class DisplayManager {
 
   /// Update tracked display state after the active space changes.
   func activeDisplayDidChange() {
-    guard let activeDisplayID = SpaceManager.display(for: SpaceManager.active()) else { return }
+    guard let activeDisplayID = Spaces.display(for: Spaces.active()) else { return }
     activeDisplay.update(to: activeDisplayID)
   }
 
@@ -56,25 +56,25 @@ public final class DisplayManager {
     flags: CGDisplayChangeSummaryFlags
   ) {
     if flags.contains(.addFlag) {
-      EventManager.shared.post(.display(.added(displayID)))
+      Events.shared.post(.display(.added(displayID)))
     }
 
     if flags.contains(.removeFlag) {
-      EventManager.shared.post(.display(.removed(displayID)))
+      Events.shared.post(.display(.removed(displayID)))
     }
 
     if flags.contains(.movedFlag) {
-      EventManager.shared.post(.display(.moved(displayID)))
+      Events.shared.post(.display(.moved(displayID)))
     }
 
     if flags.contains(.desktopShapeChangedFlag) {
-      EventManager.shared.post(.display(.resized(displayID)))
+      Events.shared.post(.display(.resized(displayID)))
     }
   }
 }
 
 /// Errors raised while starting display observation.
-public enum DisplayManagerError: Error, CustomStringConvertible {
+public enum DisplaysError: Error, CustomStringConvertible {
   /// Display observation could not be started or accessed.
   case accessFailed(String)
 

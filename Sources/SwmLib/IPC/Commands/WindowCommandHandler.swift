@@ -3,15 +3,15 @@ import AppKit
 /// Handles IPC commands that focus, minimize, move, resize, tile, and grid windows.
 @MainActor
 struct WindowCommandHandler {
-  private let windowManager: WindowManager
-  private let spaceManager: SpaceManager
-  private let tilingManager: TilingManager
+  private let windowManager: Windows
+  private let spaceManager: Spaces
+  private let tilingManager: Tiling
 
   /// Create a window command handler backed by window, Space, and tiling managers.
   init(
-    windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    tilingManager: TilingManager
+    windowManager: Windows,
+    spaceManager: Spaces,
+    tilingManager: Tiling
   ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
@@ -373,7 +373,7 @@ struct WindowCommandHandler {
         windowID = CGWindowID(id)
       }
     } else {
-      guard let focusedWindowID = WindowManager.focusedWindowID() else {
+      guard let focusedWindowID = Windows.focusedWindowID() else {
         throw IPCCommandError.invalidRequest("no focused window")
       }
       windowID = focusedWindowID

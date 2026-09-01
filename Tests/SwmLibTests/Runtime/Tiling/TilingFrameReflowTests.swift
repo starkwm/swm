@@ -4,7 +4,7 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("TilingManager frame reflow")
+@Suite("Tiling frame reflow")
 struct TilingManagerFrameReflowTests {
   @Test("directional swap: exchanges complete frames in a floating layout")
   func directionalSwapExchangesFloatingFrames() {

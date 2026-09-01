@@ -1,9 +1,9 @@
 import Foundation
 
 /// Main-thread dispatcher for runtime events.
-public final class EventManager {
+public final class Events {
   /// Shared event manager used by model callbacks.
-  public static let shared = EventManager()
+  public static let shared = Events()
 
   @MainActor
   private var dependencies: EventManagerDependencies?
@@ -14,11 +14,11 @@ public final class EventManager {
   @MainActor
   public func configure(
     workspace: Workspace,
-    processManager: ProcessManager,
-    windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    displayManager: DisplayManager,
-    tilingManager: TilingManager
+    processManager: Processes,
+    windowManager: Windows,
+    spaceManager: Spaces,
+    displayManager: Displays,
+    tilingManager: Tiling
   ) {
     dependencies = EventManagerDependencies(
       workspace: workspace,
@@ -41,7 +41,7 @@ public final class EventManager {
   @MainActor
   private func handle(_ event: RuntimeEvent) {
     guard let dependencies else {
-      preconditionFailure("EventManager must be configured before handling events")
+      preconditionFailure("Events must be configured before handling events")
     }
 
     let signalMapper = RuntimeEventSignalMapper(
@@ -54,7 +54,7 @@ public final class EventManager {
     dispatch(event, dependencies: dependencies)
 
     if let payload = payloadBeforeHandling ?? signalMapper.payload(afterHandling: event) {
-      SignalManager.shared.emit(payload)
+      Signals.shared.emit(payload)
     }
   }
 
@@ -92,14 +92,14 @@ public final class EventManager {
   }
 }
 
-extension EventManager: @unchecked Sendable {}
+extension Events: @unchecked Sendable {}
 
 /// Manager dependencies required by the event dispatcher.
 private struct EventManagerDependencies {
   let workspace: Workspace
-  let processManager: ProcessManager
-  let windowManager: WindowManager
-  let spaceManager: SpaceManager
-  let displayManager: DisplayManager
-  let tilingManager: TilingManager
+  let processManager: Processes
+  let windowManager: Windows
+  let spaceManager: Spaces
+  let displayManager: Displays
+  let tilingManager: Tiling
 }

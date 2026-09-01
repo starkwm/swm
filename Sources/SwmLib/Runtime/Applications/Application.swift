@@ -13,19 +13,19 @@ private func accessibilityObserverCallback(
   case kAXCreatedNotification:
     guard let pid = AccessibilityClient.shared.processID(for: element) else { return }
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    EventManager.shared.post(.window(.created(pid, windowID)))
+    Events.shared.post(.window(.created(pid, windowID)))
 
   case kAXFocusedWindowChangedNotification:
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    EventManager.shared.post(.window(.focused(windowID)))
+    Events.shared.post(.window(.focused(windowID)))
 
   case kAXWindowMovedNotification:
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    EventManager.shared.post(.window(.moved(windowID)))
+    Events.shared.post(.window(.moved(windowID)))
 
   case kAXWindowResizedNotification:
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    EventManager.shared.post(.window(.resized(windowID)))
+    Events.shared.post(.window(.resized(windowID)))
 
   case kAXWindowMiniaturizedNotification:
     guard let context else { return }
@@ -197,7 +197,7 @@ final class Application: NSObject {
   func windowIdentifiers() -> [CGWindowID] {
     WindowServerClient.shared.windowIdentifiers(
       applicationConnectionID: connection,
-      spaceIDs: SpaceManager.all().map(\.id)
+      spaceIDs: Spaces.all().map(\.id)
     )
   }
 

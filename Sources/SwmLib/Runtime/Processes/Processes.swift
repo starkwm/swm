@@ -9,20 +9,20 @@ private func processEventHandler(
   guard let event = event else { return noErr }
   guard let context else { return noErr }
 
-  let processManager = Unmanaged<ProcessManager>.fromOpaque(context).takeUnretainedValue()
+  let processManager = Unmanaged<Processes>.fromOpaque(context).takeUnretainedValue()
   return processManager.handle(event: event)
 }
 
 /// Tracks running application processes and publishes process lifecycle events.
 @MainActor
-public final class ProcessManager {
+public final class Processes {
   private var processes = [UInt32: Process]()
 
   /// Create an empty process manager.
   public init() {}
 
   /// Seed the process list and start observing Carbon application events.
-  public func start() -> Result<Void, ProcessManagerError> {
+  public func start() -> Result<Void, ProcessesError> {
     addRunningProcesses()
 
     let eventTypes = [
@@ -119,7 +119,7 @@ public final class ProcessManager {
 
     processes[process.psn.lowLongOfPSN] = process
 
-    EventManager.shared.post(.application(.launched(process)))
+    Events.shared.post(.application(.launched(process)))
   }
 
   /// Mark a tracked process as terminated and publish an application termination event.
@@ -129,19 +129,19 @@ public final class ProcessManager {
     processes.removeValue(forKey: psn.lowLongOfPSN)
     process.terminated = true
 
-    EventManager.shared.post(.application(.terminated(process)))
+    Events.shared.post(.application(.terminated(process)))
   }
 
   /// Publish a frontmost-application change event for a tracked process.
   private func applicationFrontSwitched(to psn: ProcessSerialNumber) {
     guard let process = processes[psn.lowLongOfPSN] else { return }
 
-    EventManager.shared.post(.application(.frontSwitched(process)))
+    Events.shared.post(.application(.frontSwitched(process)))
   }
 }
 
 /// Errors raised while starting or accessing process observation.
-public enum ProcessManagerError: Error, CustomStringConvertible {
+public enum ProcessesError: Error, CustomStringConvertible {
   /// Process observation could not be started or accessed.
   case accessFailed(String)
 

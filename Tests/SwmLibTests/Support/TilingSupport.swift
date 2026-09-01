@@ -4,7 +4,7 @@ import CoreGraphics
 
 @MainActor
 func makeTestTilingManager(
-  spaceManager: SpaceManager,
+  spaceManager: Spaces,
   windows: [TilingWindowSnapshot] = [],
   topology: SpaceTopology = SpaceTopology(
     spacesByID: [:],
@@ -12,8 +12,8 @@ func makeTestTilingManager(
     spaceIDsByWindowID: [:],
     displaysByID: [:]
   )
-) -> TilingManager {
-  TilingManager(
+) -> Tiling {
+  Tiling(
     snapshot: {
       TilingReconciliationSnapshot(
         windows: windows,
@@ -30,7 +30,7 @@ func makeManager(
   memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
   visibleSpaceID: UInt64 = 10,
   frameReconciler: WindowFrameReconciler? = nil
-) -> TilingManager {
+) -> Tiling {
   makeManager(
     windows: { windows },
     memberships: { memberships },
@@ -45,9 +45,9 @@ func makeManager(
   memberships: @escaping () -> [CGWindowID: Set<UInt64>],
   visibleSpaceID: UInt64 = 10,
   frameReconciler: WindowFrameReconciler? = nil
-) -> TilingManager {
-  let spaceManager = SpaceManager(activeSpaceID: nil)
-  return TilingManager(
+) -> Tiling {
+  let spaceManager = Spaces(activeSpaceID: nil)
+  return Tiling(
     snapshot: {
       TilingReconciliationSnapshot(
         windows: windows(),
@@ -75,7 +75,7 @@ func makeManager(
 @MainActor
 func makeSharedSpaceManager(
   windows: @escaping () -> [TilingWindowSnapshot]
-) -> TilingManager {
+) -> Tiling {
   makeSharedSpaceManager(
     windows: windows,
     displays: {
@@ -95,9 +95,9 @@ func makeSharedSpaceManager(
 func makeSharedSpaceManager(
   windows: @escaping () -> [TilingWindowSnapshot],
   displays: @escaping () -> [String: SpaceTopologyDisplay]
-) -> TilingManager {
-  let spaceManager = SpaceManager(activeSpaceID: nil)
-  return TilingManager(
+) -> Tiling {
+  let spaceManager = Spaces(activeSpaceID: nil)
+  return Tiling(
     snapshot: {
       let windows = windows()
       return TilingReconciliationSnapshot(

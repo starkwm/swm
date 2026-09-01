@@ -8,9 +8,9 @@ import Testing
 struct ConfigCommandHandlerTests {
   @Test("dispatch: layout updates current and future Spaces")
   func dispatchLayoutUpdatesCurrentAndFutureSpaces() {
-    let spaceManager = SpaceManager(activeSpaceID: nil)
+    let spaceManager = Spaces(activeSpaceID: nil)
     var spaceIDs = Set([UInt64(10), UInt64(11)])
-    let tilingManager = TilingManager(
+    let tilingManager = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: [],
@@ -81,7 +81,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: window gap updates defaults and overrides")
   func dispatchWindowGapUpdatesDefaultsAndOverrides() {
-    let manager = SpaceManager(activeSpaceID: nil)
+    let manager = Spaces(activeSpaceID: nil)
     manager.setGap(5, for: 1)
     let handler = handler(spaceManager: manager)
 
@@ -94,7 +94,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: accepts layout controls")
   func dispatchAcceptsLayoutControls() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
 
     let ratio = handler.dispatch(request(command: "master-ratio", args: ["0.65"]))
     let placement = handler.dispatch(request(command: "master-placement", args: ["top"]))
@@ -107,7 +107,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: padding updates defaults and preserves other override sides")
   func dispatchPaddingUpdatesDefaultsAndPreservesOtherOverrideSides() {
-    let manager = SpaceManager(activeSpaceID: nil)
+    let manager = Spaces(activeSpaceID: nil)
     manager.setPadding(
       SpacePadding(top: 1, bottom: 2, left: 3, right: 4),
       for: 1
@@ -123,7 +123,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects malformed window-gap arguments")
   func dispatchRejectsMalformedWindowGapArguments() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let missing = handler.dispatch(request(command: "window-gap", args: []))
     let extra = handler.dispatch(request(command: "window-gap", args: ["10", "20"]))
 
@@ -137,7 +137,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid window-gap value")
   func dispatchRejectsInvalidWindowGapValue() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "window-gap", args: ["wide"]))
 
     #expect(response.ok == false)
@@ -147,7 +147,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects malformed padding command arguments")
   func dispatchRejectsMalformedPaddingCommandArguments() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let missing = handler.dispatch(request(command: "top-padding", args: []))
     let extra = handler.dispatch(request(command: "top-padding", args: ["10", "20"]))
 
@@ -161,7 +161,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid padding command value")
   func dispatchRejectsInvalidPaddingCommandValue() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let response = handler.dispatch(request(command: "right-padding", args: ["wide"]))
 
     #expect(response.ok == false)
@@ -171,7 +171,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid layout commands")
   func dispatchRejectsInvalidLayoutCommands() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let missing = handler.dispatch(request(command: "layout", args: []))
     let extra = handler.dispatch(request(command: "layout", args: ["master", "dwindle"]))
     let unknown = handler.dispatch(request(command: "layout", args: ["columns"]))
@@ -189,7 +189,7 @@ struct ConfigCommandHandlerTests {
 
   @Test("dispatch: rejects invalid layout control values")
   func dispatchRejectsInvalidLayoutControlValues() {
-    let handler = handler(spaceManager: SpaceManager(activeSpaceID: nil))
+    let handler = handler(spaceManager: Spaces(activeSpaceID: nil))
     let responses = [
       handler.dispatch(request(command: "master-ratio", args: ["wide"])),
       handler.dispatch(request(command: "master-placement", args: ["center"])),
@@ -207,7 +207,7 @@ struct ConfigCommandHandlerTests {
     TilingLayoutID(spaceID: spaceID, displayID: "display")
   }
 
-  private func handler(spaceManager: SpaceManager) -> ConfigCommandHandler {
+  private func handler(spaceManager: Spaces) -> ConfigCommandHandler {
     ConfigCommandHandler(
       spaceManager: spaceManager,
       tilingManager: makeTestTilingManager(spaceManager: spaceManager)

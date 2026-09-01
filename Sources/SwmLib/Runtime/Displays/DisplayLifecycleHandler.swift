@@ -2,10 +2,10 @@
 @MainActor
 struct DisplayLifecycleHandler {
   /// Display manager updated by display events.
-  let displayManager: DisplayManager
+  let displayManager: Displays
 
   /// Tiling coordinator refreshed after display topology changes.
-  let tilingManager: TilingManager
+  let tilingManager: Tiling
 
   /// Handle one display lifecycle event.
   func handle(_ event: DisplayEvent) {

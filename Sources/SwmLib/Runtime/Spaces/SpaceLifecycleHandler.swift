@@ -2,13 +2,13 @@
 @MainActor
 struct SpaceLifecycleHandler {
   /// Space manager updated by space events.
-  let spaceManager: SpaceManager
+  let spaceManager: Spaces
 
   /// Window manager refreshed after space changes.
-  let windowManager: WindowManager
+  let windowManager: Windows
 
   /// Tiling coordinator refreshed after Space topology changes.
-  let tilingManager: TilingManager
+  let tilingManager: Tiling
 
   /// Handle one space lifecycle event.
   func handle(_ event: SpaceEvent) {
@@ -21,7 +21,7 @@ struct SpaceLifecycleHandler {
   /// Update active-space tracking, refresh windows, and replay deferred focus.
   private func spaceChanged(with space: Space) {
     spaceManager.activeSpaceDidChange(to: space.id)
-    spaceManager.retainSettings(for: Set(SpaceManager.all().map(\.id)))
+    spaceManager.retainSettings(for: Set(Spaces.all().map(\.id)))
     windowManager.refreshWindows()
     replayLostFocusedEvent()
     tilingManager.reconcileAndReflowVisibleSpaces()
@@ -38,7 +38,7 @@ struct SpaceLifecycleHandler {
       guard !window.isMinimized else { continue }
 
       windowManager.removeLostFocusedEvent(for: windowID)
-      EventManager.shared.post(.window(.focused(windowID)))
+      Events.shared.post(.window(.focused(windowID)))
     }
   }
 }

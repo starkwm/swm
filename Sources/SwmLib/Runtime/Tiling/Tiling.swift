@@ -2,14 +2,14 @@ import CoreGraphics
 
 /// Owns automatic-tiling state and reconciles it from coherent topology snapshots.
 @MainActor
-public final class TilingManager {
+public final class Tiling {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
 
   private let masterLayout = MasterLayout()
   private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
-  private let spaceManager: SpaceManager
+  private let spaceManager: Spaces
   private let frameReconciler: WindowFrameReconciler?
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
@@ -21,7 +21,7 @@ public final class TilingManager {
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
 
   /// Create a manager backed by the live runtime models.
-  public convenience init(windowManager: WindowManager, spaceManager: SpaceManager) {
+  public convenience init(windowManager: Windows, spaceManager: Spaces) {
     self.init(
       snapshot: {
         let windows = windowManager.allWindows().map { $0.tilingSnapshot() }
@@ -43,7 +43,7 @@ public final class TilingManager {
   /// Create a manager with an injectable reconciliation snapshot.
   init(
     snapshot: @escaping SnapshotProvider,
-    spaceManager: SpaceManager,
+    spaceManager: Spaces,
     frameReconciler: WindowFrameReconciler? = nil
   ) {
     self.snapshot = snapshot

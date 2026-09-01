@@ -4,12 +4,12 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("WindowManager")
+@Suite("Windows")
 @MainActor
 struct WindowManagerTests {
   @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
   func addAndRemoveLostFrontSwitchedEventConsumesOnce() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = Windows(workspace: Workspace())
     let processID: pid_t = 42
 
     #expect(manager.removeLostFrontSwitchedEvent(for: processID) == false)
@@ -22,7 +22,7 @@ struct WindowManagerTests {
 
   @Test("addLostFocusedEvent/removeLostFocusedEvent: tracks and consumes once")
   func addAndRemoveLostFocusedEventTracksAndConsumesOnce() {
-    let manager = WindowManager(workspace: Workspace())
+    let manager = Windows(workspace: Workspace())
     let windowID: CGWindowID = 42
 
     #expect(manager.removeLostFocusedEvent(for: windowID) == false)

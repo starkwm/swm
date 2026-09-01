@@ -43,7 +43,7 @@ public final class Workspace: NSObject {
     guard registry.kind.shouldRelaunch(process: process, change: change) else { return }
 
     unobserve(process, registry: registry)
-    EventManager.shared.post(.application(.launched(process)))
+    Events.shared.post(.application(.launched(process)))
   }
 
   /// Return whether a process is currently observable as a regular application.
@@ -88,13 +88,13 @@ public final class Workspace: NSObject {
   /// Publish an active-space changed event.
   @objc
   func activeSpaceDidChange(_: Notification) {
-    EventManager.shared.post(.space(.changed(SpaceManager.active())))
+    Events.shared.post(.space(.changed(Spaces.active())))
   }
 
   /// Publish an active-display changed event.
   @objc
   func activeDisplayDidChange(_: Notification) {
-    EventManager.shared.post(.display(.changed))
+    Events.shared.post(.display(.changed))
   }
 
   /// Start observing one KVO-backed process readiness condition.

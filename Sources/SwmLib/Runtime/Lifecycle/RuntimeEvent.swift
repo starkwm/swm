@@ -1,4 +1,4 @@
-/// Top-level runtime event routed by `EventManager`.
+/// Top-level runtime event routed by `Events`.
 enum RuntimeEvent: Sendable {
   /// Application lifecycle event.
   case application(ApplicationEvent)

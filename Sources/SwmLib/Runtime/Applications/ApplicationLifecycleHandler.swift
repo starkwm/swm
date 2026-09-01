@@ -7,13 +7,13 @@ struct ApplicationLifecycleHandler {
   let workspace: Workspace
 
   /// Process manager used to retry launch handling.
-  let processManager: ProcessManager
+  let processManager: Processes
 
   /// Window manager updated by application lifecycle changes.
-  let windowManager: WindowManager
+  let windowManager: Windows
 
   /// Tiling coordinator reconciled after application inventory changes.
-  let tilingManager: TilingManager
+  let tilingManager: Tiling
 
   /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
@@ -56,7 +56,7 @@ struct ApplicationLifecycleHandler {
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             [processManager, psn = process.psn] in
             guard let process = processManager.find(by: psn) else { return }
-            EventManager.shared.post(.application(.launched(process)))
+            Events.shared.post(.application(.launched(process)))
           }
         }
       )
@@ -67,7 +67,7 @@ struct ApplicationLifecycleHandler {
     emitApplicationSignal(.applicationLaunched, application: application)
 
     if windowManager.removeLostFrontSwitchedEvent(for: process.pid) {
-      EventManager.shared.post(.application(.frontSwitched(process)))
+      Events.shared.post(.application(.frontSwitched(process)))
     }
 
     log("application launched \(application)")
@@ -112,7 +112,7 @@ struct ApplicationLifecycleHandler {
     windowManager.refreshWindows(for: application)
 
     if let focusedWindowID = application.focusedWindowID() {
-      EventManager.shared.post(.window(.focused(focusedWindowID)))
+      Events.shared.post(.window(.focused(focusedWindowID)))
     }
 
     log(
@@ -122,7 +122,7 @@ struct ApplicationLifecycleHandler {
 
   /// Emit an application lifecycle signal after the model state changes.
   private func emitApplicationSignal(_ event: SignalEvent, application: Application) {
-    SignalManager.shared.emit(
+    Signals.shared.emit(
       .application(
         event: event,
         processID: application.processID,

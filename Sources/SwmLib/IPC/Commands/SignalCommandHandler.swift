@@ -19,7 +19,7 @@ struct SignalCommandHandler {
   /// Add a new signal registration.
   private func add(_ request: IPCRequest) throws -> IPCResponse {
     let signal = try Signal.parseAdd(arguments: request.args)
-    try SignalManager.shared.add(signal)
+    try Signals.shared.add(signal)
 
     return .success(id: request.id, message: "ok")
   }
@@ -27,7 +27,7 @@ struct SignalCommandHandler {
   /// Remove an existing signal by one-based index or label.
   private func remove(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try IPCArguments(request.args, context: "signal remove").requiredValue()
-    try SignalManager.shared.remove(selector: selector)
+    try Signals.shared.remove(selector: selector)
 
     return .success(id: request.id, message: "ok")
   }
@@ -36,7 +36,7 @@ struct SignalCommandHandler {
   private func list(_ request: IPCRequest) throws -> IPCResponse {
     try IPCArguments(request.args, context: "signal list").requireEmpty()
 
-    let payload = SignalManager.shared.list().map(SignalSerializer.init)
+    let payload = Signals.shared.list().map(SignalSerializer.init)
     return try .json(id: request.id, payload: payload)
   }
 }

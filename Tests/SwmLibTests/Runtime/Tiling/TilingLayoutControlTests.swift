@@ -4,7 +4,7 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("TilingManager layout controls")
+@Suite("Tiling layout controls")
 struct TilingManagerLayoutControlTests {
   @Test("setLayout: gives every tiled window the complete visible bounds in monocle")
   func setLayoutPlansMonocleGeometry() {
@@ -185,8 +185,8 @@ struct TilingManagerLayoutControlTests {
     var spaceIDs = Set([UInt64(10)])
     var visibleSpaceID = UInt64(10)
     var visibleFrame = CGRect(x: 0, y: 0, width: 1_000, height: 800)
-    let spaceManager = SpaceManager(activeSpaceID: nil)
-    let manager = TilingManager(
+    let spaceManager = Spaces(activeSpaceID: nil)
+    let manager = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: [window(id: 1), window(id: 2)],

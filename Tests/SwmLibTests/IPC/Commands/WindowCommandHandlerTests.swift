@@ -208,9 +208,9 @@ struct WindowCommandHandlerTests {
   }
 
   private func handler(
-    windowManager: WindowManager = WindowManager(workspace: Workspace())
+    windowManager: Windows = Windows(workspace: Workspace())
   ) -> WindowCommandHandler {
-    let spaceManager = SpaceManager(activeSpaceID: nil)
+    let spaceManager = Spaces(activeSpaceID: nil)
     return WindowCommandHandler(
       windowManager: windowManager,
       spaceManager: spaceManager,

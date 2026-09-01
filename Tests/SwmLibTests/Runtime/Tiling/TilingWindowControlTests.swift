@@ -4,7 +4,7 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("TilingManager window controls")
+@Suite("Tiling window controls")
 struct TilingManagerWindowControlTests {
   @Test("master controls: swap a selected window with master")
   func masterControlsSwapSelectedWindowWithMaster() {

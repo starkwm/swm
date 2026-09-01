@@ -17,7 +17,7 @@ final class QueryResolver {
   private let windowProvider: () -> [WindowSerializer]
 
   /// Snapshot the current display, space, and window state for querying.
-  init(windowManager: WindowManager) {
+  init(windowManager: Windows) {
     let snapshot = QuerySnapshot(windowManager: windowManager)
     displayProvider = { DisplaySerializer.all(snapshot: snapshot) }
     spaceProvider = { SpaceSerializer.all(snapshot: snapshot) }

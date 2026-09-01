@@ -2,11 +2,11 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("SignalManager")
+@Suite("Signals")
 struct SignalManagerTests {
   @Test("add: rejects duplicate labels")
   func addRejectsDuplicateLabels() throws {
-    let manager = SignalManager()
+    let manager = Signals()
     let first = try signal(label: "same", action: "one")
     let second = try signal(label: "same", action: "two")
 
@@ -25,7 +25,7 @@ struct SignalManagerTests {
 
   @Test("remove: removes by one-based index and label")
   func removeRemovesByIndexAndLabel() throws {
-    let manager = SignalManager()
+    let manager = Signals()
 
     try manager.add(signal(label: "first", action: "one"))
     try manager.add(signal(label: "second", action: "two"))

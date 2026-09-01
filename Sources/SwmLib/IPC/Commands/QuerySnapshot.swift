@@ -3,13 +3,13 @@ import AppKit
 /// Lazy raw-state snapshot shared by display, space, and window query serializers.
 @MainActor
 final class QuerySnapshot {
-  private let windowManager: WindowManager
+  private let windowManager: Windows
 
-  lazy var activeSpaceID = SpaceManager.active().id
+  lazy var activeSpaceID = Spaces.active().id
   lazy var arrangedScreens = NSScreen.arrangedScreens
   lazy var displaySpaces = WindowServerClient.shared.displaySpaces()
   lazy var screens = NSScreen.screens
-  lazy var spaces = SpaceManager.all()
+  lazy var spaces = Spaces.all()
   lazy var windows = windowManager.allWindows()
 
   lazy var currentSpaceByScreenID: [String: UInt64] = {
@@ -41,7 +41,7 @@ final class QuerySnapshot {
     return windowInfo.keyedByWindowID()
   }()
 
-  init(windowManager: WindowManager) {
+  init(windowManager: Windows) {
     self.windowManager = windowManager
   }
 }

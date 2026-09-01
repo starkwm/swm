@@ -41,13 +41,13 @@ func runSwm(with arguments: Arguments) {
   }
 
   let workspace = Workspace()
-  let processManager = ProcessManager()
-  let windowManager = WindowManager(workspace: workspace)
-  let spaceManager = SpaceManager()
-  let displayManager = DisplayManager()
-  let tilingManager = TilingManager(windowManager: windowManager, spaceManager: spaceManager)
+  let processManager = Processes()
+  let windowManager = Windows(workspace: workspace)
+  let spaceManager = Spaces()
+  let displayManager = Displays()
+  let tilingManager = Tiling(windowManager: windowManager, spaceManager: spaceManager)
 
-  EventManager.shared.configure(
+  Events.shared.configure(
     workspace: workspace,
     processManager: processManager,
     windowManager: windowManager,

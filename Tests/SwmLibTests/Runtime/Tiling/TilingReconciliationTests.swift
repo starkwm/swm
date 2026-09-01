@@ -4,7 +4,7 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("TilingManager reconciliation")
+@Suite("Tiling reconciliation")
 struct TilingManagerReconciliationTests {
   @Test("start: excludes ineligible windows from disabled Space geometry")
   func startExcludesIneligibleWindowsFromDisabledSpaceGeometry() {
@@ -127,8 +127,8 @@ struct TilingManagerReconciliationTests {
   func reconcilePreservesStateWhileDisplayOwnershipIsUnresolved() {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var windowServerDisplayID = "display"
-    let spaceManager = SpaceManager(activeSpaceID: nil)
-    let manager = TilingManager(
+    let spaceManager = Spaces(activeSpaceID: nil)
+    let manager = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
           windows: windows,

@@ -1,11 +1,11 @@
 /// Handles IPC commands that update global configuration for every known space.
 @MainActor
 struct ConfigCommandHandler {
-  private let spaceManager: SpaceManager
-  private let tilingManager: TilingManager
+  private let spaceManager: Spaces
+  private let tilingManager: Tiling
 
   /// Create a config command handler backed by space and tiling managers.
-  init(spaceManager: SpaceManager, tilingManager: TilingManager) {
+  init(spaceManager: Spaces, tilingManager: Tiling) {
     self.spaceManager = spaceManager
     self.tilingManager = tilingManager
   }

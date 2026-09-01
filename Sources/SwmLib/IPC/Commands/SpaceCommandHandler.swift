@@ -1,11 +1,11 @@
 /// Handles IPC commands that update the active space.
 @MainActor
 struct SpaceCommandHandler {
-  private let spaceManager: SpaceManager
-  private let tilingManager: TilingManager
+  private let spaceManager: Spaces
+  private let tilingManager: Tiling
 
   /// Create a space command handler backed by space and tiling managers.
-  init(spaceManager: SpaceManager, tilingManager: TilingManager) {
+  init(spaceManager: Spaces, tilingManager: Tiling) {
     self.spaceManager = spaceManager
     self.tilingManager = tilingManager
   }

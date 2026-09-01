@@ -20,9 +20,9 @@ public final class Daemon {
   /// Create a daemon using the runtime managers that handle command side effects.
   @MainActor
   public convenience init(
-    windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    tilingManager: TilingManager
+    windowManager: Windows,
+    spaceManager: Spaces,
+    tilingManager: Tiling
   ) {
     self.init(
       dispatcher: IPCCommandDispatcher(

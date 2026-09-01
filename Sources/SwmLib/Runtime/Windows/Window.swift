@@ -296,7 +296,7 @@ final class WindowObservationContext {
 
   /// Post a runtime event for the observed window.
   func post(_ event: RuntimeEvent) {
-    EventManager.shared.post(event)
+    Events.shared.post(event)
   }
 
   /// Return the observed window if it is still alive.

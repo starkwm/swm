@@ -7,7 +7,7 @@ import Testing
 struct UnsupportedCommandHandlerTests {
   @Test("dispatch: config rejects unsupported commands")
   func dispatchConfigRejectsUnsupportedCommands() {
-    let spaceManager = SpaceManager()
+    let spaceManager = Spaces()
     let response = ConfigCommandHandler(
       spaceManager: spaceManager,
       tilingManager: makeTestTilingManager(spaceManager: spaceManager)

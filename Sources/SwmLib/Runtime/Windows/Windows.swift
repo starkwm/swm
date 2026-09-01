@@ -4,7 +4,7 @@ import Foundation
 
 /// Tracks observable applications, managed windows, and focus history.
 @MainActor
-public final class WindowManager {
+public final class Windows {
   /// Resolve the currently focused window ID from the frontmost process.
   nonisolated static func focusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {

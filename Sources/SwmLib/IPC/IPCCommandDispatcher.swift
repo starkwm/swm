@@ -1,15 +1,15 @@
 /// Routes IPC requests to the command handler for their domain.
 @MainActor
 struct IPCCommandDispatcher {
-  private let windowManager: WindowManager
-  private let spaceManager: SpaceManager
-  private let tilingManager: TilingManager
+  private let windowManager: Windows
+  private let spaceManager: Spaces
+  private let tilingManager: Tiling
 
   /// Create a dispatcher backed by explicit window and space managers.
   init(
-    windowManager: WindowManager,
-    spaceManager: SpaceManager,
-    tilingManager: TilingManager
+    windowManager: Windows,
+    spaceManager: Spaces,
+    tilingManager: Tiling
   ) {
     self.windowManager = windowManager
     self.spaceManager = spaceManager
