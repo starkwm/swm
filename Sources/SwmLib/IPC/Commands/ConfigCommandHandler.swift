@@ -41,7 +41,7 @@ struct ConfigCommandHandler {
   /// Set the master pane ratio for every current and future Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "config master-ratio").requiredValue()
-    guard let ratio = LayoutCommandParser.ratio(from: argument) else {
+    guard let ratio = CommandValueParser.ratio(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(argument)")
     }
     tiling.setMasterRatioForAllSpaces(ratio)
@@ -67,7 +67,7 @@ struct ConfigCommandHandler {
       request.args,
       context: "config preserve-split"
     ).requiredValue()
-    guard let enabled = LayoutCommandParser.boolean(from: argument) else {
+    guard let enabled = CommandValueParser.boolean(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config preserve-split value: \(argument)")
     }
     tiling.setSplitDirectionPreservationForAllSpaces(enabled)

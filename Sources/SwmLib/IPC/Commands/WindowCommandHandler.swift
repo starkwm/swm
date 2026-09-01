@@ -190,7 +190,7 @@ struct WindowCommandHandler {
   /// Set or adjust the selected window's nearest dwindle split ratio.
   private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "split-ratio")
-    guard let change = LayoutCommandParser.ratioChange(from: selection.value) else {
+    guard let change = CommandValueParser.ratioChange(from: selection.value) else {
       throw IPCCommandError.invalidRequest("invalid window split-ratio value: \(selection.value)")
     }
     let window = try selectedWindow(selector: selection.selector)
