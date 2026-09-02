@@ -1,4 +1,5 @@
 import ApplicationServices
+import Dispatch
 
 /// Handles window lifecycle and focus events.
 @MainActor
@@ -49,9 +50,22 @@ struct WindowLifecycleHandler {
 
     log("window destroyed \(window)")
 
+    let processID = window.application?.processID
     windows.remove(by: window.id)
-    tiling.reconcileAndReflowVisibleSpaces()
     window.invalidate()
+
+    guard let processID else {
+      tiling.reconcileAndReflowVisibleSpaces()
+      return
+    }
+
+    // Native macOS tabs destroy one AX window before WindowServer exposes the surviving tab's
+    // updated Space membership. Let that transition settle, then rediscover and reflow once.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [windows, tiling] in
+      guard let application = windows.application(by: processID) else { return }
+      windows.addWindows(for: application)
+      tiling.reconcileAndReflowVisibleSpaces()
+    }
   }
 
   /// Update focus tracking or defer the focus event until the window is manageable.
