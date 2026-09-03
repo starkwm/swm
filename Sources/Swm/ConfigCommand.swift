@@ -72,7 +72,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "window-gap"
 
     @Argument(help: "Gap in points.")
-    var points: Double
+    var points: Int
 
     var arguments: [String] { [String(points)] }
   }
@@ -82,7 +82,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "top-padding"
 
     @Argument(help: "Padding in points.")
-    var points: Double
+    var points: Int
 
     var arguments: [String] { [String(points)] }
   }
@@ -92,7 +92,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "bottom-padding"
 
     @Argument(help: "Padding in points.")
-    var points: Double
+    var points: Int
 
     var arguments: [String] { [String(points)] }
   }
@@ -102,7 +102,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "left-padding"
 
     @Argument(help: "Padding in points.")
-    var points: Double
+    var points: Int
 
     var arguments: [String] { [String(points)] }
   }
@@ -112,7 +112,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "right-padding"
 
     @Argument(help: "Padding in points.")
-    var points: Double
+    var points: Int
 
     var arguments: [String] { [String(points)] }
   }

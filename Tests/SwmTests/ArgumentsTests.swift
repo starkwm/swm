@@ -86,4 +86,19 @@ struct ArgumentsTests {
 
     #expect(command.arguments == ["autofocus"])
   }
+
+  @Test("typed config point commands preserve integer IPC values")
+  func typedConfigPointCommandsPreserveIntegerIPCValues() throws {
+    let commandNames = [
+      "window-gap", "top-padding", "right-padding", "bottom-padding", "left-padding",
+    ]
+
+    for commandName in commandNames {
+      let command = try #require(
+        Arguments.parseAsRoot(["config", commandName, "6"]) as? any ConfigIPCCommand
+      )
+
+      #expect(command.arguments == ["6"])
+    }
+  }
 }
