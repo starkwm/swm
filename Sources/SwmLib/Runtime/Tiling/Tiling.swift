@@ -4,13 +4,16 @@ import CoreGraphics
 @MainActor
 public final class Tiling {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
+  typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
 
   private let masterLayout = MasterLayout()
   private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
   private let snapshot: SnapshotProvider
   private let spaces: Spaces
+  private let windows: Windows?
   private let frameReconciler: WindowFrameReconciler?
+  private let windowSpaceMembership: WindowSpaceMembershipProvider
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
   private var defaultMasterRatio: CGFloat = 0.5
@@ -19,6 +22,7 @@ public final class Tiling {
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
+  private var membershipPollingTask: Task<Void, Never>?
 
   /// Create tiling backed by the live runtime models.
   public convenience init(windows: Windows, spaces: Spaces) {
@@ -31,12 +35,20 @@ public final class Tiling {
         )
       },
       spaces: spaces,
+      windows: windows,
       frameReconciler: WindowFrameReconciler(
         currentFrame: { windows.window(by: $0)?.frame() },
         frameMutation: { windowID, targetFrame, currentFrame in
           windows.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
         }
-      )
+      ),
+      windowSpaceMembership: {
+        Dictionary(
+          uniqueKeysWithValues: windows.allWindows().map { window in
+            (window.id, Set(WindowServerClient.shared.spaceIDs(containing: window.id)))
+          }
+        )
+      }
     )
   }
 
@@ -44,11 +56,20 @@ public final class Tiling {
   init(
     snapshot: @escaping SnapshotProvider,
     spaces: Spaces,
-    frameReconciler: WindowFrameReconciler? = nil
+    windows: Windows? = nil,
+    frameReconciler: WindowFrameReconciler? = nil,
+    windowSpaceMembership: WindowSpaceMembershipProvider? = nil
   ) {
     self.snapshot = snapshot
     self.spaces = spaces
+    self.windows = windows
     self.frameReconciler = frameReconciler
+    self.windowSpaceMembership =
+      windowSpaceMembership ?? { snapshot().topology.spaceIDsByWindowID }
+  }
+
+  deinit {
+    membershipPollingTask?.cancel()
   }
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
@@ -155,6 +176,7 @@ public final class Tiling {
 
     currentTopology = topology
     layoutIDByWindowID = newLayoutIDByWindowID
+    updateMembershipPolling()
   }
 
   /// Select floating or an automatic layout for a known normal Space.
@@ -166,6 +188,7 @@ public final class Tiling {
     for layoutID in layoutIDs {
       layoutsByID[layoutID]?.selection = selection
     }
+    updateMembershipPolling()
     if selection != .float {
       reflow(spaceID: spaceID)
     }
@@ -181,6 +204,7 @@ public final class Tiling {
       state.selection = selection
       return state
     }
+    updateMembershipPolling()
     if selection != .float {
       reflowVisibleSpaces()
     }
@@ -547,6 +571,48 @@ public final class Tiling {
           settings: spaceSettings
         )
       )
+    }
+  }
+
+  /// Reflow when authoritative WindowServer membership changed without a lifecycle event.
+  private func reflowIfMembershipChanged() {
+    let membership = windowSpaceMembership()
+    let previousMembership = currentTopology?.spaceIDsByWindowID ?? [:]
+    guard membership != previousMembership else { return }
+
+    let changedWindowIDs = Set(membership.keys).union(previousMembership.keys).filter {
+      membership[$0] != previousMembership[$0]
+    }
+    for windowID in changedWindowIDs.sorted() {
+      if let window = windows?.window(by: windowID) {
+        log("window space membership changed \(window)", level: .info)
+      } else {
+        log("window space membership changed id: \(windowID)", level: .info)
+      }
+    }
+
+    reconcileAndReflowVisibleSpaces()
+  }
+
+  /// Poll membership while automatic tiling is active because Mission Control emits no event.
+  private func updateMembershipPolling() {
+    guard layoutsByID.values.contains(where: { $0.selection != .float }) else {
+      membershipPollingTask?.cancel()
+      membershipPollingTask = nil
+      return
+    }
+    guard membershipPollingTask == nil else { return }
+
+    membershipPollingTask = Task { @MainActor [weak self] in
+      while !Task.isCancelled {
+        do {
+          try await Task.sleep(for: .milliseconds(250))
+        } catch {
+          return
+        }
+
+        self?.reflowIfMembershipChanged()
+      }
     }
   }
 
