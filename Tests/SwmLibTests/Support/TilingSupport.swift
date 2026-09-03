@@ -68,7 +68,8 @@ func makeTiling(
       )
     },
     spaces: spaces,
-    frameReconciler: frameReconciler
+    frameReconciler: frameReconciler,
+    windowSpaceMembership: memberships
   )
 }
 

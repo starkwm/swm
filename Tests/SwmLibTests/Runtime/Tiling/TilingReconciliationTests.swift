@@ -52,6 +52,60 @@ struct TilingReconciliationTests {
     #expect(tiling.layoutPlan(for: layoutID(11)) == .disabled)
   }
 
+  @Test("membership polling: reflows without lifecycle events")
+  func membershipPollingReflowsWithoutLifecycleEvents() async throws {
+    let windows = [window(id: 1), window(id: 2), window(id: 3)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [11]]
+    var framesByWindowID: [CGWindowID: CGRect] = [
+      1: .zero,
+      2: .zero,
+      3: .zero,
+    ]
+    let frameReconciler = WindowFrameReconciler(
+      currentFrame: { framesByWindowID[$0] },
+      frameMutation: { windowID, targetFrame, _ in
+        framesByWindowID[windowID] = targetFrame
+        return .success
+      }
+    )
+    let tiling = makeTiling(
+      windows: { windows },
+      memberships: { memberships },
+      frameReconciler: frameReconciler
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    tiling.windowFrameDidChange(2)
+
+    memberships[2] = [11]
+    for _ in 0..<100 where framesByWindowID[1]?.width != 1_000 {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+    #expect(framesByWindowID[1] == CGRect(x: 0, y: 0, width: 1_000, height: 800))
+
+    framesByWindowID[3] = CGRect(x: 100, y: 100, width: 300, height: 300)
+    memberships[3] = [10]
+    for _ in 0..<100 where framesByWindowID[3]?.origin.x != 500 {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 800),
+          ])
+        )
+    )
+    #expect(framesByWindowID[3] == CGRect(x: 500, y: 0, width: 500, height: 800))
+  }
+
   @Test("dwindle: a new window splits the focused leaf")
   func dwindleNewWindowSplitsFocusedLeaf() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
