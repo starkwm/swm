@@ -43,7 +43,8 @@ struct StartCommand: ParsableCommand {
   /// Path to the user configuration file executed at daemon startup.
   @Option(
     name: .shortAndLong,
-    help: ArgumentHelp("Path to the configuration file.", valueName: "path")
+    help: ArgumentHelp("Path to the configuration file.", valueName: "path"),
+    completion: .file()
   )
   var config: String?
 

@@ -34,6 +34,20 @@ struct ArgumentsTests {
     #expect(help.contains("Position in the form abs|rel:<x>:<y>."))
   }
 
+  @Test("completion scripts include commands and typed values")
+  func completionScriptsIncludeCommandsAndTypedValues() {
+    for shell in CompletionShell.allCases {
+      let script = Arguments.completionScript(for: shell)
+
+      #expect(script.contains("swm"))
+      #expect(script.contains("focus-follows-mouse"))
+      #expect(script.contains("autofocus"))
+      #expect(script.contains("recent"))
+      #expect(script.contains("next"))
+      #expect(script.contains("prev"))
+    }
+  }
+
   @Test("typed window command translates to IPC arguments")
   func typedWindowCommandTranslatesToIPCArguments() throws {
     let command = try #require(

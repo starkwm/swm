@@ -19,7 +19,7 @@ struct WindowCommand: ParsableCommand {
     )
     static let command = "--focus"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent.")
+    @Option(name: .shortAndLong, help: "Window ID or recent.", completion: .list(["recent"]))
     var window: String?
 
     @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
@@ -38,7 +38,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Minimize a window.")
     static let command = "--minimize"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }
@@ -48,7 +52,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Restore a minimized window.")
     static let command = "--unminimize"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }
@@ -58,7 +66,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Move a window.")
     static let command = "--move"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Argument(help: "Position in the form abs|rel:<x>:<y>.")
@@ -71,7 +83,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Resize a window.")
     static let command = "--resize"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Argument(help: "Size in the form abs|rel:<width>:<height>.")
@@ -84,7 +100,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Place a window on a grid.")
     static let command = "--grid"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Argument(help: "Grid in the form columns:rows:x:y:width:height.")
@@ -97,10 +117,17 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Move a window to another display.")
     static let command = "--display"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
-    @Argument(help: "One-based display index, next, or prev.")
+    @Argument(
+      help: "One-based display index, next, or prev.",
+      completion: .list(["next", "prev"])
+    )
     var display: String
 
     var arguments: [String] { [window, display].compactMap { $0 } }
@@ -110,7 +137,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Change a window tiling state.")
     static let command = "--layout"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Argument(help: "New tiling state.")
@@ -133,7 +164,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Swap a window in a direction.")
     static let command = "--swap"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
@@ -156,7 +191,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Promote a window to master.")
     static let command = "--swap-with-master"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }
@@ -166,7 +205,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Focus the master window.")
     static let command = "--focus-master"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }
@@ -176,7 +219,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Change a dwindle split ratio.")
     static let command = "--split-ratio"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     @Argument(help: "Change in the form abs:<ratio> or rel:<ratio>.")
@@ -189,7 +236,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Toggle a dwindle split direction.")
     static let command = "--toggle-split"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }
@@ -199,7 +250,11 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Exchange dwindle split subtrees.")
     static let command = "--swap-split"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent; defaults to focused.")
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
     var window: String?
 
     var arguments: [String] { window.map { [$0] } ?? [] }

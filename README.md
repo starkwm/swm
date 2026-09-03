@@ -70,6 +70,28 @@ Top-level options:
     --version              Show the version
 ```
 
+## Shell completions
+
+`swm` can generate completion scripts for Bash, Zsh, and Fish. Homebrew installations include them automatically.
+
+For a manual installation, generate the script into a directory loaded by your shell:
+
+```sh
+# Bash: source this file from ~/.bashrc if it is not loaded automatically.
+mkdir -p ~/.local/share/bash-completion/completions
+swm --generate-completion-script bash > ~/.local/share/bash-completion/completions/swm
+
+# Zsh: add ~/.zfunc to fpath before running compinit in ~/.zshrc.
+mkdir -p ~/.zfunc
+swm --generate-completion-script zsh > ~/.zfunc/_swm
+
+# Fish
+mkdir -p ~/.config/fish/completions
+swm --generate-completion-script fish > ~/.config/fish/completions/swm.fish
+```
+
+Restart the shell after installing a completion script.
+
 Daemon startup options, accepted by `swm` and `swm start`:
 
 ```text
