@@ -105,7 +105,8 @@ struct ApplicationLifecycleHandler {
   private func applicationFrontSwitched(for process: Process) {
     guard let application = windows.application(by: process.pid) else {
       windows.addLostFrontSwitchedEvent(for: process.pid)
-      log("frontmost application switched before launch completed \(process)", level: .info)
+      log("frontmost application is unmanaged, retrying launch handling \(process)", level: .info)
+      applicationLaunched(for: process)
       return
     }
 

@@ -148,12 +148,14 @@ final class Application: NSObject {
       onFailure: { notification, result in
         retryObserving = result == .cannotComplete
         log(
-          "notification \(notification) not added \(self) (retry: \(retryObserving))",
+          "notification \(notification) not added \(self): AXError \(result.diagnosticDescription) (retry: \(retryObserving))",
           level: .warn
         )
 
         if observationError == nil {
-          observationError = .notificationFailed("failed to add notification \(notification)")
+          observationError = .notificationFailed(
+            "failed to add notification \(notification): AXError \(result.diagnosticDescription)"
+          )
         }
       }
     )
