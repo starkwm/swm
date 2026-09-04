@@ -99,11 +99,11 @@ public final class Workspace: NSObject {
 
   /// Start observing one KVO-backed process readiness condition.
   private func observe(_ process: Process, registry: ProcessObservationRegistry) {
-    guard process.application != nil else { return }
+    guard let application = process.application else { return }
 
-    let token = registry.register(process)
+    let token = registry.register(process, application: application)
 
-    process.application?.addObserver(
+    application.addObserver(
       self,
       forKeyPath: token.keyPath,
       options: [.initial, .new],
@@ -113,10 +113,9 @@ public final class Workspace: NSObject {
 
   /// Stop observing one KVO-backed process readiness condition.
   private func unobserve(_ process: Process, registry: ProcessObservationRegistry) {
-    guard process.application != nil else { return }
     guard let token = registry.unregister(process) else { return }
 
-    process.application?.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
+    token.application.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
   }
 
   /// Return the observation registry that owns a KVO key path.
@@ -143,6 +142,9 @@ extension Notification.Name {
 
 /// KVO observation token for one process readiness condition.
 private struct ProcessObservationToken {
+  /// Running application retained for the lifetime of the KVO observation.
+  let application: NSRunningApplication
+
   /// Observed KVO key path.
   let keyPath: String
 
@@ -201,12 +203,13 @@ private final class ProcessObservationRegistry {
   }
 
   /// Register or return the existing observation token for a process.
-  func register(_ process: Process) -> ProcessObservationToken {
+  func register(_ process: Process, application: NSRunningApplication) -> ProcessObservationToken {
     if let existing = tokens[process.psn.lowLongOfPSN] {
       return existing
     }
 
     let token = ProcessObservationToken(
+      application: application,
       keyPath: kind.keyPath,
       context: Unmanaged.passUnretained(process).toOpaque(),
       processID: process.psn.lowLongOfPSN
