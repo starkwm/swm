@@ -155,6 +155,35 @@ struct TilingWindowControlTests {
     #expect(tiling.cycledWindowID(from: 1, in: .next) == nil)
   }
 
+  @Test("window cycle: resumes on the active Space after the focused window closes")
+  func windowCycleResumesAfterFocusedWindowCloses() {
+    var windows = [window(id: 1), window(id: 2), window(id: 3), window(id: 4, isMinimized: true)]
+    let tiling = makeTiling(
+      windows: { windows },
+      memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
+    )
+    tiling.initialize()
+    tiling.windowDidFocus(1)
+    windows.removeAll { $0.id == 1 }
+    tiling.reconcile()
+
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == 2)
+    #expect(tiling.cycledWindowID(from: nil, in: .prev, fallbackSpaceID: 10) == 3)
+    #expect(tiling.cycledWindowID(from: 1, in: .next, fallbackSpaceID: 10) == 2)
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == 3)
+    #expect(tiling.cycledWindowID(from: 3, in: .next) == 2)
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 99) == nil)
+
+    windows.removeAll { $0.id == 3 }
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == 2)
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == nil)
+
+    windows.removeAll { $0.id == 2 }
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == nil)
+  }
+
   @Test("window swap cycle: exchanges adjacent leaves and wraps")
   func windowSwapCycleExchangesAdjacentLeaves() {
     let tiling = makeTiling(

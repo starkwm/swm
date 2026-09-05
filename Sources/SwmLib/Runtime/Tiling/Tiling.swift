@@ -386,14 +386,27 @@ public final class Tiling {
   }
 
   /// Return the next available window in stable layout order.
-  func cycledWindowID(from windowID: CGWindowID, in direction: CycleDirection)
-    -> CGWindowID?
-  {
-    guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
+  func cycledWindowID(
+    from windowID: CGWindowID?,
+    in direction: CycleDirection,
+    fallbackSpaceID: UInt64? = nil
+  ) -> CGWindowID? {
+    let sourceLayoutID = windowID.flatMap { layoutIDByWindowID[$0] }
+    guard
+      let layoutID = sourceLayoutID
+        ?? fallbackSpaceID.flatMap({ spaceID in
+          layoutIDs(for: spaceID).first {
+            currentTopology?.visibleLayoutIDs.contains($0) == true
+          }
+        })
+    else { return nil }
     guard let state = layoutsByID[layoutID], let tree = state.tree else { return nil }
     let windowIDs = tree.windowIDs.filter { candidateWindowID in
       guard !state.omittedWindowIDs.contains(candidateWindowID) else { return false }
       return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateWindowID)
+    }
+    guard let windowID, sourceLayoutID != nil else {
+      return direction == .next ? windowIDs.first : windowIDs.last
     }
     guard windowIDs.count > 1, let index = windowIDs.firstIndex(of: windowID) else { return nil }
 

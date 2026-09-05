@@ -120,11 +120,17 @@ struct WindowCommandHandler {
     guard let direction = CycleDirection(rawValue: argument) else {
       throw IPCCommandError.invalidRequest("invalid window cycle direction: \(argument)")
     }
-    let window = try selectedWindow(selector: nil)
-    guard let cycledWindowID = tiling.cycledWindowID(from: window.id, in: direction),
+    tiling.reconcile()
+    let focusedWindowID = Windows.focusedWindowID()
+    guard
+      let cycledWindowID = tiling.cycledWindowID(
+        from: focusedWindowID,
+        in: direction,
+        fallbackSpaceID: Spaces.active().id
+      ),
       let cycledWindow = windows.window(by: cycledWindowID)
     else {
-      throw IPCCommandError.invalidRequest("window has no cycle neighbour: \(window.id)")
+      throw IPCCommandError.invalidRequest("no available window to cycle")
     }
     guard cycledWindow.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(cycledWindow.id)")
