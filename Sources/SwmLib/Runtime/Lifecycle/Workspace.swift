@@ -101,9 +101,9 @@ public final class Workspace: NSObject {
   private func observe(_ process: Process, registry: ProcessObservationRegistry) {
     guard let application = process.application else { return }
 
-    let token = registry.register(process, application: application)
+    guard let token = registry.register(process, application: application) else { return }
 
-    application.addObserver(
+    token.application.addObserver(
       self,
       forKeyPath: token.keyPath,
       options: [.initial, .new],
@@ -202,11 +202,9 @@ private final class ProcessObservationRegistry {
     self.kind = kind
   }
 
-  /// Register or return the existing observation token for a process.
-  func register(_ process: Process, application: NSRunningApplication) -> ProcessObservationToken {
-    if let existing = tokens[process.psn.lowLongOfPSN] {
-      return existing
-    }
+  /// Register a new token, or return nil when the process is already observed.
+  func register(_ process: Process, application: NSRunningApplication) -> ProcessObservationToken? {
+    guard tokens[process.psn.lowLongOfPSN] == nil else { return nil }
 
     let token = ProcessObservationToken(
       application: application,
