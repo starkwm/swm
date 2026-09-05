@@ -22,10 +22,9 @@ struct DisplaySerializer: Encodable, Equatable {
       .enumerated()
       .map { (index: $0.offset, id: $0.element.id) }
 
-    return snapshot.arrangedScreens.enumerated().compactMap { index, screen in
-      guard let spaces = displaySpaces[screen.uuid] else {
-        return nil
-      }
+    return snapshot.arrangedScreens.enumerated().map { index, screen in
+      // A screen can be available before WindowServer exposes its Spaces.
+      let spaces = displaySpaces[screen.uuid] ?? []
 
       return DisplaySerializer(
         id: screen.id,

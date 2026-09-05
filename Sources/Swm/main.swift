@@ -24,6 +24,10 @@ func runSwm(with arguments: StartCommand) {
     try LockFile.acquire()
   }
 
+  // Establish AppKit's window-system connection before runtime initialization
+  // reads NSScreen, so screen changes are observed after docking and waking.
+  let application = NSApplication.shared
+
   let workspace = Workspace()
   let processes = Processes()
   let windows = Windows(workspace: workspace)
@@ -96,7 +100,7 @@ func runSwm(with arguments: StartCommand) {
 
   // Run the AppKit event loop used by accessibility and workspace callbacks.
   withExtendedLifetime(terminationSignalSources) {
-    NSApplication.shared.run()
+    application.run()
   }
 }
 
