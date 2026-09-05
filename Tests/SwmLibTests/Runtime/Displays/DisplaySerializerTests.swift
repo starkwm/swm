@@ -5,6 +5,25 @@ import Testing
 
 @Suite("DisplaySerializer")
 struct DisplaySerializerTests {
+  @Test("all: maps shared Spaces to every screen", arguments: ["Main", "MAIN"])
+  @MainActor
+  func allMapsSharedSpacesToEveryScreen(sharedDisplayID: String) {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace()))
+    snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
+    snapshot.displaySpaces = [
+      WindowServerDisplaySpaces(id: sharedDisplayID, spaces: [1, 3, 4, 5, 6])
+    ]
+    snapshot.spaces = [1, 3, 4, 5, 6].map { Space(id: $0) }
+    snapshot.activeSpaceID = 5
+    snapshot.currentSpaceByScreenID = ["": 5, sharedDisplayID: 5]
+
+    let displays = DisplaySerializer.all(snapshot: snapshot)
+
+    #expect(displays.map(\.index) == [1, 2])
+    #expect(displays.allSatisfy { $0.spaces == [0, 1, 2, 3, 4] })
+    #expect(displays.allSatisfy { $0.hasFocus })
+  }
+
   @Test("all: retains screens while display Spaces are unavailable")
   @MainActor
   func allRetainsScreensWhileDisplaySpacesAreUnavailable() {

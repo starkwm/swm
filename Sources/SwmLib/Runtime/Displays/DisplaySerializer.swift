@@ -16,15 +16,16 @@ struct DisplaySerializer: Encodable, Equatable {
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
     let displaySpaces = Dictionary(
-      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.id, $0.spaces) }
+      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.id.lowercased(), $0.spaces) }
     )
     let indexedSpaces = snapshot.spaces
       .enumerated()
       .map { (index: $0.offset, id: $0.element.id) }
 
     return snapshot.arrangedScreens.enumerated().map { index, screen in
-      // A screen can be available before WindowServer exposes its Spaces.
-      let spaces = displaySpaces[screen.uuid] ?? []
+      // Without separate Spaces, every screen belongs to WindowServer's Main group.
+      // Keep screens visible even while their Spaces are unavailable.
+      let spaces = displaySpaces[screen.uuid.lowercased()] ?? displaySpaces["main"] ?? []
 
       return DisplaySerializer(
         id: screen.id,
