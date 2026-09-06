@@ -220,7 +220,7 @@ public final class Tiling {
     for layoutID in layoutIDs {
       layoutsByID[layoutID]?.masterRatio = ratio
     }
-    applyMasterPlans(for: layoutIDs)
+    applyPlans(for: layoutIDs, matching: .master)
     return true
   }
 
@@ -233,7 +233,7 @@ public final class Tiling {
       state.masterRatio = ratio
       return state
     }
-    reflowVisibleMasterLayouts()
+    reflowVisibleLayouts(matching: .master)
   }
 
   /// Set the master placement for one Space.
@@ -245,7 +245,7 @@ public final class Tiling {
     for layoutID in layoutIDs {
       layoutsByID[layoutID]?.masterPlacement = placement
     }
-    applyMasterPlans(for: layoutIDs)
+    applyPlans(for: layoutIDs, matching: .master)
     return true
   }
 
@@ -263,7 +263,7 @@ public final class Tiling {
     for layoutID in layoutIDs {
       layoutsByID[layoutID]?.masterPlacement = placement
     }
-    applyMasterPlans(for: layoutIDs)
+    applyPlans(for: layoutIDs, matching: .master)
     return placement
   }
 
@@ -275,7 +275,7 @@ public final class Tiling {
       state.masterPlacement = placement
       return state
     }
-    reflowVisibleMasterLayouts()
+    reflowVisibleLayouts(matching: .master)
   }
 
   /// Enable or disable retained dwindle split directions for one Space.
@@ -292,7 +292,7 @@ public final class Tiling {
       }
       layoutsByID[layoutID] = state
     }
-    applyDwindlePlans(for: layoutIDs)
+    applyPlans(for: layoutIDs, matching: .dwindle)
     return true
   }
 
@@ -307,7 +307,7 @@ public final class Tiling {
       }
       return state
     }
-    reflowVisibleDwindleLayouts()
+    reflowVisibleLayouts(matching: .dwindle)
   }
 
   /// Swap a window with its closest neighbour in a direction.
@@ -695,26 +695,18 @@ public final class Tiling {
     return true
   }
 
-  /// Apply fresh master plans for every visible master layout.
-  private func reflowVisibleMasterLayouts() {
+  /// Apply fresh plans for every visible layout with the selected kind.
+  private func reflowVisibleLayouts(matching selection: LayoutSelection) {
     guard let currentTopology else { return }
-    applyMasterPlans(for: sorted(currentTopology.visibleLayoutIDs))
+    applyPlans(for: sorted(currentTopology.visibleLayoutIDs), matching: selection)
   }
 
-  /// Apply fresh plans only where the master settings affect geometry.
-  private func applyMasterPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
-    applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .master })
-  }
-
-  /// Apply fresh dwindle plans for every visible dwindle layout.
-  private func reflowVisibleDwindleLayouts() {
-    guard let currentTopology else { return }
-    applyDwindlePlans(for: sorted(currentTopology.visibleLayoutIDs))
-  }
-
-  /// Apply fresh plans only where dwindle settings affect geometry.
-  private func applyDwindlePlans(for layoutIDs: some Sequence<TilingLayoutID>) {
-    applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == .dwindle })
+  /// Apply fresh plans only where the selected layout settings affect geometry.
+  private func applyPlans(
+    for layoutIDs: some Sequence<TilingLayoutID>,
+    matching selection: LayoutSelection
+  ) {
+    applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == selection })
   }
 
   /// Sort composite IDs for deterministic reconciliation and frame application.
