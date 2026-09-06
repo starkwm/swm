@@ -14,8 +14,6 @@ final class QuerySnapshot {
     }
   }
 
-  private let managedWindows: Windows
-
   lazy var activeSpaceID = Spaces.active().id
   lazy var arrangedScreens = NSScreen.arrangedScreens
   lazy var displaySpaces = WindowServerClient.shared.displaySpaces()
@@ -51,6 +49,8 @@ final class QuerySnapshot {
       CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
     return Self.indexWindowInfo(windowInfo)
   }()
+
+  private let managedWindows: Windows
 
   init(windows: Windows) {
     managedWindows = windows
