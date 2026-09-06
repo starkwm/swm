@@ -221,17 +221,3 @@ struct WindowSerializer: Encodable, Equatable {
     try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
   }
 }
-
-/// Helpers for looking up raw Core Graphics window metadata.
-extension [[String: Any]] {
-  /// Index Core Graphics metadata by window ID for constant-time lookup.
-  func keyedByWindowID() -> [CGWindowID: [String: Any]] {
-    reduce(into: [:]) { result, info in
-      guard let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value else {
-        return
-      }
-
-      result[windowID] = info
-    }
-  }
-}
