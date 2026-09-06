@@ -3,6 +3,17 @@ import AppKit
 /// Lazy raw-state snapshot shared by display, space, and window query serializers.
 @MainActor
 final class QuerySnapshot {
+  /// Index Core Graphics metadata by window ID for constant-time lookup.
+  static func indexWindowInfo(_ windowInfo: [[String: Any]]) -> [CGWindowID: [String: Any]] {
+    windowInfo.reduce(into: [:]) { result, info in
+      guard let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value else {
+        return
+      }
+
+      result[windowID] = info
+    }
+  }
+
   private let managedWindows: Windows
 
   lazy var activeSpaceID = Spaces.active().id
@@ -38,7 +49,7 @@ final class QuerySnapshot {
   lazy var windowInfoByID: [CGWindowID: [String: Any]] = {
     let windowInfo =
       CGWindowListCopyWindowInfo([.optionAll], kCGNullWindowID) as? [[String: Any]] ?? []
-    return windowInfo.keyedByWindowID()
+    return Self.indexWindowInfo(windowInfo)
   }()
 
   init(windows: Windows) {
