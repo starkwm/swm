@@ -86,7 +86,13 @@ struct WindowCommandHandler {
       window = try selectedWindow(selector: selector)
     case .direction(let direction):
       let sourceWindow = try selectedWindow(selector: nil)
-      guard let directionalWindow = directionalWindow(from: sourceWindow, in: direction) else {
+      guard
+        let directionalWindow = windows.directionalWindow(
+          from: sourceWindow,
+          in: direction,
+          spaces: spaces
+        )
+      else {
         throw IPCCommandError.invalidRequest(
           "window has no focusable neighbour in direction: \(direction.rawValue)"
         )
@@ -398,34 +404,6 @@ struct WindowCommandHandler {
     }
 
     return window
-  }
-
-  /// Resolve the closest non-minimized window on the currently visible Spaces.
-  private func directionalWindow(
-    from sourceWindow: Window,
-    in direction: CardinalDirection
-  ) -> Window? {
-    let candidateWindows = windows.allWindows()
-    let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
-    let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
-    let framesByWindowID = Dictionary(
-      uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
-        guard !window.isMinimized else { return nil }
-        guard
-          let spaceIDs = topology.spaceIDsByWindowID[window.id],
-          !spaceIDs.isDisjoint(with: visibleSpaceIDs),
-          let frame = window.frame()
-        else {
-          return nil
-        }
-        return (window.id, frame)
-      }
-    )
-
-    guard let windowID = direction.neighbor(of: sourceWindow.id, in: framesByWindowID) else {
-      return nil
-    }
-    return windows.window(by: windowID)
   }
 
   /// Parse an optional single window selector argument.

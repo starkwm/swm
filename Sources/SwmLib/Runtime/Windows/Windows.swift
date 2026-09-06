@@ -81,6 +81,35 @@ public final class Windows {
     Array(windowsByID.values)
   }
 
+  /// Resolve the closest non-minimized window on the currently visible Spaces.
+  func directionalWindow(
+    from sourceWindow: Window,
+    in direction: CardinalDirection,
+    spaces: Spaces
+  ) -> Window? {
+    let candidateWindows = allWindows()
+    let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
+    let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
+    let framesByWindowID = Dictionary(
+      uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
+        guard !window.isMinimized else { return nil }
+        guard
+          let spaceIDs = topology.spaceIDsByWindowID[window.id],
+          !spaceIDs.isDisjoint(with: visibleSpaceIDs),
+          let frame = window.frame()
+        else {
+          return nil
+        }
+        return (window.id, frame)
+      }
+    )
+
+    guard let windowID = direction.neighbor(of: sourceWindow.id, in: framesByWindowID) else {
+      return nil
+    }
+    return window(by: windowID)
+  }
+
   /// Update tracked focused-window state.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
