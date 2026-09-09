@@ -44,7 +44,7 @@ struct ConfigCommandHandler {
     }
   }
 
-  /// Configure swap and layout animations.
+  /// Configure window animations.
   private func animationDuration(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(
       request.args,

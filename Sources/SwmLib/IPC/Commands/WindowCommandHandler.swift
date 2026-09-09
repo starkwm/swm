@@ -47,22 +47,28 @@ struct WindowCommandHandler {
       case "--swap-split":
         return try swapSplit(request)
       case "--move":
-        return try performGeometryAction(request, action: "move") { window, change in
+        return try performGeometryAction(request, action: "move") { frame, change in
+          var target = frame
           switch change.mode {
           case .absolute:
-            window.move(to: CGPoint(x: change.first, y: change.second))
+            target.origin = CGPoint(x: change.first, y: change.second)
           case .relative:
-            window.move(by: CGVector(dx: change.first, dy: change.second))
+            target.origin.x += CGFloat(change.first)
+            target.origin.y += CGFloat(change.second)
           }
+          return target
         }
       case "--resize":
-        return try performGeometryAction(request, action: "resize") { window, change in
+        return try performGeometryAction(request, action: "resize") { frame, change in
+          var target = frame
           switch change.mode {
           case .absolute:
-            window.resize(to: CGSize(width: change.first, height: change.second))
+            target.size = CGSize(width: change.first, height: change.second)
           case .relative:
-            window.resize(by: CGVector(dx: change.first, dy: change.second))
+            target.size.width += CGFloat(change.first)
+            target.size.height += CGFloat(change.second)
           }
+          return target
         }
       case "--grid":
         return try grid(request)
@@ -254,7 +260,7 @@ struct WindowCommandHandler {
   private func performGeometryAction(
     _ request: IPCRequest,
     action: String,
-    operation: (Window, WindowGeometryChange) -> Bool
+    operation: (CGRect, WindowGeometryChange) -> CGRect
   ) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: action)
 
@@ -264,10 +270,16 @@ struct WindowCommandHandler {
 
     let window = try selectedWindow(selector: selection.selector)
 
-    tiling.cancelAnimation(for: window.id)
-    guard operation(window, change) else {
+    guard let currentFrame = window.frame() else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
+    let destination = tiling.destinationFrame(for: window.id) ?? currentFrame
+    try applyFrame(
+      operation(destination, change),
+      currentFrame: currentFrame,
+      window: window,
+      failureMessage: "could not \(action) window: \(window.id)"
+    )
 
     return .success(id: request.id, message: "ok")
   }
@@ -304,7 +316,8 @@ struct WindowCommandHandler {
       targetFrame,
       currentFrame: frame,
       window: window,
-      failureMessage: "could not move window to display: \(window.id)"
+      failureMessage: "could not move window to display: \(window.id)",
+      animated: false
     )
 
     return .success(id: request.id, message: "ok")
@@ -351,8 +364,10 @@ struct WindowCommandHandler {
     _ targetFrame: CGRect,
     currentFrame: CGRect,
     window: Window,
-    failureMessage: String
+    failureMessage: String,
+    animated: Bool = true
   ) throws {
+    if animated, tiling.animateFrame(targetFrame, for: window.id) { return }
     tiling.cancelAnimation(for: window.id)
     var result = window.setFrame(targetFrame, from: currentFrame)
     if result == .success,

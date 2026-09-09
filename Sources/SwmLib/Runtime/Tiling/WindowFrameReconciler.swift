@@ -12,13 +12,13 @@ final class WindowFrameReconciler {
     didSet {
       if animationDuration == 0 {
         let targets = animations.mapValues(\.target)
-        animations.removeAll()
-        animationTask?.cancel()
-        animationTask = nil
+        cancelAnimations()
         applyImmediately(targets, exactWindowIDs: Set(targets.keys))
       }
     }
   }
+
+  var animationEnabled: Bool { animationDuration > 0 && !reduceMotion() }
 
   private var animations = [CGWindowID: FrameAnimation]()
   private var animationTask: Task<Void, Never>?
@@ -49,9 +49,7 @@ final class WindowFrameReconciler {
     _ targetFrames: [CGWindowID: CGRect],
     at now: ContinuousClock.Instant = .now
   ) {
-    guard animationDuration > 0,
-      !reduceMotion()
-    else {
+    guard animationEnabled else {
       for windowID in targetFrames.keys { animations.removeValue(forKey: windowID) }
       applyImmediately(targetFrames)
       return
@@ -60,7 +58,7 @@ final class WindowFrameReconciler {
     for (windowID, target) in targetFrames {
       if animations[windowID]?.target == target { continue }
       animations.removeValue(forKey: windowID)
-      guard let start = currentFrame(windowID), !start.matches(target, tolerance: 1) else {
+      guard let start = currentFrame(windowID), start != target else {
         continue
       }
       animations[windowID] = FrameAnimation(
