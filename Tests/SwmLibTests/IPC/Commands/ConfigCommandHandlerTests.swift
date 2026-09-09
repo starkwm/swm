@@ -226,6 +226,19 @@ struct ConfigCommandHandlerTests {
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
   }
 
+  @Test("dispatch: validates animation duration")
+  func animationDurationValidation() {
+    let handler = handler(spaces: Spaces(activeSpaceID: nil))
+    for argument in ["0", "0.18", "1"] {
+      #expect(handler.dispatch(request(command: "animation-duration", args: [argument])).ok)
+    }
+    for args in [[], ["-1"], ["1.1"], ["nan"], ["inf"], ["fast"], ["0.1", "0.2"]] {
+      let response = handler.dispatch(request(command: "animation-duration", args: args))
+      #expect(!response.ok)
+      #expect(response.errorCode == .invalidRequest)
+    }
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .config, command: command, args: args)
   }

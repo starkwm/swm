@@ -1,4 +1,4 @@
-import CoreGraphics
+import AppKit
 
 /// Applies calculated frames while tracking the Accessibility notifications they cause.
 @MainActor
@@ -8,6 +8,21 @@ final class WindowFrameReconciler {
 
   private static let expectationLifetime = Duration.seconds(1)
 
+  var animationDuration: Double = 0 {
+    didSet {
+      if animationDuration == 0 {
+        let targets = animations.mapValues(\.target)
+        animations.removeAll()
+        animationTask?.cancel()
+        animationTask = nil
+        applyImmediately(targets, exactWindowIDs: Set(targets.keys))
+      }
+    }
+  }
+
+  private var animations = [CGWindowID: FrameAnimation]()
+  private var animationTask: Task<Void, Never>?
+  private let reduceMotion: () -> Bool
   private let currentFrame: CurrentFrameProvider
   private let frameMutation: FrameMutation
   private var pendingMutations = [CGWindowID: ExpectedFrameMutation]()
@@ -15,26 +30,140 @@ final class WindowFrameReconciler {
   /// Create a reconciler backed by frame access and mutation operations.
   init(
     currentFrame: @escaping CurrentFrameProvider,
-    frameMutation: @escaping FrameMutation
+    frameMutation: @escaping FrameMutation,
+    reduceMotion: @escaping () -> Bool = {
+      NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    }
   ) {
+    self.reduceMotion = reduceMotion
     self.currentFrame = currentFrame
     self.frameMutation = frameMutation
   }
 
-  /// Apply only changed frames after recording every feedback expectation.
-  func apply(_ targetFrames: [CGWindowID: CGRect]) {
+  deinit {
+    animationTask?.cancel()
+  }
+
+  /// Animate a batch using the same clock, or apply it immediately when disabled.
+  func apply(
+    _ targetFrames: [CGWindowID: CGRect],
+    at now: ContinuousClock.Instant = .now
+  ) {
+    guard animationDuration > 0,
+      !reduceMotion()
+    else {
+      for windowID in targetFrames.keys { animations.removeValue(forKey: windowID) }
+      applyImmediately(targetFrames)
+      return
+    }
+
+    for (windowID, target) in targetFrames {
+      if animations[windowID]?.target == target { continue }
+      animations.removeValue(forKey: windowID)
+      guard let start = currentFrame(windowID), !start.matches(target, tolerance: 1) else {
+        continue
+      }
+      animations[windowID] = FrameAnimation(
+        start: start,
+        target: target,
+        startedAt: now,
+        duration: animationDuration
+      )
+    }
+    guard !animations.isEmpty, animationTask == nil else { return }
+    animationTask = Task { [weak self] in
+      while !Task.isCancelled {
+        do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+        guard let self else { return }
+        self.advanceAnimations()
+        if self.animations.isEmpty {
+          self.animationTask = nil
+          return
+        }
+      }
+    }
+  }
+
+  /// Leave cancelled windows at their current frames.
+  func cancelAnimations(for windowIDs: some Sequence<CGWindowID>) {
+    for windowID in windowIDs {
+      animations.removeValue(forKey: windowID)
+      pendingMutations.removeValue(forKey: windowID)
+    }
+    if animations.isEmpty {
+      animationTask?.cancel()
+      animationTask = nil
+    }
+  }
+
+  /// Discard destinations calculated before a topology change.
+  func cancelAnimations() {
+    cancelAnimations(for: Array(animations.keys))
+  }
+
+  /// Calculate each frame from elapsed time so delayed ticks do not slow the animation.
+  func advanceAnimations(at now: ContinuousClock.Instant = .now) {
+    var frames = [CGWindowID: CGRect]()
+    var finished = Set<CGWindowID>()
+    for (windowID, animation) in animations {
+      guard currentFrame(windowID) != nil else {
+        finished.insert(windowID)
+        pendingMutations.removeValue(forKey: windowID)
+        continue
+      }
+      let elapsed = animation.startedAt.duration(to: now)
+      let progress = min(1, max(0, elapsed / .seconds(1) / animation.duration))
+      frames[windowID] = animation.frame(at: progress)
+      if progress == 1 { finished.insert(windowID) }
+    }
+    applyImmediately(frames, exactWindowIDs: finished)
+    for windowID in finished { animations.removeValue(forKey: windowID) }
+  }
+
+  /// Return animation destinations, or current frames for windows that are not moving.
+  func frames(for windowIDs: some Sequence<CGWindowID>) -> [CGWindowID: CGRect] {
+    var framesByWindowID = [CGWindowID: CGRect]()
+    for windowID in windowIDs {
+      framesByWindowID[windowID] = animations[windowID]?.target ?? currentFrame(windowID)
+    }
+    return framesByWindowID
+  }
+
+  /// Return whether a frame notification belongs to a pending SWM mutation.
+  ///
+  /// Suppress notifications throughout animation and until the last frame arrives or times out.
+  func shouldSuppressNotification(for windowID: CGWindowID, actualFrame: CGRect?) -> Bool {
+    if animations[windowID] != nil { return true }
+    expireExpectations()
+    guard let expectation = pendingMutations[windowID] else { return false }
+
+    if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
+      pendingMutations.removeValue(forKey: windowID)
+    }
+
+    return true
+  }
+
+  /// Read the current frame and return whether its notification belongs to SWM.
+  func shouldSuppressNotification(for windowID: CGWindowID) -> Bool {
+    shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
+  }
+
+  /// Record expected notifications before moving any windows.
+  private func applyImmediately(
+    _ targetFrames: [CGWindowID: CGRect],
+    exactWindowIDs: Set<CGWindowID> = []
+  ) {
     expireExpectations()
 
     var changedFrames = [CGWindowID: FrameApplicationTarget]()
     for (windowID, targetFrame) in targetFrames {
       guard let currentFrame = currentFrame(windowID) else {
-        changedFrames[windowID] = FrameApplicationTarget(
-          currentFrame: nil,
-          targetFrame: targetFrame
-        )
+        pendingMutations.removeValue(forKey: windowID)
         continue
       }
-      guard !currentFrame.matches(targetFrame, tolerance: 1) else { continue }
+      let tolerance: CGFloat = exactWindowIDs.contains(windowID) ? 0 : 1
+      guard !currentFrame.matches(targetFrame, tolerance: tolerance) else { continue }
       changedFrames[windowID] = FrameApplicationTarget(
         currentFrame: currentFrame,
         targetFrame: targetFrame
@@ -54,12 +183,7 @@ final class WindowFrameReconciler {
 
     for windowID in changedFrames.keys.sorted() {
       guard let target = changedFrames[windowID] else { continue }
-      guard let currentFrame = target.currentFrame else {
-        pendingMutations.removeValue(forKey: windowID)
-        continue
-      }
-
-      guard let result = frameMutation(windowID, target.targetFrame, currentFrame) else {
+      guard let result = frameMutation(windowID, target.targetFrame, target.currentFrame) else {
         pendingMutations.removeValue(forKey: windowID)
         continue
       }
@@ -74,36 +198,7 @@ final class WindowFrameReconciler {
     }
   }
 
-  /// Return current frames for the requested windows when Accessibility can read them.
-  func frames(for windowIDs: some Sequence<CGWindowID>) -> [CGWindowID: CGRect] {
-    var framesByWindowID = [CGWindowID: CGRect]()
-    for windowID in windowIDs {
-      framesByWindowID[windowID] = currentFrame(windowID)
-    }
-    return framesByWindowID
-  }
-
-  /// Return whether a frame notification belongs to a pending SWM mutation.
-  ///
-  /// Intermediate move or resize notifications remain suppressed until the target frame arrives
-  /// or the expectation expires.
-  func shouldSuppressNotification(for windowID: CGWindowID, actualFrame: CGRect?) -> Bool {
-    expireExpectations()
-    guard let expectation = pendingMutations[windowID] else { return false }
-
-    if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
-      pendingMutations.removeValue(forKey: windowID)
-    }
-
-    return true
-  }
-
-  /// Read the current frame and return whether its notification belongs to SWM.
-  func shouldSuppressNotification(for windowID: CGWindowID) -> Bool {
-    shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
-  }
-
-  /// Remove expectations whose bounded suppression interval has elapsed.
+  /// Stop suppressing notifications after their timeout.
   private func expireExpectations() {
     let now = ContinuousClock.now
     pendingMutations = pendingMutations.filter { $0.value.expiresAt > now }
@@ -113,15 +208,34 @@ final class WindowFrameReconciler {
 
 /// Expected frame notification registered before an Accessibility mutation.
 private struct ExpectedFrameMutation {
-  /// Final target frame.
+  /// Last requested frame.
   let target: CGRect
 
-  /// Time after which notifications are no longer attributed to the mutation.
+  /// When to stop suppressing notifications.
   let expiresAt: ContinuousClock.Instant
 }
 
 /// Current and target frame retained while a batch is applied.
 private struct FrameApplicationTarget {
-  let currentFrame: CGRect?
+  let currentFrame: CGRect
   let targetFrame: CGRect
+}
+
+/// Start frame, destination, and timing for one window.
+private struct FrameAnimation {
+  let start: CGRect
+  let target: CGRect
+  let startedAt: ContinuousClock.Instant
+  let duration: Double
+
+  func frame(at progress: Double) -> CGRect {
+    if progress >= 1 { return target }
+    let eased = 1 - (1 - progress) * (1 - progress)
+    return CGRect(
+      x: start.minX + (target.minX - start.minX) * eased,
+      y: start.minY + (target.minY - start.minY) * eased,
+      width: start.width + (target.width - start.width) * eased,
+      height: start.height + (target.height - start.height) * eased
+    )
+  }
 }

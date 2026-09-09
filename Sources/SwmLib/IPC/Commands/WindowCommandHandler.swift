@@ -264,6 +264,7 @@ struct WindowCommandHandler {
 
     let window = try selectedWindow(selector: selection.selector)
 
+    tiling.cancelAnimation(for: window.id)
     guard operation(window, change) else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
@@ -352,6 +353,7 @@ struct WindowCommandHandler {
     window: Window,
     failureMessage: String
   ) throws {
+    tiling.cancelAnimation(for: window.id)
     var result = window.setFrame(targetFrame, from: currentFrame)
     if result == .success,
       let appliedFrame = window.frame(),

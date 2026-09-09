@@ -3,15 +3,17 @@ import SwmLib
 
 /// Change global defaults in the running daemon.
 struct ConfigCommand: ParsableCommand {
-  static let configuration = CommandConfiguration(
-    commandName: "config",
-    abstract: "Change global layout defaults.",
-    subcommands: [
-      Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
-      PreserveSplit.self,
-      WindowGap.self, TopPadding.self, BottomPadding.self, LeftPadding.self, RightPadding.self,
-    ]
-  )
+  struct AnimationDuration: ConfigIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Set window swap and layout animation duration."
+    )
+    static let command = "animation-duration"
+
+    @Argument(help: "Seconds from 0 through 1. Default: 0, which disables animation.")
+    var seconds: Double
+
+    var arguments: [String] { [String(seconds)] }
+  }
 
   struct Layout: ConfigIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Set the default layout.")
@@ -116,6 +118,16 @@ struct ConfigCommand: ParsableCommand {
 
     var arguments: [String] { [String(points)] }
   }
+
+  static let configuration = CommandConfiguration(
+    commandName: "config",
+    abstract: "Change global layout defaults.",
+    subcommands: [
+      Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
+      PreserveSplit.self, AnimationDuration.self,
+      WindowGap.self, TopPadding.self, BottomPadding.self, LeftPadding.self, RightPadding.self,
+    ]
+  )
 }
 
 enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {

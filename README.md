@@ -210,7 +210,7 @@ Each physical display has an independent tiling layout, including when macOS's *
 
 ## Set global defaults
 
-Config commands update every current space and become the defaults for spaces discovered later:
+Config commands change settings in the running daemon. Layout, padding, and gap settings also apply to spaces discovered later:
 
 ```sh
 swm config layout <float|master|monocle|dwindle>
@@ -218,6 +218,7 @@ swm config focus-follows-mouse <off|autofocus|autoraise>
 swm config master-ratio <ratio>
 swm config master-placement <left|right|top|bottom>
 swm config preserve-split <on|off>
+swm config animation-duration <seconds>
 swm config window-gap <points>
 swm config top-padding <points>
 swm config bottom-padding <points>
@@ -225,7 +226,17 @@ swm config left-padding <points>
 swm config right-padding <points>
 ```
 
-Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, and zero padding and gaps. Negative padding or gap values are clamped to zero.
+Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. Negative padding or gap values are clamped to zero.
+
+Window animation is disabled by default. Run
+`swm config animation-duration 0.18` to animate swaps and automatic layout reflows,
+or set it to `0` to finish active animations and return to instant movement.
+The accepted range is 0 through 1 second. macOS Reduce Motion overrides this setting.
+Direct `move`, `resize`, `grid`, and display transfers remain instant.
+
+Add the command to `swmrc` to apply it at startup. Animation smoothness depends on
+the app. Direct geometry commands cancel the selected window's animation. Dragging during
+an animation may still compete with it.
 
 ## Configuration file
 
@@ -238,6 +249,7 @@ The file can be any executable script. A shell script is the simplest option:
 
 swm config layout dwindle
 swm config focus-follows-mouse autofocus
+swm config animation-duration 0.18
 swm config window-gap 8
 swm config top-padding 8
 swm config bottom-padding 8
