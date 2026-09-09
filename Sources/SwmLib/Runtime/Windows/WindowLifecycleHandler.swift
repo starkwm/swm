@@ -72,6 +72,13 @@ struct WindowLifecycleHandler {
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
+    if windows.window(by: windowID) == nil {
+      if let window = windows.recoverFocusedWindow(with: windowID) {
+        log("recovered focused window \(window)", level: .info)
+        tiling.reconcileAndReflowVisibleSpaces()
+      }
+    }
+
     guard let window = windows.window(by: windowID) else {
       windows.addLostFocusedEvent(for: windowID)
       log("window focused before it was managed id: \(windowID)", level: .info)

@@ -174,12 +174,28 @@ public final class Windows {
     }
   }
 
-  /// Retry window discovery for one application if it has unresolved windows.
+  /// Rediscover windows, including windows lost after an earlier successful discovery.
   func refreshWindows(for application: Application) {
-    guard unresolvedApplicationIDs.contains(application.processID) else { return }
-
-    log("application has windows that are not yet resolved \(application)", level: .info)
     reconcileWindows(for: application, mode: .refreshAttempt)
+  }
+
+  /// Recover an unknown focused window without waiting for another creation notification.
+  func recoverFocusedWindow(with windowID: CGWindowID) -> Window? {
+    guard windowID != 0 else { return nil }
+    if let window = windowsByID[windowID] { return window }
+
+    guard
+      let processID = WindowServerClient.shared.frontmostProcessID(),
+      let application = applicationsByPID[processID],
+      application.focusedWindowID() == windowID
+    else { return nil }
+
+    if let window = addWindow(with: windowID, for: application) {
+      return window
+    }
+
+    refreshWindows(for: application)
+    return windowsByID[windowID]
   }
 
   /// Record a front-switched event that arrived before its application was managed.
@@ -239,6 +255,14 @@ public final class Windows {
   /// Find and add one window by ID from an application's accessibility elements.
   func addWindow(with windowID: CGWindowID, for application: Application) -> Window? {
     if let window = windowsByID[windowID] {
+      return window
+    }
+
+    // Some apps expose their focused window before including it in AXWindows.
+    if let element = AccessibilityClient.shared.focusedWindowElement(for: application.element),
+      AccessibilityClient.shared.optionalWindowID(for: element) == windowID,
+      let window = addWindow(for: application, with: element)
+    {
       return window
     }
 
@@ -413,6 +437,8 @@ public final class Windows {
       if unresolvedWindowIDs.isEmpty {
         log("workaround successfully resolved all windows \(application)", level: .info)
         unresolvedApplicationIDs.remove(application.processID)
+      } else {
+        unresolvedApplicationIDs.insert(application.processID)
       }
     }
   }

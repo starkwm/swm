@@ -111,6 +111,7 @@ struct ApplicationLifecycleHandler {
     }
 
     windows.refreshWindows(for: application)
+    tiling.reconcileAndReflowVisibleSpaces()
 
     if let focusedWindowID = application.focusedWindowID() {
       Events.shared.post(.window(.focused(focusedWindowID)))
