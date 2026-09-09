@@ -16,6 +16,8 @@ struct ConfigCommandHandler {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
+      case "animation-duration":
+        return try animationDuration(request)
       case "layout":
         return try layout(request)
       case "focus-follows-mouse":
@@ -40,6 +42,19 @@ struct ConfigCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
     }
+  }
+
+  /// Configure swap and layout animations.
+  private func animationDuration(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(
+      request.args,
+      context: "config animation-duration"
+    ).requiredValue()
+    guard let duration = Double(argument), duration.isFinite, (0...1).contains(duration) else {
+      throw IPCCommandError.invalidRequest("animation-duration must be between 0 and 1 seconds")
+    }
+    tiling.setAnimationDuration(duration)
+    return .success(id: request.id, message: "ok")
   }
 
   /// Select how pointer movement focuses managed windows.

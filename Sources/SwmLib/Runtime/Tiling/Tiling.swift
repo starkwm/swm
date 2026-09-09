@@ -78,8 +78,19 @@ public final class Tiling {
     reflowVisibleSpaces()
   }
 
+  /// Set the frame animation duration in seconds.
+  func setAnimationDuration(_ duration: Double) {
+    frameReconciler?.animationDuration = duration
+  }
+
+  /// Stop an animation before a direct window command changes its frame.
+  func cancelAnimation(for windowID: CGWindowID) {
+    frameReconciler?.cancelAnimations(for: [windowID])
+  }
+
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
   func reconcile() {
+    frameReconciler?.cancelAnimations()
     let snapshot = snapshot()
     let windows = snapshot.windows.sorted { $0.id < $1.id }
     floatingOverrideWindowIDs.formIntersection(windows.map(\.id))
@@ -186,6 +197,7 @@ public final class Tiling {
     guard !layoutIDs.isEmpty else { return false }
 
     for layoutID in layoutIDs {
+      frameReconciler?.cancelAnimations(for: layoutsByID[layoutID]?.tree?.windowIDs ?? [])
       layoutsByID[layoutID]?.selection = selection
     }
     updateMembershipPolling()
@@ -197,6 +209,7 @@ public final class Tiling {
 
   /// Select floating or an automatic layout for all current and future Spaces.
   func setLayoutForSpaces(_ selection: LayoutSelection) {
+    frameReconciler?.cancelAnimations()
     defaultSelection = selection
 
     layoutsByID = layoutsByID.mapValues { currentState in
@@ -365,6 +378,7 @@ public final class Tiling {
     guard topology.normalSpaceIDs(for: windowID).count == 1 else { return false }
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
 
+    cancelAnimation(for: windowID)
     switch selection {
     case .float:
       floatingOverrideWindowIDs.insert(windowID)
