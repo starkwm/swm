@@ -5,7 +5,7 @@ import SwmLib
 struct ConfigCommand: ParsableCommand {
   struct AnimationDuration: ConfigIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set window swap and layout animation duration."
+      abstract: "Set window animation duration."
     )
     static let command = "animation-duration"
 

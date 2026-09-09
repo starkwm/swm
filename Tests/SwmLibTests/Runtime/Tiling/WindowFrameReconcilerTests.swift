@@ -6,6 +6,45 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
+  @Test("direct commands: one-point moves are not skipped")
+  func directCommandAppliesSmallMove() {
+    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, _ in
+        frame = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let target = frame.offsetBy(dx: 1, dy: 0)
+    #expect(makeTiling(frameReconciler: reconciler).animateFrame(target, for: 1))
+    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
+    #expect(frame == target)
+  }
+
+  @Test(
+    "direct commands: disabled animation and Reduce Motion use the synchronous fallback",
+    arguments: [false, true]
+  )
+  func directCommandsUseSynchronousFallback(reduceMotion: Bool) {
+    var mutations = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in .zero },
+      frameMutation: { _, _, _ in
+        mutations += 1
+        return .success
+      },
+      reduceMotion: { reduceMotion }
+    )
+    reconciler.animationDuration = reduceMotion ? 1 : 0
+    let tiling = makeTiling(frameReconciler: reconciler)
+    #expect(!tiling.animateFrame(CGRect(x: 100, y: 0, width: 100, height: 100), for: 1))
+    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
+    #expect(mutations == 0)
+  }
+
   @Test("animation: final tick applies a destination within one point")
   func finalTickAppliesExactDestination() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)

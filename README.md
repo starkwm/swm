@@ -229,13 +229,15 @@ swm config right-padding <points>
 Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. Negative padding or gap values are clamped to zero.
 
 Window animation is disabled by default. Run
-`swm config animation-duration 0.18` to animate swaps and automatic layout reflows,
+`swm config animation-duration 0.18` to animate swaps, automatic layout reflows, and `move`, `resize`, and `grid` commands,
 or set it to `0` to finish active animations and return to instant movement.
 The accepted range is 0 through 1 second. macOS Reduce Motion overrides this setting.
-Direct `move`, `resize`, `grid`, and display transfers remain instant.
+Repeated relative moves and resizes accumulate against the pending destination.
+Display transfers remain instant. With animation enabled, geometry commands return
+once the movement is queued.
 
 Add the command to `swmrc` to apply it at startup. Animation smoothness depends on
-the app. Direct geometry commands cancel the selected window's animation. Dragging during
+the app. Display transfers cancel the selected window's animation. Dragging during
 an animation may still compete with it.
 
 ## Configuration file

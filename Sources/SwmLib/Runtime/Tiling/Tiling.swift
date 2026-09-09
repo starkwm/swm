@@ -83,6 +83,18 @@ public final class Tiling {
     frameReconciler?.animationDuration = duration
   }
 
+  /// Return the pending destination so repeated geometry commands accumulate.
+  func destinationFrame(for windowID: CGWindowID) -> CGRect? {
+    frameReconciler?.frames(for: [windowID])[windowID]
+  }
+
+  /// Animate a direct geometry command when the configured settings allow it.
+  func animateFrame(_ frame: CGRect, for windowID: CGWindowID) -> Bool {
+    guard let frameReconciler, frameReconciler.animationEnabled else { return false }
+    frameReconciler.apply([windowID: frame])
+    return true
+  }
+
   /// Stop an animation before a direct window command changes its frame.
   func cancelAnimation(for windowID: CGWindowID) {
     frameReconciler?.cancelAnimations(for: [windowID])
