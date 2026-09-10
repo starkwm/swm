@@ -155,6 +155,43 @@ struct TilingWindowControlTests {
     #expect(tiling.cycledWindowID(from: 1, in: .next) == nil)
   }
 
+  @Test("window cycle: includes fixed-size windows only in floating layouts")
+  func windowCycleIncludesFixedSizeWindows() {
+    var windows = [
+      window(id: 1), window(id: 2, isResizable: false),
+      window(id: 3, isMinimized: true, isResizable: false),
+      window(id: 4, isResizable: false),
+    ]
+    let tiling = makeTiling(
+      windows: { windows },
+      memberships: { [1: [10], 2: [10], 3: [10], 4: [20]] }
+    )
+    tiling.initialize()
+
+    #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == 1)
+    #expect(tiling.cycledWindowID(from: 1, in: .prev) == 2)
+    #expect(tiling.cycledWindowID(from: 2, in: .prev) == 1)
+
+    tiling.setLayout(.master, for: 10)
+    #expect(tiling.cycledWindowID(from: 1, in: .next) == nil)
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == nil)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+
+    tiling.setLayout(.float, for: 10)
+    #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
+    windows.removeAll { $0.id == 1 }
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == 2)
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == nil)
+    windows.removeAll { $0.id == 2 }
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == nil)
+  }
+
   @Test("window cycle: resumes on the active Space after the focused window closes")
   func windowCycleResumesAfterFocusedWindowCloses() {
     var windows = [window(id: 1), window(id: 2), window(id: 3), window(id: 4, isMinimized: true)]
