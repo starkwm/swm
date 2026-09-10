@@ -21,6 +21,7 @@ public final class Tiling {
   private var defaultPreserveSplitDirections = false
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
+  private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
   private var membershipPollingTask: Task<Void, Never>?
 
@@ -130,12 +131,21 @@ public final class Tiling {
     var retainedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
     var omittedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
     var newLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
+    fixedSizeLayoutIDByWindowID.removeAll(keepingCapacity: true)
 
     for window in windows {
       let disposition = WindowEligibilityPolicy.disposition(for: window, topology: topology)
       let placement: (layoutID: TilingLayoutID, isOmitted: Bool)
 
       switch disposition {
+      case .excluded(.notResizable):
+        if !window.isMinimized,
+          let layoutID = topology.layoutID(for: window.id, on: window.displayID)
+        {
+          fixedSizeLayoutIDByWindowID[window.id] = layoutID
+        }
+        continue
+
       case .tiled:
         if let layoutID = topology.layoutID(for: window.id, on: window.displayID) {
           placement = (layoutID, window.isMinimized)
@@ -417,7 +427,12 @@ public final class Tiling {
     in direction: CycleDirection,
     fallbackSpaceID: UInt64? = nil
   ) -> CGWindowID? {
-    let sourceLayoutID = windowID.flatMap { layoutIDByWindowID[$0] }
+    let sourceLayoutID = windowID.flatMap { windowID in
+      layoutIDByWindowID[windowID]
+        ?? fixedSizeLayoutIDByWindowID[windowID].flatMap {
+          layoutsByID[$0]?.selection == .float ? $0 : nil
+        }
+    }
     guard
       let layoutID = sourceLayoutID
         ?? fallbackSpaceID.flatMap({ spaceID in
@@ -426,10 +441,15 @@ public final class Tiling {
           }
         })
     else { return nil }
-    guard let state = layoutsByID[layoutID], let tree = state.tree else { return nil }
-    let windowIDs = tree.windowIDs.filter { candidateWindowID in
-      guard !state.omittedWindowIDs.contains(candidateWindowID) else { return false }
-      return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateWindowID)
+    guard let state = layoutsByID[layoutID] else { return nil }
+    var windowIDs = (state.tree?.windowIDs ?? []).filter { candidateID in
+      guard !state.omittedWindowIDs.contains(candidateID) else { return false }
+      return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateID)
+    }
+    if state.selection == .float {
+      windowIDs += fixedSizeLayoutIDByWindowID.keys.filter {
+        fixedSizeLayoutIDByWindowID[$0] == layoutID
+      }.sorted()
     }
     guard let windowID, sourceLayoutID != nil else {
       return direction == .next ? windowIDs.first : windowIDs.last

@@ -130,7 +130,8 @@ func layoutID(
 func window(
   id: CGWindowID,
   displayID: String? = "display",
-  isMinimized: Bool = false
+  isMinimized: Bool = false,
+  isResizable: Bool = true
 ) -> TilingWindowSnapshot {
   TilingWindowSnapshot(
     id: id,
@@ -138,6 +139,6 @@ func window(
     subrole: "AXStandardWindow",
     isMinimized: isMinimized,
     isMovable: true,
-    isResizable: true
+    isResizable: isResizable
   )
 }
