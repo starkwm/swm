@@ -6,6 +6,132 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
+  @Test("animation: frame work does not shift the next deadline", arguments: [0, 5, 15])
+  func frameWorkDoesNotShiftDeadline(workMilliseconds: Int) {
+    let start = ContinuousClock.now
+    let interval = Duration.seconds(1.0 / 60)
+    let previous = start.advanced(by: interval)
+    let deadline = WindowFrameReconciler.nextAnimationDeadline(
+      after: previous,
+      now: previous.advanced(by: .milliseconds(workMilliseconds))
+    )
+
+    #expect(deadline == previous.advanced(by: interval))
+  }
+
+  @Test("animation: slow frames skip missed deadlines without shifting the cadence")
+  func slowFramesSkipMissedDeadlines() {
+    let previous = ContinuousClock.now
+    let interval = Duration.seconds(1.0 / 60)
+    let deadline = WindowFrameReconciler.nextAnimationDeadline(
+      after: previous,
+      now: previous.advanced(by: .milliseconds(40))
+    )
+
+    #expect(deadline == previous.advanced(by: interval * 3))
+  }
+
+  @Test("animation: intermediate ticks read each window once and feedback does not read it")
+  func intermediateTicksAvoidRedundantFrameReads() {
+    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+    var frameReads = 0
+    var mutations = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in
+        frameReads += 1
+        return frame
+      },
+      frameMutation: { _, target, current in
+        #expect(current == frame)
+        mutations += 1
+        frame = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let start = ContinuousClock.now
+    reconciler.apply([1: CGRect(x: 100, y: 0, width: 200, height: 100)], at: start)
+    frameReads = 0
+
+    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
+    #expect(frame.minX == 75)
+    #expect(frame.width == 175)
+    #expect(mutations == 1)
+    #expect(frameReads == 1)
+
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    #expect(frameReads == 1)
+
+    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
+    #expect(frameReads == 3)
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    #expect(frameReads == 4)
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
+    #expect(frameReads == 4)
+  }
+
+  @Test("animation: clamped frames are retried at the destination")
+  func clampedFramesAreRetriedAtDestination() {
+    var frame = CGRect(x: 750, y: 400, width: 250, height: 400)
+    var lastTarget: CGRect?
+    var mutations = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, current in
+        mutations += 1
+        // Model an app that accepts the larger size only after moving to the new origin.
+        frame = lastTarget == target ? target : CGRect(origin: target.origin, size: current.size)
+        lastTarget = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let start = ContinuousClock.now
+    let target = CGRect(x: 500, y: 400, width: 500, height: 400)
+    reconciler.apply([1: target], at: start)
+
+    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
+    #expect(mutations == 1)
+    #expect(frame.origin != target.origin)
+
+    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
+    #expect(mutations == 3)
+    #expect(frame == target)
+  }
+
+  @Test("animation: a vanished window is removed without another read or mutation")
+  func vanishedWindowStopsAnimating() {
+    var frame: CGRect? = CGRect(x: 0, y: 0, width: 100, height: 100)
+    var frameReads = 0
+    var mutations = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in
+        frameReads += 1
+        return frame
+      },
+      frameMutation: { _, _, _ in
+        mutations += 1
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let start = ContinuousClock.now
+    reconciler.apply([1: CGRect(x: 100, y: 0, width: 200, height: 100)], at: start)
+    frame = nil
+    frameReads = 0
+
+    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
+    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
+    #expect(frameReads == 1)
+    #expect(mutations == 0)
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
+    #expect(frameReads == 1)
+  }
+
   @Test("direct commands: one-point moves are not skipped")
   func directCommandAppliesSmallMove() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)

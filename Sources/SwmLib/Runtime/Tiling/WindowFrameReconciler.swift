@@ -7,6 +7,16 @@ final class WindowFrameReconciler {
   typealias FrameMutation = (CGWindowID, CGRect, CGRect) -> WindowFrameMutationResult?
 
   private static let expectationLifetime = Duration.seconds(1)
+  private static let animationFrameInterval = Duration.seconds(1.0 / 60)
+
+  /// Keep a steady cadence and skip missed frames instead of queuing catch-up updates.
+  static func nextAnimationDeadline(
+    after previous: ContinuousClock.Instant,
+    now: ContinuousClock.Instant
+  ) -> ContinuousClock.Instant {
+    let intervals = max(1, Int(previous.duration(to: now) / animationFrameInterval) + 1)
+    return previous.advanced(by: animationFrameInterval * intervals)
+  }
 
   var animationDuration: Double = 0 {
     didSet {
@@ -70,9 +80,12 @@ final class WindowFrameReconciler {
     }
     guard !animations.isEmpty, animationTask == nil else { return }
     animationTask = Task { [weak self] in
+      let clock = ContinuousClock()
+      var deadline = clock.now
       while !Task.isCancelled {
-        do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
-        guard let self else { return }
+        deadline = Self.nextAnimationDeadline(after: deadline, now: clock.now)
+        do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
+        guard !Task.isCancelled, let self else { return }
         self.advanceAnimations()
         if self.animations.isEmpty {
           self.animationTask = nil
@@ -102,9 +115,10 @@ final class WindowFrameReconciler {
   /// Calculate each frame from elapsed time so delayed ticks do not slow the animation.
   func advanceAnimations(at now: ContinuousClock.Instant = .now) {
     var frames = [CGWindowID: CGRect]()
+    var currentFrames = [CGWindowID: CGRect]()
     var finished = Set<CGWindowID>()
     for (windowID, animation) in animations {
-      guard currentFrame(windowID) != nil else {
+      guard let current = currentFrame(windowID) else {
         finished.insert(windowID)
         pendingMutations.removeValue(forKey: windowID)
         continue
@@ -112,9 +126,10 @@ final class WindowFrameReconciler {
       let elapsed = animation.startedAt.duration(to: now)
       let progress = min(1, max(0, elapsed / .seconds(1) / animation.duration))
       frames[windowID] = animation.frame(at: progress)
+      currentFrames[windowID] = current
       if progress == 1 { finished.insert(windowID) }
     }
-    applyImmediately(frames, exactWindowIDs: finished)
+    applyImmediately(frames, currentFrames: currentFrames, exactWindowIDs: finished)
     for windowID in finished { animations.removeValue(forKey: windowID) }
   }
 
@@ -144,19 +159,25 @@ final class WindowFrameReconciler {
 
   /// Read the current frame and return whether its notification belongs to SWM.
   func shouldSuppressNotification(for windowID: CGWindowID) -> Bool {
-    shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
+    if animations[windowID] != nil { return true }
+    expireExpectations()
+    guard pendingMutations[windowID] != nil else { return false }
+    return shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
   }
 
   /// Record expected notifications before moving any windows.
   private func applyImmediately(
     _ targetFrames: [CGWindowID: CGRect],
+    currentFrames: [CGWindowID: CGRect]? = nil,
     exactWindowIDs: Set<CGWindowID> = []
   ) {
     expireExpectations()
 
     var changedFrames = [CGWindowID: FrameApplicationTarget]()
     for (windowID, targetFrame) in targetFrames {
-      guard let currentFrame = currentFrame(windowID) else {
+      let current =
+        if let currentFrames { currentFrames[windowID] } else { currentFrame(windowID) }
+      guard let currentFrame = current else {
         pendingMutations.removeValue(forKey: windowID)
         continue
       }
@@ -187,7 +208,8 @@ final class WindowFrameReconciler {
       }
 
       // Some apps clamp a resize at the old origin before accepting the accompanying move.
-      if result == .success,
+      // Intermediate animation frames will be superseded on the next tick.
+      if currentFrames == nil || exactWindowIDs.contains(windowID), result == .success,
         let appliedFrame = self.currentFrame(windowID),
         !appliedFrame.matches(target.targetFrame, tolerance: 1)
       {
