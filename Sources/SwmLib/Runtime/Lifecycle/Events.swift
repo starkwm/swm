@@ -47,7 +47,8 @@ public final class Events {
     let signalMapper = RuntimeEventSignalMapper(
       windows: dependencies.windows,
       spaces: dependencies.spaces,
-      displays: dependencies.displays
+      displays: dependencies.displays,
+      hasSubscribers: { Signals.shared.hasSubscribers(for: $0) }
     )
     let payloadBeforeHandling = signalMapper.payload(beforeHandling: event)
 

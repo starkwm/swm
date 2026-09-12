@@ -68,8 +68,8 @@ struct WindowFrameReconcilerTests {
     #expect(frameReads == 3)
     #expect(reconciler.shouldSuppressNotification(for: 1))
     #expect(frameReads == 4)
-    #expect(!reconciler.shouldSuppressNotification(for: 1))
-    #expect(frameReads == 4)
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    #expect(frameReads == 5)
   }
 
   @Test("animation: clamped frames are retried at the destination")
@@ -285,7 +285,7 @@ struct WindowFrameReconcilerTests {
     reconciler.advanceAnimations(at: halfway.advanced(by: .seconds(1)))
     #expect(frame == destination)
     #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
     reconciler.animationDuration = 0
   }
 
@@ -402,8 +402,8 @@ struct WindowFrameReconcilerTests {
     #expect(frame == targetFrame)
   }
 
-  @Test("shouldSuppressNotification: holds intermediate events and consumes the target")
-  func shouldSuppressNotificationHoldsIntermediateEventsAndConsumesTarget() {
+  @Test("shouldSuppressNotification: holds intermediate and duplicate destination events")
+  func shouldSuppressNotificationHoldsIntermediateAndDuplicateEvents() {
     let reconciler = WindowFrameReconciler(
       currentFrame: { _ in .zero },
       frameMutation: { _, _, _ in .success }
@@ -419,6 +419,8 @@ struct WindowFrameReconcilerTests {
     )
     #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
     #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: target))
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: target) == false)
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: target))
+    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
+    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: target))
   }
 }

@@ -4,6 +4,19 @@ import Testing
 
 @Suite("Signals")
 struct SignalsTests {
+  @Test("hasSubscribers: follows event registrations and removal")
+  func subscribersFollowRegistration() throws {
+    let signals = Signals()
+    #expect(!signals.hasSubscribers(for: .windowMoved))
+    try signals.add(
+      Signal.parseAdd(arguments: ["event=window-moved", "action=true", "label=move"])
+    )
+    #expect(signals.hasSubscribers(for: .windowMoved))
+    #expect(!signals.hasSubscribers(for: .windowResized))
+    try signals.remove(selector: "move")
+    #expect(!signals.hasSubscribers(for: .windowMoved))
+  }
+
   @Test("add: rejects duplicate labels")
   func addRejectsDuplicateLabels() throws {
     let signals = Signals()

@@ -227,7 +227,7 @@ final class Application: NSObject {
   }
 
   /// Temporarily disable enhanced accessibility UI while running a window operation.
-  func enhancedUIWorkaround(callback: () -> Void) {
+  func enhancedUIWorkaround<Result>(callback: () -> Result) -> Result {
     let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
 
     if enhancedUserInterfaceEnabled {
@@ -238,7 +238,7 @@ final class Application: NSObject {
       )
     }
 
-    callback()
+    let result = callback()
 
     if enhancedUserInterfaceEnabled {
       AccessibilityClient.shared.setAttributeValue(
@@ -247,6 +247,8 @@ final class Application: NSObject {
         attribute: kAXEnhancedUserInterface
       )
     }
+
+    return result
   }
 
   /// Return whether the app has enhanced accessibility UI enabled.

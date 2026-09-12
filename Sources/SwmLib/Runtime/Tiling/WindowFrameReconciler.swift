@@ -144,14 +144,18 @@ final class WindowFrameReconciler {
 
   /// Return whether a frame notification belongs to a pending SWM mutation.
   ///
-  /// Suppress notifications throughout animation and until the last frame arrives or times out.
+  /// Suppress animation feedback, including duplicate notifications at the destination.
   func shouldSuppressNotification(for windowID: CGWindowID, actualFrame: CGRect?) -> Bool {
     if animations[windowID] != nil { return true }
     expireExpectations()
-    guard let expectation = pendingMutations[windowID] else { return false }
+    guard var expectation = pendingMutations[windowID] else { return false }
 
     if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
+      expectation.reachedTarget = true
+      pendingMutations[windowID] = expectation
+    } else if expectation.reachedTarget, actualFrame != nil {
       pendingMutations.removeValue(forKey: windowID)
+      return false
     }
 
     return true
@@ -233,6 +237,9 @@ private struct ExpectedFrameMutation {
 
   /// When to stop suppressing notifications.
   let expiresAt: ContinuousClock.Instant
+
+  /// Keep matching feedback suppressed after arrival, but allow a subsequent external move.
+  var reachedTarget = false
 }
 
 /// Current and target frame retained while a batch is applied.

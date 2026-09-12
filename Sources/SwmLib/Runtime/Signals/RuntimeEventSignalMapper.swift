@@ -12,6 +12,20 @@ struct RuntimeEventSignalMapper {
   /// Display state used to describe active and reconfigured displays.
   let displays: Displays
 
+  private let hasSubscribers: (SignalEvent) -> Bool
+
+  init(
+    windows: Windows,
+    spaces: Spaces,
+    displays: Displays,
+    hasSubscribers: @escaping (SignalEvent) -> Bool = { _ in true }
+  ) {
+    self.windows = windows
+    self.spaces = spaces
+    self.displays = displays
+    self.hasSubscribers = hasSubscribers
+  }
+
   /// Capture payload data that lifecycle handling would invalidate.
   func payload(beforeHandling event: RuntimeEvent) -> SignalPayload? {
     guard case .window(.destroyed(let window)) = event else { return nil }
@@ -95,8 +109,10 @@ struct RuntimeEventSignalMapper {
     windowID: CGWindowID,
     window: Window? = nil,
     active: Bool? = nil
-  ) -> SignalPayload {
-    .window(
+  ) -> SignalPayload? {
+    // Reading a title requires an app round trip, including on every animation notification.
+    guard hasSubscribers(event) else { return nil }
+    return .window(
       event: event,
       windowID: windowID,
       window: window ?? windows.window(by: windowID),

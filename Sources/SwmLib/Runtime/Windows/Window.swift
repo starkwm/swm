@@ -244,12 +244,32 @@ final class Window: NSObject {
 
   /// Apply a target frame, restoring the original size when moving fails.
   func setFrame(_ targetFrame: CGRect, from currentFrame: CGRect) -> WindowFrameMutationResult {
-    WindowFrameMutation.apply(
-      from: currentFrame,
-      to: targetFrame,
-      resize: { resize(to: $0) },
-      move: { move(to: $0) }
-    )
+    guard targetFrame != currentFrame else { return .success }
+    guard let application, let element else {
+      return targetFrame.size != currentFrame.size ? .resizeFailed : .moveFailed
+    }
+
+    // Keep the workaround active across the resize, move, and any rollback.
+    return application.enhancedUIWorkaround {
+      WindowFrameMutation.apply(
+        from: currentFrame,
+        to: targetFrame,
+        resize: {
+          AccessibilityClient.shared.setSize(
+            $0,
+            for: element,
+            attribute: kAXSizeAttribute as String
+          )
+        },
+        move: {
+          AccessibilityClient.shared.setPoint(
+            $0,
+            for: element,
+            attribute: kAXPositionAttribute as String
+          )
+        }
+      )
+    }
   }
 
   /// Register window-specific accessibility notifications.

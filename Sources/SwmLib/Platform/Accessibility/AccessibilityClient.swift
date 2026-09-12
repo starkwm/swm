@@ -6,6 +6,26 @@ public final class AccessibilityClient {
   /// Shared accessibility client.
   public static let shared = AccessibilityClient()
 
+  /// Decode the position and size returned by one batched Accessibility read.
+  static func frame(from values: [AnyObject]) -> CGRect? {
+    guard values.count == 2,
+      CFGetTypeID(values[0]) == AXValueGetTypeID(),
+      CFGetTypeID(values[1]) == AXValueGetTypeID()
+    else { return nil }
+
+    let position = values[0] as! AXValue
+    let size = values[1] as! AXValue
+    var origin = CGPoint.zero
+    var dimensions = CGSize.zero
+    guard AXValueGetType(position) == .cgPoint,
+      AXValueGetType(size) == .cgSize,
+      AXValueGetValue(position, .cgPoint, &origin),
+      AXValueGetValue(size, .cgSize, &dimensions)
+    else { return nil }
+
+    return CGRect(origin: origin, size: dimensions)
+  }
+
   private init() {}
 
   /// Prompt for accessibility permission when needed and return current trust status.
@@ -61,15 +81,22 @@ public final class AccessibilityClient {
     return size
   }
 
-  /// Return a frame built from accessibility position and size attributes.
+  /// Read position and size together to avoid a second synchronous app round trip.
   func frame(for element: AXUIElement) -> CGRect? {
-    guard let origin = pointAttribute(for: element, attribute: kAXPositionAttribute as String),
-      let size = sizeAttribute(for: element, attribute: kAXSizeAttribute as String)
+    var values: CFArray?
+    guard
+      AXUIElementCopyMultipleAttributeValues(
+        element,
+        [kAXPositionAttribute, kAXSizeAttribute] as CFArray,
+        .stopOnError,
+        &values
+      ) == .success,
+      let values = values as? [AnyObject]
     else {
       return nil
     }
 
-    return CGRect(origin: origin, size: size)
+    return Self.frame(from: values)
   }
 
   /// Return whether an accessibility attribute is settable.

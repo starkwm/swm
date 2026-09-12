@@ -6,6 +6,25 @@ import Testing
 @Suite("RuntimeEventSignalMapper")
 @MainActor
 struct RuntimeEventSignalMapperTests {
+  @Test("payload after handling: skips window events without subscribers")
+  func skipsUnobservedWindowEvents() {
+    var observedEvents = Set<SignalEvent>()
+    let mapper = RuntimeEventSignalMapper(
+      windows: Windows(workspace: Workspace()),
+      spaces: Spaces(activeSpaceID: nil),
+      displays: Displays(),
+      hasSubscribers: { observedEvents.contains($0) }
+    )
+    #expect(mapper.payload(afterHandling: .window(.moved(42))) == nil)
+    #expect(mapper.payload(afterHandling: .window(.resized(42))) == nil)
+
+    observedEvents.insert(.windowMoved)
+    let payload = mapper.payload(afterHandling: .window(.moved(42)))
+    #expect(payload?.event == .windowMoved)
+    #expect(payload?.environment["SWM_WINDOW_ID"] == "42")
+    #expect(mapper.payload(afterHandling: .window(.resized(42))) == nil)
+  }
+
   @Test("payload after handling: maps frontmost application")
   func payloadAfterHandlingMapsFrontmostApplication() {
     let process = Process(

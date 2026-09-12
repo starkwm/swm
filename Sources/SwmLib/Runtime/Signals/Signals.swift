@@ -54,6 +54,11 @@ public final class Signals {
     }
   }
 
+  /// Check for listeners before reading Accessibility data for a window payload.
+  func hasSubscribers(for event: SignalEvent) -> Bool {
+    lock.withLock { signals.contains { $0.event == event } }
+  }
+
   /// Execute actions whose registrations match the payload.
   func emit(_ payload: SignalPayload) {
     let matches = lock.withLock {
