@@ -28,6 +28,8 @@ final class WindowFrameReconciler {
     }
   }
 
+  var animationEasing = AnimationEasing.easeOutQuad
+
   var animationEnabled: Bool { animationDuration > 0 && !reduceMotion() }
 
   private var animations = [CGWindowID: FrameAnimation]()
@@ -78,7 +80,8 @@ final class WindowFrameReconciler {
         start: start,
         target: target,
         startedAt: now,
-        duration: animationDuration
+        duration: animationDuration,
+        easing: animationEasing
       )
     }
     stopSchedulerIfIdle()
@@ -272,10 +275,11 @@ private struct FrameAnimation {
   let target: CGRect
   let startedAt: ContinuousClock.Instant
   let duration: Double
+  let easing: AnimationEasing
 
   func frame(at progress: Double) -> CGRect {
     if progress >= 1 { return target }
-    let eased = 1 - (1 - progress) * (1 - progress)
+    let eased = easing.value(at: progress)
     return CGRect(
       x: start.minX + (target.minX - start.minX) * eased,
       y: start.minY + (target.minY - start.minY) * eased,

@@ -32,6 +32,7 @@ swm config master-ratio <ratio>
 swm config master-placement <left|right|top|bottom>
 swm config preserve-split <on|off>
 swm config animation-duration <seconds>
+swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
 swm config window-gap <points>
 swm config top-padding <points>
 swm config bottom-padding <points>
@@ -51,12 +52,17 @@ Repeated relative moves and resizes accumulate against the pending destination.
 Display transfers remain instant. With animation enabled, geometry commands return
 once the movement is queued.
 
+Use `swm config animation-easing ease-out-circ` for a circular ease-out curve like
+yabai's default. Available curves are `linear`, `ease-out-quad` (the default),
+`ease-out-cubic`, `ease-out-circ`, and `ease-in-out-quad`. Changes apply to newly
+started or retargeted animations; active animations retain their curve.
+
 Animation ticks follow the main screen's display link, capped at 60 Hz to avoid
 increasing Accessibility traffic. A 60 Hz clock fallback is used if no screen is
 available when starting an animation. Windows on other displays share this cadence;
 updates still move and resize real windows sequentially, not compositor proxies.
 
-Add the command to `swmrc` to apply it at startup. Animation smoothness depends on
+Add the commands to `swmrc` to apply them at startup. Animation smoothness depends on
 the app. Display transfers cancel the selected window's animation. Dragging during
 an animation may still compete with it.
 

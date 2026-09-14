@@ -84,6 +84,11 @@ public final class Tiling {
     frameReconciler?.animationDuration = duration
   }
 
+  /// Select the curve captured by newly started or retargeted animations.
+  func setAnimationEasing(_ easing: AnimationEasing) {
+    frameReconciler?.animationEasing = easing
+  }
+
   /// Return the pending destination so repeated geometry commands accumulate.
   func destinationFrame(for windowID: CGWindowID) -> CGRect? {
     frameReconciler?.frames(for: [windowID])[windowID]

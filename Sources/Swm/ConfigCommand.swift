@@ -15,6 +15,27 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { [String(seconds)] }
   }
 
+  struct AnimationEasingCommand: ConfigIPCCommand {
+    static let configuration = CommandConfiguration(
+      commandName: "animation-easing",
+      abstract: "Set window animation easing."
+    )
+    static let command = "animation-easing"
+
+    @Argument(
+      help: "linear, ease-out-quad (default), ease-out-cubic, ease-out-circ, or ease-in-out-quad."
+    )
+    var easing: String
+
+    var arguments: [String] { [easing] }
+
+    func validate() throws {
+      guard AnimationEasing(rawValue: easing) != nil else {
+        throw ValidationError("Unknown animation easing: \(easing)")
+      }
+    }
+  }
+
   struct Layout: ConfigIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Set the default layout.")
     static let command = "layout"
@@ -124,7 +145,7 @@ struct ConfigCommand: ParsableCommand {
     abstract: "Change global layout defaults.",
     subcommands: [
       Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
-      PreserveSplit.self, AnimationDuration.self,
+      PreserveSplit.self, AnimationDuration.self, AnimationEasingCommand.self,
       WindowGap.self, TopPadding.self, BottomPadding.self, LeftPadding.self, RightPadding.self,
     ]
   )
