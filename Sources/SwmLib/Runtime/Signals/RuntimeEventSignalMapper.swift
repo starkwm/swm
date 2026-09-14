@@ -54,7 +54,7 @@ struct RuntimeEventSignalMapper {
     case .window(.created(_, let windowID)):
       return windowPayload(event: .windowCreated, windowID: windowID)
 
-    case .window(.destroyed):
+    case .window(.destroyed), .window(.titleChanged):
       return nil
 
     case .window(.focused(let windowID)):

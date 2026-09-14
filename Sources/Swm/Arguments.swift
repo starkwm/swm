@@ -15,7 +15,7 @@ struct Arguments: ParsableCommand {
       ),
       CommandGroup(
         name: "OTHER",
-        subcommands: [ConfigCommand.self, QueryCommand.self, SignalCommand.self]
+        subcommands: [ConfigCommand.self, QueryCommand.self, SignalCommand.self, RuleCommand.self]
       ),
     ],
     defaultSubcommand: StartCommand.self

@@ -10,6 +10,11 @@ final class Window: NSObject {
     ]
   )
 
+  // Title notifications are optional; unsupported notifications must not prevent discovery.
+  private static let titleNotificationRegistrar = AXNotificationRegistrar(
+    notifications: [kAXTitleChangedNotification]
+  )
+
   /// Owning application, held weakly to avoid a retain cycle.
   weak var application: Application?
 
@@ -238,7 +243,10 @@ final class Window: NSObject {
       isResizable: AccessibilityClient.shared.isAttributeSettable(
         kAXSizeAttribute as String,
         for: element
-      )
+      ),
+      app: application?.name,
+      title: title,
+      bundleID: application?.bundleID
     )
   }
 
@@ -282,6 +290,19 @@ final class Window: NSObject {
     self.observationContext = observationContext
     let context = Unmanaged.passUnretained(observationContext).toOpaque()
 
+    _ = Self.titleNotificationRegistrar.observe(
+      observedNotifications: &observedNotifications,
+      addNotification: { notification in
+        AccessibilityClient.shared.addNotification(
+          observer: observer,
+          element: element,
+          notification: notification,
+          context: context
+        )
+      },
+      onFailure: { _, _ in }
+    )
+
     return Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
       addNotification: { notification in
@@ -302,6 +323,17 @@ final class Window: NSObject {
     guard let element else { return }
 
     Self.notificationRegistrar.unobserve(
+      observedNotifications: &observedNotifications,
+      removeNotification: { notification in
+        AccessibilityClient.shared.removeNotification(
+          observer: observer,
+          element: element,
+          notification: notification
+        )
+      }
+    )
+
+    Self.titleNotificationRegistrar.unobserve(
       observedNotifications: &observedNotifications,
       removeNotification: { notification in
         AccessibilityClient.shared.removeNotification(

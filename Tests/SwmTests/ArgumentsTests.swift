@@ -81,6 +81,23 @@ struct ArgumentsTests {
     #expect(command.arguments == ["--space", "2", "abs:10"])
   }
 
+  @Test("typed rule command preserves matching properties")
+  func typedRuleCommand() throws {
+    let command = try #require(
+      Arguments.parseAsRoot([
+        "rule", "add", "label=finder", "app=^Finder$", "manage=off",
+      ]) as? RuleCommand.Add
+    )
+    #expect(command.arguments == ["label=finder", "app=^Finder$", "manage=off"])
+    #expect(RuleCommand.Add.domain == .rule)
+    #expect(RuleCommand.Add.command == "--add")
+    let remove = try #require(
+      Arguments.parseAsRoot(["rule", "remove", "finder"]) as? RuleCommand.Remove
+    )
+    #expect(remove.arguments == ["finder"])
+    #expect(try Arguments.parseAsRoot(["rule", "list"]) is RuleCommand.List)
+  }
+
   @Test("typed window command rejects multiple targets")
   func typedWindowCommandRejectsMultipleTargets() {
     #expect(throws: (any Error).self) {
