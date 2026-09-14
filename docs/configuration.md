@@ -51,6 +51,11 @@ Repeated relative moves and resizes accumulate against the pending destination.
 Display transfers remain instant. With animation enabled, geometry commands return
 once the movement is queued.
 
+Animation ticks follow the main screen's display link, capped at 60 Hz to avoid
+increasing Accessibility traffic. A 60 Hz clock fallback is used if no screen is
+available when starting an animation. Windows on other displays share this cadence;
+updates still move and resize real windows sequentially, not compositor proxies.
+
 Add the command to `swmrc` to apply it at startup. Animation smoothness depends on
 the app. Display transfers cancel the selected window's animation. Dragging during
 an animation may still compete with it.

@@ -32,6 +32,7 @@ final class WindowFrameReconciler {
 
   private var animations = [CGWindowID: FrameAnimation]()
   private var animationTask: Task<Void, Never>?
+  private var displayLink: AnimationDisplayLink?
   private let reduceMotion: () -> Bool
   private let currentFrame: CurrentFrameProvider
   private let frameMutation: FrameMutation
@@ -50,8 +51,9 @@ final class WindowFrameReconciler {
     self.frameMutation = frameMutation
   }
 
-  deinit {
+  isolated deinit {
     animationTask?.cancel()
+    displayLink?.stop()
   }
 
   /// Animate a batch using the same clock, or apply it immediately when disabled.
@@ -62,6 +64,7 @@ final class WindowFrameReconciler {
     guard animationEnabled else {
       for windowID in targetFrames.keys { animations.removeValue(forKey: windowID) }
       applyImmediately(targetFrames)
+      stopSchedulerIfIdle()
       return
     }
 
@@ -78,7 +81,16 @@ final class WindowFrameReconciler {
         duration: animationDuration
       )
     }
-    guard !animations.isEmpty, animationTask == nil else { return }
+    stopSchedulerIfIdle()
+    guard !animations.isEmpty, animationTask == nil, displayLink == nil else { return }
+    let link = AnimationDisplayLink { [weak self] in
+      self?.advanceAnimations()
+    }
+    if link.start() {
+      displayLink = link
+      return
+    }
+    // Keep progressing when no screen is available to create a display link.
     animationTask = Task { [weak self] in
       let clock = ContinuousClock()
       var deadline = clock.now
@@ -101,10 +113,7 @@ final class WindowFrameReconciler {
       animations.removeValue(forKey: windowID)
       pendingMutations.removeValue(forKey: windowID)
     }
-    if animations.isEmpty {
-      animationTask?.cancel()
-      animationTask = nil
-    }
+    stopSchedulerIfIdle()
   }
 
   /// Discard destinations calculated before a topology change.
@@ -131,6 +140,7 @@ final class WindowFrameReconciler {
     }
     applyImmediately(frames, currentFrames: currentFrames, exactWindowIDs: finished)
     for windowID in finished { animations.removeValue(forKey: windowID) }
+    stopSchedulerIfIdle()
   }
 
   /// Return animation destinations, or current frames for windows that are not moving.
@@ -167,6 +177,14 @@ final class WindowFrameReconciler {
     expireExpectations()
     guard pendingMutations[windowID] != nil else { return false }
     return shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
+  }
+
+  private func stopSchedulerIfIdle() {
+    guard animations.isEmpty else { return }
+    displayLink?.stop()
+    displayLink = nil
+    animationTask?.cancel()
+    animationTask = nil
   }
 
   /// Record expected notifications before moving any windows.
