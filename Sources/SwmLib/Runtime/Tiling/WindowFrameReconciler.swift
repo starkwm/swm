@@ -102,10 +102,6 @@ final class WindowFrameReconciler {
         do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
         guard !Task.isCancelled, let self else { return }
         self.advanceAnimations()
-        if self.animations.isEmpty {
-          self.animationTask = nil
-          return
-        }
       }
     }
   }
