@@ -6,6 +6,31 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
+  @Test("animation: easing changes affect new animations, not active ones")
+  func easingIsCapturedPerAnimation() {
+    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, _ in
+        frame = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    reconciler.animationEasing = .linear
+    let start = ContinuousClock.now
+    reconciler.apply([1: frame.offsetBy(dx: 100, dy: 0)], at: start)
+    reconciler.animationEasing = .easeOutCubic
+    let halfway = start.advanced(by: .milliseconds(500))
+    reconciler.advanceAnimations(at: halfway)
+    #expect(frame.minX == 50)
+    reconciler.apply([1: frame.offsetBy(dx: 100, dy: 0)], at: halfway)
+    reconciler.advanceAnimations(at: halfway.advanced(by: .milliseconds(500)))
+    #expect(frame.minX == 137.5)
+    reconciler.cancelAnimations()
+  }
+
   @Test("animation: scheduler does not retain the reconciler")
   func schedulerDoesNotRetainReconciler() {
     var reconciler: WindowFrameReconciler? = WindowFrameReconciler(

@@ -16,6 +16,8 @@ struct ConfigCommandHandler {
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
+      case "animation-easing":
+        return try animationEasing(request)
       case "animation-duration":
         return try animationDuration(request)
       case "layout":
@@ -42,6 +44,20 @@ struct ConfigCommandHandler {
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
     }
+  }
+
+  private func animationEasing(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(
+      request.args,
+      context: "config animation-easing"
+    ).requiredValue()
+    guard let easing = AnimationEasing(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest(
+        "animation-easing must be one of: \(AnimationEasing.allCases.map(\.rawValue).joined(separator: ", "))"
+      )
+    }
+    tiling.setAnimationEasing(easing)
+    return .success(id: request.id, message: easing.rawValue)
   }
 
   /// Configure window animations.

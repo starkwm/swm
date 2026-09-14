@@ -239,6 +239,32 @@ struct ConfigCommandHandlerTests {
     }
   }
 
+  @Test("dispatch: validates and applies animation easing")
+  func animationEasingValidation() {
+    let spaces = Spaces(activeSpaceID: nil)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in .zero },
+      frameMutation: { _, _, _ in .success }
+    )
+    let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace()),
+      spaces: spaces,
+      tiling: makeTiling(frameReconciler: reconciler)
+    )
+    for easing in AnimationEasing.allCases {
+      let response = handler.dispatch(request(command: "animation-easing", args: [easing.rawValue]))
+      #expect(response.ok)
+      #expect(reconciler.animationEasing == easing)
+    }
+    let previous = reconciler.animationEasing
+    for args in [[], ["unknown"], ["linear", "ease-out-quad"]] {
+      let response = handler.dispatch(request(command: "animation-easing", args: args))
+      #expect(!response.ok)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(reconciler.animationEasing == previous)
+    }
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .config, command: command, args: args)
   }
