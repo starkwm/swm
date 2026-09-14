@@ -14,6 +14,9 @@ enum WindowEvent: Sendable {
   /// Window moved.
   case moved(CGWindowID)
 
+  /// Window title changed and rules may match differently.
+  case titleChanged(CGWindowID)
+
   /// Window resized.
   case resized(CGWindowID)
 

@@ -6,6 +6,9 @@ public final class Tiling {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
 
+  /// Rules in registration order.
+  private(set) var rules = [WindowRule]()
+
   private let masterLayout = MasterLayout()
   private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
@@ -19,6 +22,8 @@ public final class Tiling {
   private var defaultMasterRatio: CGFloat = 0.5
   private var defaultMasterPlacement = MasterPlacement.left
   private var defaultPreserveSplitDirections = false
+  private var manualFloatingByWindowID = [CGWindowID: Bool]()
+  private var ruleFloatingWindowIDs = Set<CGWindowID>()
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
@@ -111,7 +116,14 @@ public final class Tiling {
     frameReconciler?.cancelAnimations()
     let snapshot = snapshot()
     let windows = snapshot.windows.sorted { $0.id < $1.id }
-    floatingOverrideWindowIDs.formIntersection(windows.map(\.id))
+    let liveIDs = Set(windows.map(\.id))
+    manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
+    ruleFloatingWindowIDs = Set(
+      windows.filter { window in
+        rules.last(where: { $0.matches(window) })?.manage == false
+      }.map(\.id)
+    )
+    updateFloatingWindows()
     let topology = snapshot.topology
     let availableLayoutIDs = topology.layoutIDs
     let previousLayoutsByID = layoutsByID
@@ -191,6 +203,13 @@ public final class Tiling {
         state.tree = state.tree?.removing([windowID])
       }
 
+      if let focusedWindowID = state.focusedWindowID,
+        !desiredWindowIDs.contains(focusedWindowID)
+          || floatingOverrideWindowIDs.contains(focusedWindowID)
+      {
+        state.focusedWindowID = nil
+      }
+
       var insertionAnchor = state.focusedWindowID
       for windowID in desiredWindowIDs.sorted() where !retainedWindowIDs.contains(windowID) {
         if var tree = state.tree {
@@ -202,12 +221,6 @@ public final class Tiling {
         insertionAnchor = windowID
       }
 
-      if let focusedWindowID = state.focusedWindowID,
-        !desiredWindowIDs.contains(focusedWindowID)
-      {
-        state.focusedWindowID = nil
-      }
-
       state.omittedWindowIDs = omittedWindowIDsByLayoutID[layoutID] ?? []
       layoutsByID[layoutID] = state
     }
@@ -215,6 +228,31 @@ public final class Tiling {
     currentTopology = topology
     layoutIDByWindowID = newLayoutIDByWindowID
     updateMembershipPolling()
+  }
+
+  /// Add a rule and immediately update existing windows.
+  func addRule(_ rule: WindowRule) throws {
+    if let label = rule.label, rules.contains(where: { $0.label == label }) {
+      throw IPCCommandError.invalidRequest("rule label already exists: \(label)")
+    }
+    rules.append(rule)
+    reconcileAndReflowVisibleSpaces()
+  }
+
+  /// Remove a rule by one-based index or unique label.
+  func removeRule(selector: String) throws {
+    let index: Int?
+    if let number = Int(selector) {
+      guard number > 0 else { throw IPCCommandError.invalidRequest("rule not found: \(selector)") }
+      index = number - 1
+    } else {
+      index = rules.firstIndex { $0.label == selector }
+    }
+    guard let index, rules.indices.contains(index) else {
+      throw IPCCommandError.invalidRequest("rule not found: \(selector)")
+    }
+    rules.remove(at: index)
+    reconcileAndReflowVisibleSpaces()
   }
 
   /// Select floating or an automatic layout for a known normal Space.
@@ -380,7 +418,9 @@ public final class Tiling {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
     guard var state = layoutsByID[layoutID], state.selection == .master else { return false }
-    guard var tree = state.tree, let masterWindowID = tree.windowIDs.first else { return false }
+    guard var tree = state.tree,
+      let masterWindowID = masterWindowID(inLayoutContaining: windowID)
+    else { return false }
     guard tree.swap(windowID, with: masterWindowID) else { return false }
 
     state.tree = tree
@@ -406,21 +446,16 @@ public final class Tiling {
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
 
     cancelAnimation(for: windowID)
+    let shouldFloat: Bool
     switch selection {
-    case .float:
-      floatingOverrideWindowIDs.insert(windowID)
-      if layoutsByID[layoutID]?.focusedWindowID == windowID {
-        layoutsByID[layoutID]?.focusedWindowID = nil
-      }
-    case .tile:
-      floatingOverrideWindowIDs.remove(windowID)
-    case .toggle:
-      if floatingOverrideWindowIDs.remove(windowID) == nil {
-        floatingOverrideWindowIDs.insert(windowID)
-        if layoutsByID[layoutID]?.focusedWindowID == windowID {
-          layoutsByID[layoutID]?.focusedWindowID = nil
-        }
-      }
+    case .float: shouldFloat = true
+    case .tile: shouldFloat = false
+    case .toggle: shouldFloat = !floatingOverrideWindowIDs.contains(windowID)
+    }
+    manualFloatingByWindowID[windowID] = shouldFloat
+    updateFloatingWindows()
+    if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
+      layoutsByID[layoutID]?.focusedWindowID = nil
     }
     applyPlans(for: [layoutID])
     return true
@@ -636,6 +671,12 @@ public final class Tiling {
         )
       )
     }
+  }
+
+  /// Combine rule defaults with explicit window choices once per change.
+  private func updateFloatingWindows() {
+    floatingOverrideWindowIDs = ruleFloatingWindowIDs.subtracting(manualFloatingByWindowID.keys)
+      .union(manualFloatingByWindowID.filter { $0.value }.keys)
   }
 
   /// Reflow when authoritative WindowServer membership changed without a lifecycle event.

@@ -66,4 +66,6 @@ Add the commands to `swmrc` to apply them at startup. Animation smoothness depen
 the app. Display transfers cancel the selected window's animation. Dragging during
 an animation may still compete with it.
 
+See [window rules](rules.md) to keep selected applications floating.
+
 See [space commands](spaces.md) for per-space settings, [signals](signals.md) for actions that run on events, and [keyboard shortcuts](keyboard-shortcuts.md) for hotkey bindings.

@@ -17,3 +17,4 @@ Start with [getting started](getting-started.md) for requirements and installati
 - [Configure spaces](spaces.md): layouts, padding, gaps, and display behavior.
 - [Global defaults](configuration.md#global-defaults): configure the running daemon and defaults for new spaces.
 - [Signals](signals.md): register shell actions for runtime events.
+- [Window rules](rules.md): choose which windows participate in automatic tiling.

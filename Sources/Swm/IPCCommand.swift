@@ -48,6 +48,12 @@ extension SignalIPCCommand {
   static var domain: CommandDomain { .signal }
 }
 
+protocol RuleIPCCommand: IPCCommand {}
+
+extension RuleIPCCommand {
+  static var domain: CommandDomain { .rule }
+}
+
 protocol SpaceIPCCommand: IPCCommand {}
 
 extension SpaceIPCCommand {

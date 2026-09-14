@@ -23,6 +23,10 @@ private func accessibilityObserverCallback(
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     Events.shared.post(.window(.moved(windowID)))
 
+  case kAXTitleChangedNotification:
+    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
+    Events.shared.post(.window(.titleChanged(windowID)))
+
   case kAXWindowResizedNotification:
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     Events.shared.post(.window(.resized(windowID)))
@@ -73,6 +77,9 @@ final class Application: NSObject {
   var name: String? {
     application.localizedName
   }
+
+  /// Stable application identifier for rule matching.
+  var bundleID: String? { application.bundleIdentifier }
 
   /// Process identifier for the running application.
   var processID: pid_t {

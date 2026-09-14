@@ -45,6 +45,9 @@ struct IPCCommandDispatcher {
         tiling: tiling
       ).dispatch(request)
 
+    case .rule:
+      return RuleCommandHandler(tiling: tiling).dispatch(request)
+
     case .signal:
       return SignalCommandHandler().dispatch(request)
     }

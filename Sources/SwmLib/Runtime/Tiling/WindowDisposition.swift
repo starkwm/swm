@@ -52,6 +52,11 @@ struct TilingWindowSnapshot: Equatable {
 
   /// Whether Accessibility permits changing the size.
   let isResizable: Bool
+
+  /// Optional identity facts used by window rules.
+  var app: String? = nil
+  var title: String? = nil
+  var bundleID: String? = nil
 }
 
 /// Pure policy for classifying windows against one topology snapshot.
