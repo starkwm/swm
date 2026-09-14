@@ -6,6 +6,20 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
+  @Test("animation: scheduler does not retain the reconciler")
+  func schedulerDoesNotRetainReconciler() {
+    var reconciler: WindowFrameReconciler? = WindowFrameReconciler(
+      currentFrame: { _ in .zero },
+      frameMutation: { _, _, _ in .success },
+      reduceMotion: { false }
+    )
+    weak var reference = reconciler
+    reconciler?.animationDuration = 1
+    reconciler?.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)])
+    reconciler = nil
+    #expect(reference == nil)
+  }
+
   @Test("animation: frame work does not shift the next deadline", arguments: [0, 5, 15])
   func frameWorkDoesNotShiftDeadline(workMilliseconds: Int) {
     let start = ContinuousClock.now
