@@ -3,7 +3,7 @@ import CoreGraphics
 /// Owns automatic-tiling state and reconciles it from coherent topology snapshots.
 @MainActor
 public final class Tiling {
-  typealias RulePlacementHandler = (WindowRulePlacement, CGWindowID, SpaceTopology) ->
+  typealias RulePlacementHandler = (WindowRulePlacement, CGWindowID, TilingLayoutID) ->
     WindowRulePlacementResult
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
@@ -28,7 +28,6 @@ public final class Tiling {
   private var defaultMasterPlacement = MasterPlacement.left
   private var defaultPreserveSplitDirections = false
   private var manualFloatingByWindowID = [CGWindowID: Bool]()
-  private var ruleFloatingWindowIDs = Set<CGWindowID>()
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
@@ -75,10 +74,10 @@ public final class Tiling {
   ) {
     self.ruleDisplayIDs = ruleDisplayIDs
     self.rulePlacement =
-      rulePlacement ?? { placement, windowID, topology in
+      rulePlacement ?? { placement, windowID, destination in
         guard let windows else { return .deferred }
         return WindowRulePlacementApplier(windows: windows, spaces: spaces)
-          .apply(placement, to: windowID, topology: topology)
+          .apply(placement, to: windowID, destination: destination)
       }
     self.snapshot = snapshot
     self.spaces = spaces
@@ -137,8 +136,11 @@ public final class Tiling {
         ($0.id, WindowRuleActions.resolve(rules, for: $0))
       }
     )
-    ruleFloatingWindowIDs = Set(actions.filter { $0.value.manage == false }.keys)
-    updateFloatingWindows()
+    floatingOverrideWindowIDs = Set(
+      windows.filter {
+        manualFloatingByWindowID[$0.id] ?? (actions[$0.id]?.manage == false)
+      }.map(\.id)
+    )
     if applyRulePlacements(actions, snapshot: snapshot) {
       // Transfers must be reflected in membership and display facts before planning a layout.
       snapshot = self.snapshot()
@@ -473,7 +475,11 @@ public final class Tiling {
     case .toggle: shouldFloat = !floatingOverrideWindowIDs.contains(windowID)
     }
     manualFloatingByWindowID[windowID] = shouldFloat
-    updateFloatingWindows()
+    if shouldFloat {
+      floatingOverrideWindowIDs.insert(windowID)
+    } else {
+      floatingOverrideWindowIDs.remove(windowID)
+    }
     if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
       layoutsByID[layoutID]?.focusedWindowID = nil
     }
@@ -737,17 +743,13 @@ public final class Tiling {
         placement.grid = nil
       }
       guard !placement.isEmpty else { continue }
-      switch rulePlacement(placement, window.id, snapshot.topology) {
+      switch rulePlacement(placement, window.id, destinationLayoutID) {
       case .deferred:
         continue
-      case .applied:
+      case .applied, .failed:
+        // Record rejected mutations too, so their frame notifications cannot trigger retries.
         changed = true
         layoutIDByWindowID.removeValue(forKey: window.id)
-      case .failed:
-        changed = true
-        layoutIDByWindowID.removeValue(forKey: window.id)
-        // Do not loop on rejected AX mutations in response to their own frame notifications.
-        break
       }
       if let display = placement.display {
         applied.display = display
@@ -758,12 +760,6 @@ public final class Tiling {
       appliedRulePlacements[window.id] = applied
     }
     return changed
-  }
-
-  /// Combine rule defaults with explicit window choices once per change.
-  private func updateFloatingWindows() {
-    floatingOverrideWindowIDs = ruleFloatingWindowIDs.subtracting(manualFloatingByWindowID.keys)
-      .union(manualFloatingByWindowID.filter { $0.value }.keys)
   }
 
   /// Reflow when authoritative WindowServer membership changed without a lifecycle event.
