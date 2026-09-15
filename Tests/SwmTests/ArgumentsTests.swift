@@ -132,4 +132,14 @@ struct ArgumentsTests {
       #expect(command.arguments == ["6"])
     }
   }
+  @Test("rule placement commands preserve grid and display properties")
+  func rulePlacementCommand() throws {
+    let command = try #require(
+      Arguments.parseAsRoot([
+        "rule", "add", "app=^Finder$", "grid=2:1:1:0:1:1", "display=2",
+      ]) as? RuleCommand.Add
+    )
+    #expect(command.arguments == ["app=^Finder$", "grid=2:1:1:0:1:1", "display=2"])
+  }
+
 }

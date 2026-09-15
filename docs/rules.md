@@ -2,7 +2,7 @@
 
 [Documentation index](index.md)
 
-Rules choose whether matching windows participate in automatic tiling. Add these
+Rules control automatic tiling, display selection, and grid placement. Add these
 commands to `~/.config/swm/swmrc` to leave Settings and Finder floating:
 
 ```sh
@@ -26,7 +26,18 @@ swm rule remove 1
 the registered properties. Indexes change after removal. Labels must be unique
 and cannot be integers.
 
-`add` requires `manage=on|off`. Optional properties are:
+`add` requires at least one action:
+
+- `manage=on|off`: choose automatic tiling participation.
+- `display=<index|uuid>`: move to the display's visible normal Space without following focus.
+  Indexes are one-based, using the same arrangement as `swm window display`.
+  Use a UUID from `swm query displays` for a stable monitor identity. Relative
+  targets such as `next` and `prev` are not accepted in rules.
+- `grid=<columns>:<rows>:<x>:<y>:<width>:<height>`: place a floating window within
+  the display's visible bounds, respecting the destination Space's padding and gaps.
+  This uses the same parsing and clamping as `swm window grid`.
+
+Optional matching and naming properties are:
 
 - `label=<text>`: a name for removing the rule.
 - `bundle-id=<identifier>`: exact, case-sensitive application bundle identifier.
@@ -43,7 +54,9 @@ matches every window.
 
 ## Precedence and window behavior
 
-The last matching rule wins. Put broad rules before exceptions:
+The last matching value for each property wins independently. A rule that only
+sets `grid` preserves an earlier matching `manage` or `display` value. Put broad
+rules before exceptions:
 
 ```sh
 swm rule add label=finder app='^Finder$' manage=off
@@ -65,3 +78,33 @@ current effective participation. Rule edits preserve these manual choices.
 
 Floating rules do not change the Space's layout. In a Space configured with the
 `float` layout, ordinary floating-window commands and cycling still apply.
+
+## Display and grid placement
+
+```sh
+# Keep Finder floating on display 2, occupying its right half.
+swm rule add label=finder app='^Finder$' manage=off display=2 grid=2:1:1:0:1:1
+```
+
+Display selection happens before grid placement. Display-only rules preserve the
+window's relative position and fit its size to the destination, like the window
+command. A tiled window joins the destination layout. Grid rules do not make a
+window float: use `manage=off`, a manual float override, or a destination Space
+with the `float` layout. Grid placement waits while the window is tiled or cannot
+resize.
+
+Each placement property applies once when it first matches or its effective value
+changes. Moving or resizing a window manually does not replay an unchanged rule.
+Changing the display action also reapplies the matching grid on the new display;
+changing only the grid leaves any completed display action alone.
+
+Rules apply to existing windows when registered. Minimized windows, windows on
+inactive or fullscreen Spaces, and unavailable destination displays defer
+placement until a later reconciliation has the required facts. An unavailable
+display does not apply the grid on the wrong monitor. Placement does not activate
+a Space or force unsupported windows to move.
+
+Removing a placement rule does not restore the previous frame or display. If an
+earlier matching value remains, that value takes effect. Placement state clears
+when the window closes or stops matching. Failed Accessibility mutations are
+logged and are not repeatedly retried; removing and adding the rule retries it.

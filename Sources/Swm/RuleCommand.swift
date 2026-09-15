@@ -7,7 +7,7 @@ struct RuleCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a window management rule.",
       discussion:
-        "Requires manage=on|off. Optional properties are label, app, title, and bundle-id."
+        "Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, or display=index|uuid. Optional filters are app, title, and bundle-id; label names the rule."
     )
     static let command = "--add"
 

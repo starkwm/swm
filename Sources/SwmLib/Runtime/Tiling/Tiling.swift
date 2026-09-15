@@ -3,6 +3,8 @@ import CoreGraphics
 /// Owns automatic-tiling state and reconciles it from coherent topology snapshots.
 @MainActor
 public final class Tiling {
+  typealias RulePlacementHandler = (WindowRulePlacement, CGWindowID, SpaceTopology) ->
+    WindowRulePlacementResult
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
 
@@ -17,6 +19,9 @@ public final class Tiling {
   private let windows: Windows?
   private let frameReconciler: WindowFrameReconciler?
   private let windowSpaceMembership: WindowSpaceMembershipProvider
+  private let ruleDisplayIDs: () -> [String]
+  private let rulePlacement: RulePlacementHandler
+  private var appliedRulePlacements = [CGWindowID: WindowRulePlacement]()
   private var currentTopology: SpaceTopology?
   private var defaultSelection = LayoutSelection.float
   private var defaultMasterRatio: CGFloat = 0.5
@@ -64,8 +69,17 @@ public final class Tiling {
     spaces: Spaces,
     windows: Windows? = nil,
     frameReconciler: WindowFrameReconciler? = nil,
-    windowSpaceMembership: WindowSpaceMembershipProvider? = nil
+    windowSpaceMembership: WindowSpaceMembershipProvider? = nil,
+    rulePlacement: RulePlacementHandler? = nil,
+    ruleDisplayIDs: @escaping () -> [String] = { WindowRulePlacementApplier.displayIDs() }
   ) {
+    self.ruleDisplayIDs = ruleDisplayIDs
+    self.rulePlacement =
+      rulePlacement ?? { placement, windowID, topology in
+        guard let windows else { return .deferred }
+        return WindowRulePlacementApplier(windows: windows, spaces: spaces)
+          .apply(placement, to: windowID, topology: topology)
+      }
     self.snapshot = snapshot
     self.spaces = spaces
     self.windows = windows
@@ -114,16 +128,22 @@ public final class Tiling {
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
   func reconcile() {
     frameReconciler?.cancelAnimations()
-    let snapshot = snapshot()
-    let windows = snapshot.windows.sorted { $0.id < $1.id }
+    var snapshot = snapshot()
+    var windows = snapshot.windows.sorted { $0.id < $1.id }
     let liveIDs = Set(windows.map(\.id))
     manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
-    ruleFloatingWindowIDs = Set(
-      windows.filter { window in
-        rules.last(where: { $0.matches(window) })?.manage == false
-      }.map(\.id)
+    let actions = Dictionary(
+      uniqueKeysWithValues: windows.map {
+        ($0.id, WindowRuleActions.resolve(rules, for: $0))
+      }
     )
+    ruleFloatingWindowIDs = Set(actions.filter { $0.value.manage == false }.keys)
     updateFloatingWindows()
+    if applyRulePlacements(actions, snapshot: snapshot) {
+      // Transfers must be reflected in membership and display facts before planning a layout.
+      snapshot = self.snapshot()
+      windows = snapshot.windows.sorted { $0.id < $1.id }
+    }
     let topology = snapshot.topology
     let availableLayoutIDs = topology.layoutIDs
     let previousLayoutsByID = layoutsByID
@@ -671,6 +691,73 @@ public final class Tiling {
         )
       )
     }
+  }
+
+  /// Apply changed placement rules without snapping back windows on subsequent events.
+  private func applyRulePlacements(
+    _ actions: [CGWindowID: WindowRuleActions],
+    snapshot: TilingReconciliationSnapshot
+  ) -> Bool {
+    appliedRulePlacements = appliedRulePlacements.filter { actions[$0.key] != nil }
+    var changed = false
+    for window in snapshot.windows.sorted(by: { $0.id < $1.id }) {
+      let desired = actions[window.id]?.placement ?? WindowRulePlacement()
+      if desired.isEmpty {
+        appliedRulePlacements.removeValue(forKey: window.id)
+        continue
+      }
+      var applied = appliedRulePlacements[window.id] ?? WindowRulePlacement()
+      if desired.grid == nil { applied.grid = nil }
+      if desired.display == nil { applied.display = nil }
+      appliedRulePlacements[window.id] = applied
+      var placement = WindowRulePlacement(
+        grid: desired.grid != applied.grid ? desired.grid : nil,
+        display: desired.display != applied.display ? desired.display : nil
+      )
+      if placement.display != nil { placement.grid = desired.grid }
+      guard !placement.isEmpty else { continue }
+      guard !window.isMinimized, window.isMovable, window.subrole == "AXStandardWindow",
+        let layoutID = snapshot.topology.layoutID(for: window.id, on: window.displayID),
+        snapshot.topology.visibleLayoutIDs.contains(layoutID)
+      else { continue }
+      let destinationLayoutID: TilingLayoutID
+      if let display = placement.display {
+        guard let displayID = display.resolve(in: ruleDisplayIDs()),
+          let target = snapshot.topology.visibleLayoutIDs.first(where: { $0.displayID == displayID }
+          )
+        else { continue }
+        destinationLayoutID = target
+      } else {
+        destinationLayoutID = layoutID
+      }
+      let selection = layoutsByID[destinationLayoutID]?.selection ?? defaultSelection
+      if !window.isResizable
+        || (selection != .float && !floatingOverrideWindowIDs.contains(window.id))
+      {
+        placement.grid = nil
+      }
+      guard !placement.isEmpty else { continue }
+      switch rulePlacement(placement, window.id, snapshot.topology) {
+      case .deferred:
+        continue
+      case .applied:
+        changed = true
+        layoutIDByWindowID.removeValue(forKey: window.id)
+      case .failed:
+        changed = true
+        layoutIDByWindowID.removeValue(forKey: window.id)
+        // Do not loop on rejected AX mutations in response to their own frame notifications.
+        break
+      }
+      if let display = placement.display {
+        applied.display = display
+        // A grid from the old display is not a completed placement on the new one.
+        applied.grid = nil
+      }
+      if let grid = placement.grid { applied.grid = grid }
+      appliedRulePlacements[window.id] = applied
+    }
+    return changed
   }
 
   /// Combine rule defaults with explicit window choices once per change.
