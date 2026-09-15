@@ -290,29 +290,22 @@ final class Window: NSObject {
     self.observationContext = observationContext
     let context = Unmanaged.passUnretained(observationContext).toOpaque()
 
+    let addNotification: (String) -> AXError = { notification in
+      AccessibilityClient.shared.addNotification(
+        observer: observer,
+        element: element,
+        notification: notification,
+        context: context
+      )
+    }
     _ = Self.titleNotificationRegistrar.observe(
       observedNotifications: &observedNotifications,
-      addNotification: { notification in
-        AccessibilityClient.shared.addNotification(
-          observer: observer,
-          element: element,
-          notification: notification,
-          context: context
-        )
-      },
+      addNotification: addNotification,
       onFailure: { _, _ in }
     )
-
     return Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
-      addNotification: { notification in
-        AccessibilityClient.shared.addNotification(
-          observer: observer,
-          element: element,
-          notification: notification,
-          context: context
-        )
-      },
+      addNotification: addNotification,
       onFailure: { _, _ in }
     )
   }
@@ -322,27 +315,18 @@ final class Window: NSObject {
     guard let observer = application?.observer else { return }
     guard let element else { return }
 
-    Self.notificationRegistrar.unobserve(
-      observedNotifications: &observedNotifications,
-      removeNotification: { notification in
-        AccessibilityClient.shared.removeNotification(
-          observer: observer,
-          element: element,
-          notification: notification
-        )
-      }
-    )
-
-    Self.titleNotificationRegistrar.unobserve(
-      observedNotifications: &observedNotifications,
-      removeNotification: { notification in
-        AccessibilityClient.shared.removeNotification(
-          observer: observer,
-          element: element,
-          notification: notification
-        )
-      }
-    )
+    for registrar in [Self.notificationRegistrar, Self.titleNotificationRegistrar] {
+      registrar.unobserve(
+        observedNotifications: &observedNotifications,
+        removeNotification: { notification in
+          AccessibilityClient.shared.removeNotification(
+            observer: observer,
+            element: element,
+            notification: notification
+          )
+        }
+      )
+    }
 
     observationContext = nil
   }

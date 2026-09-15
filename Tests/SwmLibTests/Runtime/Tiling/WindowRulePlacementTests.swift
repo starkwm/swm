@@ -214,8 +214,9 @@ struct WindowRulePlacementTests {
         )
       },
       spaces: Spaces(activeSpaceID: nil),
-      rulePlacement: { placement, id, _ in
+      rulePlacement: { placement, id, destination in
         if id == 1 {
+          #expect(destination == layoutID(11, displayID: "right"))
           placements.append(placement)
           if placement.display != nil {
             currentDisplay = "right"

@@ -11,30 +11,18 @@ struct WindowRulePlacementApplier {
   func apply(
     _ placement: WindowRulePlacement,
     to windowID: CGWindowID,
-    topology: SpaceTopology
+    destination: TilingLayoutID
   ) -> WindowRulePlacementResult {
     guard let window = windows.window(by: windowID), let frame = window.frame(),
       let source = NSScreen.screen(containingLargestIntersectionWith: frame)
     else { return .deferred }
-    let screens = NSScreen.arrangedScreens
-    let target: NSScreen
-    if let display = placement.display {
-      guard let targetID = display.resolve(in: screens.map(\.uuid)),
-        let screen = screens.first(where: { $0.uuid == targetID })
-      else { return .deferred }
-      target = screen
-    } else {
-      target = source
-    }
-
-    // The destination's visible normal Space supplies grid padding and gaps.
-    guard let layoutID = topology.visibleLayoutIDs.first(where: { $0.displayID == target.uuid })
+    guard let target = NSScreen.arrangedScreens.first(where: { $0.uuid == destination.displayID })
     else { return .deferred }
     let targetFrame = placement.frame(
       from: frame,
       sourceBounds: source.axVisibleFrame,
       targetBounds: target.axVisibleFrame,
-      settings: spaces.settings(for: layoutID.spaceID)
+      settings: spaces.settings(for: destination.spaceID)
     )
     var result = window.setFrame(targetFrame, from: frame)
     if result == .success, let applied = window.frame(), !applied.matches(targetFrame, tolerance: 1)

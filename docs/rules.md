@@ -2,16 +2,16 @@
 
 [Documentation index](index.md)
 
-Rules control automatic tiling, display selection, and grid placement. Add these
-commands to `~/.config/swm/swmrc` to leave Settings and Finder floating:
+Add rules to `~/.config/swm/swmrc` to keep selected windows floating or place them
+on a display. For example, leave Settings and Finder out of tiling layouts:
 
 ```sh
 swm rule add label=settings bundle-id=com.apple.systempreferences manage=off
 swm rule add label=finder bundle-id=com.apple.finder manage=off
 ```
 
-Registrations last for the current daemon run. Rules also apply immediately to
-existing windows when added or removed.
+Rules last until the daemon stops. Adding or removing a rule updates existing
+windows as well as windows opened later.
 
 ## Commands
 
@@ -22,89 +22,90 @@ swm rule remove finder
 swm rule remove 1
 ```
 
-`list` returns a JSON array with a one-based `index` and a `rule` object containing
-the registered properties. Indexes change after removal. Labels must be unique
-and cannot be integers.
+`list` returns a JSON array. Each entry has a one-based `index` and a `rule` object
+with the registered properties. Indexes change after removal. Use a unique,
+non-integer `label` to remove a rule by name.
 
 `add` requires at least one action:
 
-- `manage=on|off`: choose automatic tiling participation.
-- `display=<index|uuid>`: move to the display's visible normal Space without following focus.
-  Indexes are one-based, using the same arrangement as `swm window display`.
-  Use a UUID from `swm query displays` for a stable monitor identity. Relative
-  targets such as `next` and `prev` are not accepted in rules.
-- `grid=<columns>:<rows>:<x>:<y>:<width>:<height>`: place a floating window within
-  the display's visible bounds, respecting the destination Space's padding and gaps.
-  This uses the same parsing and clamping as `swm window grid`.
+- `manage=on|off` allows or skips automatic tiling.
+- `display=<index|uuid>` moves the window to a display without following focus.
+  Indexes start at 1 and use the same order as `swm window display`. Use a UUID from
+  `swm query displays` to identify a monitor regardless of its index. Rules accept
+  neither `next` nor `prev`.
+- `grid=<columns>:<rows>:<x>:<y>:<width>:<height>` places a floating window within
+  the display's visible bounds. It uses the destination Space's padding and gaps,
+  with the same coordinate clamping as `swm window grid`.
 
-Optional matching and naming properties are:
+## Match windows
 
-- `label=<text>`: a name for removing the rule.
-- `bundle-id=<identifier>`: exact, case-sensitive application bundle identifier.
-- `app=<regex>`: application name, which may depend on the system language.
-- `title=<regex>`: window title.
-- `app!=<regex>` or `title!=<regex>`: invert a regex filter.
+A rule can use these filters:
 
-All filters in a rule must match. A missing value fails its filter, including an
-inverted filter. Regexes use Foundation's ICU syntax, are case-sensitive by
-default, and match substrings unless anchored with `^` and `$`. Quote regexes in
-shell scripts. Invalid regexes, unknown properties, empty values, and duplicate
-properties are rejected without registering a rule. A rule without filters
-matches every window.
+- `bundle-id=<identifier>` matches an exact, case-sensitive application identifier.
+- `app=<regex>` matches the application name, which can vary with the system language.
+- `title=<regex>` matches the window title.
+- `app!=<regex>` or `title!=<regex>` requires the text not to match.
 
-## Precedence and window behavior
+All filters must match. If a window's value is missing, that filter fails even
+when inverted. A rule without filters matches every window.
 
-The last matching value for each property wins independently. A rule that only
-sets `grid` preserves an earlier matching `manage` or `display` value. Put broad
-rules before exceptions:
+Regexes use Foundation's ICU syntax. They are case-sensitive by default and match
+substrings unless anchored with `^` and `$`. Quote them in shell scripts. swm
+rejects invalid regexes, unknown properties, empty values, and duplicate properties
+without adding the rule.
+
+The last matching value for each action wins. A rule that only sets `grid` leaves
+an earlier `manage` or `display` value in place. Put broad rules before exceptions:
 
 ```sh
 swm rule add label=finder app='^Finder$' manage=off
 swm rule add label=finder-projects app='^Finder$' title='^Projects$' manage=on
 ```
 
-`manage=off` removes the window from automatic layout geometry and tiling cycles.
-The window remains available to queries, focus, and direct window commands.
-`manage=on` allows normal tiling eligibility checks; it does not force fixed-size,
-nonstandard, or native-fullscreen windows into a layout.
+## Tiling
 
-Rules are evaluated during window reconciliation, including discovery, title
-changes, and rule edits. Removing a rule restores the remaining matching rule or
-the normal default. New windows are evaluated before their first layout.
+`manage=off` leaves a window out of automatic tiling and tiling cycles. Queries,
+focus, and direct window commands still work. `manage=on` allows tiling if the
+window supports it. It cannot force fixed-size, nonstandard, or native-fullscreen
+windows into a layout.
 
-Explicit `swm window layout float`, `tile`, and `toggle` commands override rules
-for that window until it closes or the daemon restarts. `toggle` uses the window's
-current effective participation. Rule edits preserve these manual choices.
+swm checks rules before a new window's first layout, when rules change, and during
+later window updates. Title changes trigger a check when the app supports title
+notifications. Removing a management rule restores the earlier matching value or
+the normal default.
 
-Floating rules do not change the Space's layout. In a Space configured with the
-`float` layout, ordinary floating-window commands and cycling still apply.
+`swm window layout float`, `tile`, and `toggle` override management rules for that
+window until it closes or the daemon restarts. Rule edits preserve those choices.
+`toggle` reverses the window's float/tile setting.
+Rules do not change the Space's layout. A Space using `float` keeps its usual
+floating-window commands and cycling.
 
 ## Display and grid placement
 
 ```sh
-# Keep Finder floating on display 2, occupying its right half.
+# Place Finder in the right half of display 2.
 swm rule add label=finder app='^Finder$' manage=off display=2 grid=2:1:1:0:1:1
 ```
 
-Display selection happens before grid placement. Display-only rules preserve the
-window's relative position and fit its size to the destination, like the window
-command. A tiled window joins the destination layout. Grid rules do not make a
-window float: use `manage=off`, a manual float override, or a destination Space
-with the `float` layout. Grid placement waits while the window is tiled or cannot
-resize.
+swm selects the display before calculating the grid. Without a grid, it preserves
+the window's relative position and fits its size to the destination. Tiled windows
+join the destination layout.
 
-Each placement property applies once when it first matches or its effective value
-changes. Moving or resizing a window manually does not replay an unchanged rule.
-Changing the display action also reapplies the matching grid on the new display;
-changing only the grid leaves any completed display action alone.
+Grid placement requires a resizable, floating window. Use `manage=off`, a manual
+float command, or a destination Space with the `float` layout. A grid waits until
+the window meets those conditions.
 
-Rules apply to existing windows when registered. Minimized windows, windows on
-inactive or fullscreen Spaces, and unavailable destination displays defer
-placement until a later reconciliation has the required facts. An unavailable
-display does not apply the grid on the wrong monitor. Placement does not activate
-a Space or force unsupported windows to move.
+Each placement action runs when it first matches or its value changes. Later
+manual moves and resizes leave that action unchanged, so it does not run again.
+A new display value also reapplies the matching grid on that display. Changing
+only the grid does not repeat a completed display move.
 
-Removing a placement rule does not restore the previous frame or display. If an
-earlier matching value remains, that value takes effect. Placement state clears
-when the window closes or stops matching. Failed Accessibility mutations are
-logged and are not repeatedly retried; removing and adding the rule retries it.
+Placement waits for minimized windows, windows on inactive or fullscreen Spaces,
+and unavailable destination displays. swm tries again during later window or
+display updates. It does not switch Spaces to place a window or apply a grid on a
+substitute monitor.
+
+Removing a placement rule leaves the current frame and display in place unless
+an earlier matching value takes over. swm forgets completed actions when a window
+closes or stops matching them. If an Accessibility move or resize fails, swm logs
+the failure and stops retrying that action. Remove and add the rule to retry.
