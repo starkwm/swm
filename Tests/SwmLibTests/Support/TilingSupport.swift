@@ -29,13 +29,15 @@ func makeTiling(
   windows: [TilingWindowSnapshot] = [window(id: 1)],
   memberships: [CGWindowID: Set<UInt64>] = [1: [10]],
   visibleSpaceID: UInt64 = 10,
-  frameReconciler: WindowFrameReconciler? = nil
+  frameReconciler: WindowFrameReconciler? = nil,
+  rulePlacement: Tiling.RulePlacementHandler? = nil
 ) -> Tiling {
   makeTiling(
     windows: { windows },
     memberships: { memberships },
     visibleSpaceID: visibleSpaceID,
-    frameReconciler: frameReconciler
+    frameReconciler: frameReconciler,
+    rulePlacement: rulePlacement
   )
 }
 
@@ -44,7 +46,8 @@ func makeTiling(
   windows: @escaping () -> [TilingWindowSnapshot],
   memberships: @escaping () -> [CGWindowID: Set<UInt64>],
   visibleSpaceID: UInt64 = 10,
-  frameReconciler: WindowFrameReconciler? = nil
+  frameReconciler: WindowFrameReconciler? = nil,
+  rulePlacement: Tiling.RulePlacementHandler? = nil
 ) -> Tiling {
   let spaces = Spaces(activeSpaceID: nil)
   return Tiling(
@@ -69,7 +72,9 @@ func makeTiling(
     },
     spaces: spaces,
     frameReconciler: frameReconciler,
-    windowSpaceMembership: memberships
+    windowSpaceMembership: memberships,
+    rulePlacement: rulePlacement,
+    ruleDisplayIDs: { ["display"] }
   )
 }
 
