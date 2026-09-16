@@ -133,6 +133,47 @@ struct TilingReconciliationTests {
     )
   }
 
+  @Test(
+    "dwindle: retains pending focus unless a newer focus event supersedes it",
+    arguments: [false, true]
+  )
+  func dwindleRetainsFocusBeforeSpaceMembership(focusChanged: Bool) {
+    var windows = [window(id: 1)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10]]
+    let tiling = makeTiling(windows: { windows }, memberships: { memberships })
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    tiling.windowDidFocus(1)
+
+    windows.append(window(id: 2))
+    tiling.reconcile()
+    tiling.windowDidFocus(2)
+    tiling.reconcile()
+    if focusChanged {
+      tiling.windowDidFocus(1)
+    }
+
+    memberships[2] = [10]
+    tiling.reconcile()
+    windows.append(window(id: 3))
+    memberships[3] = [10]
+    tiling.reconcile()
+
+    let expectedFrames: [CGWindowID: CGRect] =
+      focusChanged
+      ? [
+        1: CGRect(x: 0, y: 0, width: 500, height: 400),
+        3: CGRect(x: 0, y: 400, width: 500, height: 400),
+        2: CGRect(x: 500, y: 0, width: 500, height: 800),
+      ]
+      : [
+        1: CGRect(x: 0, y: 0, width: 500, height: 800),
+        2: CGRect(x: 500, y: 0, width: 500, height: 400),
+        3: CGRect(x: 500, y: 400, width: 500, height: 400),
+      ]
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expectedFrames)))
+  }
+
   @Test("reconcile: preserves minimized leaves but omits them from geometry")
   func reconcilePreservesMinimizedLeavesButOmitsThemFromGeometry() {
     var windows = [window(id: 1), window(id: 2, isMinimized: true)]

@@ -32,6 +32,7 @@ public final class Tiling {
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
+  private var pendingFocusedWindowID: CGWindowID?
   private var membershipPollingTask: Task<Void, Never>?
 
   /// Create tiling backed by the live runtime models.
@@ -249,6 +250,12 @@ public final class Tiling {
 
     currentTopology = topology
     layoutIDByWindowID = newLayoutIDByWindowID
+    if let windowID = pendingFocusedWindowID {
+      pendingFocusedWindowID = nil
+      if liveIDs.contains(windowID) {
+        windowDidFocus(windowID)
+      }
+    }
     updateMembershipPolling()
   }
 
@@ -612,8 +619,13 @@ public final class Tiling {
 
   /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
+    pendingFocusedWindowID = nil
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }
-    guard let layoutID = layoutIDByWindowID[windowID] else { return }
+    guard let layoutID = layoutIDByWindowID[windowID] else {
+      // Focus can arrive before WindowServer exposes a new window's Space membership.
+      pendingFocusedWindowID = windowID
+      return
+    }
     guard var state = layoutsByID[layoutID] else { return }
 
     state.focusedWindowID = windowID
