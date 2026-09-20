@@ -89,6 +89,7 @@ struct ApplicationLifecycleHandler {
     let applicationWindows = windows.allWindows(for: application)
 
     for window in applicationWindows {
+      tiling.cancelAnimation(for: window.id)
       windows.remove(by: window.id)
     }
 

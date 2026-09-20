@@ -20,6 +20,7 @@ struct SpaceLifecycleHandler {
 
   /// Update active-space tracking, refresh windows, and replay deferred focus.
   private func spaceChanged(with space: Space) {
+    tiling.cancelAnimations()
     spaces.activeSpaceDidChange(to: space.id)
     spaces.retainSettings(for: Set(Spaces.all().map(\.id)))
     windows.refreshWindows()

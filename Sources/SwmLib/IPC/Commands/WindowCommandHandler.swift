@@ -249,6 +249,7 @@ struct WindowCommandHandler {
     let selector = try parseSelector(request.args, action: action)
     let window = try selectedWindow(selector: selector)
 
+    tiling.prepareForSynchronousMutation(for: window.id)
     guard operation(window) else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
@@ -270,13 +271,11 @@ struct WindowCommandHandler {
 
     let window = try selectedWindow(selector: selection.selector)
 
-    guard let currentFrame = window.frame() else {
+    guard let destination = tiling.destinationFrame(for: window.id) ?? window.frame() else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
-    let destination = tiling.destinationFrame(for: window.id) ?? currentFrame
     try applyFrame(
       operation(destination, change),
-      currentFrame: currentFrame,
       window: window,
       failureMessage: "could not \(action) window: \(window.id)"
     )
@@ -314,7 +313,6 @@ struct WindowCommandHandler {
 
     try applyFrame(
       targetFrame,
-      currentFrame: frame,
       window: window,
       failureMessage: "could not move window to display: \(window.id)",
       animated: false
@@ -351,7 +349,6 @@ struct WindowCommandHandler {
 
     try applyFrame(
       targetFrame,
-      currentFrame: frame,
       window: window,
       failureMessage: "could not grid window: \(window.id)"
     )
@@ -362,13 +359,18 @@ struct WindowCommandHandler {
   /// Apply a multi-part frame change and report unrecoverable partial state.
   private func applyFrame(
     _ targetFrame: CGRect,
-    currentFrame: CGRect,
     window: Window,
     failureMessage: String,
     animated: Bool = true
   ) throws {
+    guard !tiling.isInteractingWithWindow(window.id) else {
+      throw IPCCommandError.invalidRequest("window is being dragged: \(window.id)")
+    }
     if animated, tiling.animateFrame(targetFrame, for: window.id) { return }
-    tiling.cancelAnimation(for: window.id)
+    tiling.prepareForSynchronousMutation(for: window.id)
+    guard let currentFrame = window.frame() else {
+      throw IPCCommandError.internalError(failureMessage)
+    }
     var result = window.setFrame(targetFrame, from: currentFrame)
     if result == .success,
       let appliedFrame = window.frame(),

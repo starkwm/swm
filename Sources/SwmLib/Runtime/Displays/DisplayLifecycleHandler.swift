@@ -35,6 +35,7 @@ struct DisplayLifecycleHandler {
 
   /// Log display reconfiguration without mutating active-display tracking.
   private func displayReconfigured(displayID: UInt32, message: String) {
+    tiling.cancelAnimations()
     tiling.reconcileAndReflowVisibleSpaces()
     log(
       "\(message) id: \(displayID), current: \(displays.currentActiveDisplayID ?? "nil"), last: \(displays.lastActiveDisplayID ?? "nil")"

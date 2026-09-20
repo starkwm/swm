@@ -52,6 +52,7 @@ struct WindowLifecycleHandler {
 
     log("window destroyed \(window)")
 
+    tiling.cancelAnimation(for: window.id)
     let processID = window.application?.processID
     windows.remove(by: window.id)
     window.invalidate()
@@ -110,6 +111,7 @@ struct WindowLifecycleHandler {
 
   /// Handle a window minimization notification.
   private func windowMinimized(with window: Window) {
+    tiling.cancelAnimation(for: window.id)
     log("window minimized \(window)")
     tiling.reconcileAndReflowVisibleSpaces()
   }
