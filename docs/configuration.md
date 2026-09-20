@@ -57,14 +57,26 @@ yabai's default. Available curves are `linear`, `ease-out-quad` (the default),
 `ease-out-cubic`, `ease-out-circ`, and `ease-in-out-quad`. Changes apply to newly
 started or retargeted animations; active animations retain their curve.
 
-Animation ticks follow the main screen's display link, capped at 60 Hz to avoid
-increasing Accessibility traffic. A 60 Hz clock fallback is used if no screen is
-available when starting an animation. Windows on other displays share this cadence;
-updates still move and resize real windows sequentially, not compositor proxies.
+Each active display schedules animation updates at up to 60 Hz. Without a display,
+swm uses a 60 Hz timer. Each update calculates the window's position and size for the
+next display frame.
+
+Animation reads and writes use Accessibility, one call at a time per app.
+A slow app does not block animation updates in other apps. New pending frames replace
+older ones, and swm checks the final position and size even after display updates stop.
 
 Add the commands to `swmrc` to apply them at startup. Animation smoothness depends on
-the app. Display transfers cancel the selected window's animation. Dragging during
-an animation may still compete with it.
+the app. Moving a window to another display cancels its animation.
+
+When you drag or resize a window, swm stops sending animation updates to it until you
+release the mouse, then recalculates the layout. Clicking without dragging leaves the
+animation running. Geometry commands return an error during a drag. Placement rules
+wait until you release the mouse.
+
+An Accessibility call already in progress can finish after swm cancels an animation.
+swm discards queued updates and ignores results from the cancelled animation.
+Synchronous geometry commands wait for calls in progress to finish before moving or
+resizing the window.
 
 Use [window rules](rules.md) to keep selected applications floating or place their windows.
 
