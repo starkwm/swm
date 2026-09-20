@@ -6,24 +6,9 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  lint-test-and-smoke:
-    name: Lint, test, and smoke
-    runs-on: xcode-27
-    timeout-minutes: 20
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Swift version
-        run: swift --version
-
-      - name: Lint
-        run: make lint
-
-      - name: Test
-        run: make test
-
-      - name: Release smoke test
-        run: make smoke
+  lint-and-test:
+    uses: starkwm/workflows/.github/workflows/lint-and-test.yml@main

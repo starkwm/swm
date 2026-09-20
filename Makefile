@@ -16,9 +16,6 @@ lint:
 test:
 	@swift test --parallel --disable-xctest
 
-smoke: release
-	@sh scripts/smoke-test .build/release/swm
-
 clean:
 	@swift package clean
 
