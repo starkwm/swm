@@ -2,15 +2,25 @@ import CoreGraphics
 
 /// Applies a frame change with best-effort rollback for partial failures.
 enum WindowFrameMutation {
-  /// Resize then move a window, restoring its original size if moving fails.
+  /// Optionally move before growing, rolling back the first component if the second fails.
   static func apply(
     from currentFrame: CGRect,
     to targetFrame: CGRect,
+    moveBeforeResizeWhenGrowing: Bool = false,
     resize: (CGSize) -> Bool,
     move: (CGPoint) -> Bool
   ) -> WindowFrameMutationResult {
     let needsResize = targetFrame.size != currentFrame.size
     let needsMove = targetFrame.origin != currentFrame.origin
+
+    let growing = targetFrame.width > currentFrame.width || targetFrame.height > currentFrame.height
+    if moveBeforeResizeWhenGrowing, growing, needsMove, needsResize {
+      guard move(targetFrame.origin) else { return .moveFailed }
+      guard resize(targetFrame.size) else {
+        return move(currentFrame.origin) ? .resizeFailed : .resizeFailedAndRollbackFailed
+      }
+      return .success
+    }
 
     if needsResize, !resize(targetFrame.size) {
       return .resizeFailed
@@ -30,8 +40,11 @@ enum WindowFrameMutationResult: Equatable {
   /// Requested size and position changes completed.
   case success
 
-  /// Resizing failed before any position change was attempted.
+  /// Resizing failed with no remaining partial position change.
   case resizeFailed
+
+  /// Resizing and the best-effort position rollback both failed.
+  case resizeFailedAndRollbackFailed
 
   /// Moving failed with no remaining partial size change.
   case moveFailed

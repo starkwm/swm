@@ -382,6 +382,10 @@ struct WindowCommandHandler {
       return
     case .resizeFailed, .moveFailed:
       throw IPCCommandError.internalError(failureMessage)
+    case .resizeFailedAndRollbackFailed:
+      throw IPCCommandError.internalError(
+        "\(failureMessage); position rollback failed and the window may be partially updated"
+      )
     case .moveFailedAndRollbackFailed:
       throw IPCCommandError.internalError(
         "\(failureMessage); resize rollback failed and the window may be partially updated"
