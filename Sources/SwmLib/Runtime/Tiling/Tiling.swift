@@ -51,7 +51,8 @@ public final class Tiling {
         currentFrame: { windows.window(by: $0)?.frame() },
         frameMutation: { windowID, targetFrame, currentFrame in
           windows.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
-        }
+        },
+        delivery: AnimationFrameDelivery(windows: windows)
       ),
       windowSpaceMembership: {
         Dictionary(
@@ -86,6 +87,17 @@ public final class Tiling {
     self.frameReconciler = frameReconciler
     self.windowSpaceMembership =
       windowSpaceMembership ?? { snapshot().topology.spaceIDsByWindowID }
+    if let windows {
+      frameReconciler?.onInteractionEnded = { [weak self] in
+        self?.reconcileAndReflowVisibleSpaces()
+      }
+      frameReconciler?.monitorInteractions { point in
+        guard let id = WindowServerClient.shared.frontmostWindowID(at: point),
+          windows.window(by: id) != nil
+        else { return nil }
+        return id
+      }
+    }
   }
 
   deinit {
@@ -125,12 +137,26 @@ public final class Tiling {
     frameReconciler?.cancelAnimations(for: [windowID])
   }
 
+  func isInteractingWithWindow(_ windowID: CGWindowID) -> Bool {
+    frameReconciler?.isInteracting(windowID) == true
+  }
+
+  /// Drain started writes before a command or placement changes the same window synchronously.
+  func prepareForSynchronousMutation(for windowID: CGWindowID) {
+    frameReconciler?.prepareForSynchronousMutation(for: windowID)
+  }
+
+  /// Invalidate destinations immediately when a topology event arrives.
+  func cancelAnimations() {
+    frameReconciler?.cancelAnimations()
+  }
+
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
   func reconcile() {
-    frameReconciler?.cancelAnimations()
     var snapshot = snapshot()
     var windows = snapshot.windows.sorted { $0.id < $1.id }
-    let liveIDs = Set(windows.map(\.id))
+    var liveIDs = Set(windows.map(\.id))
+    let previousFloatingIDs = floatingOverrideWindowIDs
     manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
     let actions = Dictionary(
       uniqueKeysWithValues: windows.map {
@@ -146,6 +172,7 @@ public final class Tiling {
       // Transfers must be reflected in membership and display facts before planning a layout.
       snapshot = self.snapshot()
       windows = snapshot.windows.sorted { $0.id < $1.id }
+      liveIDs = Set(windows.map(\.id))
     }
     let topology = snapshot.topology
     let availableLayoutIDs = topology.layoutIDs
@@ -248,6 +275,26 @@ public final class Tiling {
       layoutsByID[layoutID] = state
     }
 
+    if let previous = currentTopology,
+      previous.displaysByID != topology.displaysByID
+        || previous.visibleSpaceIDByDisplayID != topology.visibleSpaceIDByDisplayID
+        || previous.spacesByID != topology.spacesByID
+    {
+      frameReconciler?.cancelAnimations()
+    } else {
+      let changedIDs = Set(layoutIDByWindowID.keys).union(newLayoutIDByWindowID.keys)
+        .union(liveIDs).union(currentTopology?.spaceIDsByWindowID.keys.map { $0 } ?? [])
+        .filter {
+          layoutIDByWindowID[$0] != newLayoutIDByWindowID[$0]
+            || currentTopology?.spaceIDsByWindowID[$0] != topology.spaceIDsByWindowID[$0]
+            || !liveIDs.contains($0)
+            || previousFloatingIDs.contains($0) != floatingOverrideWindowIDs.contains($0)
+        }
+      frameReconciler?.cancelAnimations(for: changedIDs)
+    }
+    let omittedIDs = Set(layoutsByID.values.flatMap(\.omittedWindowIDs))
+      .union(windows.filter(\.isMinimized).map(\.id))
+    frameReconciler?.retainWindows(liveIDs.subtracting(omittedIDs))
     currentTopology = topology
     layoutIDByWindowID = newLayoutIDByWindowID
     if let windowID = pendingFocusedWindowID {
@@ -734,7 +781,8 @@ public final class Tiling {
       )
       if placement.display != nil { placement.grid = desired.grid }
       guard !placement.isEmpty else { continue }
-      guard !window.isMinimized, window.isMovable, window.subrole == "AXStandardWindow",
+      guard !isInteractingWithWindow(window.id),
+        !window.isMinimized, window.isMovable, window.subrole == "AXStandardWindow",
         let layoutID = snapshot.topology.layoutID(for: window.id, on: window.displayID),
         snapshot.topology.visibleLayoutIDs.contains(layoutID)
       else { continue }
@@ -755,6 +803,7 @@ public final class Tiling {
         placement.grid = nil
       }
       guard !placement.isEmpty else { continue }
+      prepareForSynchronousMutation(for: window.id)
       switch rulePlacement(placement, window.id, destinationLayoutID) {
       case .deferred:
         continue
