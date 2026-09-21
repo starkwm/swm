@@ -40,8 +40,7 @@ let package = Package(
     .target(
       name: "SwmLib",
       dependencies: [
-        .product(name: "ArgumentParser", package: "swift-argument-parser"),
-        .product(name: "Socket", package: "BlueSocket"),
+        .product(name: "Socket", package: "BlueSocket")
       ],
       swiftSettings: releaseDebugSettings,
       linkerSettings: privateFrameworkLinkerSettings
