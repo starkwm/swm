@@ -1,200 +1,61 @@
-import Darwin
 import Foundation
-import Socket
+import StarkIPC
 
-/// Unix socket IPC server for swm commands.
+/// Adapts transport requests to the main-actor runtime.
+@MainActor
 public final class Daemon {
-  private let lockQueue = DispatchQueue(label: "app.usestark.swm")
-  private let dispatcher: IPCCommandDispatcher
-  private var isRunning = false
-  private var running: Bool {
-    get {
-      lockQueue.sync { self.isRunning }
-    }
-    set(newValue) {
-      lockQueue.sync { self.isRunning = newValue }
-    }
-  }
-  private var listen: Socket?
+  private let path: String
+  private let dispatch: @MainActor (IPCRequest) -> IPCResponse
+  private var server: SocketServer<IPCRequest, IPCResponse>?
+  private var runID: UUID?
 
-  /// Create a daemon using the runtime services that handle command side effects.
-  @MainActor
-  public convenience init(
-    windows: Windows,
-    spaces: Spaces,
-    tiling: Tiling
-  ) {
-    self.init(
-      dispatcher: IPCCommandDispatcher(
-        windows: windows,
-        spaces: spaces,
-        tiling: tiling
-      )
-    )
+  public convenience init(windows: Windows, spaces: Spaces, tiling: Tiling) {
+    let dispatcher = IPCCommandDispatcher(windows: windows, spaces: spaces, tiling: tiling)
+    self.init(path: UnixSocket.filePath(), dispatch: dispatcher.dispatch)
   }
 
-  /// Create a daemon with an explicit command dispatcher.
-  @MainActor
-  init(dispatcher: IPCCommandDispatcher) {
-    self.dispatcher = dispatcher
+  init(path: String, dispatch: @escaping @MainActor (IPCRequest) -> IPCResponse) {
+    self.path = path
+    self.dispatch = dispatch
   }
 
-  /// Start listening for IPC requests on the per-user Unix socket.
   public func run() throws {
-    do {
-      try UnixSocket.removeStaleFileIfNeeded()
-    } catch {
-      throw DaemonError.unableToPrepareSocket("\(error)")
-    }
+    guard server == nil else { return }
 
-    do {
-      try listen = Socket.create(family: .unix)
-    } catch {
-      throw DaemonError.unableToCreateSocket
-    }
+    let runID = UUID()
+    let server = SocketServer<IPCRequest, IPCResponse>(
+      path: path,
+      serviceName: "swm",
+      errorResponse: { error in
+        .failure(id: "", message: "\(error)", errorCode: .invalidRequest)
+      },
+      handler: { [weak self] request in
+        await MainActor.run {
+          // A stopped server may still have handler tasks waiting for the main actor.
+          // A new run must not admit work left over from a previous run.
+          guard let self, self.runID == runID else {
+            return SocketReply(
+              IPCCommandError.internalError("daemon is shutting down").response(id: request.id)
+            )
+          }
 
-    guard let socket = listen else {
-      throw DaemonError.unableToUnwrapSocket
-    }
-
-    do {
-      try socket.listen(on: UnixSocket.filePath())
-    } catch {
-      throw DaemonError.unableToListenOnSocket
-    }
-
-    running = true
-
-    let queue = DispatchQueue.global(qos: .userInteractive)
-
-    let listeningSocket = UncheckedSocket(socket: socket)
-
-    queue.async { [unowned self, listeningSocket] in
-      repeat {
-        do {
-          let client = try listeningSocket.socket.acceptClientConnection()
-          handle(socket: UncheckedSocket(socket: client))
-        } catch {
-          guard running else { break }
-          log("accepting incoming client connection failed: \(error)", level: .error)
+          let response = IPCCommandError.catching(id: request.id) {
+            try request.validateVersion()
+            log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
+            return self.dispatch(request)
+          }
+          return SocketReply(response)
         }
-      } while running
-    }
+      }
+    )
+    try server.start()
+    self.runID = runID
+    self.server = server
   }
 
-  /// Stop accepting IPC requests and remove the socket file.
   public func shutdown() {
-    running = false
-    listen?.close()
-    listen = nil
-
-    try? FileManager.default.removeItem(atPath: UnixSocket.filePath())
+    runID = nil
+    server?.stop()
+    server = nil
   }
-
-  /// Handle one accepted client connection on a background queue.
-  private func handle(socket client: UncheckedSocket) {
-    let queue = DispatchQueue.global(qos: .userInitiated)
-
-    queue.async { [client] in
-      let socket = client.socket
-
-      defer {
-        socket.close()
-      }
-
-      do {
-        try socket.setReadTimeout(value: UnixSocket.timeout)
-        try socket.setWriteTimeout(value: UnixSocket.timeout)
-
-        guard self.isAuthorized(socket: socket) else {
-          let response = IPCResponse.failure(
-            id: "",
-            message: "unauthorized IPC client",
-            errorCode: .unauthorized
-          )
-          try socket.write(from: IPCMessage.encode(response))
-          return
-        }
-
-        guard let data = try IPCMessage.readFrame(from: socket) else {
-          return
-        }
-
-        let request = try IPCMessage.decode(IPCRequest.self, from: data)
-        do {
-          try request.validateVersion()
-        } catch let error as IPCCommandError {
-          try socket.write(from: IPCMessage.encode(error.response(id: request.id)))
-          return
-        }
-
-        log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
-
-        let response = DispatchQueue.main.sync {
-          self.dispatcher.dispatch(request)
-        }
-        try socket.write(from: IPCMessage.encode(response))
-      } catch {
-        log("could not receive data from socket: \(error)", level: .error)
-        let response = IPCResponse.failure(
-          id: "",
-          message: "\(error)",
-          errorCode: .invalidRequest
-        )
-        do {
-          try socket.write(from: IPCMessage.encode(response))
-        } catch {}
-      }
-    }
-  }
-
-  /// Allow IPC only from clients owned by the same user as the daemon process.
-  private func isAuthorized(socket: Socket) -> Bool {
-    var uid: uid_t = 0
-    var gid: gid_t = 0
-
-    guard getpeereid(socket.socketfd, &uid, &gid) == 0 else {
-      return false
-    }
-
-    return uid == getuid()
-  }
-}
-
-extension Daemon: @unchecked Sendable {}
-
-/// Errors raised while starting the IPC daemon.
-enum DaemonError: Error {
-  /// The daemon could not remove or validate the socket path before listening.
-  case unableToPrepareSocket(String)
-
-  /// The daemon could not create a Unix socket.
-  case unableToCreateSocket
-
-  /// The listening socket was unexpectedly unavailable after creation.
-  case unableToUnwrapSocket
-
-  /// The daemon could not listen on the Unix socket path.
-  case unableToListenOnSocket
-}
-
-extension DaemonError: CustomStringConvertible {
-  /// Human-readable daemon startup failure description.
-  var description: String {
-    switch self {
-    case .unableToPrepareSocket(let error):
-      return "unable to prepare listening socket - \(error)"
-    case .unableToCreateSocket:
-      return "unable to create listening socket"
-    case .unableToUnwrapSocket:
-      return "unable to unwrap listening socket"
-    case .unableToListenOnSocket:
-      return "unable to listen on listening socket"
-    }
-  }
-}
-
-/// Sendable wrapper for `Socket`, which does not declare thread-safety itself.
-private struct UncheckedSocket: @unchecked Sendable {
-  let socket: Socket
 }

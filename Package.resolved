@@ -1,13 +1,13 @@
 {
-  "originHash" : "bb08513218fc3c8b273e9adce91824c7c50925d818aeeb84e674e193100309d1",
+  "originHash" : "29752934310ed5c0c137c9285735b24b275e098fa25985059cdfd1800f7c6335",
   "pins" : [
     {
-      "identity" : "bluesocket",
+      "identity" : "stark-ipc",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Kitura/BlueSocket.git",
+      "location" : "https://github.com/starkwm/stark-ipc",
       "state" : {
-        "revision" : "7b23a867008e0027bfd6f4d398d44720707bc8ca",
-        "version" : "2.0.4"
+        "revision" : "59d79e5352aa0b0dcb3f5e14ec1b1f6685300892",
+        "version" : "0.0.3"
       }
     },
     {

@@ -1,5 +1,5 @@
 import Foundation
-import Socket
+import StarkIPC
 
 /// Unix socket IPC client for sending commands to the daemon.
 public enum Client {
@@ -14,20 +14,18 @@ public enum Client {
 
   /// Send a command request and wait for a response from the daemon.
   public static func send(domain: CommandDomain, args: [String]) -> SendResult {
-    send(domain: domain, args: args, exchange: exchange)
+    send(domain: domain, args: args, exchange: { try exchange($0) })
   }
 
   /// Send a command using an injected request/response exchange.
   static func send(
     domain: CommandDomain,
     args: [String],
-    exchange: (IPCRequest) throws -> IPCResponse?
+    exchange: (IPCRequest) throws -> IPCResponse
   ) -> SendResult {
     do {
       let request = try IPCRequest.make(domain: domain, arguments: args)
-      guard let response = try exchange(request) else {
-        throw IPCClientError.missingResponse
-      }
+      let response = try exchange(request)
       guard response.id == request.id else {
         throw IPCClientError.responseIDMismatch
       }
@@ -35,6 +33,10 @@ public enum Client {
       return SendResult(ok: response.ok, outputMessage: response.outputMessage)
     } catch let error as IPCCommandError {
       let response = error.response(id: "")
+
+      return SendResult(ok: false, outputMessage: response.outputMessage)
+    } catch let error as SocketError {
+      let response = IPCCommandError.internalError(error.localizedDescription).response(id: "")
 
       return SendResult(ok: false, outputMessage: response.outputMessage)
     } catch {
@@ -45,23 +47,18 @@ public enum Client {
   }
 
   /// Exchange one request with the daemon over its Unix socket.
-  private static func exchange(_ request: IPCRequest) throws -> IPCResponse? {
-    let socket = try Socket.create(family: .unix)
-    defer { socket.close() }
-
-    try socket.setReadTimeout(value: UnixSocket.timeout)
-    try socket.setWriteTimeout(value: UnixSocket.timeout)
-
+  static func exchange(_ request: IPCRequest, path: String = UnixSocket.filePath()) throws
+    -> IPCResponse
+  {
+    let client: SocketClient
     do {
-      try socket.connect(to: UnixSocket.filePath())
+      client = try SocketClient(path: path, serviceName: "swm", streaming: false)
     } catch {
       throw IPCClientError.daemonNotRunning
     }
 
-    try socket.write(from: IPCMessage.encode(request))
-
-    guard let data = try IPCMessage.readFrame(from: socket) else { return nil }
-    return try IPCMessage.decode(IPCResponse.self, from: data)
+    try client.send(request)
+    return try client.receive(IPCResponse.self)
   }
 }
 
@@ -69,9 +66,6 @@ public enum Client {
 enum IPCClientError: Error, Equatable, CustomStringConvertible {
   /// No daemon accepted the Unix socket connection.
   case daemonNotRunning
-
-  /// The daemon closed the connection before sending a response.
-  case missingResponse
 
   /// The response identifier did not match the request identifier.
   case responseIDMismatch
@@ -81,8 +75,6 @@ enum IPCClientError: Error, Equatable, CustomStringConvertible {
     switch self {
     case .daemonNotRunning:
       "daemon is not running"
-    case .missingResponse:
-      "daemon closed the IPC connection without a response"
     case .responseIDMismatch:
       "IPC response did not match its request"
     }
