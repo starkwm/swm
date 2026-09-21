@@ -9,7 +9,7 @@ public enum Client {
     public let ok: Bool
 
     /// Response text intended for command-line output.
-    public let outputMessage: String?
+    public let outputMessage: String
   }
 
   /// Send a command request and wait for a response from the daemon.

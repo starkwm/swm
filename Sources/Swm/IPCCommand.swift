@@ -14,15 +14,18 @@ extension IPCCommand {
   var arguments: [String] { [] }
 
   mutating func run() throws {
-    let result = Client.send(
-      domain: Self.domain,
-      args: [Self.command] + arguments
-    )
+    try run(send: Client.send, output: stdout, errors: stderr)
+  }
 
-    if let outputMessage = result.outputMessage {
-      let stream = result.ok ? stdout : stderr
-      fputs("\(outputMessage)\n", stream)
-    }
+  mutating func run(
+    send: (CommandDomain, [String]) -> Client.SendResult,
+    output: UnsafeMutablePointer<FILE>,
+    errors: UnsafeMutablePointer<FILE>
+  ) throws {
+    let result = send(Self.domain, [Self.command] + arguments)
+
+    let stream = result.ok ? output : errors
+    fputs("\(result.outputMessage)\n", stream)
 
     if !result.ok {
       throw ExitCode.failure
