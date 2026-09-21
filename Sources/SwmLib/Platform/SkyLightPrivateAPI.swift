@@ -2,16 +2,6 @@ import Carbon
 
 // Private system functions imported from SkyLight.
 
-/// Return display-space information.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSCopyManagedDisplaySpaces") @discardableResult
-func SLSCopyManagedDisplaySpaces(_ connectionID: Int32) -> CFArray
-
-/// Return the spaces that contain the given windows.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSCopySpacesForWindows") @discardableResult
-func SLSCopySpacesForWindows(_ connectionID: Int32, _ mask: Int32, _ windows: CFArray) -> CFArray
-
 /// Return windows on the given spaces.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSCopyWindowsWithOptionsAndTags") @discardableResult
@@ -38,11 +28,6 @@ func SLSFindWindowAndOwner(
   _ foundWindowConnectionID: inout Int32
 ) -> OSStatus
 
-/// Return the active space.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSGetActiveSpace") @discardableResult
-func SLSGetActiveSpace(_ connectionID: Int32) -> UInt64
-
 /// Return the connection ID for the given process serial number.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSGetConnectionIDForPSN") @discardableResult
@@ -56,16 +41,6 @@ func SLSGetConnectionIDForPSN(
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSMainConnectionID") @discardableResult
 func SLSMainConnectionID() -> Int32
-
-/// Return the current space for the given screen.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSManagedDisplayGetCurrentSpace") @discardableResult
-func SLSManagedDisplayGetCurrentSpace(_ connectionID: Int32, _ screenID: CFString) -> UInt64
-
-/// Return the type of space.
-// swift-format-ignore: AlwaysUseLowerCamelCase
-@_silgen_name("SLSSpaceGetType") @discardableResult
-func SLSSpaceGetType(_ connectionID: Int32, _ spaceID: UInt64) -> Int32
 
 /// Advance the given query iterator.
 // swift-format-ignore: AlwaysUseLowerCamelCase

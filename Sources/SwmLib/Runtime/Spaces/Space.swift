@@ -12,6 +12,7 @@ struct Space: Equatable, Sendable, CustomStringConvertible {
   }
 
   /// Create a space model by looking up its current WindowServer type.
+  @MainActor
   init(id: UInt64) {
     self.id = id
     type = WindowServerClient.shared.spaceType(for: id)

@@ -1,3 +1,5 @@
+import StarkSkyLight
+
 /// WindowServer space type.
 enum SpaceType: Int32 {
   /// Standard desktop space.
@@ -8,6 +10,14 @@ enum SpaceType: Int32 {
 
   /// Space type not recognized by swm.
   case unknown
+
+  init(_ type: StarkSkyLight.SpaceType) {
+    switch type {
+    case .desktop: self = .normal
+    case .fullscreen: self = .fullscreen
+    case .unknown: self = .unknown
+    }
+  }
 }
 
 extension SpaceType: CustomStringConvertible {
