@@ -299,7 +299,7 @@ public final class Windows {
     guard applicationsByPID[process.pid] == nil else { return nil }
 
     guard workspace.isObservable(process) else {
-      log("application is not observable \(process)", level: .info)
+      log("application is not observable \(process)")
       workspace.observeActivationPolicy(process)
       return nil
     }
@@ -364,7 +364,7 @@ public final class Windows {
   /// Finish a refresh attempt when all windows are resolved.
   private func finishResolution(for application: Application, mode: WindowDiscoveryMode) {
     guard mode == .refreshAttempt else { return }
-    log("all windows resolved \(application)", level: .info)
+    log("all windows resolved \(application)")
     unresolvedApplicationIDs.remove(application.processID)
   }
 
@@ -383,8 +383,7 @@ public final class Windows {
     remoteTokenCursors[application.processID] = cursor
 
     log(
-      "scanning remote window tokens \(tokenIDs.lowerBound)...\(tokenIDs.upperBound) for \(application)",
-      level: .info
+      "scanning remote window tokens \(tokenIDs.lowerBound)...\(tokenIDs.upperBound) for \(application)"
     )
 
     for id in tokenIDs {
@@ -404,7 +403,7 @@ public final class Windows {
       guard addWindow(for: application, with: element) != nil else { continue }
 
       unresolvedWindowIDs.remove(at: index)
-      log("resolved window \(windowID) for \(application)", level: .info)
+      log("resolved window \(windowID) for \(application)")
     }
 
     if unresolvedWindowIDs.isEmpty {

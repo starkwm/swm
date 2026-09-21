@@ -835,9 +835,9 @@ public final class Tiling {
     }
     for windowID in changedWindowIDs.sorted() {
       if let window = windows?.window(by: windowID) {
-        log("window space membership changed \(window)", level: .info)
+        log("window space membership changed \(window)")
       } else {
-        log("window space membership changed id: \(windowID)", level: .info)
+        log("window space membership changed id: \(windowID)")
       }
     }
 
