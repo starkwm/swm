@@ -71,6 +71,28 @@ struct WindowGridTests {
     )
   }
 
+  @Test("frame handles large grid counts and padding without integer overflow")
+  func largeValues() throws {
+    let grid = try #require(
+      WindowGrid(rows: Int.max, columns: Int.max, x: 0, y: 0, width: Int.max, height: Int.max)
+    )
+    let bounds = CGRect(x: 0, y: 0, width: CGFloat(Int.max) * 4, height: CGFloat(Int.max) * 4)
+    let settings = SpaceSettings(
+      padding: SpacePadding(top: Int.max, bottom: Int.max, left: Int.max, right: Int.max),
+      gap: Int.max
+    )
+    let frame = grid.frame(in: bounds, settings: settings)
+    #expect(
+      frame
+        == CGRect(
+          x: CGFloat(Int.max),
+          y: CGFloat(Int.max),
+          width: CGFloat(Int.max) * 2,
+          height: CGFloat(Int.max) * 2
+        )
+    )
+  }
+
   private func expect(_ actual: CGRect, equals expected: CGRect) {
     #expect(abs(actual.origin.x - expected.origin.x) < 0.0001)
     #expect(abs(actual.origin.y - expected.origin.y) < 0.0001)

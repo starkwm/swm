@@ -121,7 +121,7 @@ struct SpaceCommandHandler {
     case .absolute:
       spaces.setPadding(change.padding, for: spaceID)
     case .relative:
-      spaces.adjustPadding(change.padding, for: spaceID)
+      try spaces.adjustPadding(change.padding, for: spaceID)
     }
 
     tiling.reflow(spaceID: spaceID)
@@ -140,7 +140,7 @@ struct SpaceCommandHandler {
     case .absolute:
       spaces.setGap(change.value, for: spaceID)
     case .relative:
-      spaces.adjustGap(change.value, for: spaceID)
+      try spaces.adjustGap(change.value, for: spaceID)
     }
 
     tiling.reflow(spaceID: spaceID)
