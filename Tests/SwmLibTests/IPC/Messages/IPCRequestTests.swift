@@ -4,64 +4,23 @@ import Testing
 
 @Suite("IPCRequest")
 struct IPCRequestTests {
-  @Test("make: splits command from arguments")
-  func makeSplitsCommandFromArguments() throws {
-    let request = try IPCRequest.make(domain: .window, arguments: ["focus", "main display"])
-
+  @Test(
+    "make preserves command arguments",
+    arguments: [
+      (CommandDomain.window, ["focus", "main display"]),
+      (.window, ["--move", "recent", "abs:100:200"]),
+      (.window, ["--resize", "100", "abs:500:800"]),
+      (.window, ["--grid", "3:1:0:0:2:1"]),
+      (.window, ["--grid", "recent", "3:1:0:0:2:1"]),
+      (.signal, ["--add", "event=window-focused", "action=echo"]),
+    ]
+  )
+  func makePreservesArguments(domain: CommandDomain, arguments: [String]) throws {
+    let request = try IPCRequest.make(domain: domain, arguments: arguments)
     #expect(request.version == IPCRequest.currentVersion)
-    #expect(request.domain == .window)
-    #expect(request.command == "focus")
-    #expect(request.args == ["main display"])
-  }
-
-  @Test("make: parses command-first window selector arguments")
-  func makeParsesCommandFirstWindowSelectorArguments() throws {
-    let recent = try IPCRequest.make(
-      domain: .window,
-      arguments: ["--move", "recent", "abs:100:200"]
-    )
-    let windowID = try IPCRequest.make(
-      domain: .window,
-      arguments: ["--resize", "100", "abs:500:800"]
-    )
-    let gridFocused = try IPCRequest.make(
-      domain: .window,
-      arguments: ["--grid", "3:1:0:0:2:1"]
-    )
-    let gridRecent = try IPCRequest.make(
-      domain: .window,
-      arguments: ["--grid", "recent", "3:1:0:0:2:1"]
-    )
-
-    #expect(recent.command == "--move")
-    #expect(recent.args == ["recent", "abs:100:200"])
-    #expect(windowID.command == "--resize")
-    #expect(windowID.args == ["100", "abs:500:800"])
-    #expect(gridFocused.command == "--grid")
-    #expect(gridFocused.args == ["3:1:0:0:2:1"])
-    #expect(gridRecent.command == "--grid")
-    #expect(gridRecent.args == ["recent", "3:1:0:0:2:1"])
-  }
-
-  @Test("make: builds query request")
-  func makeBuildsQueryRequest() throws {
-    let request = try IPCRequest.make(domain: .query, arguments: ["--display"])
-
-    #expect(request.domain == .query)
-    #expect(request.command == "--displays")
-    #expect(request.args == ["--display"])
-  }
-
-  @Test("make: builds signal request")
-  func makeBuildsSignalRequest() throws {
-    let request = try IPCRequest.make(
-      domain: .signal,
-      arguments: ["--add", "event=window-focused", "action=echo"]
-    )
-
-    #expect(request.domain == .signal)
-    #expect(request.command == "--add")
-    #expect(request.args == ["event=window-focused", "action=echo"])
+    #expect(request.domain == domain)
+    #expect(request.command == arguments[0])
+    #expect(request.args == Array(arguments.dropFirst()))
   }
 
   @Test("make: requires command")

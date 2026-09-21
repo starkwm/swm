@@ -180,28 +180,19 @@ struct SpaceCommandHandlerTests {
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
   }
 
-  @Test("dispatch: rejects unsupported space commands")
-  func dispatchRejectsUnsupportedSpaceCommands() {
-    let handler = handler(spaces: Spaces(activeSpaceID: 42))
-    let unknown = handler.dispatch(request(command: "--unknown", args: []))
-    let toggle = handler.dispatch(request(command: "--toggle", args: ["tiling"]))
-
-    #expect(unknown.ok == false)
-    #expect(unknown.errorCode == .unsupportedCommand)
-    #expect(unknown.message == "unsupported space command: --unknown")
-    #expect(toggle.ok == false)
-    #expect(toggle.errorCode == .unsupportedCommand)
-    #expect(toggle.message == "unsupported space command: --toggle")
-  }
-
-  @Test("dispatch: rejects focus command as unsupported")
-  func dispatchRejectsFocusCommandAsUnsupported() {
-    let handler = handler(spaces: Spaces(activeSpaceID: 42))
-    let response = handler.dispatch(request(command: "--focus", args: ["recent"]))
-
-    #expect(response.ok == false)
+  @Test(
+    "dispatch rejects unsupported space commands",
+    arguments: [
+      ("--unknown", [String]()), ("--toggle", ["tiling"]), ("--focus", ["recent"]),
+    ]
+  )
+  func unsupportedCommands(command: String, args: [String]) {
+    let response = handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
+      request(command: command, args: args)
+    )
+    #expect(!response.ok)
     #expect(response.errorCode == .unsupportedCommand)
-    #expect(response.message == "unsupported space command: --focus")
+    #expect(response.message == "unsupported space command: \(command)")
   }
 
   @Test(
