@@ -25,6 +25,10 @@ let package = Package(
   ],
   dependencies: [
     .package(
+      url: "https://github.com/starkwm/stark-skylight",
+      revision: "23a5df35d8a6357b1b4f63639005d00a82fb679c"
+    ),
+    .package(
       url: "https://github.com/starkwm/stark-ipc",
       exact: "0.0.3"
     ),
@@ -43,7 +47,8 @@ let package = Package(
     .target(
       name: "SwmLib",
       dependencies: [
-        .product(name: "StarkIPC", package: "stark-ipc")
+        .product(name: "StarkIPC", package: "stark-ipc"),
+        .product(name: "StarkSkyLight", package: "stark-skylight"),
       ],
       swiftSettings: releaseDebugSettings,
       linkerSettings: privateFrameworkLinkerSettings

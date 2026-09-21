@@ -2,15 +2,15 @@ import AppKit
 import Carbon
 import CoreGraphics
 import Darwin
+import StarkSkyLight
 
 /// Thin wrapper around private WindowServer APIs used by swm.
 final class WindowServerClient {
   /// Shared WindowServer client.
   static let shared = WindowServerClient()
 
-  private let screenIDKey = "Display Identifier"
-  private let spaceIDKey = "ManagedSpaceID"
-  private let spacesKey = "Spaces"
+  @MainActor
+  static let spaceClient = Result { try SpaceClient() }
 
   /// Return the main WindowServer connection ID for this process.
   func mainConnectionID() -> Int32 {
@@ -104,63 +104,54 @@ final class WindowServerClient {
   }
 
   /// Return the active WindowServer space ID.
+  @MainActor
   func activeSpace() -> UInt64 {
-    SLSGetActiveSpace(mainConnectionID())
+    querySpaces(default: 0) { try $0.activeSpace()?.rawValue ?? 0 }
   }
 
   /// Return the current space ID for a display UUID.
+  @MainActor
   func currentSpace(for screenUUID: String) -> UInt64 {
-    SLSManagedDisplayGetCurrentSpace(mainConnectionID(), screenUUID as CFString)
+    querySpaces(default: 0) { try $0.currentSpace(for: .init(rawValue: screenUUID))?.rawValue ?? 0 }
   }
 
   /// Return all known WindowServer space IDs.
+  @MainActor
   func allSpaceIDs() -> [UInt64] {
-    managedDisplaySpaces().flatMap { info -> [UInt64] in
-      guard let spacesInfo = info[spacesKey] as? [[String: AnyObject]] else { return [] }
-      return spacesInfo.compactMap { managedSpaceID(from: $0[spaceIDKey]) }
-    }
+    querySpaces(default: []) { try $0.snapshot().allSpaceIDs.map(\.rawValue) }
   }
 
   /// Return each display and the spaces assigned to it.
+  @MainActor
   func displaySpaces() -> [WindowServerDisplaySpaces] {
-    managedDisplaySpaces().compactMap { info in
-      guard let screenID = info[screenIDKey] as? String else { return nil }
-      let spaces =
-        (info[spacesKey] as? [[String: AnyObject]])?.compactMap {
-          managedSpaceID(from: $0[spaceIDKey])
-        } ?? []
-
-      return WindowServerDisplaySpaces(id: screenID, spaces: spaces)
+    querySpaces(default: []) { client in
+      try client.snapshot().displays.map {
+        WindowServerDisplaySpaces(id: $0.id.rawValue, spaces: $0.spaces.map(\.id.rawValue))
+      }
     }
   }
 
   /// Return the display UUID for a space ID.
+  @MainActor
   func screenID(for spaceID: UInt64) -> String? {
-    for info in managedDisplaySpaces() {
-      guard let screenID = info[screenIDKey] as? String,
-        let spacesInfo = info[spacesKey] as? [[String: AnyObject]]
-      else {
-        continue
-      }
-
-      if spacesInfo.contains(where: { managedSpaceID(from: $0[spaceIDKey]) == spaceID }) {
-        return screenID
-      }
+    querySpaces(default: nil) {
+      try $0.snapshot().displayID(containing: .init(rawValue: spaceID))?.rawValue
     }
-
-    return nil
   }
 
   /// Return the space IDs containing a window.
+  @MainActor
   func spaceIDs(containing windowID: CGWindowID) -> [UInt64] {
-    let identifiers =
-      SLSCopySpacesForWindows(mainConnectionID(), 0x7, [windowID] as CFArray) as NSArray
-    return identifiers.compactMap { managedSpaceID(from: $0) }
+    querySpaces(default: []) { try $0.spaceIDs(containing: windowID).map(\.rawValue) }
   }
 
   /// Return the WindowServer type for a space.
+  @MainActor
   func spaceType(for spaceID: UInt64) -> SpaceType {
-    SpaceType(rawValue: SLSSpaceGetType(mainConnectionID(), spaceID)) ?? .unknown
+    guard spaceID != 0 else { return .unknown }
+    return querySpaces(default: .unknown) {
+      SpaceType(try $0.spaceType(for: .init(rawValue: spaceID)))
+    }
   }
 
   /// Return valid top-level window IDs owned by an application connection on spaces.
@@ -204,19 +195,17 @@ final class WindowServerClient {
     return windowIDs
   }
 
-  /// Return raw managed display-space dictionaries from WindowServer.
-  private func managedDisplaySpaces() -> [[String: AnyObject]] {
-    let info = SLSCopyManagedDisplaySpaces(mainConnectionID()) as NSArray
-    return info.compactMap { $0 as? [String: AnyObject] }
-  }
-
-  /// Normalize a managed space ID value from WindowServer dictionaries.
-  private func managedSpaceID(from value: Any?) -> UInt64? {
-    if let id = value as? UInt64 {
-      return id
+  /// Preserve the existing unavailable-value conventions at the package boundary.
+  @MainActor
+  private func querySpaces<Value>(default fallback: Value, _ query: (SpaceClient) throws -> Value)
+    -> Value
+  {
+    do {
+      return try query(Self.spaceClient.get())
+    } catch {
+      log("could not query Spaces: \(error)", level: .warn)
+      return fallback
     }
-
-    return (value as? NSNumber)?.uint64Value
   }
 
   /// Post yabai-compatible events that make a window key without raising it.

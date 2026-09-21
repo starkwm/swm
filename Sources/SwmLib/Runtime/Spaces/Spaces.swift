@@ -5,17 +5,17 @@ import CoreGraphics
 @MainActor
 public final class Spaces {
   /// Return all known WindowServer spaces.
-  nonisolated static func all() -> [Space] {
+  static func all() -> [Space] {
     WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))
   }
 
   /// Return the currently active WindowServer space.
-  nonisolated static func active() -> Space {
+  static func active() -> Space {
     Space(id: WindowServerClient.shared.activeSpace())
   }
 
   /// Return the display UUID for a space.
-  nonisolated static func display(for space: Space) -> String? {
+  static func display(for space: Space) -> String? {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
@@ -42,7 +42,8 @@ public final class Spaces {
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
   /// Create a Space service seeded from the active space.
-  public convenience init() {
+  public convenience init() throws {
+    _ = try WindowServerClient.spaceClient.get()
     self.init(activeSpaceID: Self.active().id)
   }
 

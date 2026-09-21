@@ -22,7 +22,7 @@ struct SignalPayloadTests {
   @Test("spaceChanged: maps current and recent space environment")
   func spaceChangedMapsEnvironment() {
     let payload = SignalPayload.spaceChanged(
-      space: Space(id: 10),
+      space: Space(id: 10, type: .normal),
       currentIndex: 2,
       recentSpaceID: 8,
       recentIndex: 1

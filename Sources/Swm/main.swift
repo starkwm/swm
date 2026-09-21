@@ -31,7 +31,12 @@ func runSwm(with arguments: StartCommand) {
   let workspace = Workspace()
   let processes = Processes()
   let windows = Windows(workspace: workspace)
-  let spaces = Spaces()
+  let spaces: Spaces
+  do {
+    spaces = try Spaces()
+  } catch {
+    fail("unable to initialize Space queries - \(error)")
+  }
   let displays = Displays()
   let tiling = Tiling(windows: windows, spaces: spaces)
 
