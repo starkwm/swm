@@ -248,9 +248,10 @@ public final class Tiling {
       guard var state = layoutsByID[layoutID] else { continue }
       let desiredWindowIDs = retainedWindowIDsByLayoutID[layoutID] ?? []
 
-      let retainedWindowIDs = state.tree?.windowIDs ?? []
-      for windowID in retainedWindowIDs where !desiredWindowIDs.contains(windowID) {
-        state.tree = state.tree?.removing([windowID])
+      let retainedWindowIDs = Set(state.tree?.windowIDs ?? [])
+      let removedWindowIDs = retainedWindowIDs.subtracting(desiredWindowIDs)
+      if !removedWindowIDs.isEmpty {
+        state.tree = state.tree?.removing(removedWindowIDs)
       }
 
       if let focusedWindowID = state.focusedWindowID,

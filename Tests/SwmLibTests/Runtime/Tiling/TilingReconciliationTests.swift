@@ -52,6 +52,59 @@ struct TilingReconciliationTests {
     #expect(tiling.layoutPlan(for: layoutID(11)) == .disabled)
   }
 
+  @Test(
+    "reconcile batches discards while preserving order, omitted leaves, focus insertion and settings"
+  )
+  func batchRemoval() {
+    var candidates = (1...6).map { window(id: CGWindowID($0)) }
+    let tiling = makeTiling(
+      windows: { candidates },
+      memberships: {
+        Dictionary(uniqueKeysWithValues: candidates.map { ($0.id, Set([UInt64(10)])) })
+      }
+    )
+    tiling.initialize()
+    #expect(tiling.setLayout(.master, for: 10))
+    #expect(tiling.changeMasterRatio(.absolute(0.65), for: 10))
+    #expect(tiling.swapWindowWithMaster(4))
+    tiling.windowDidFocus(3)
+
+    candidates = [
+      window(id: 1, isMinimized: true), window(id: 3), window(id: 4), window(id: 7), window(id: 8),
+    ]
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            4: CGRect(x: 0, y: 0, width: 650, height: 800),
+            3: CGRect(x: 650, y: 0, width: 350, height: 267),
+            7: CGRect(x: 650, y: 267, width: 350, height: 266),
+            8: CGRect(x: 650, y: 533, width: 350, height: 267),
+          ])
+        )
+    )
+
+    candidates[0] = window(id: 1)
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: 4, in: .next) == 3)
+    #expect(tiling.cycledWindowID(from: 3, in: .next) == 7)
+    #expect(tiling.cycledWindowID(from: 7, in: .next) == 8)
+    #expect(tiling.cycledWindowID(from: 8, in: .next) == 1)
+    #expect(tiling.cycledWindowID(from: 1, in: .next) == 4)
+
+    candidates = [window(id: 9)]
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            9: CGRect(x: 0, y: 0, width: 1000, height: 800)
+          ])
+        )
+    )
+  }
+
   @Test("membership polling: reflows without lifecycle events")
   func membershipPollingReflowsWithoutLifecycleEvents() async throws {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
