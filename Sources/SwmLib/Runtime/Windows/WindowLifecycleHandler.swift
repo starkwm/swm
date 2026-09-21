@@ -77,20 +77,20 @@ struct WindowLifecycleHandler {
 
     if windows.window(by: windowID) == nil {
       if let window = windows.recoverFocusedWindow(with: windowID) {
-        log("recovered focused window \(window)", level: .info)
+        log("recovered focused window \(window)")
         tiling.reconcileAndReflowVisibleSpaces()
       }
     }
 
     guard let window = windows.window(by: windowID) else {
       windows.addLostFocusedEvent(for: windowID)
-      log("window focused before it was managed id: \(windowID)", level: .info)
+      log("window focused before it was managed id: \(windowID)")
       return
     }
 
     guard !window.isMinimized else {
       windows.addLostFocusedEvent(for: windowID)
-      log("window focused while minimized \(window)", level: .info)
+      log("window focused while minimized \(window)")
       return
     }
 

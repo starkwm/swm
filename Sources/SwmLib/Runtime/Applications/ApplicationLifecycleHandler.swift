@@ -31,19 +31,19 @@ struct ApplicationLifecycleHandler {
   private func applicationLaunched(for process: Process) {
     if process.terminated {
       windows.removeLostFrontSwitchedEvent(for: process.pid)
-      log("application terminated during launch \(process)", level: .info)
+      log("application terminated during launch \(process)")
       return
     }
 
     if !workspace.isFinishedLaunching(process) {
-      log("application has not finished launching \(process)", level: .info)
+      log("application has not finished launching \(process)")
       workspace.observeFinishedLaunching(process)
       guard workspace.isFinishedLaunching(process) else { return }
       workspace.unobserveFinishedLaunching(process)
     }
 
     if !workspace.isObservable(process) {
-      log("application is not observable \(process)", level: .info)
+      log("application is not observable \(process)")
       workspace.observeActivationPolicy(process)
       guard workspace.isObservable(process) else { return }
       workspace.unobserveActivationPolicy(process)
@@ -106,7 +106,7 @@ struct ApplicationLifecycleHandler {
   private func applicationFrontSwitched(for process: Process) {
     guard let application = windows.application(by: process.pid) else {
       windows.addLostFrontSwitchedEvent(for: process.pid)
-      log("frontmost application is unmanaged, retrying launch handling \(process)", level: .info)
+      log("frontmost application is unmanaged, retrying launch handling \(process)")
       applicationLaunched(for: process)
       return
     }
