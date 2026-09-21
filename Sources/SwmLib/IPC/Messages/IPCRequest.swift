@@ -1,7 +1,7 @@
 import Foundation
 
 /// Client request sent over IPC.
-struct IPCRequest: Codable, Equatable {
+struct IPCRequest: Codable, Equatable, Sendable {
   /// Current request schema version.
   static let currentVersion = 1
 
