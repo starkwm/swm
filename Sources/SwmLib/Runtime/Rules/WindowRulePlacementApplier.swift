@@ -18,12 +18,14 @@ struct WindowRulePlacementApplier {
     else { return .deferred }
     guard let target = NSScreen.arrangedScreens.first(where: { $0.uuid == destination.displayID })
     else { return .deferred }
-    let targetFrame = placement.frame(
-      from: frame,
-      sourceBounds: source.axVisibleFrame,
-      targetBounds: target.axVisibleFrame,
-      settings: spaces.settings(for: destination.spaceID)
-    )
+    guard
+      let targetFrame = placement.frame(
+        from: frame,
+        sourceBounds: source.axVisibleFrame,
+        targetBounds: target.axVisibleFrame,
+        settings: spaces.settings(for: destination.spaceID)
+      )
+    else { return .failed }
     var result = window.setFrame(targetFrame, from: frame)
     if result == .success, let applied = window.frame(), !applied.matches(targetFrame, tolerance: 1)
     {
@@ -44,7 +46,7 @@ extension WindowRulePlacement {
     sourceBounds: CGRect,
     targetBounds: CGRect,
     settings: SpaceSettings
-  ) -> CGRect {
+  ) -> CGRect? {
     if let grid { return grid.frame(in: targetBounds, settings: settings) }
     return WindowDisplayTransfer(
       windowFrame: frame,

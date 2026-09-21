@@ -345,7 +345,9 @@ struct WindowCommandHandler {
 
     let settings = spaces.settings(for: spaceID)
     let bounds = screen.axVisibleFrame
-    let targetFrame = grid.frame(in: bounds, settings: settings)
+    guard let targetFrame = grid.frame(in: bounds, settings: settings) else {
+      throw IPCCommandError.invalidRequest("window grid has no usable bounds")
+    }
 
     try applyFrame(
       targetFrame,

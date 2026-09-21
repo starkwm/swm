@@ -81,6 +81,21 @@ struct WindowRulePlacementTests {
     )
   }
 
+  @Test("Grid rules reject exhausted destination bounds", arguments: [300, Int.max])
+  func exhaustedGrid(value: Int) throws {
+    let grid = try #require(WindowGrid(argument: "2:1:1:0:1:1"))
+    let placement = WindowRulePlacement(grid: grid)
+    let bounds = CGRect(x: -1440, y: -900, width: 300, height: 120)
+    #expect(
+      placement.frame(
+        from: bounds,
+        sourceBounds: bounds,
+        targetBounds: bounds,
+        settings: SpaceSettings(padding: .zero, gap: value)
+      ) == nil
+    )
+  }
+
   @Test("Placement applies once, changes with matching actions, and expires on close")
   func oncePerChange() throws {
     var candidate = window(id: 1)

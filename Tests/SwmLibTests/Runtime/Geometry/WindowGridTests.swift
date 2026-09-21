@@ -71,6 +71,47 @@ struct WindowGridTests {
     )
   }
 
+  @Test(
+    "frame rejects padding and gaps that exhaust either dimension",
+    arguments: [120, 300, Int.max]
+  )
+  func exhaustedBounds(value: Int) throws {
+    let grid = try #require(WindowGrid(argument: "3:3:1:1:1:1"))
+    let bounds = CGRect(x: -1440, y: -900, width: 300, height: 120)
+    #expect(
+      grid.frame(
+        in: bounds,
+        settings: SpaceSettings(
+          padding: SpacePadding(top: value, bottom: value, left: value, right: value),
+          gap: 0
+        )
+      ) == nil
+    )
+    #expect(grid.frame(in: bounds, settings: SpaceSettings(padding: .zero, gap: value)) == nil)
+  }
+
+  @Test(
+    "frame rejects nonfinite and nonpositive input bounds",
+    arguments: [CGFloat.nan, .infinity, -.infinity, 0, -1]
+  )
+  func invalidBounds(value: CGFloat) throws {
+    let grid = try #require(WindowGrid(argument: "1:1:0:0:1:1"))
+    #expect(
+      grid.frame(in: CGRect(x: 0, y: 0, width: value, height: 100), settings: .defaults) == nil
+    )
+    #expect(
+      grid.frame(in: CGRect(x: 0, y: 0, width: 100, height: value), settings: .defaults) == nil
+    )
+    if !value.isFinite {
+      #expect(
+        grid.frame(in: CGRect(x: value, y: 0, width: 100, height: 100), settings: .defaults) == nil
+      )
+      #expect(
+        grid.frame(in: CGRect(x: 0, y: value, width: 100, height: 100), settings: .defaults) == nil
+      )
+    }
+  }
+
   @Test("frame handles large grid counts and padding without integer overflow")
   func largeValues() throws {
     let grid = try #require(
@@ -81,7 +122,7 @@ struct WindowGridTests {
       padding: SpacePadding(top: Int.max, bottom: Int.max, left: Int.max, right: Int.max),
       gap: Int.max
     )
-    let frame = grid.frame(in: bounds, settings: settings)
+    let frame = try #require(grid.frame(in: bounds, settings: settings))
     #expect(
       frame
         == CGRect(
@@ -93,7 +134,11 @@ struct WindowGridTests {
     )
   }
 
-  private func expect(_ actual: CGRect, equals expected: CGRect) {
+  private func expect(_ frame: CGRect?, equals expected: CGRect) {
+    guard let actual = frame else {
+      Issue.record("Expected usable grid frame")
+      return
+    }
     #expect(abs(actual.origin.x - expected.origin.x) < 0.0001)
     #expect(abs(actual.origin.y - expected.origin.y) < 0.0001)
     #expect(abs(actual.size.width - expected.size.width) < 0.0001)
