@@ -51,15 +51,10 @@ extension NSScreen {
 
   /// Convert an AppKit screen frame to the coordinate space used by accessibility APIs.
   private func accessibilityFrame(for frame: CGRect) -> CGRect {
-    guard let mainFrame = NSScreen.screens.map(\.frame).max(by: { $0.maxY < $1.maxY }) else {
+    guard let primaryFrame = NSScreen.screens.first?.frame else {
       return frame
     }
 
-    return CGRect(
-      x: frame.origin.x,
-      y: mainFrame.maxY - frame.maxY,
-      width: frame.width,
-      height: frame.height
-    )
+    return ScreenGeometry.accessibilityFrame(frame, primaryFrame: primaryFrame)
   }
 }
