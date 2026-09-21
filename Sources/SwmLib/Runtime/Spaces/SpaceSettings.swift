@@ -2,17 +2,9 @@
 struct SpaceSettings: Equatable {
   /// Default settings used for spaces without explicit overrides.
   static let defaults = SpaceSettings(
-    paddingEnabled: true,
-    gapEnabled: true,
     padding: .zero,
     gap: 0
   )
-
-  /// Whether padding should affect layout calculations.
-  var paddingEnabled: Bool
-
-  /// Whether gaps should affect layout calculations.
-  var gapEnabled: Bool
 
   /// Padding around the usable area.
   var padding: SpacePadding

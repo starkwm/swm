@@ -110,22 +110,6 @@ public final class Spaces {
     settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
   }
 
-  /// Toggle whether padding is applied on a space.
-  @discardableResult
-  func togglePadding(for spaceID: UInt64) -> SpaceSettings {
-    update(spaceID) { settings in
-      settings.paddingEnabled.toggle()
-    }
-  }
-
-  /// Toggle whether gaps are applied on a space.
-  @discardableResult
-  func toggleGap(for spaceID: UInt64) -> SpaceSettings {
-    update(spaceID) { settings in
-      settings.gapEnabled.toggle()
-    }
-  }
-
   /// Replace padding for a space, clamping each side to zero or greater.
   @discardableResult
   func setPadding(_ padding: SpacePadding, for spaceID: UInt64) -> SpaceSettings {

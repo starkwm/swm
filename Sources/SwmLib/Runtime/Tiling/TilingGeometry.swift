@@ -10,13 +10,11 @@ extension CGSize {
 extension SpaceSettings {
   /// Effective gap between adjacent tiled windows.
   var tilingGap: CGFloat {
-    gapEnabled ? CGFloat(max(0, gap)) : 0
+    CGFloat(max(0, gap))
   }
 
-  /// Visible bounds after applying enabled per-Space padding.
+  /// Visible bounds after applying per-Space padding.
   func tilingBounds(in bounds: CGRect) -> CGRect {
-    guard paddingEnabled else { return bounds }
-
     let top = CGFloat(max(0, padding.top))
     let bottom = CGFloat(max(0, padding.bottom))
     let left = CGFloat(max(0, padding.left))
