@@ -204,6 +204,26 @@ struct SpaceCommandHandlerTests {
     #expect(response.message == "unsupported space command: --focus")
   }
 
+  @Test(
+    "overflow returns invalid request and leaves all settings unchanged",
+    arguments: [
+      ("--gap", "abs:\(Int.max)", "rel:1", "gap"),
+      ("--padding", "abs:10:20:30:\(Int.max)", "rel:1:1:1:1", "padding"),
+    ]
+  )
+  func overflow(command: String, absolute: String, relative: String, setting: String) {
+    let spaces = Spaces(activeSpaceID: 42)
+    let handler = handler(spaces: spaces)
+    #expect(handler.dispatch(request(command: command, args: [absolute])).ok)
+    let previous = spaces.settings(for: 42)
+    let response = handler.dispatch(request(command: command, args: [relative]))
+    #expect(!response.ok)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "space \(setting) adjustment overflows integer range")
+    #expect(spaces.settings(for: 42) == previous)
+    #expect(spaces.settings(for: 43) == .defaults)
+  }
+
   @Test("dispatch: updates active space only")
   func dispatchUpdatesActiveSpaceOnly() {
     let spaces = Spaces(activeSpaceID: 2)

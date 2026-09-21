@@ -19,6 +19,14 @@ public final class Spaces {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
+  private static func add(_ value: Int, _ delta: Int, setting: String) throws -> Int {
+    let (result, overflow) = value.addingReportingOverflow(delta)
+    guard !overflow else {
+      throw IPCCommandError.invalidRequest("space \(setting) adjustment overflows integer range")
+    }
+    return result
+  }
+
   /// ID of the currently active space.
   var currentActiveSpaceID: UInt64? {
     activeSpace.current
@@ -120,13 +128,13 @@ public final class Spaces {
 
   /// Adjust padding for a space, clamping each side to zero or greater.
   @discardableResult
-  func adjustPadding(_ padding: SpacePadding, for spaceID: UInt64) -> SpaceSettings {
-    update(spaceID) { settings in
+  func adjustPadding(_ padding: SpacePadding, for spaceID: UInt64) throws -> SpaceSettings {
+    try update(spaceID) { settings in
       settings.padding = SpacePadding(
-        top: settings.padding.top + padding.top,
-        bottom: settings.padding.bottom + padding.bottom,
-        left: settings.padding.left + padding.left,
-        right: settings.padding.right + padding.right
+        top: try Self.add(settings.padding.top, padding.top, setting: "padding"),
+        bottom: try Self.add(settings.padding.bottom, padding.bottom, setting: "padding"),
+        left: try Self.add(settings.padding.left, padding.left, setting: "padding"),
+        right: try Self.add(settings.padding.right, padding.right, setting: "padding")
       )
       .clamped()
     }
@@ -142,19 +150,19 @@ public final class Spaces {
 
   /// Adjust the window gap for a space, clamping it to zero or greater.
   @discardableResult
-  func adjustGap(_ gap: Int, for spaceID: UInt64) -> SpaceSettings {
-    update(spaceID) { settings in
-      settings.gap = max(0, settings.gap + gap)
+  func adjustGap(_ gap: Int, for spaceID: UInt64) throws -> SpaceSettings {
+    try update(spaceID) { settings in
+      settings.gap = max(0, try Self.add(settings.gap, gap, setting: "gap"))
     }
   }
 
   /// Update stored settings for a space.
   private func update(
     _ spaceID: UInt64,
-    transform: (inout SpaceSettings) -> Void
-  ) -> SpaceSettings {
+    transform: (inout SpaceSettings) throws -> Void
+  ) rethrows -> SpaceSettings {
     var settings = settingsBySpaceID[spaceID] ?? defaultSettings
-    transform(&settings)
+    try transform(&settings)
     settingsBySpaceID[spaceID] = settings
     return settings
   }

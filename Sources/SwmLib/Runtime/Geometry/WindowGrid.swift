@@ -40,9 +40,9 @@ struct WindowGrid: Equatable {
 
     var bounds = bounds
     bounds.origin.x += CGFloat(padding.left)
-    bounds.size.width -= CGFloat(padding.left + padding.right)
+    bounds.size.width -= (CGFloat(padding.left) + CGFloat(padding.right))
     bounds.origin.y += CGFloat(padding.top)
-    bounds.size.height -= CGFloat(padding.top + padding.bottom)
+    bounds.size.height -= (CGFloat(padding.top) + CGFloat(padding.bottom))
 
     if x > 0 {
       bounds.origin.x += gap
