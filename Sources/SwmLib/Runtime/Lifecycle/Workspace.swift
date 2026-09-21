@@ -1,7 +1,13 @@
 import AppKit
+import Synchronization
 
 /// Bridges AppKit workspace notifications and process KVO into runtime events.
+@MainActor
 public final class Workspace: NSObject {
+  private nonisolated let observationContexts = Mutex<[UInt: ProcessObservationToken]>([:])
+
+  private let postEvent: (RuntimeEvent) -> Void
+
   private let activationPolicyObservations = ProcessObservationRegistry(
     kind: .activationPolicy
   )
@@ -10,7 +16,12 @@ public final class Workspace: NSObject {
   )
 
   /// Create a workspace observer for active space and display changes.
-  public override init() {
+  public override convenience init() {
+    self.init(postEvent: { Events.shared.post($0) })
+  }
+
+  init(postEvent: @escaping (RuntimeEvent) -> Void) {
+    self.postEvent = postEvent
     super.init()
 
     NSWorkspace.shared.notificationCenter.addObserver(
@@ -29,7 +40,7 @@ public final class Workspace: NSObject {
   }
 
   /// Handle process KVO updates that make a process ready to manage.
-  public override func observeValue(
+  public nonisolated override func observeValue(
     forKeyPath keyPath: String?,
     of object: Any?,
     change: [NSKeyValueChangeKey: Any]?,
@@ -37,13 +48,29 @@ public final class Workspace: NSObject {
   ) {
     guard let context else { return }
 
-    let process = Unmanaged<Process>.fromOpaque(context).takeUnretainedValue()
+    // Contexts are never dereferenced. A retained lookup also makes callbacks
+    // racing with observer removal safe, even when KVO delivers off the main thread.
+    guard let token = observationContexts.withLock({ $0[UInt(bitPattern: context)] }) else {
+      return
+    }
 
-    guard let registry = registry(for: keyPath) else { return }
-    guard registry.kind.shouldRelaunch(process: process, change: change) else { return }
-
-    unobserve(process, registry: registry)
-    Events.shared.post(.application(.launched(process)))
+    // KVO runs on the notifying thread. Copy only scalar change data before
+    // queueing work; all process and registry access belongs to the main actor.
+    let rawPolicy = change?[.newKey] as? Int
+    let finishedLaunching = change?[.newKey] as? Bool
+    DispatchQueue.main.async { [self, token] in
+      let process = token.process
+      guard let registry = registry(for: keyPath), registry.contains(token),
+        !process.terminated,
+        registry.kind.shouldRelaunch(
+          process: process,
+          rawPolicy: rawPolicy,
+          finishedLaunching: finishedLaunching
+        )
+      else { return }
+      unobserve(process, registry: registry)
+      postEvent(.application(.launched(process)))
+    }
   }
 
   /// Return whether a process is currently observable as a regular application.
@@ -102,6 +129,7 @@ public final class Workspace: NSObject {
     guard let application = process.application else { return }
 
     guard let token = registry.register(process, application: application) else { return }
+    observationContexts.withLock { $0[token.contextID] = token }
 
     token.application.addObserver(
       self,
@@ -114,6 +142,7 @@ public final class Workspace: NSObject {
   /// Stop observing one KVO-backed process readiness condition.
   private func unobserve(_ process: Process, registry: ProcessObservationRegistry) {
     guard let token = registry.unregister(process) else { return }
+    _ = observationContexts.withLock { $0.removeValue(forKey: token.contextID) }
 
     token.application.removeObserver(self, forKeyPath: token.keyPath, context: token.context)
   }
@@ -131,8 +160,6 @@ public final class Workspace: NSObject {
   }
 }
 
-extension Workspace: @unchecked Sendable {}
-
 extension Notification.Name {
   /// AppKit notification emitted when the active display changes.
   fileprivate static let activeDisplayDidChange = Notification.Name(
@@ -141,21 +168,38 @@ extension Notification.Name {
 }
 
 /// KVO observation token for one process readiness condition.
-private struct ProcessObservationToken {
-  /// Running application retained for the lifetime of the KVO observation.
+private final class ProcessObservationToken: Sendable {
+  private static let nextContextID = Mutex<UInt>(1)
+
+  // Never reuse a context identifier: a late callback must not resolve a new observation.
+  private static func makeContextID() -> UInt {
+    nextContextID.withLock { value in
+      let result = value
+      value += 1
+      return result
+    }
+  }
+
+  let contextID = makeContextID()
   let application: NSRunningApplication
-
-  /// Observed KVO key path.
+  let process: Process
   let keyPath: String
-
-  /// Unmanaged process pointer passed as KVO context.
-  let context: UnsafeMutableRawPointer?
-
-  /// Stable process key used for registry lookup.
   let processID: UInt32
+
+  var context: UnsafeMutableRawPointer {
+    UnsafeMutableRawPointer(bitPattern: contextID)!
+  }
+
+  init(application: NSRunningApplication, process: Process, keyPath: String, processID: UInt32) {
+    self.application = application
+    self.process = process
+    self.keyPath = keyPath
+    self.processID = processID
+  }
 }
 
 /// Process readiness condition that can trigger application management.
+@MainActor
 private enum ProcessObservationKind {
   /// Wait for the process activation policy to change.
   case activationPolicy
@@ -174,23 +218,24 @@ private enum ProcessObservationKind {
   }
 
   /// Return whether a KVO change means the process should be treated as launched.
-  func shouldRelaunch(process: Process, change: [NSKeyValueChangeKey: Any]?) -> Bool {
+  func shouldRelaunch(process: Process, rawPolicy: Int?, finishedLaunching: Bool?) -> Bool {
     switch self {
     case .activationPolicy:
       guard
-        let raw = change?[.newKey] as? Int,
+        let raw = rawPolicy,
         let result = NSApplication.ActivationPolicy(rawValue: raw)
       else { return false }
 
       return result != process.policy
     case .finishedLaunching:
-      guard let result = change?[.newKey] as? Bool else { return false }
+      guard let result = finishedLaunching else { return false }
       return result
     }
   }
 }
 
 /// Tracks active KVO observations for one process readiness condition.
+@MainActor
 private final class ProcessObservationRegistry {
   /// Readiness condition represented by this registry.
   let kind: ProcessObservationKind
@@ -208,14 +253,18 @@ private final class ProcessObservationRegistry {
 
     let token = ProcessObservationToken(
       application: application,
+      process: process,
       keyPath: kind.keyPath,
-      context: Unmanaged.passUnretained(process).toOpaque(),
       processID: process.psn.lowLongOfPSN
     )
 
     tokens[token.processID] = token
 
     return token
+  }
+
+  func contains(_ token: ProcessObservationToken) -> Bool {
+    tokens[token.processID] === token
   }
 
   /// Remove and return an observation token for a process.

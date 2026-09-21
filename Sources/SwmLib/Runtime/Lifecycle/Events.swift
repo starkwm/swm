@@ -1,14 +1,18 @@
 import Foundation
 
 /// Main-thread dispatcher for runtime events.
-public final class Events {
+public final class Events: Sendable {
   /// Shared event service used by model callbacks.
   public static let shared = Events()
 
   @MainActor
   private var dependencies: EventDependencies?
 
-  private init() {}
+  private let handleEvent: (@MainActor @Sendable (RuntimeEvent) -> Void)?
+
+  init(handleEvent: (@MainActor @Sendable (RuntimeEvent) -> Void)? = nil) {
+    self.handleEvent = handleEvent
+  }
 
   /// Configure the services used to handle runtime events.
   @MainActor
@@ -32,8 +36,12 @@ public final class Events {
 
   /// Enqueue a runtime event for main-thread handling.
   func post(_ event: RuntimeEvent) {
-    Task { @MainActor in
-      self.handle(event)
+    DispatchQueue.main.async {
+      if let handleEvent = self.handleEvent {
+        handleEvent(event)
+      } else {
+        self.handle(event)
+      }
     }
   }
 
@@ -92,8 +100,6 @@ public final class Events {
     }
   }
 }
-
-extension Events: @unchecked Sendable {}
 
 /// Runtime dependencies required by the event dispatcher.
 private struct EventDependencies {

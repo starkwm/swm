@@ -10,7 +10,7 @@ struct RuntimeEventSignalMapperTests {
   func skipsUnobservedWindowEvents() {
     var observedEvents = Set<SignalEvent>()
     let mapper = RuntimeEventSignalMapper(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: Spaces(activeSpaceID: nil),
       displays: Displays(),
       hasSubscribers: { observedEvents.contains($0) }
@@ -86,7 +86,7 @@ struct RuntimeEventSignalMapperTests {
 
   private func mapper() -> RuntimeEventSignalMapper {
     RuntimeEventSignalMapper(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: Spaces(activeSpaceID: nil),
       displays: Displays()
     )

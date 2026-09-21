@@ -8,7 +8,7 @@ struct DisplaySerializerTests {
   @Test("all: maps shared Spaces to every screen", arguments: ["Main", "MAIN"])
   @MainActor
   func allMapsSharedSpacesToEveryScreen(sharedDisplayID: String) {
-    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace()))
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
     snapshot.displaySpaces = [
       WindowServerDisplaySpaces(id: sharedDisplayID, spaces: [1, 3, 4, 5, 6])
@@ -27,7 +27,7 @@ struct DisplaySerializerTests {
   @Test("all: retains screens while display Spaces are unavailable")
   @MainActor
   func allRetainsScreensWhileDisplaySpacesAreUnavailable() {
-    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace()))
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
     snapshot.displaySpaces = [WindowServerDisplaySpaces(id: "disconnected-display", spaces: [10])]
     snapshot.spaces = [Space(id: 10)]

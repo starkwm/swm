@@ -63,6 +63,70 @@ struct WorkspaceTests {
     #expect(application.removedKeyPaths == ["finishedLaunching", "activationPolicy"])
   }
 
+  @Test(
+    "KVO callbacks revalidate registration after cancellation or termination",
+    arguments: ["cancel", "restart", "terminate", "late", "deliver"]
+  )
+  func queuedCallbacks(action: String) async throws {
+    var launched = [pid_t]()
+    let workspace = Workspace { event in
+      if case .application(.launched(let process)) = event { launched.append(process.pid) }
+    }
+    let application = ObservationRecordingApplication()
+    let process = makeProcess(application: application)
+    workspace.observeFinishedLaunching(process)
+    let context = try #require(application.contexts["finishedLaunching"])
+    if action == "late" {
+      workspace.unobserveFinishedLaunching(process)
+      workspace.observeFinishedLaunching(process)
+    }
+    workspace.observeValue(
+      forKeyPath: "finishedLaunching",
+      of: nil,
+      change: [.newKey: true],
+      context: context
+    )
+    switch action {
+    case "cancel": workspace.unobserveFinishedLaunching(process)
+    case "restart":
+      workspace.unobserveFinishedLaunching(process)
+      workspace.observeFinishedLaunching(process)
+    case "terminate": process.terminated = true
+    default: break
+    }
+    await withCheckedContinuation { continuation in
+      DispatchQueue.main.async { continuation.resume() }
+    }
+    #expect(launched == (action == "deliver" ? [42] : []))
+    workspace.unobserveFinishedLaunching(process)
+  }
+
+  @Test("KVO accepts background delivery without accessing mutable process state off actor")
+  func backgroundCallback() async throws {
+    var launched = [pid_t]()
+    let workspace = Workspace { event in
+      if case .application(.launched(let process)) = event { launched.append(process.pid) }
+    }
+    let application = ObservationRecordingApplication()
+    let process = makeProcess(application: application)
+    workspace.observeActivationPolicy(process)
+    let context = try #require(application.contexts["activationPolicy"])
+    let address = UInt(bitPattern: context)
+    await Task.detached {
+      workspace.observeValue(
+        forKeyPath: "activationPolicy",
+        of: nil,
+        change: [.newKey: NSApplication.ActivationPolicy.regular.rawValue],
+        context: UnsafeMutableRawPointer(bitPattern: address)
+      )
+    }.value
+    await withCheckedContinuation { continuation in
+      DispatchQueue.main.async { continuation.resume() }
+    }
+    #expect(launched == [42])
+    #expect(application.removedKeyPaths == ["activationPolicy"])
+  }
+
   private func makeProcess(application: NSRunningApplication) -> SwmLib.Process {
     SwmLib.Process(
       psn: ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: 1),
@@ -74,6 +138,7 @@ struct WorkspaceTests {
 }
 
 private final class ObservationRecordingApplication: NSRunningApplication {
+  var contexts = [String: UnsafeMutableRawPointer]()
   var addedKeyPaths = [String]()
   var removedKeyPaths = [String]()
 
@@ -83,6 +148,7 @@ private final class ObservationRecordingApplication: NSRunningApplication {
     options: NSKeyValueObservingOptions = [],
     context: UnsafeMutableRawPointer?
   ) {
+    contexts[keyPath] = context
     addedKeyPaths.append(keyPath)
   }
 

@@ -48,9 +48,13 @@ public final class Windows {
   private var remoteTokenCursors = [pid_t: WindowDiscoveryCursor]()
 
   /// Create the window service for a workspace.
-  public init(workspace: Workspace) {
+  public convenience init(workspace: Workspace) {
+    self.init(workspace: workspace, focusedWindowID: Self.focusedWindowID())
+  }
+
+  init(workspace: Workspace, focusedWindowID: CGWindowID?) {
     self.workspace = workspace
-    focusedWindowState = TrackedState(current: Self.focusedWindowID())
+    focusedWindowState = TrackedState(current: focusedWindowID)
   }
 
   /// Discover and observe windows from all supplied processes.

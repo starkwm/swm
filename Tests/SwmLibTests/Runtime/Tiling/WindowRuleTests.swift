@@ -119,8 +119,11 @@ struct WindowRuleTests {
         )
     )
     candidates[1].title = "Document"
-    WindowLifecycleHandler(windows: Windows(workspace: Workspace()), tiling: tiling)
-      .handle(.titleChanged(2))
+    WindowLifecycleHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      tiling: tiling
+    )
+    .handle(.titleChanged(2))
     #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
     candidates.append(window(id: 3, isResizable: false))
     try tiling.addRule(WindowRule.parse(arguments: ["manage=on"]))

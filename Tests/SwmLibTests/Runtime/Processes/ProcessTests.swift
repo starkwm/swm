@@ -4,6 +4,7 @@ import Testing
 @testable import SwmLib
 
 @Suite("Process")
+@MainActor
 struct ProcessTests {
   @Test("description: includes pid and name")
   func descriptionIncludesPIDAndName() {

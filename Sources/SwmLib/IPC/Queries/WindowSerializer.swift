@@ -132,6 +132,7 @@ struct WindowSerializer: Encodable, Equatable {
   }
 
   /// Create query output by combining window, accessibility, and Core Graphics metadata.
+  @MainActor
   init(
     window: Window,
     info: [String: Any]?,

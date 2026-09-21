@@ -1,7 +1,8 @@
 import AppKit
 
 /// Runtime model for an accessibility-backed window.
-final class Window: NSObject {
+@MainActor
+final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
   private static let notificationRegistrar = AXNotificationRegistrar(
     notifications: [
       kAXUIElementDestroyedNotification,
@@ -15,11 +16,15 @@ final class Window: NSObject {
     notifications: [kAXTitleChangedNotification]
   )
 
+  static func == (lhs: Window, rhs: Window) -> Bool {
+    lhs.id == rhs.id
+  }
+
   /// Owning application, held weakly to avoid a retain cycle.
   weak var application: Application?
 
   /// Debug description including window ID and title.
-  override var description: String {
+  var description: String {
     "<Window id: \(id), title: \(title)>"
   }
 
@@ -58,21 +63,22 @@ final class Window: NSObject {
   private var observationContext: WindowObservationContext?
 
   /// Create a window model from an accessibility element and owning application.
-  init(with element: AXUIElement, for application: Application) {
+  convenience init(with element: AXUIElement, for application: Application) {
+    self.init(
+      id: AccessibilityClient.shared.windowID(for: element),
+      element: element,
+      application: application
+    )
+  }
+
+  init(id: CGWindowID, element: AXUIElement? = nil, application: Application? = nil) {
+    self.id = id
     self.element = element
     self.application = application
-    id = AccessibilityClient.shared.windowID(for: element)
   }
 
-  deinit {
+  isolated deinit {
     unobserve()
-  }
-
-  /// Compare windows by Core Graphics window ID.
-  override func isEqual(_ object: Any?) -> Bool {
-    guard let window = object as? Self else { return false }
-
-    return id == window.id
   }
 
   /// Stop observing and clear references to invalid window state.
@@ -332,9 +338,8 @@ final class Window: NSObject {
   }
 }
 
-extension Window: @unchecked Sendable {}
-
 /// Weak observation context passed through accessibility notification callbacks.
+@MainActor
 final class WindowObservationContext {
   private weak var observedWindow: Window?
 
