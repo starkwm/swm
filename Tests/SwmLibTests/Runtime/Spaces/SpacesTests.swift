@@ -20,8 +20,6 @@ struct SpacesTests {
     let spaces = Spaces()
     let settings = spaces.settings(for: 1)
 
-    #expect(settings.paddingEnabled)
-    #expect(settings.gapEnabled)
     #expect(settings.padding == .zero)
     #expect(settings.gap == 0)
   }
@@ -48,22 +46,6 @@ struct SpacesTests {
 
     #expect(spaces.settings(for: 1).gap == 5)
     #expect(spaces.settings(for: 2).gap == 20)
-  }
-
-  @Test("togglePadding(for:): toggles padding boolean")
-  func togglePaddingTogglesPaddingBoolean() {
-    let spaces = Spaces()
-
-    #expect(spaces.togglePadding(for: 1).paddingEnabled == false)
-    #expect(spaces.togglePadding(for: 1).paddingEnabled)
-  }
-
-  @Test("toggleGap(for:): toggles gap boolean")
-  func toggleGapTogglesGapBoolean() {
-    let spaces = Spaces()
-
-    #expect(spaces.toggleGap(for: 1).gapEnabled == false)
-    #expect(spaces.toggleGap(for: 1).gapEnabled)
   }
 
   @Test("setPadding(_:for:): applies absolute padding")

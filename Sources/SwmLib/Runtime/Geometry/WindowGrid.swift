@@ -35,8 +35,8 @@ struct WindowGrid: Equatable {
 
   /// Calculate the target frame inside screen bounds using space padding and gap settings.
   func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
-    let padding = settings.paddingEnabled ? settings.padding : .zero
-    let gap = settings.gapEnabled ? CGFloat(settings.gap) : 0
+    let padding = settings.padding
+    let gap = CGFloat(settings.gap)
 
     var bounds = bounds
     bounds.origin.x += CGFloat(padding.left)

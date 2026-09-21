@@ -71,23 +71,6 @@ struct WindowGridTests {
     )
   }
 
-  @Test("frame: ignores disabled padding and gap")
-  func frameIgnoresDisabledPaddingAndGap() throws {
-    let grid = try #require(
-      WindowGrid(rows: 1, columns: 3, x: 1, y: 0, width: 1, height: 1)
-    )
-    var settings = SpaceSettings.defaults
-    settings.paddingEnabled = false
-    settings.gapEnabled = false
-    settings.padding = SpacePadding(top: 10, bottom: 10, left: 10, right: 10)
-    settings.gap = 15
-
-    expect(
-      grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: settings),
-      equals: CGRect(x: 100, y: 0, width: 100, height: 120)
-    )
-  }
-
   private func expect(_ actual: CGRect, equals expected: CGRect) {
     #expect(abs(actual.origin.x - expected.origin.x) < 0.0001)
     #expect(abs(actual.origin.y - expected.origin.y) < 0.0001)
