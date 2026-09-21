@@ -6,31 +6,12 @@ import Testing
 @MainActor
 @Suite("ConfigCommandHandler")
 struct ConfigCommandHandlerTests {
-  @Test("dispatch: layout updates current and future Spaces")
-  func dispatchLayoutUpdatesCurrentAndFutureSpaces() {
+  @Test("dispatch selects layout geometry", arguments: ["master", "monocle", "dwindle", "float"])
+  func dispatchSelectsLayoutGeometry(selection: String) {
     let spaces = Spaces(activeSpaceID: nil)
-    var spaceIDs = Set([UInt64(10), UInt64(11)])
-    let tiling = Tiling(
-      snapshot: {
-        TilingReconciliationSnapshot(
-          windows: [],
-          topology: SpaceTopology(
-            spacesByID: Dictionary(
-              uniqueKeysWithValues: spaceIDs.map {
-                ($0, SpaceTopologyDescriptor(id: $0, displayID: "display", type: .normal))
-              }
-            ),
-            visibleSpaceIDByDisplayID: ["display": 10],
-            spaceIDsByWindowID: [:],
-            displaysByID: [
-              "display": SpaceTopologyDisplay(
-                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-              )
-            ]
-          )
-        )
-      },
-      spaces: spaces
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3), window(id: 4)],
+      memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
     )
     tiling.initialize()
     let handler = ConfigCommandHandler(
@@ -38,46 +19,28 @@ struct ConfigCommandHandlerTests {
       spaces: spaces,
       tiling: tiling
     )
-
-    let dwindle = handler.dispatch(request(command: "layout", args: ["dwindle"]))
-
-    #expect(dwindle.ok)
-    #expect(dwindle.message == "dwindle")
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .notVisible)
-
-    spaceIDs.insert(12)
-    tiling.reconcile()
-
-    #expect(tiling.layoutPlan(for: layoutID(12)) == .notVisible)
-
-    let float = handler.dispatch(request(command: "layout", args: ["float"]))
-
-    #expect(float.ok)
-    #expect(float.message == "float")
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .disabled)
-    #expect(tiling.layoutPlan(for: layoutID(12)) == .disabled)
-
-    spaceIDs.insert(13)
-    tiling.reconcile()
-
-    #expect(tiling.layoutPlan(for: layoutID(13)) == .disabled)
-
-    let master = handler.dispatch(request(command: "layout", args: ["master"]))
-
-    #expect(master.ok)
-    #expect(master.message == "master")
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .notVisible)
-    #expect(tiling.layoutPlan(for: layoutID(12)) == .notVisible)
-    #expect(tiling.layoutPlan(for: layoutID(13)) == .notVisible)
-
-    let monocle = handler.dispatch(request(command: "layout", args: ["monocle"]))
-
-    #expect(monocle.ok)
-    #expect(monocle.message == "monocle")
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
+    let response = handler.dispatch(request(command: "layout", args: [selection]))
+    #expect(response.ok)
+    #expect(response.message == selection)
+    if selection == "float" {
+      #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
+      return
+    }
+    guard case .layout(.frames(let frames)) = tiling.layoutPlan(for: layoutID(10)) else {
+      Issue.record("Expected layout frames")
+      return
+    }
+    #expect(Set(frames.keys) == [1, 2, 3, 4])
+    switch selection {
+    case "master":
+      #expect(frames[1] == CGRect(x: 0, y: 0, width: 500, height: 800))
+      #expect(frames[4] == CGRect(x: 500, y: 533, width: 500, height: 267))
+    case "monocle":
+      #expect(frames.values.allSatisfy { $0 == CGRect(x: 0, y: 0, width: 1000, height: 800) })
+    case "dwindle":
+      #expect(frames[4] == CGRect(x: 750, y: 400, width: 250, height: 400))
+    default: Issue.record("Unexpected layout")
+    }
   }
 
   @Test("dispatch: window gap updates defaults and overrides")
@@ -147,83 +110,31 @@ struct ConfigCommandHandlerTests {
     #expect(spaces.settings(for: 2).padding == SpacePadding(top: 10, bottom: 0, left: 0, right: 0))
   }
 
-  @Test("dispatch: rejects malformed window-gap arguments")
-  func dispatchRejectsMalformedWindowGapArguments() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let missing = handler.dispatch(request(command: "window-gap", args: []))
-    let extra = handler.dispatch(request(command: "window-gap", args: ["10", "20"]))
-
-    #expect(missing.ok == false)
-    #expect(missing.errorCode == .invalidRequest)
-    #expect(missing.message == "invalid config window-gap arguments")
-    #expect(extra.ok == false)
-    #expect(extra.errorCode == .invalidRequest)
-    #expect(extra.message == "invalid config window-gap arguments")
-  }
-
-  @Test("dispatch: rejects invalid window-gap value")
-  func dispatchRejectsInvalidWindowGapValue() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let response = handler.dispatch(request(command: "window-gap", args: ["wide"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid config window-gap value: wide")
-  }
-
-  @Test("dispatch: rejects malformed padding command arguments")
-  func dispatchRejectsMalformedPaddingCommandArguments() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let missing = handler.dispatch(request(command: "top-padding", args: []))
-    let extra = handler.dispatch(request(command: "top-padding", args: ["10", "20"]))
-
-    #expect(missing.ok == false)
-    #expect(missing.errorCode == .invalidRequest)
-    #expect(missing.message == "invalid config top-padding arguments")
-    #expect(extra.ok == false)
-    #expect(extra.errorCode == .invalidRequest)
-    #expect(extra.message == "invalid config top-padding arguments")
-  }
-
-  @Test("dispatch: rejects invalid padding command value")
-  func dispatchRejectsInvalidPaddingCommandValue() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let response = handler.dispatch(request(command: "right-padding", args: ["wide"]))
-
-    #expect(response.ok == false)
-    #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid config right-padding value: wide")
-  }
-
-  @Test("dispatch: rejects invalid layout commands")
-  func dispatchRejectsInvalidLayoutCommands() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let missing = handler.dispatch(request(command: "layout", args: []))
-    let extra = handler.dispatch(request(command: "layout", args: ["master", "dwindle"]))
-    let unknown = handler.dispatch(request(command: "layout", args: ["columns"]))
-
-    #expect(missing.ok == false)
-    #expect(missing.errorCode == .invalidRequest)
-    #expect(missing.message == "invalid config layout arguments")
-    #expect(extra.ok == false)
-    #expect(extra.errorCode == .invalidRequest)
-    #expect(extra.message == "invalid config layout arguments")
-    #expect(unknown.ok == false)
-    #expect(unknown.errorCode == .invalidRequest)
-    #expect(unknown.message == "invalid config layout: columns")
-  }
-
-  @Test("dispatch: rejects invalid layout control values")
-  func dispatchRejectsInvalidLayoutControlValues() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let responses = [
-      handler.dispatch(request(command: "master-ratio", args: ["wide"])),
-      handler.dispatch(request(command: "master-placement", args: ["center"])),
-      handler.dispatch(request(command: "preserve-split", args: ["maybe"])),
-      handler.dispatch(request(command: "focus-follows-mouse", args: ["maybe"])),
+  @Test(
+    "dispatch rejects malformed arguments with exact diagnostics",
+    arguments: [
+      ("window-gap", [], "invalid config window-gap arguments"),
+      ("window-gap", ["10", "20"], "invalid config window-gap arguments"),
+      ("window-gap", ["wide"], "invalid config window-gap value: wide"),
+      ("top-padding", [], "invalid config top-padding arguments"),
+      ("top-padding", ["10", "20"], "invalid config top-padding arguments"),
+      ("right-padding", ["wide"], "invalid config right-padding value: wide"),
+      ("layout", [], "invalid config layout arguments"),
+      ("layout", ["master", "dwindle"], "invalid config layout arguments"),
+      ("layout", ["columns"], "invalid config layout: columns"),
+      ("master-ratio", ["wide"], "invalid config master-ratio value: wide"),
+      ("master-placement", ["center"], "invalid config master-placement: center"),
+      ("preserve-split", ["maybe"], "invalid config preserve-split value: maybe"),
+      ("focus-follows-mouse", ["maybe"], "invalid config focus-follows-mouse value: maybe"),
     ]
-
-    #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
+  )
+  func malformedArguments(command: String, args: [String], message: String) {
+    let response = handler(spaces: Spaces(activeSpaceID: nil)).dispatch(
+      request(command: command, args: args)
+    )
+    #expect(!response.ok)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == message)
   }
 
   @Test("dispatch: validates animation duration")
