@@ -78,7 +78,7 @@ public final class Processes {
     )
 
     let eventKind = Int(GetEventKind(event))
-    Task { @MainActor in
+    DispatchQueue.main.async { [self] in
       handle(eventKind: eventKind, psn: psn)
     }
 

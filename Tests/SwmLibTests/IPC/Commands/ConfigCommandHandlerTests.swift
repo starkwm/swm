@@ -15,7 +15,7 @@ struct ConfigCommandHandlerTests {
     )
     tiling.initialize()
     let handler = ConfigCommandHandler(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
       tiling: tiling
     )
@@ -72,7 +72,7 @@ struct ConfigCommandHandlerTests {
   @Test("dispatch: selects focus follows mouse mode")
   func dispatchSelectsFocusFollowsMouseMode() {
     let spaces = Spaces(activeSpaceID: nil)
-    let windows = Windows(workspace: Workspace())
+    let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
     let handler = ConfigCommandHandler(
       windows: windows,
       spaces: spaces,
@@ -158,7 +158,7 @@ struct ConfigCommandHandlerTests {
       frameMutation: { _, _, _ in .success }
     )
     let handler = ConfigCommandHandler(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
       tiling: makeTiling(frameReconciler: reconciler)
     )
@@ -186,7 +186,7 @@ struct ConfigCommandHandlerTests {
 
   private func handler(spaces: Spaces) -> ConfigCommandHandler {
     ConfigCommandHandler(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
       tiling: makeTestTiling(spaces: spaces)
     )

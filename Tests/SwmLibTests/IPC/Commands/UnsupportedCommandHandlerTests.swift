@@ -7,9 +7,9 @@ import Testing
 struct UnsupportedCommandHandlerTests {
   @Test("dispatch: config rejects unsupported commands")
   func dispatchConfigRejectsUnsupportedCommands() {
-    let spaces = Spaces()
+    let spaces = Spaces(activeSpaceID: nil)
     let response = ConfigCommandHandler(
-      windows: Windows(workspace: Workspace()),
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
       tiling: makeTestTiling(spaces: spaces)
     ).dispatch(

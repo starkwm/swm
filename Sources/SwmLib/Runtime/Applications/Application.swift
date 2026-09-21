@@ -34,20 +34,29 @@ private func accessibilityObserverCallback(
   case kAXWindowMiniaturizedNotification:
     guard let context else { return }
     let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    guard let window = observation.window() else { return }
-    observation.post(.window(.minimized(window)))
+    // The observer source is installed only on CFRunLoopGetMain().
+    MainActor.assumeIsolated {
+      guard let window = observation.window() else { return }
+      observation.post(.window(.minimized(window)))
+    }
 
   case kAXWindowDeminiaturizedNotification:
     guard let context else { return }
     let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    guard let window = observation.window() else { return }
-    observation.post(.window(.deminimized(window)))
+    // The observer source is installed only on CFRunLoopGetMain().
+    MainActor.assumeIsolated {
+      guard let window = observation.window() else { return }
+      observation.post(.window(.deminimized(window)))
+    }
 
   case kAXUIElementDestroyedNotification:
     guard let context else { return }
     let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    guard let window = observation.window() else { return }
-    observation.post(.window(.destroyed(window)))
+    // The observer source is installed only on CFRunLoopGetMain().
+    MainActor.assumeIsolated {
+      guard let window = observation.window() else { return }
+      observation.post(.window(.destroyed(window)))
+    }
 
   default:
     break
@@ -55,7 +64,8 @@ private func accessibilityObserverCallback(
 }
 
 /// Runtime model for a single running application.
-final class Application: NSObject {
+@MainActor
+final class Application: @MainActor CustomStringConvertible, @MainActor Equatable {
   private static let notificationRegistrar = AXNotificationRegistrar(
     notifications: [
       kAXCreatedNotification,
@@ -65,8 +75,12 @@ final class Application: NSObject {
     ]
   )
 
+  static func == (lhs: Application, rhs: Application) -> Bool {
+    lhs === rhs
+  }
+
   /// Debug description including process, app name, and bundle identifier.
-  override var description: String {
+  var description: String {
     """
     <Application pid: \(application.processIdentifier), name: \(application.localizedName ?? "-"), \
     bundle: \(application.bundleIdentifier ?? "-")>
@@ -121,7 +135,7 @@ final class Application: NSObject {
     }
   }
 
-  deinit {
+  isolated deinit {
     unobserve()
   }
 

@@ -19,6 +19,7 @@ struct SignalPayload: Equatable, Sendable {
   }
 
   /// Build a window payload.
+  @MainActor
   static func window(
     event: SignalEvent,
     windowID: CGWindowID,

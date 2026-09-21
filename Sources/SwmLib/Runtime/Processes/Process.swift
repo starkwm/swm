@@ -10,7 +10,8 @@ private let processIgnoreList = [
 ]
 
 /// Runtime model for an application process known to swm.
-public final class Process: CustomStringConvertible {
+@MainActor
+public final class Process: @MainActor CustomStringConvertible {
   /// Debug description including process ID and name.
   public var description: String {
     "<Process pid: \(pid), name: \(name)>"
@@ -77,5 +78,3 @@ public final class Process: CustomStringConvertible {
     self.policy = policy
   }
 }
-
-extension Process: @unchecked Sendable {}
