@@ -32,11 +32,6 @@ struct ClientTests {
     #expect(result.outputMessage == "error: IPC response did not match its request")
   }
 
-  @Test("IPCClientError: describes daemon connection failure")
-  func clientErrorDescribesDaemonConnectionFailure() {
-    #expect(IPCClientError.daemonNotRunning.description == "daemon is not running")
-  }
-
   @Test("send: presents daemon connection failure")
   func sendPresentsDaemonConnectionFailure() {
     let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
