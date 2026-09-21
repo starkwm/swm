@@ -1,7 +1,7 @@
 import Foundation
 
 /// Server response sent over IPC.
-struct IPCResponse: Codable, Equatable {
+struct IPCResponse: Codable, Equatable, Sendable {
   /// Create a successful response.
   static func success(id: String, message: String) -> IPCResponse {
     IPCResponse(id: id, ok: true, message: message, errorCode: nil)
