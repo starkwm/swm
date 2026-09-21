@@ -34,15 +34,14 @@ struct WindowGrid: Equatable {
   }
 
   /// Calculate the target frame inside screen bounds using space padding and gap settings.
-  func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect {
-    let padding = settings.padding
-    let gap = CGFloat(settings.gap)
+  func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect? {
+    guard bounds.origin.x.isFinite, bounds.origin.y.isFinite,
+      bounds.size.width.isFinite, bounds.size.height.isFinite,
+      bounds.size.width > 0, bounds.size.height > 0
+    else { return nil }
 
-    var bounds = bounds
-    bounds.origin.x += CGFloat(padding.left)
-    bounds.size.width -= (CGFloat(padding.left) + CGFloat(padding.right))
-    bounds.origin.y += CGFloat(padding.top)
-    bounds.size.height -= (CGFloat(padding.top) + CGFloat(padding.bottom))
+    let gap = settings.tilingGap
+    var bounds = settings.tilingBounds(in: bounds)
 
     if x > 0 {
       bounds.origin.x += gap
@@ -62,15 +61,22 @@ struct WindowGrid: Equatable {
       bounds.size.height -= gap
     }
 
+    guard bounds.size.width > 0, bounds.size.height > 0 else { return nil }
+
     let cellWidth = bounds.width / CGFloat(columns)
     let cellHeight = bounds.height / CGFloat(rows)
 
-    return CGRect(
+    let frame = CGRect(
       x: bounds.minX + bounds.width - cellWidth * CGFloat(columns - x),
       y: bounds.minY + bounds.height - cellHeight * CGFloat(rows - y),
       width: cellWidth * CGFloat(width),
       height: cellHeight * CGFloat(height)
     )
+    guard frame.origin.x.isFinite, frame.origin.y.isFinite,
+      frame.size.width.isFinite, frame.size.height.isFinite,
+      frame.size.width > 0, frame.size.height > 0
+    else { return nil }
+    return frame
   }
 }
 
