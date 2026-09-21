@@ -1,4 +1,3 @@
-import ArgumentParser
 import Foundation
 
 private let logLevelColumnWidth = LogLevel.allCases.map(\.label.count).max()! + 2
@@ -24,7 +23,7 @@ func log(_ message: @autoclosure () -> String, level: LogLevel = .debug) {
 }
 
 /// Runtime logging severity.
-public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, Sendable {
+public enum LogLevel: String, CaseIterable, Comparable, Sendable {
   /// Detailed diagnostic messages.
   case debug
 
@@ -36,6 +35,11 @@ public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, S
 
   /// Runtime failures.
   case error
+
+  /// Compare log levels by severity.
+  public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+    lhs.priority < rhs.priority
+  }
 
   /// Uppercase label used in log output.
   var label: String {
@@ -54,11 +58,6 @@ public enum LogLevel: String, CaseIterable, Comparable, ExpressibleByArgument, S
     case .error:
       3
     }
-  }
-
-  /// Compare log levels by severity.
-  public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
-    lhs.priority < rhs.priority
   }
 }
 

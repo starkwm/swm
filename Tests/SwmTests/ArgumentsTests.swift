@@ -5,6 +5,26 @@ import Testing
 
 @Suite("Arguments")
 struct ArgumentsTests {
+  @Test("start converts log levels in the CLI", arguments: ["debug", "info", "warn", "error"])
+  func logLevels(value: String) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["start", "--log-level", value]) as? StartCommand
+    )
+    #expect(command.logLevel.rawValue == value)
+  }
+
+  @Test("start defaults to info and rejects unknown log levels")
+  func logLevelValidation() throws {
+    let command = try #require(Arguments.parseAsRoot(["start"]) as? StartCommand)
+    #expect(command.logLevel.rawValue == "info")
+    do {
+      _ = try Arguments.parseAsRoot(["start", "--log-level", "verbose"])
+      Issue.record("Expected invalid log level")
+    } catch {
+      #expect(Arguments.message(for: error).contains("Invalid log level: verbose"))
+    }
+  }
+
   @Test("root help groups command domains")
   func rootHelpGroupsCommandDomains() {
     let help = Arguments.helpMessage()
