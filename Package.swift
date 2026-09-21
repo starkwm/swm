@@ -24,7 +24,10 @@ let package = Package(
     .executable(name: "swm", targets: ["Swm"])
   ],
   dependencies: [
-    .package(url: "https://github.com/Kitura/BlueSocket.git", from: "2.0.4"),
+    .package(
+      url: "https://github.com/starkwm/stark-ipc",
+      exact: "0.0.3"
+    ),
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.7.1"),
   ],
   targets: [
@@ -40,7 +43,7 @@ let package = Package(
     .target(
       name: "SwmLib",
       dependencies: [
-        .product(name: "Socket", package: "BlueSocket")
+        .product(name: "StarkIPC", package: "stark-ipc")
       ],
       swiftSettings: releaseDebugSettings,
       linkerSettings: privateFrameworkLinkerSettings

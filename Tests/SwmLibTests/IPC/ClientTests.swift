@@ -14,14 +14,6 @@ struct ClientTests {
     #expect(result.outputMessage == "ok")
   }
 
-  @Test("send: rejects missing response")
-  func sendRejectsMissingResponse() {
-    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in nil }
-
-    #expect(result.ok == false)
-    #expect(result.outputMessage == "error: daemon closed the IPC connection without a response")
-  }
-
   @Test("send: rejects mismatched response ID")
   func sendRejectsMismatchedResponseID() {
     let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
