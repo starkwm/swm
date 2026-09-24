@@ -1,13 +1,13 @@
 {
-  "originHash" : "170c901c861ef3001654912766772fd5b3cd5699d193e21b97b0b5fdb9bfcf2c",
+  "originHash" : "2ff7d7d8eef6a06827e8742310fc7aee949bc51a52e65b07ea3873bcff1321e1",
   "pins" : [
     {
       "identity" : "stark-ipc",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/starkwm/stark-ipc",
       "state" : {
-        "revision" : "59d79e5352aa0b0dcb3f5e14ec1b1f6685300892",
-        "version" : "0.0.3"
+        "revision" : "cd2a30196dd647483907be5574baef704df79665",
+        "version" : "0.0.5"
       }
     },
     {
@@ -15,7 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/starkwm/stark-skylight",
       "state" : {
-        "revision" : "23a5df35d8a6357b1b4f63639005d00a82fb679c"
+        "revision" : "71e042a4c65ea62b900a696c7ee22b9ef7f4195f",
+        "version" : "0.0.3"
       }
     },
     {

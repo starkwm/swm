@@ -26,11 +26,11 @@ let package = Package(
   dependencies: [
     .package(
       url: "https://github.com/starkwm/stark-skylight",
-      revision: "23a5df35d8a6357b1b4f63639005d00a82fb679c"
+      exact: "0.0.3"
     ),
     .package(
       url: "https://github.com/starkwm/stark-ipc",
-      exact: "0.0.3"
+      exact: "0.0.5"
     ),
     .package(url: "https://github.com/apple/swift-argument-parser", from: "1.7.1"),
   ],
