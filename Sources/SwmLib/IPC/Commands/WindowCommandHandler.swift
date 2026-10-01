@@ -19,8 +19,8 @@ struct WindowCommandHandler {
   }
 
   /// Dispatch a window IPC request to the matching window operation.
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
-    IPCCommandError.catching(id: request.id) {
+  func dispatch(_ request: IPCRequest) async -> IPCResponse {
+    await IPCCommandError.catching(id: request.id) {
       switch request.command {
       case "--focus":
         return try focus(request)
@@ -74,6 +74,8 @@ struct WindowCommandHandler {
         return try grid(request)
       case "--display":
         return try display(request)
+      case "--space":
+        return try await space(request)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
       }
@@ -317,6 +319,61 @@ struct WindowCommandHandler {
       failureMessage: "could not move window to display: \(window.id)",
       animated: false
     )
+
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Move a window without switching the active Space or immediately restoring focus.
+  private func space(_ request: IPCRequest) async throws -> IPCResponse {
+    let selection = try parseValueSelection(request.args, action: "space")
+
+    guard let target = WindowSpaceTarget(argument: selection.value) else {
+      throw IPCCommandError.invalidRequest("invalid window space value: \(selection.value)")
+    }
+
+    let window = try selectedWindow(selector: selection.selector)
+    let windowID = window.id
+
+    guard !tiling.isInteractingWithWindow(windowID) else {
+      throw IPCCommandError.invalidRequest("window is being dragged: \(windowID)")
+    }
+
+    tiling.prepareForSynchronousMutation(for: windowID)
+    defer {
+      if !Task.isCancelled { tiling.reconcileAndReflowVisibleSpaces() }
+    }
+
+    let destinationID = try await WindowSpaceTransfer.shared.move(windowID: windowID, to: target) {
+      window.id == windowID && windows.window(by: windowID) === window
+    }
+
+    if let targetScreen = NSScreen.screen(
+      for: WindowServerClient.shared.screenID(for: destinationID)
+    ),
+      let frame = window.frame(),
+      let sourceScreen = NSScreen.screen(containingLargestIntersectionWith: frame),
+      sourceScreen.uuid != targetScreen.uuid
+    {
+      let targetFrame = WindowDisplayTransfer(
+        windowFrame: frame,
+        sourceFrame: sourceScreen.axVisibleFrame,
+        targetFrame: targetScreen.axVisibleFrame
+      ).targetWindowFrame()
+
+      try applyFrame(
+        targetFrame,
+        window: window,
+        failureMessage:
+          "window moved to Space \(destinationID), but display placement failed: \(windowID)",
+        animated: false
+      )
+
+      guard Set(WindowServerClient.shared.spaceIDs(containing: windowID)) == [destinationID] else {
+        throw IPCCommandError.internalError(
+          "display placement changed window \(windowID)'s membership in Space \(destinationID)"
+        )
+      }
+    }
 
     return .success(id: request.id, message: "ok")
   }

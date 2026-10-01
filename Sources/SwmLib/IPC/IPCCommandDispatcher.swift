@@ -17,7 +17,7 @@ struct IPCCommandDispatcher {
   }
 
   /// Dispatch a request to its domain-specific command handler.
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
+  func dispatch(_ request: IPCRequest) async -> IPCResponse {
     switch request.domain {
     case .query:
       return QueryCommandHandler(windows: windows).dispatch(request)
@@ -39,7 +39,7 @@ struct IPCCommandDispatcher {
       return DisplayCommandHandler().dispatch(request)
 
     case .window:
-      return WindowCommandHandler(
+      return await WindowCommandHandler(
         windows: windows,
         spaces: spaces,
         tiling: tiling

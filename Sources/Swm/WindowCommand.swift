@@ -8,6 +8,7 @@ struct WindowCommand: ParsableCommand {
     abstract: "Focus, move, resize, and arrange windows.",
     subcommands: [
       Focus.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self, Display.self,
+      Space.self,
       Layout.self, Cycle.self, Swap.self, SwapCycle.self, SwapWithMaster.self, FocusMaster.self,
       SplitRatio.self, ToggleSplit.self, SwapSplit.self,
     ]
@@ -131,6 +132,23 @@ struct WindowCommand: ParsableCommand {
     var display: String
 
     var arguments: [String] { [window, display].compactMap { $0 } }
+  }
+
+  struct Space: WindowIPCCommand {
+    static let configuration = CommandConfiguration(abstract: "Move a window to another Space.")
+    static let command = "--space"
+
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var window: String?
+
+    @Argument(help: "Zero-based Space index, next, or prev.", completion: .list(["next", "prev"]))
+    var space: String
+
+    var arguments: [String] { [window, space].compactMap { $0 } }
   }
 
   struct Layout: WindowIPCCommand {

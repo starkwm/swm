@@ -31,6 +31,32 @@ swm window grid 2:1:1:0:1:1
 
 Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 
+## Move between Spaces
+
+```sh
+swm window space [--window <window|recent>] <space-index|next|prev>
+```
+
+Space indexes are zero-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. `previous` is also accepted. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
+
+Only windows belonging to one normal desktop Space can move. Fullscreen windows and windows assigned to multiple Spaces are rejected. A move to the window's current Space does not submit a bridge operation.
+
+Movement uses a private SkyLight bridge with SIP enabled. The command polls for roughly two seconds for WindowServer to confirm the new Space membership, then updates visible tiling layouts. If the bridge is unavailable or movement cannot be confirmed, the command returns an error. A timeout does not undo a move that completes later.
+
+Stop any running daemon and start `swm` with debug logging:
+
+```sh
+swm start --log-level debug
+```
+
+Then test from another terminal:
+
+```sh
+swm query spaces
+swm window space next
+swm window space --window <window-id> 0
+```
+
 ## Control tiling
 
 ```sh

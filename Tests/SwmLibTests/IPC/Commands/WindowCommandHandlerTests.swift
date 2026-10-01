@@ -6,11 +6,11 @@ import Testing
 @MainActor
 struct WindowCommandHandlerTests {
   @Test("dispatch: rejects malformed single-target action arguments")
-  func dispatchRejectsMalformedSingleTargetActionArguments() {
+  func dispatchRejectsMalformedSingleTargetActionArguments() async {
     let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
-      let extra = handler.dispatch(request(command: "--\(action)", args: ["1", "2"]))
+      let extra = await handler.dispatch(request(command: "--\(action)", args: ["1", "2"]))
 
       #expect(extra.ok == false)
       #expect(extra.errorCode == .invalidRequest)
@@ -19,11 +19,11 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid single-target action target")
-  func dispatchRejectsInvalidSingleTargetActionTarget() {
+  func dispatchRejectsInvalidSingleTargetActionTarget() async {
     let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["nope"]))
+      let response = await handler.dispatch(request(command: "--\(action)", args: ["nope"]))
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
@@ -32,11 +32,11 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects missing numeric single-target action target")
-  func dispatchRejectsMissingNumericSingleTargetActionTarget() {
+  func dispatchRejectsMissingNumericSingleTargetActionTarget() async {
     let handler = handler()
 
     for action in ["focus", "minimize", "unminimize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["42"]))
+      let response = await handler.dispatch(request(command: "--\(action)", args: ["42"]))
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
@@ -45,12 +45,12 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects malformed geometry action arguments")
-  func dispatchRejectsMalformedGeometryActionArguments() {
+  func dispatchRejectsMalformedGeometryActionArguments() async {
     let handler = handler()
 
     for action in ["move", "resize"] {
-      let missing = handler.dispatch(request(command: "--\(action)", args: []))
-      let extra = handler.dispatch(
+      let missing = await handler.dispatch(request(command: "--\(action)", args: []))
+      let extra = await handler.dispatch(
         request(command: "--\(action)", args: ["1", "abs:1:2", "extra"])
       )
 
@@ -64,11 +64,11 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid geometry action value")
-  func dispatchRejectsInvalidGeometryActionValue() {
+  func dispatchRejectsInvalidGeometryActionValue() async {
     let handler = handler()
 
     for action in ["move", "resize"] {
-      let response = handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
+      let response = await handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
@@ -77,11 +77,11 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects geometry action with invalid window selector")
-  func dispatchRejectsGeometryActionWithInvalidWindowSelector() {
+  func dispatchRejectsGeometryActionWithInvalidWindowSelector() async {
     let handler = handler()
 
     for action in ["move", "resize"] {
-      let response = handler.dispatch(
+      let response = await handler.dispatch(
         request(command: "--\(action)", args: ["nope", "rel:100:-200"])
       )
 
@@ -92,10 +92,10 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects malformed display arguments")
-  func dispatchRejectsMalformedDisplayArguments() {
+  func dispatchRejectsMalformedDisplayArguments() async {
     let handler = handler()
-    let missing = handler.dispatch(request(command: "--display", args: []))
-    let extra = handler.dispatch(request(command: "--display", args: ["1", "next", "extra"]))
+    let missing = await handler.dispatch(request(command: "--display", args: []))
+    let extra = await handler.dispatch(request(command: "--display", args: ["1", "next", "extra"]))
 
     #expect(missing.ok == false)
     #expect(missing.errorCode == .invalidRequest)
@@ -106,20 +106,50 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid display value")
-  func dispatchRejectsInvalidDisplayValue() {
+  func dispatchRejectsInvalidDisplayValue() async {
     let handler = handler()
-    let response = handler.dispatch(request(command: "--display", args: ["sideways"]))
+    let response = await handler.dispatch(request(command: "--display", args: ["sideways"]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "invalid window display value: sideways")
   }
 
-  @Test("dispatch: rejects malformed grid arguments")
-  func dispatchRejectsMalformedGridArguments() {
+  @Test("dispatch: rejects malformed Space movement arguments and invalid targets")
+  func dispatchRejectsMalformedSpaceArguments() async {
     let handler = handler()
-    let missing = handler.dispatch(request(command: "--grid", args: []))
-    let extra = handler.dispatch(request(command: "--grid", args: ["1", "1:2:3:4:5:6", "extra"]))
+
+    for args in [[], ["42", "next", "extra"]] {
+      let response = await handler.dispatch(request(command: "--space", args: args))
+
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "invalid window space arguments")
+    }
+
+    let response = await handler.dispatch(request(command: "--space", args: ["42", "sideways"]))
+
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "invalid window space value: sideways")
+  }
+
+  @Test("dispatch: resolves window selectors before attempting a Space move")
+  func dispatchSpaceWindowSelectors() async {
+    let handler = handler()
+
+    let invalid = await handler.dispatch(request(command: "--space", args: ["nope", "next"]))
+    let missing = await handler.dispatch(request(command: "--space", args: ["42", "0"]))
+
+    #expect(invalid.message == "invalid window selector: nope")
+    #expect(missing.message == "window not found: 42")
+  }
+
+  @Test("dispatch: rejects malformed grid arguments")
+  func dispatchRejectsMalformedGridArguments() async {
+    let handler = handler()
+    let missing = await handler.dispatch(request(command: "--grid", args: []))
+    let extra = await handler.dispatch(
+      request(command: "--grid", args: ["1", "1:2:3:4:5:6", "extra"])
+    )
 
     #expect(missing.ok == false)
     #expect(missing.errorCode == .invalidRequest)
@@ -130,9 +160,9 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid grid value")
-  func dispatchRejectsInvalidGridValue() {
+  func dispatchRejectsInvalidGridValue() async {
     let handler = handler()
-    let response = handler.dispatch(request(command: "--grid", args: ["1:3:0:0:2:x"]))
+    let response = await handler.dispatch(request(command: "--grid", args: ["1:3:0:0:2:x"]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
@@ -140,9 +170,11 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects grid with invalid window selector")
-  func dispatchRejectsGridWithInvalidWindowSelector() {
+  func dispatchRejectsGridWithInvalidWindowSelector() async {
     let handler = handler()
-    let response = handler.dispatch(request(command: "--grid", args: ["nope", "3:1:0:0:2:1"]))
+    let response = await handler.dispatch(
+      request(command: "--grid", args: ["nope", "3:1:0:0:2:1"])
+    )
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
@@ -150,17 +182,17 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid automatic layout controls")
-  func dispatchRejectsInvalidAutomaticLayoutControls() {
+  func dispatchRejectsInvalidAutomaticLayoutControls() async {
     let handler = handler()
-    let layout = handler.dispatch(request(command: "--layout", args: ["stack"]))
-    let ratio = handler.dispatch(request(command: "--split-ratio", args: ["middle"]))
-    let directionalSwap = handler.dispatch(request(command: "--swap", args: ["sideways"]))
-    let cycle = handler.dispatch(request(command: "--cycle", args: ["sideways"]))
-    let cycleSwap = handler.dispatch(request(command: "--swap-cycle", args: ["sideways"]))
-    let masterSwap = handler.dispatch(
+    let layout = await handler.dispatch(request(command: "--layout", args: ["stack"]))
+    let ratio = await handler.dispatch(request(command: "--split-ratio", args: ["middle"]))
+    let directionalSwap = await handler.dispatch(request(command: "--swap", args: ["sideways"]))
+    let cycle = await handler.dispatch(request(command: "--cycle", args: ["sideways"]))
+    let cycleSwap = await handler.dispatch(request(command: "--swap-cycle", args: ["sideways"]))
+    let masterSwap = await handler.dispatch(
       request(command: "--swap-with-master", args: ["1", "extra"])
     )
-    let masterFocus = handler.dispatch(
+    let masterFocus = await handler.dispatch(
       request(command: "--focus-master", args: ["1", "extra"])
     )
 
@@ -186,8 +218,8 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects a selector for layout-order cycling")
-  func dispatchRejectsCycleSelector() {
-    let response = handler().dispatch(request(command: "--cycle", args: ["42", "next"]))
+  func dispatchRejectsCycleSelector() async {
+    let response = await handler().dispatch(request(command: "--cycle", args: ["42", "next"]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
@@ -195,8 +227,8 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects a selector for layout-order swapping")
-  func dispatchRejectsSwapCycleSelector() {
-    let response = handler().dispatch(request(command: "--swap-cycle", args: ["42", "next"]))
+  func dispatchRejectsSwapCycleSelector() async {
+    let response = await handler().dispatch(request(command: "--swap-cycle", args: ["42", "next"]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)

@@ -26,6 +26,21 @@ struct IPCCommandError: Error, Equatable, CustomStringConvertible {
     }
   }
 
+  /// Convert failures from an asynchronous main-actor command into IPC responses.
+  @MainActor
+  static func catching(
+    id: String,
+    _ action: @MainActor () async throws -> IPCResponse
+  ) async -> IPCResponse {
+    do {
+      return try await action()
+    } catch let error as IPCCommandError {
+      return error.response(id: id)
+    } catch {
+      return IPCCommandError.internalError("\(error)").response(id: id)
+    }
+  }
+
   /// Human-readable error message returned to the IPC client.
   let message: String
 
