@@ -90,6 +90,22 @@ struct ArgumentsTests {
     #expect(command.arguments == ["left"])
   }
 
+  @Test("typed window Space command translates selectors and destinations to IPC arguments")
+  func typedWindowSpaceCommand() throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["window", "space", "--window", "recent", "0"]) as? WindowCommand.Space
+    )
+
+    #expect(command.arguments == ["recent", "0"])
+    #expect(WindowCommand.Space.command == "--space")
+
+    let focused = try #require(
+      Arguments.parseAsRoot(["window", "space", "next"]) as? WindowCommand.Space
+    )
+
+    #expect(focused.arguments == ["next"])
+  }
+
   @Test("typed space command translates a space selector to IPC arguments")
   func typedSpaceCommandTranslatesSpaceSelectorToIPCArguments() throws {
     let command = try #require(

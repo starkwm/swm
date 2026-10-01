@@ -366,6 +366,67 @@ struct DaemonIntegrationTests {
     #expect(!response.contains(10))
   }
 
+  @Test(
+    "suspended commands allow other requests and are cancelled on shutdown",
+    .timeLimit(.minutes(1))
+  )
+  func suspendedCommandShutdown() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+
+    let (started, startContinuation) = AsyncStream<Void>.makeStream()
+    let (cancelled, cancellationContinuation) = AsyncStream<Void>.makeStream()
+
+    let daemon = Daemon(path: endpoint.path) { request in
+      if request.command == "slow" {
+        defer { cancellationContinuation.finish() }
+
+        startContinuation.yield(())
+        startContinuation.finish()
+
+        do {
+          try await Task.sleep(for: .seconds(30))
+
+          Issue.record("suspended request was not cancelled")
+        } catch {
+          #expect(error is CancellationError)
+
+          cancellationContinuation.yield(())
+        }
+      }
+
+      return .success(id: request.id, message: "ok")
+    }
+
+    try daemon.run()
+    defer { daemon.shutdown() }
+
+    let fd = try LocalSocket.connect(path: endpoint.path)
+    defer { close(fd) }
+
+    try LocalSocket.send(
+      Data((#"{"version":1,"id":"slow","domain":"query","command":"slow","args":[]}"# + "\n").utf8),
+      to: fd
+    )
+
+    var starts = started.makeAsyncIterator()
+    _ = await starts.next()
+
+    #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))
+
+    daemon.shutdown()
+
+    var cancellations = cancelled.makeAsyncIterator()
+    let signal = await cancellations.next()
+
+    try #require(signal != nil)
+
+    // A fresh run must still accept commands after the cancelled request has unwound.
+    try daemon.run()
+
+    #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))
+  }
+
   @Test("daemon does not retain itself through its server handler")
   func lifetime() throws {
     let endpoint = try TestEndpoint()
