@@ -4,21 +4,35 @@ struct SpaceCommandHandler {
   private let spaces: Spaces
   private let tiling: Tiling
   private let spaceIDProvider: () -> [UInt64]
+  private let activateSpace: (Int) async throws -> Void
 
   /// Create a space command handler backed by space and tiling services.
   init(
     spaces: Spaces,
     tiling: Tiling,
-    spaceIDProvider: @escaping () -> [UInt64] = { Spaces.all().map(\.id) }
+    spaceIDProvider: @escaping () -> [UInt64] = { Spaces.all().map(\.id) },
+    activateSpace: @escaping (Int) async throws -> Void = {
+      _ = try await SpaceActivation.shared.activate(index: $0)
+    }
   ) {
     self.spaces = spaces
     self.tiling = tiling
     self.spaceIDProvider = spaceIDProvider
+    self.activateSpace = activateSpace
   }
 
   /// Dispatch a space IPC request to the matching selected-space update.
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
-    IPCCommandError.catching(id: request.id) {
+  func dispatch(_ request: IPCRequest) async -> IPCResponse {
+    await IPCCommandError.catching(id: request.id) {
+      if request.command == "--activate" {
+        let argument = try IPCArguments(request.args, context: "space activate").requiredValue()
+        guard let index = Int(argument), index >= 0 else {
+          throw IPCCommandError.invalidRequest("invalid space index: \(argument)")
+        }
+        try await activateSpace(index)
+        return .success(id: request.id, message: "ok")
+      }
+
       let operation: (IPCRequest, UInt64) throws -> IPCResponse
 
       switch request.command {

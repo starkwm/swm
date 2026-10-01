@@ -1,7 +1,7 @@
 import ArgumentParser
 import SwmLib
 
-/// Configure a space.
+/// Activate or configure a space.
 struct SpaceCommand: ParsableCommand {
   struct TargetOptions: ParsableArguments {
     @Option(
@@ -26,12 +26,29 @@ struct SpaceCommand: ParsableCommand {
 
   static let configuration = CommandConfiguration(
     commandName: "space",
-    abstract: "Configure a space.",
+    abstract: "Activate or configure a space.",
     subcommands: [
-      Layout.self, MasterRatio.self, MasterPlacement.self, PreserveSplit.self, Padding.self,
+      Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, PreserveSplit.self,
+      Padding.self,
       Gap.self,
     ]
   )
+
+  struct Activate: SpaceIPCCommand {
+    static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")
+    static let command = "--activate"
+
+    @Argument(help: "Zero-based space index from swm query spaces.")
+    var index: Int
+
+    var arguments: [String] { [String(index)] }
+
+    func validate() throws {
+      guard index >= 0 else {
+        throw ValidationError("Space index must not be negative.")
+      }
+    }
+  }
 
   struct Layout: SpaceIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Set a space layout.")

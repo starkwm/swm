@@ -23,9 +23,10 @@ struct IPCCommandDispatcher {
       return QueryCommandHandler(windows: windows).dispatch(request)
 
     case .space:
-      return SpaceCommandHandler(
+      return await SpaceCommandHandler(
         spaces: spaces,
-        tiling: tiling
+        tiling: tiling,
+        activateSpace: activateSpace
       ).dispatch(request)
 
     case .config:
@@ -50,6 +51,22 @@ struct IPCCommandDispatcher {
 
     case .signal:
       return SignalCommandHandler().dispatch(request)
+    }
+  }
+
+  /// Refresh runtime state even when a bridge activation produces no workspace notification.
+  private func activateSpace(index: Int) async throws {
+    let snapshot = try await SpaceActivation.shared.activate(index: index)
+    if let focusedID = snapshot.activeSpaceID,
+      focusedID.rawValue != spaces.currentActiveSpaceID,
+      let focusedSpace = snapshot.displays.flatMap(\.spaces).first(where: { $0.id == focusedID })
+    {
+      Events.shared.handle(
+        .space(.changed(Space(id: focusedID.rawValue, type: SpaceType(focusedSpace.type))))
+      )
+    } else {
+      SpaceLifecycleHandler(spaces: spaces, windows: windows, tiling: tiling)
+        .refresh(spaceIDs: Set(snapshot.allSpaceIDs.map(\.rawValue)))
     }
   }
 }

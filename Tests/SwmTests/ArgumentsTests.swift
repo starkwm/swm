@@ -117,6 +117,25 @@ struct ArgumentsTests {
     #expect(command.arguments == ["--space", "2", "abs:10"])
   }
 
+  @Test("typed Space activation command sends a zero-based index")
+  func spaceActivation() throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["space", "activate", "2"]) as? SpaceCommand.Activate
+    )
+    #expect(command.arguments == ["2"])
+    #expect(SpaceCommand.Activate.command == "--activate")
+    #expect(SpaceCommand.Activate.domain == .space)
+  }
+
+  @Test("Space activation rejects missing, negative, and nonnumeric indexes")
+  func invalidSpaceActivation() {
+    for args in [[], ["-1"], ["next"], ["0", "1"]] {
+      #expect(throws: (any Error).self) {
+        try Arguments.parseAsRoot(["space", "activate"] + args)
+      }
+    }
+  }
+
   @Test("typed rule command preserves matching properties")
   func typedRuleCommand() throws {
     let command = try #require(
