@@ -18,14 +18,19 @@ struct SpaceLifecycleHandler {
     }
   }
 
-  /// Update active-space tracking, refresh windows, and replay deferred focus.
-  private func spaceChanged(with space: Space) {
+  /// Refresh visible windows and layouts without changing the tracked focused Space.
+  func refresh(spaceIDs: Set<UInt64>) {
     tiling.cancelAnimations()
-    spaces.activeSpaceDidChange(to: space.id)
-    spaces.retainSettings(for: Set(Spaces.all().map(\.id)))
+    spaces.retainSettings(for: spaceIDs)
     windows.refreshWindows()
     replayLostFocusedEvent()
     tiling.reconcileAndReflowVisibleSpaces()
+  }
+
+  /// Update active-space tracking and refresh the runtime after a Space change.
+  private func spaceChanged(with space: Space) {
+    spaces.activeSpaceDidChange(to: space.id)
+    refresh(spaceIDs: Set(Spaces.all().map(\.id)))
 
     log(
       "space changed \(space) current: \(spaces.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaces.lastActiveSpaceID.map(String.init) ?? "nil")"

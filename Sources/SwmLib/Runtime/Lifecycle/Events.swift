@@ -47,7 +47,7 @@ public final class Events: Sendable {
 
   /// Capture transient signal state, dispatch the event, and emit its signal.
   @MainActor
-  private func handle(_ event: RuntimeEvent) {
+  func handle(_ event: RuntimeEvent) {
     guard let dependencies else {
       preconditionFailure("Events must be configured before handling events")
     }

@@ -6,8 +6,56 @@ import Testing
 @MainActor
 @Suite("SpaceCommandHandler")
 struct SpaceCommandHandlerTests {
+  @Test("dispatch: activates a Space without requiring a tracked active Space")
+  func activatesSpace() async {
+    let spaces = Spaces(activeSpaceID: nil)
+    var selectedIndex: Int?
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces),
+      activateSpace: { selectedIndex = $0 }
+    )
+
+    let response = await handler.dispatch(request(command: "--activate", args: ["2"]))
+
+    #expect(response.ok && response.message == "ok")
+    #expect(response.id == "request-id")
+    #expect(selectedIndex == 2)
+  }
+
+  @Test("dispatch: activation failures remain failures")
+  func activationFailure() async {
+    let spaces = Spaces(activeSpaceID: 42)
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces),
+      activateSpace: { _ in throw SpaceActivationBridgeError.unavailable }
+    )
+
+    let response = await handler.dispatch(request(command: "--activate", args: ["0"]))
+    #expect(!response.ok)
+    #expect(response.errorCode == .internalError)
+    #expect(response.message == SpaceActivationBridgeError.unavailable.description)
+  }
+
+  @Test(
+    "dispatch: activation rejects missing, extra, and invalid indexes",
+    arguments: [[], ["0", "1"], ["-1"], ["next"], ["18446744073709551615"], ["--space", "1"]]
+  )
+  func invalidActivation(args: [String]) async {
+    let spaces = Spaces(activeSpaceID: 42)
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces),
+      activateSpace: { _ in Issue.record("unexpected activation") }
+    )
+
+    let response = await handler.dispatch(request(command: "--activate", args: args))
+    #expect(response.errorCode == .invalidRequest)
+  }
+
   @Test("dispatch: selects floating or automatic layout for the active Space")
-  func dispatchSelectsLayout() {
+  func dispatchSelectsLayout() async {
     let spaces = Spaces(activeSpaceID: 42)
     let tiling = makeTestTiling(
       spaces: spaces,
@@ -30,25 +78,25 @@ struct SpaceCommandHandlerTests {
       tiling: tiling
     )
 
-    let dwindle = handler.dispatch(request(command: "--layout", args: ["dwindle"]))
+    let dwindle = await handler.dispatch(request(command: "--layout", args: ["dwindle"]))
 
     #expect(dwindle.ok)
     #expect(dwindle.message == "dwindle")
     #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
-    let master = handler.dispatch(request(command: "--layout", args: ["master"]))
+    let master = await handler.dispatch(request(command: "--layout", args: ["master"]))
 
     #expect(master.ok)
     #expect(master.message == "master")
     #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
-    let monocle = handler.dispatch(request(command: "--layout", args: ["monocle"]))
+    let monocle = await handler.dispatch(request(command: "--layout", args: ["monocle"]))
 
     #expect(monocle.ok)
     #expect(monocle.message == "monocle")
     #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
 
-    let float = handler.dispatch(request(command: "--layout", args: ["float"]))
+    let float = await handler.dispatch(request(command: "--layout", args: ["float"]))
 
     #expect(float.ok)
     #expect(float.message == "float")
@@ -56,12 +104,12 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: accepts padding commands")
-  func dispatchAcceptsPaddingCommands() throws {
+  func dispatchAcceptsPaddingCommands() async throws {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
 
-    let absolute = handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
-    let relative = handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
+    let absolute = await handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
+    let relative = await handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
 
     #expect(absolute.ok)
     #expect(relative.ok)
@@ -74,12 +122,12 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: accepts gap commands")
-  func dispatchAcceptsGapCommands() throws {
+  func dispatchAcceptsGapCommands() async throws {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
 
-    let absolute = handler.dispatch(request(command: "--gap", args: ["abs:0"]))
-    let relative = handler.dispatch(request(command: "--gap", args: ["rel:10"]))
+    let absolute = await handler.dispatch(request(command: "--gap", args: ["abs:0"]))
+    let relative = await handler.dispatch(request(command: "--gap", args: ["rel:10"]))
 
     #expect(absolute.ok)
     #expect(relative.ok)
@@ -90,7 +138,7 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: updates layout controls")
-  func dispatchUpdatesLayoutControls() {
+  func dispatchUpdatesLayoutControls() async {
     let spaces = Spaces(activeSpaceID: 42)
     let tiling = Tiling(
       snapshot: {
@@ -135,14 +183,16 @@ struct SpaceCommandHandlerTests {
       tiling: tiling
     )
 
-    let ratio = handler.dispatch(request(command: "--master-ratio", args: ["abs:0.6"]))
-    let relativeRatio = handler.dispatch(request(command: "--master-ratio", args: ["rel:0.1"]))
-    let placement = handler.dispatch(request(command: "--master-placement", args: ["bottom"]))
-    let cycledPlacement = handler.dispatch(
+    let ratio = await handler.dispatch(request(command: "--master-ratio", args: ["abs:0.6"]))
+    let relativeRatio = await handler.dispatch(
+      request(command: "--master-ratio", args: ["rel:0.1"])
+    )
+    let placement = await handler.dispatch(request(command: "--master-placement", args: ["bottom"]))
+    let cycledPlacement = await handler.dispatch(
       request(command: "--master-placement", args: ["next"])
     )
-    let preserve = handler.dispatch(request(command: "--preserve-split", args: ["on"]))
-    let layout = handler.dispatch(request(command: "--layout", args: ["master"]))
+    let preserve = await handler.dispatch(request(command: "--preserve-split", args: ["on"]))
+    let layout = await handler.dispatch(request(command: "--layout", args: ["master"]))
 
     #expect(ratio.ok)
     #expect(relativeRatio.ok)
@@ -162,19 +212,19 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: rejects malformed arguments")
-  func dispatchRejectsMalformedArguments() {
+  func dispatchRejectsMalformedArguments() async {
     let handler = handler(spaces: Spaces(activeSpaceID: 42))
 
     let responses = [
-      handler.dispatch(request(command: "--layout", args: [])),
-      handler.dispatch(request(command: "--layout", args: ["unknown"])),
-      handler.dispatch(request(command: "--padding", args: ["abs:1:2:3"])),
-      handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
-      handler.dispatch(request(command: "--gap", args: ["abs"])),
-      handler.dispatch(request(command: "--gap", args: ["rel:x"])),
-      handler.dispatch(request(command: "--master-ratio", args: ["0.6"])),
-      handler.dispatch(request(command: "--master-placement", args: ["center"])),
-      handler.dispatch(request(command: "--preserve-split", args: ["maybe"])),
+      await handler.dispatch(request(command: "--layout", args: [])),
+      await handler.dispatch(request(command: "--layout", args: ["unknown"])),
+      await handler.dispatch(request(command: "--padding", args: ["abs:1:2:3"])),
+      await handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
+      await handler.dispatch(request(command: "--gap", args: ["abs"])),
+      await handler.dispatch(request(command: "--gap", args: ["rel:x"])),
+      await handler.dispatch(request(command: "--master-ratio", args: ["0.6"])),
+      await handler.dispatch(request(command: "--master-placement", args: ["center"])),
+      await handler.dispatch(request(command: "--preserve-split", args: ["maybe"])),
     ]
 
     #expect(responses.allSatisfy { !$0.ok && $0.errorCode == .invalidRequest })
@@ -186,8 +236,8 @@ struct SpaceCommandHandlerTests {
       ("--unknown", [String]()), ("--toggle", ["tiling"]), ("--focus", ["recent"]),
     ]
   )
-  func unsupportedCommands(command: String, args: [String]) {
-    let response = handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
+  func unsupportedCommands(command: String, args: [String]) async {
+    let response = await handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
       request(command: command, args: args)
     )
     #expect(!response.ok)
@@ -202,12 +252,12 @@ struct SpaceCommandHandlerTests {
       ("--padding", "abs:10:20:30:\(Int.max)", "rel:1:1:1:1", "padding"),
     ]
   )
-  func overflow(command: String, absolute: String, relative: String, setting: String) {
+  func overflow(command: String, absolute: String, relative: String, setting: String) async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
-    #expect(handler.dispatch(request(command: command, args: [absolute])).ok)
+    #expect(await handler.dispatch(request(command: command, args: [absolute])).ok)
     let previous = spaces.settings(for: 42)
-    let response = handler.dispatch(request(command: command, args: [relative]))
+    let response = await handler.dispatch(request(command: command, args: [relative]))
     #expect(!response.ok)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "space \(setting) adjustment overflows integer range")
@@ -216,18 +266,18 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: updates active space only")
-  func dispatchUpdatesActiveSpaceOnly() {
+  func dispatchUpdatesActiveSpaceOnly() async {
     let spaces = Spaces(activeSpaceID: 2)
     let handler = handler(spaces: spaces)
 
-    _ = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
+    _ = await handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
     #expect(spaces.settings(for: 1).gap == 0)
     #expect(spaces.settings(for: 2).gap == 10)
   }
 
   @Test("dispatch: updates a selected space by index")
-  func dispatchUpdatesSelectedSpaceByIndex() {
+  func dispatchUpdatesSelectedSpaceByIndex() async {
     let spaces = Spaces(activeSpaceID: 1)
     let handler = SpaceCommandHandler(
       spaces: spaces,
@@ -235,7 +285,7 @@ struct SpaceCommandHandlerTests {
       spaceIDProvider: { [1, 2] }
     )
 
-    let response = handler.dispatch(
+    let response = await handler.dispatch(
       request(command: "--gap", args: ["--space", "1", "abs:10"])
     )
 
@@ -245,7 +295,7 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: rejects invalid space indexes")
-  func dispatchRejectsInvalidSpaceIndexes() {
+  func dispatchRejectsInvalidSpaceIndexes() async {
     let spaces = Spaces(activeSpaceID: 1)
     let handler = SpaceCommandHandler(
       spaces: spaces,
@@ -253,11 +303,11 @@ struct SpaceCommandHandlerTests {
       spaceIDProvider: { [1, 2] }
     )
 
-    let missing = handler.dispatch(request(command: "--gap", args: ["--space"]))
-    let negative = handler.dispatch(
+    let missing = await handler.dispatch(request(command: "--gap", args: ["--space"]))
+    let negative = await handler.dispatch(
       request(command: "--gap", args: ["--space", "-1", "abs:10"])
     )
-    let outOfRange = handler.dispatch(
+    let outOfRange = await handler.dispatch(
       request(command: "--gap", args: ["--space", "2", "abs:10"])
     )
 
@@ -268,9 +318,9 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: rejects active-space mutation without active space")
-  func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() {
+  func dispatchRejectsActiveSpaceMutationWithoutActiveSpace() async {
     let handler = handler(spaces: Spaces(activeSpaceID: nil))
-    let response = handler.dispatch(request(command: "--gap", args: ["abs:10"]))
+    let response = await handler.dispatch(request(command: "--gap", args: ["abs:10"]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)

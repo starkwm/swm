@@ -14,7 +14,7 @@ Start with [getting started](getting-started.md) for requirements and installati
 
 - [Query state](query.md): inspect displays, spaces, and windows as JSON.
 - [Manage windows](windows.md): focus, minimize, move, resize, and control tiling.
-- [Configure spaces](spaces.md): layouts, padding, gaps, and display behavior.
+- [Configure spaces](spaces.md): activation, layouts, padding, gaps, and display behavior.
 - [Global defaults](configuration.md#global-defaults): configure the running daemon and defaults for new spaces.
 - [Signals](signals.md): register shell actions for runtime events.
 - [Window rules](rules.md): keep windows floating or place them on a display.
