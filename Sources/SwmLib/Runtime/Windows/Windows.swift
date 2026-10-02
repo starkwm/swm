@@ -89,14 +89,15 @@ public final class Windows {
   func directionalWindow(
     from sourceWindow: Window,
     in direction: CardinalDirection,
-    spaces: Spaces
+    spaces: Spaces,
+    isEligible: (CGWindowID) -> Bool = { _ in true }
   ) -> Window? {
     let candidateWindows = allWindows()
     let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
     let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
     let framesByWindowID = Dictionary(
       uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
-        guard !window.isMinimized else { return nil }
+        guard !window.isMinimized, isEligible(window.id) else { return nil }
         guard
           let spaceIDs = topology.spaceIDsByWindowID[window.id],
           !spaceIDs.isDisjoint(with: visibleSpaceIDs),

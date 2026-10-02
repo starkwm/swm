@@ -61,6 +61,7 @@ struct ArgumentsTests {
 
       #expect(script.contains("swm"))
       #expect(script.contains("focus-follows-mouse"))
+      #expect(script.contains("warp"))
       #expect(script.contains("autofocus"))
       #expect(script.contains("recent"))
       #expect(script.contains("next"))
@@ -77,6 +78,56 @@ struct ArgumentsTests {
     )
 
     #expect(command.arguments == ["recent", "rel:10:20"])
+  }
+
+  @Test("typed warp command preserves selectors and defaults to the focused window")
+  func typedWarpCommand() throws {
+    let focused = try #require(
+      Arguments.parseAsRoot(["window", "warp"]) as? WindowCommand.Warp
+    )
+
+    #expect(focused.arguments.isEmpty)
+    #expect(WindowCommand.Warp.command == "--warp")
+
+    for selector in ["recent", "42"] {
+      let selected = try #require(
+        Arguments.parseAsRoot(["window", "warp", "--window", selector]) as? WindowCommand.Warp
+      )
+
+      #expect(selected.arguments == [selector])
+    }
+
+    #expect(
+      Arguments.helpMessage(for: WindowCommand.Warp.self).contains(
+        "USAGE: swm window warp [--window <window>]"
+      )
+    )
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(["window", "warp", "42"])
+    }
+  }
+
+  @Test(
+    "typed directional warp command preserves every cardinal direction",
+    arguments: ["left", "right", "up", "down"]
+  )
+  func directionalWarp(direction: String) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["window", "warp", "--direction", direction]) as? WindowCommand.Warp
+    )
+
+    #expect(command.arguments == [direction])
+    #expect(command.window == nil)
+  }
+
+  @Test("typed warp command rejects combined targets and invalid directions")
+  func invalidWarpTargets() {
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(["window", "warp", "--window", "recent", "--direction", "left"])
+    }
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(["window", "warp", "--direction", "sideways"])
+    }
   }
 
   @Test("typed directional window command translates to IPC arguments")

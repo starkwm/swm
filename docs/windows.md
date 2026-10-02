@@ -14,6 +14,24 @@ swm window unminimize [--window <window|recent>]
 
 Directional focus chooses the nearest non-minimized window on the currently visible spaces.
 
+## Move the mouse cursor
+
+```sh
+swm window warp [--window <window|recent> | --direction <left|right|up|down>]
+```
+
+`warp` moves the mouse cursor to the selected window's center without focusing or raising it,
+switching Spaces, or generating a mouse movement event. It defaults to the focused window.
+Hidden, minimized, and off-Space windows are rejected. If the center is off-screen,
+the cursor moves to the center of the largest part of the window visible on a display.
+
+Directional warping chooses the nearest non-minimized, on-screen window in the requested
+direction from the managed window under the cursor. If the cursor is not over an available
+managed window, it starts from the focused window. Each command checks the window under the
+cursor again, so repeated warps navigate between windows without changing focus. If another
+window covers the destination, the next warp starts from that covering window.
+`--window` and `--direction` cannot be combined.
+
 ## Move, resize, and place
 
 ```sh

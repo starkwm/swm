@@ -9,7 +9,7 @@ struct WindowCommandHandlerTests {
   func dispatchRejectsMalformedSingleTargetActionArguments() async {
     let handler = handler()
 
-    for action in ["focus", "minimize", "unminimize"] {
+    for action in ["focus", "warp", "minimize", "unminimize"] {
       let extra = await handler.dispatch(request(command: "--\(action)", args: ["1", "2"]))
 
       #expect(extra.ok == false)
@@ -22,7 +22,7 @@ struct WindowCommandHandlerTests {
   func dispatchRejectsInvalidSingleTargetActionTarget() async {
     let handler = handler()
 
-    for action in ["focus", "minimize", "unminimize"] {
+    for action in ["focus", "warp", "minimize", "unminimize"] {
       let response = await handler.dispatch(request(command: "--\(action)", args: ["nope"]))
 
       #expect(response.ok == false)
@@ -35,13 +35,22 @@ struct WindowCommandHandlerTests {
   func dispatchRejectsMissingNumericSingleTargetActionTarget() async {
     let handler = handler()
 
-    for action in ["focus", "minimize", "unminimize"] {
+    for action in ["focus", "warp", "minimize", "unminimize"] {
       let response = await handler.dispatch(request(command: "--\(action)", args: ["42"]))
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
       #expect(response.message == "window not found: 42")
     }
+  }
+
+  @Test("dispatch: rejects warp when no recent window exists")
+  func dispatchWarpWithoutRecentWindow() async {
+    let response = await handler().dispatch(request(command: "--warp", args: ["recent"]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "no recent window")
   }
 
   @Test("dispatch: rejects malformed geometry action arguments")
