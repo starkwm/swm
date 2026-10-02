@@ -1,6 +1,6 @@
 import AppKit
 
-/// Handles IPC commands that focus, minimize, move, resize, tile, and grid windows.
+/// Handles window operations and mouse cursor placement.
 @MainActor
 struct WindowCommandHandler {
   private let windows: Windows
@@ -24,6 +24,8 @@ struct WindowCommandHandler {
       switch request.command {
       case "--focus":
         return try focus(request)
+      case "--warp":
+        return try warp(request)
       case "--minimize":
         return try performWindowAction(request, action: "minimize") { $0.minimize() }
       case "--unminimize":
@@ -84,7 +86,7 @@ struct WindowCommandHandler {
 
   /// Focus a selected window or the closest visible window in a direction.
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    guard let target = WindowFocusTarget(arguments: request.args) else {
+    guard let target = WindowTarget(arguments: request.args) else {
       throw IPCCommandError.invalidRequest("invalid window focus arguments")
     }
 
@@ -111,6 +113,44 @@ struct WindowCommandHandler {
     guard window.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(window.id)")
     }
+
+    return .success(id: request.id, message: "ok")
+  }
+
+  /// Move the cursor into a selected window without changing focus or stacking order.
+  private func warp(_ request: IPCRequest) throws -> IPCResponse {
+    guard let target = WindowTarget(arguments: request.args) else {
+      throw IPCCommandError.invalidRequest("invalid window warp arguments")
+    }
+
+    let mouseWarp = WindowMouseWarp.shared
+    let window: Window
+    switch target {
+    case .selected(let selector):
+      window = try selectedWindow(selector: selector)
+    case .direction(let direction):
+      let sourceWindow = try mouseWarp.sourceWindow(
+        windowByID: windows.window(by:),
+        focusedWindow: { try selectedWindow(selector: nil) }
+      )
+
+      guard
+        let neighbour = windows.directionalWindow(
+          from: sourceWindow,
+          in: direction,
+          spaces: spaces,
+          isEligible: mouseWarp.isOnScreen
+        )
+      else {
+        throw IPCCommandError.invalidRequest(
+          "window has no available neighbour in direction: \(direction.rawValue)"
+        )
+      }
+
+      window = neighbour
+    }
+
+    try mouseWarp.warp(windowID: window.id, frame: window.frame())
 
     return .success(id: request.id, message: "ok")
   }

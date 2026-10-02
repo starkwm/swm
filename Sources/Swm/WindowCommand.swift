@@ -1,13 +1,14 @@
 import ArgumentParser
 import SwmLib
 
-/// Focus, move, resize, and arrange windows.
+/// Focus, move, resize, arrange windows, and position the mouse cursor.
 struct WindowCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "window",
     abstract: "Focus, move, resize, and arrange windows.",
     subcommands: [
-      Focus.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self, Display.self,
+      Focus.self, Warp.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self,
+      Display.self,
       Space.self,
       Layout.self, Cycle.self, Swap.self, SwapCycle.self, SwapWithMaster.self, FocusMaster.self,
       SplitRatio.self, ToggleSplit.self, SwapSplit.self,
@@ -24,6 +25,34 @@ struct WindowCommand: ParsableCommand {
     var window: String?
 
     @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
+    var direction: CardinalDirectionName?
+
+    var arguments: [String] { [window, direction?.rawValue].compactMap { $0 } }
+
+    func validate() throws {
+      if window != nil, direction != nil {
+        throw ValidationError("Specify either --window or --direction, not both.")
+      }
+    }
+  }
+
+  struct Warp: WindowIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Move the mouse cursor to a window or its nearest neighbour in a direction."
+    )
+    static let command = "--warp"
+
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var window: String?
+
+    @Option(
+      name: .shortAndLong,
+      help: "Direction from the window under the cursor, or focused window."
+    )
     var direction: CardinalDirectionName?
 
     var arguments: [String] { [window, direction?.rawValue].compactMap { $0 } }

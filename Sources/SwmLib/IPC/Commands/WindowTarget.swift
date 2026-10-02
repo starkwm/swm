@@ -1,5 +1,5 @@
-/// Parsed target for focusing a selected or directional window.
-enum WindowFocusTarget: Equatable {
+/// Parsed target for focusing or warping to a selected or directional window.
+enum WindowTarget: Equatable {
   case selected(String?)
   case direction(CardinalDirection)
 
