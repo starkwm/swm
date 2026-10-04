@@ -8,6 +8,7 @@ Queries return JSON, indented when written to a terminal and on one line when pi
 swm query displays
 swm query spaces
 swm query windows
+swm query layouts
 ```
 
 Add at most one selector to filter the result:
@@ -31,3 +32,7 @@ Display and Space indexes are one-based. Display indexes follow the physical dis
 Window `has-focus` compares each ID with the focused window of the frontmost application. It is `null` when focus cannot be determined; a singular window query then returns `null`.
 
 Use the returned IDs and indexes to target [window commands](windows.md) and [space commands](spaces.md).
+
+`query layouts` always returns an array with one entry per normal Space and physical display. It accepts the same `--space`, `--display`, and `--window` selectors. A window selector matches scrolling column membership, including minimized or floating columns.
+
+Each entry includes `space-id`, `display-id`, `layout`, and `is-visible`. Scrolling entries also contain `viewport-offset` and ordered `columns`. Each column reports its window ID, fractional width, `is-omitted`, `is-parked`, and its latest logical `frame`. These frames describe the strip, rather than physical parking coordinates. `constraint`, when present, explains why swm could not calculate or place the scrolling layout.

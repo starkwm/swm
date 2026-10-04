@@ -15,6 +15,8 @@ public final class Tiling {
   private let masterLayout = MasterLayout()
   private let monocleLayout = MonocleLayout()
   private let dwindleLayout = DwindleLayout()
+  private let scrollingLayout = ScrollingLayout()
+  private let scrollingPlacement = ScrollingWindowPlacement()
   private let snapshot: SnapshotProvider
   private let spaces: Spaces
   private let windows: Windows?
@@ -37,6 +39,14 @@ public final class Tiling {
     omittedWindowIDs: [],
     focusedWindowID: nil
   )
+  private(set) var defaultScrollingColumnWidth: CGFloat = 0.5
+  private(set) var scrollingFocusFit = ScrollingFocusFit.fit
+  private var scrollingOwnership = [CGWindowID: TilingLayoutID]()
+  private var scrollingRestoreFrames = [CGWindowID: CGRect]()
+  private var scrollingFramesByLayoutID = [TilingLayoutID: [CGWindowID: CGRect]]()
+  private var parkedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
+  private var scrollingConstraintsByLayoutID = [TilingLayoutID: TilingLayoutConstraint]()
+  private var scrollingMinimumWidths = [CGWindowID: CGFloat]()
   private var manualFloatingByWindowID = [CGWindowID: Bool]()
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
@@ -106,11 +116,26 @@ public final class Tiling {
     self.frameReconciler = frameReconciler
     self.windowSpaceMembership =
       windowSpaceMembership ?? { snapshot().topology?.spaceIDsByWindowID ?? [:] }
+    frameReconciler?.onInteractionEnded = { [weak self] in
+      guard let self else { return }
+      self.retryDwindle(Array(self.layoutsByID.keys))
+      self.reconcileAndReflowVisibleSpaces()
+    }
+    frameReconciler?.onInteractionBegan = { [weak self] windowID in
+      self?.scrollingOwnership.removeValue(forKey: windowID)
+    }
+    frameReconciler?.onFrameDeliveryFailed = { [weak self] windowID, target, actual in
+      guard let self, self.isScrollingWindow(windowID), let target, let actual,
+        actual.width > target.width + 1,
+        actual.width > (self.scrollingMinimumWidths[windowID] ?? 0) + 1,
+        let layoutID = self.layoutIDByWindowID[windowID]
+      else { return }
+      self.scrollingMinimumWidths[windowID] = actual.width
+      self.applyPlans(for: [layoutID])
+    }
     if let windows {
-      frameReconciler?.onInteractionEnded = { [weak self] in
-        guard let self else { return }
-        self.retryDwindle(Array(self.layoutsByID.keys))
-        self.reconcileAndReflowVisibleSpaces()
+      windows.canFocusWithMouse = { [weak self] windowID in
+        self?.parkedWindowIDsByLayoutID.values.contains { $0.contains(windowID) } != true
       }
       frameReconciler?.monitorInteractions { point in
         guard let id = WindowServerClient.shared.frontmostWindowID(at: point),
@@ -129,7 +154,16 @@ public final class Tiling {
   /// Seed and reconcile all per-Space state from the current runtime inventory.
   public func initialize() {
     reconcile()
+    if let focusedID = windows?.currentFocusedWindowID { windowDidFocus(focusedID) }
     reflowVisibleSpaces()
+  }
+
+  /// Restore scrolling windows while the runtime and Accessibility handles are still alive.
+  public func shutdown() {
+    membershipPollingTask?.cancel()
+    membershipPollingTask = nil
+    frameReconciler?.cancelAnimations()
+    restoreScrollingWindows(Set(scrollingRestoreFrames.keys))
   }
 
   /// Set the frame animation duration in seconds.
@@ -215,6 +249,12 @@ public final class Tiling {
     }
     for windowID in placedWindowIDs { layoutIDByWindowID.removeValue(forKey: windowID) }
     spaces.retainSettings(for: Set(topology.spacesByID.keys))
+    scrollingOwnership = scrollingOwnership.filter { windowID, layoutID in
+      liveIDs.contains(windowID) && topology.layoutIDs.contains(layoutID)
+        && topology.normalSpaceIDs(for: windowID) == [layoutID.spaceID]
+    }
+    scrollingRestoreFrames = scrollingRestoreFrames.filter { liveIDs.contains($0.key) }
+    scrollingMinimumWidths = scrollingMinimumWidths.filter { liveIDs.contains($0.key) }
     let availableLayoutIDs = topology.layoutIDs
     let previousLayoutsByID = layoutsByID
     let resolvedSpaceIDs = Set(availableLayoutIDs.map(\.spaceID))
@@ -228,6 +268,15 @@ public final class Tiling {
     )
 
     layoutsByID = layoutsByID.filter { retainedLayoutIDs.contains($0.key) }
+    scrollingFramesByLayoutID = scrollingFramesByLayoutID.filter {
+      retainedLayoutIDs.contains($0.key)
+    }
+    parkedWindowIDsByLayoutID = parkedWindowIDsByLayoutID.filter {
+      retainedLayoutIDs.contains($0.key)
+    }
+    scrollingConstraintsByLayoutID = scrollingConstraintsByLayoutID.filter {
+      retainedLayoutIDs.contains($0.key)
+    }
     for layoutID in availableLayoutIDs where layoutsByID[layoutID] == nil {
       layoutsByID[layoutID] = initialState(
         for: layoutID,
@@ -240,7 +289,8 @@ public final class Tiling {
     var newLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
     fixedSizeLayoutIDByWindowID.removeAll(keepingCapacity: true)
 
-    for window in windows {
+    for var window in windows {
+      if let owner = scrollingOwnership[window.id] { window.displayID = owner.displayID }
       if ruleSpaceMoveTasks[window.id] != nil {
         // Keep a window bound for another Space out of its source layout until it arrives.
         if let layoutID = layoutIDByWindowID[window.id], retainedLayoutIDs.contains(layoutID) {
@@ -263,7 +313,9 @@ public final class Tiling {
         continue
 
       case .tiled:
-        if let layoutID = topology.layoutID(for: window.id, on: window.displayID) {
+        if let layoutID = scrollingOwnership[window.id]
+          ?? topology.layoutID(for: window.id, on: window.displayID)
+        {
           placement = (layoutID, window.isMinimized)
         } else if let layoutID = layoutIDByWindowID[window.id],
           retainedLayoutIDs.contains(layoutID)
@@ -322,8 +374,32 @@ public final class Tiling {
       }
 
       state.omittedWindowIDs = omittedWindowIDsByLayoutID[layoutID] ?? []
+      if state.selection == .scrolling || state.scrolling.isInitialized {
+        let retainedColumns = Set(state.scrolling.windowIDs)
+        state.scrolling.reconcile(
+          windowIDs: state.tree?.windowIDs ?? [],
+          focusedWindowID: state.focusedWindowID,
+          defaultWidth: defaultScrollingColumnWidth
+        )
+        for index in state.scrolling.columns.indices {
+          let windowID = state.scrolling.columns[index].windowID
+          if !retainedColumns.contains(windowID),
+            let previousColumn = previousLayoutsByID.values.lazy.flatMap({ $0.scrolling.columns })
+              .first(where: { $0.windowID == windowID })
+          {
+            state.scrolling.columns[index].width = previousColumn.width
+          }
+        }
+      }
       layoutsByID[layoutID] = state
     }
+
+    // Rules or changed eligibility can release windows that were physically parked.
+    let releasedIDs = Set(scrollingRestoreFrames.keys).union(scrollingOwnership.keys).filter {
+      newLayoutIDByWindowID[$0] == nil || floatingOverrideWindowIDs.contains($0)
+        || scrollingOwnership[$0].flatMap { layoutsByID[$0]?.selection } != .scrolling
+    }
+    restoreScrollingWindows(releasedIDs)
 
     if let previous = currentTopology,
       previous.displaysByID != topology.displaysByID
@@ -401,7 +477,11 @@ public final class Tiling {
   func setLayout(_ selection: LayoutSelection, for spaceID: UInt64) -> Bool {
     let updated = updateLayouts(for: spaceID, reflowing: nil) { state in
       frameReconciler?.cancelAnimations(for: state.tree?.windowIDs ?? [])
+      if state.selection == .scrolling, selection != .scrolling {
+        restoreScrollingWindows(Set(state.scrolling.windowIDs))
+      }
       state.selection = selection
+      if selection == .scrolling { enterScrolling(&state) }
     }
     guard updated else { return false }
 
@@ -415,7 +495,11 @@ public final class Tiling {
   /// Select floating or an automatic layout for all current and future Spaces.
   func setLayoutForSpaces(_ selection: LayoutSelection) {
     frameReconciler?.cancelAnimations()
-    updateAllLayouts(reflowing: nil) { $0.selection = selection }
+    if selection != .scrolling { restoreScrollingWindows(Set(scrollingRestoreFrames.keys)) }
+    updateAllLayouts(reflowing: nil) { state in
+      state.selection = selection
+      if selection == .scrolling { enterScrolling(&state) }
+    }
     updateMembershipPolling()
     if selection != .float {
       reflowVisibleSpaces()
@@ -492,6 +576,125 @@ public final class Tiling {
     firstLayoutState(for: spaceID)
   }
 
+  /// Set the width assigned to newly admitted columns without resizing existing ones.
+  func setScrollingColumnWidth(_ width: CGFloat) {
+    defaultScrollingColumnWidth = ColumnWidthChange.absolute(width).applying(to: 0.5)
+  }
+
+  /// Select how subsequent focus changes reveal a column.
+  func setScrollingFocusFit(_ fit: ScrollingFocusFit) {
+    scrollingFocusFit = fit
+    for layoutID in Array(layoutsByID.keys) {
+      layoutsByID[layoutID]?.scrolling.reveal = fit
+    }
+    reflowVisibleLayouts(matching: .scrolling)
+  }
+
+  func isScrollingWindow(_ windowID: CGWindowID) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID),
+      let layoutID = layoutIDByWindowID[windowID]
+    else { return false }
+    return layoutsByID[layoutID]?.selection == .scrolling
+  }
+
+  func isParkedWindow(_ windowID: CGWindowID) -> Bool {
+    guard isScrollingWindow(windowID), let layoutID = layoutIDByWindowID[windowID] else {
+      return false
+    }
+    return parkedWindowIDsByLayoutID[layoutID]?.contains(windowID) == true
+  }
+
+  /// Choose a neighbour using retained column order, including parked windows.
+  func scrollingNeighbor(of windowID: CGWindowID, in direction: CardinalDirection) -> CGWindowID? {
+    guard direction == .left || direction == .right, isScrollingWindow(windowID),
+      let layoutID = layoutIDByWindowID[windowID], let state = layoutsByID[layoutID]
+    else { return nil }
+
+    let omitted = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
+    let ids = state.scrolling.windowIDs.filter { !omitted.contains($0) }
+    guard let index = ids.firstIndex(of: windowID) else { return nil }
+    let target = index + (direction == .left ? -1 : 1)
+    return ids.indices.contains(target) ? ids[target] : nil
+  }
+
+  /// Plan a reveal before requesting focus, so parked coordinates cannot select the target.
+  func prepareForFocus(_ windowID: CGWindowID) -> Bool {
+    guard isScrollingWindow(windowID), let layoutID = layoutIDByWindowID[windowID] else {
+      return true
+    }
+    layoutsByID[layoutID]?.focusedWindowID = windowID
+    layoutsByID[layoutID]?.scrolling.reveal = scrollingFocusFit
+    guard currentTopology?.visibleLayoutIDs.contains(layoutID) == true else { return true }
+    guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID), frames[windowID] != nil
+    else {
+      return false
+    }
+    applyPlans(for: [layoutID])
+    return true
+  }
+
+  @discardableResult
+  func changeColumnWidth(_ change: ColumnWidthChange, for windowID: CGWindowID) -> CGFloat? {
+    guard isScrollingWindow(windowID), let layoutID = layoutIDByWindowID[windowID],
+      var state = layoutsByID[layoutID],
+      let index = state.scrolling.columns.firstIndex(where: { $0.windowID == windowID })
+    else { return nil }
+
+    let width = change.applying(to: state.scrolling.columns[index].width)
+    scrollingMinimumWidths.removeValue(forKey: windowID)
+    state.scrolling.columns[index].width = width
+    state.focusedWindowID = windowID
+    state.scrolling.reveal = scrollingFocusFit
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return width
+  }
+
+  @discardableResult
+  func centerColumn(for windowID: CGWindowID) -> Bool {
+    guard isScrollingWindow(windowID), let layoutID = layoutIDByWindowID[windowID] else {
+      return false
+    }
+    layoutsByID[layoutID]?.focusedWindowID = windowID
+    layoutsByID[layoutID]?.scrolling.reveal = .center
+    applyPlans(for: [layoutID])
+    return true
+  }
+
+  /// Restore the owner-relative frame before an explicit display or Space transfer.
+  func releaseScrollingWindow(_ windowID: CGWindowID) {
+    restoreScrollingWindows([windowID])
+    scrollingOwnership.removeValue(forKey: windowID)
+  }
+
+  /// Snapshot logical state without changing the viewport or applying frames.
+  func layoutSnapshots() -> [TilingLayoutSerializer] {
+    layoutsByID.keys.sorted().compactMap { layoutID in
+      guard let state = layoutsByID[layoutID] else { return nil }
+      let omitted = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
+      return TilingLayoutSerializer(
+        spaceID: layoutID.spaceID,
+        displayID: layoutID.displayID,
+        layout: state.selection.rawValue,
+        isVisible: currentTopology?.visibleLayoutIDs.contains(layoutID) == true,
+        viewportOffset: state.selection == .scrolling ? state.scrolling.viewportOffset : nil,
+        constraint: state.selection == .scrolling
+          ? scrollingConstraintsByLayoutID[layoutID].map { String(describing: $0) } : nil,
+        columns: state.selection == .scrolling
+          ? state.scrolling.columns.map { column in
+            ScrollingColumnSerializer(
+              window: column.windowID,
+              width: column.width,
+              isOmitted: omitted.contains(column.windowID),
+              isParked: !omitted.contains(column.windowID)
+                && parkedWindowIDsByLayoutID[layoutID]?.contains(column.windowID) == true,
+              frame: scrollingFramesByLayoutID[layoutID]?[column.windowID].map(FrameSerializer.init)
+            )
+          } : []
+      )
+    }
+  }
+
   /// Swap a window with its closest neighbour in a direction.
   @discardableResult
   func swapWindow(_ windowID: CGWindowID, in direction: CardinalDirection) -> Bool {
@@ -499,6 +702,10 @@ public final class Tiling {
     guard let state = layoutsByID[layoutID] else { return false }
     if state.selection == .float || floatingOverrideWindowIDs.contains(windowID) {
       return swapFloatingWindow(windowID, in: direction, layoutID: layoutID, state: state)
+    }
+    if state.selection == .scrolling {
+      guard let neighborID = scrollingNeighbor(of: windowID, in: direction) else { return false }
+      return swapScrollingWindow(windowID, with: neighborID, in: layoutID)
     }
     guard case .layout(.frames(let framesByWindowID)) = layoutPlan(for: layoutID) else {
       return false
@@ -552,6 +759,7 @@ public final class Tiling {
     }
     manualFloatingByWindowID[windowID] = shouldFloat
     if shouldFloat {
+      restoreScrollingWindows([windowID])
       floatingOverrideWindowIDs.insert(windowID)
     } else {
       floatingOverrideWindowIDs.remove(windowID)
@@ -584,7 +792,9 @@ public final class Tiling {
         })
     else { return nil }
     guard let state = layoutsByID[layoutID] else { return nil }
-    var windowIDs = (state.tree?.windowIDs ?? []).filter { candidateID in
+    let orderedIDs =
+      state.selection == .scrolling ? state.scrolling.windowIDs : state.tree?.windowIDs ?? []
+    var windowIDs = orderedIDs.filter { candidateID in
       guard !state.omittedWindowIDs.contains(candidateID) else { return false }
       return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateID)
     }
@@ -611,6 +821,12 @@ public final class Tiling {
   func swapWindowInOrder(_ windowID: CGWindowID, in direction: CycleDirection) -> Bool {
     guard let neighborWindowID = cycledWindowID(from: windowID, in: direction) else {
       return false
+    }
+    if let layoutID = layoutIDByWindowID[windowID],
+      layoutsByID[layoutID]?.selection == .scrolling,
+      !floatingOverrideWindowIDs.contains(windowID)
+    {
+      return swapScrollingWindow(windowID, with: neighborWindowID, in: layoutID)
     }
     return mutateTree(containing: windowID, focus: true) {
       $0.swap(windowID, with: neighborWindowID)
@@ -668,8 +884,11 @@ public final class Tiling {
     }
     guard var state = layoutsByID[layoutID] else { return }
 
+    let changed = state.focusedWindowID != windowID
     state.focusedWindowID = windowID
+    if state.selection == .scrolling, changed { state.scrolling.reveal = scrollingFocusFit }
     layoutsByID[layoutID] = state
+    if state.selection == .scrolling, changed { applyPlans(for: [layoutID]) }
   }
 
   /// Reconcile current facts and apply every visible enabled Space plan.
@@ -694,6 +913,8 @@ public final class Tiling {
     if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.phase == .verified {
       dwindleAttempts.removeValue(forKey: id)
     }
+    if isInteractingWithWindow(windowID) { scrollingOwnership.removeValue(forKey: windowID) }
+
     reconcileAndReflowVisibleSpaces()
   }
 
@@ -758,6 +979,35 @@ public final class Tiling {
           minimumSizes: observedSizes
         )
       )
+    case .scrolling:
+      switch scrollingLayout.layout(
+        state: state.scrolling,
+        omittedWindowIDs: omittedWindowIDs,
+        focusedWindowID: state.focusedWindowID,
+        in: display.visibleFrame,
+        settings: spaceSettings,
+        minimumWidths: scrollingMinimumWidths
+      ) {
+      case .insufficientSpace(let constraint):
+        scrollingConstraintsByLayoutID[layoutID] = constraint
+        return .layout(.insufficientSpace(constraint))
+      case .plan(let plan):
+        let otherDisplays = topology.displaysByID.filter { $0.key != layoutID.displayID }.map(
+          \.value
+        )
+        switch scrollingPlacement.place(plan.frames, on: display, otherDisplays: otherDisplays) {
+        case .insufficientSpace(let constraint):
+          scrollingConstraintsByLayoutID[layoutID] = constraint
+          return .layout(.insufficientSpace(constraint))
+        case .frames(let frames, let parkedWindowIDs):
+          scrollingConstraintsByLayoutID.removeValue(forKey: layoutID)
+          state.scrolling = plan.state
+          layoutsByID[layoutID] = state
+          scrollingFramesByLayoutID[layoutID] = plan.frames
+          parkedWindowIDsByLayoutID[layoutID] = parkedWindowIDs
+          return .layout(.frames(frames))
+        }
+      }
     }
   }
 
@@ -834,6 +1084,8 @@ public final class Tiling {
       case .applied, .failed:
         // Record rejected mutations too, so their frame notifications cannot trigger retries.
         changedWindowIDs.insert(window.id)
+        scrollingOwnership.removeValue(forKey: window.id)
+        scrollingRestoreFrames.removeValue(forKey: window.id)
       }
       if let display = placement.display {
         applied.display = display
@@ -952,6 +1204,24 @@ public final class Tiling {
       }
       if layoutsByID[layoutID]?.selection == .dwindle {
         applyDwindle(layoutID, frames: frames)
+      } else if layoutsByID[layoutID]?.selection == .scrolling {
+        for windowID in frames.keys {
+          if scrollingRestoreFrames[windowID] == nil {
+            scrollingRestoreFrames[windowID] = frameReconciler?.observedFrame(for: windowID)
+          }
+          scrollingOwnership[windowID] = layoutID
+        }
+        // Parking and reveal must not animate across neighbouring displays.
+        let display = currentTopology?.displaysByID[layoutID.displayID]
+        let bounds = display?.frame ?? display?.visibleFrame
+        let animatedFrames = frames.filter { windowID, target in
+          guard let bounds, let actual = frameReconciler?.observedFrame(for: windowID) else {
+            return false
+          }
+          return bounds.contains(actual) && bounds.contains(target)
+        }
+        frameReconciler?.apply(frames.filter { animatedFrames[$0.key] == nil }, animated: false)
+        frameReconciler?.apply(animatedFrames)
       } else {
         frameReconciler?.apply(frames)
       }
@@ -1058,6 +1328,59 @@ public final class Tiling {
         observedSizes.removeValue(forKey: windowID)
       }
     }
+  }
+
+  /// Swap whole columns and reveal the selected column at its new position.
+  private func swapScrollingWindow(
+    _ windowID: CGWindowID,
+    with neighborID: CGWindowID,
+    in layoutID: TilingLayoutID
+  ) -> Bool {
+    guard var state = layoutsByID[layoutID], state.scrolling.swap(windowID, with: neighborID) else {
+      return false
+    }
+    state.focusedWindowID = windowID
+    state.scrolling.reveal = scrollingFocusFit
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
+  }
+
+  private func restoreScrollingWindows(_ windowIDs: Set<CGWindowID>) {
+    var frames = [CGWindowID: CGRect]()
+    for windowID in windowIDs {
+      // Native fullscreen and minimized windows must be restored only after they return.
+      if let layoutID = layoutIDByWindowID[windowID],
+        layoutsByID[layoutID]?.omittedWindowIDs.contains(windowID) == true
+      {
+        continue
+      }
+      guard var frame = scrollingRestoreFrames.removeValue(forKey: windowID) else {
+        scrollingOwnership.removeValue(forKey: windowID)
+        continue
+      }
+      if let layoutID = scrollingOwnership[windowID] ?? layoutIDByWindowID[windowID],
+        let bounds = currentTopology?.displaysByID[layoutID.displayID]?.visibleFrame
+      {
+        frame.size.width = min(frame.width, bounds.width)
+        frame.size.height = min(frame.height, bounds.height)
+        frame.origin.x = min(max(frame.minX, bounds.minX), bounds.maxX - frame.width)
+        frame.origin.y = min(max(frame.minY, bounds.minY), bounds.maxY - frame.height)
+      }
+      frames[windowID] = frame
+      scrollingOwnership.removeValue(forKey: windowID)
+    }
+    frameReconciler?.restore(frames)
+  }
+
+  /// Order a layout's windows into columns when it switches to scrolling.
+  private func enterScrolling(_ state: inout TilingLayoutState) {
+    state.scrolling.reconcile(
+      windowIDs: state.tree?.windowIDs ?? [],
+      focusedWindowID: state.focusedWindowID,
+      defaultWidth: defaultScrollingColumnWidth
+    )
+    state.scrolling.reveal = scrollingFocusFit
   }
 
   /// Create empty layout state, inheriting per-Space controls when a display changes.

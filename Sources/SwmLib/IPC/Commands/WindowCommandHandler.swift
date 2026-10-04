@@ -32,6 +32,10 @@ struct WindowCommandHandler {
         return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
       case "--layout":
         return try layout(request)
+      case "--column-width":
+        return try columnWidth(request)
+      case "--column-center":
+        return try columnCenter(request)
       case "--cycle":
         return try cycle(request)
       case "--swap":
@@ -84,11 +88,23 @@ struct WindowCommandHandler {
       window = try selectedWindow(selector: selector)
     case .direction(let direction):
       let sourceWindow = try selectedWindow(selector: nil)
+      if tiling.isScrollingWindow(sourceWindow.id) {
+        guard let targetID = tiling.scrollingNeighbor(of: sourceWindow.id, in: direction),
+          let target = windows.window(by: targetID)
+        else {
+          throw IPCCommandError.invalidRequest(
+            "window has no focusable neighbour in direction: \(direction.rawValue)"
+          )
+        }
+        window = target
+        break
+      }
       guard
         let directionalWindow = windows.directionalWindow(
           from: sourceWindow,
           in: direction,
-          spaces: spaces
+          spaces: spaces,
+          isEligible: { !tiling.isParkedWindow($0) }
         )
       else {
         throw IPCCommandError.invalidRequest(
@@ -98,7 +114,7 @@ struct WindowCommandHandler {
       window = directionalWindow
     }
 
-    guard window.focus() else {
+    guard tiling.prepareForFocus(window.id), window.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(window.id)")
     }
 
@@ -156,6 +172,31 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: layout.rawValue)
   }
 
+  private func columnWidth(_ request: IPCRequest) throws -> IPCResponse {
+    let selection = try parseValueSelection(request.args, action: "column-width")
+    guard let change = ColumnWidthChange(argument: selection.value) else {
+      throw IPCCommandError.invalidValue(
+        "window column-width",
+        selection.value,
+        expected: "abs:<width>, rel:<width>, next, or prev, such as rel:0.1"
+      )
+    }
+    let window = try selectedWindow(selector: selection.selector)
+    guard tiling.changeColumnWidth(change, for: window.id) != nil else {
+      throw IPCCommandError.invalidRequest("window is not in a scrolling layout: \(window.id)")
+    }
+    return .acknowledged(id: request.id)
+  }
+
+  private func columnCenter(_ request: IPCRequest) throws -> IPCResponse {
+    let selector = try parseSelector(request.args, action: "column-center")
+    let window = try selectedWindow(selector: selector)
+    guard tiling.centerColumn(for: window.id) else {
+      throw IPCCommandError.invalidRequest("window is not in a scrolling layout: \(window.id)")
+    }
+    return .acknowledged(id: request.id)
+  }
+
   /// Focus the next available window in stable layout order.
   private func cycle(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "window cycle").requiredValue()
@@ -174,7 +215,7 @@ struct WindowCommandHandler {
     else {
       throw IPCCommandError.invalidRequest("no available window to cycle")
     }
-    guard cycledWindow.focus() else {
+    guard tiling.prepareForFocus(cycledWindow.id), cycledWindow.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(cycledWindow.id)")
     }
     return .acknowledged(id: request.id)
@@ -349,9 +390,14 @@ struct WindowCommandHandler {
       )
     }
 
+    guard !tiling.isInteractingWithWindow(window.id) else {
+      throw IPCCommandError.invalidRequest("window is being dragged: \(window.id)")
+    }
+    tiling.releaseScrollingWindow(window.id)
+
     try transfer(
       window,
-      frame: frame,
+      frame: window.frame() ?? frame,
       from: sourceScreen,
       to: targetScreen,
       failureMessage: "could not move window to display: \(window.id)"
@@ -380,6 +426,7 @@ struct WindowCommandHandler {
     }
 
     tiling.prepareForSynchronousMutation(for: windowID)
+    tiling.releaseScrollingWindow(windowID)
     defer {
       if !Task.isCancelled { tiling.reconcileAndReflowVisibleSpaces() }
     }

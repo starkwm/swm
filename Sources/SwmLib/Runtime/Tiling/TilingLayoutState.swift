@@ -26,6 +26,9 @@ struct TilingLayoutState {
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
 
+  /// Independent column order and widths retained across layout switches.
+  var scrolling = ScrollingLayoutState()
+
   /// Use a dwindle split ratio for new branches and rebalance existing ones to it.
   mutating func setSplitRatio(_ ratio: CGFloat) {
     splitRatio = ratio

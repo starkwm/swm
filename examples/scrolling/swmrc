@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+EXAMPLE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+SWM_BIN="$EXAMPLE_DIR/../../.build/debug/swm"
+
+"$SWM_BIN" config scrolling-column-width 0.5
+"$SWM_BIN" config scrolling-focus-fit fit
+"$SWM_BIN" config gap 12
+"$SWM_BIN" config padding --top 12 --bottom 12 --left 12 --right 12
+"$SWM_BIN" config animation-duration 0.18
+"$SWM_BIN" config layout scrolling

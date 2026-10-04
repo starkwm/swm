@@ -329,6 +329,56 @@ struct ArgumentsTests {
     #expect(command.arguments == ["autofocus"])
   }
 
+  @Test("scrolling commands: preserve layout, width, centering, and query IPC arguments")
+  func scrollingCommands() throws {
+    let layout = try #require(
+      Arguments.parseAsRoot(["space", "layout", "scrolling"]) as? SpaceCommand.Layout
+    )
+    let width = try #require(
+      Arguments.parseAsRoot(["window", "column-width", "--window", "recent", "next"])
+        as? WindowCommand.ColumnWidth
+    )
+    let center = try #require(
+      Arguments.parseAsRoot(["window", "column-center", "--window", "12"])
+        as? WindowCommand.ColumnCenter
+    )
+    let query = try #require(
+      Arguments.parseAsRoot(["query", "layouts", "--space", "1"]) as? QueryCommand.Layouts
+    )
+    let defaultWidth = try #require(
+      Arguments.parseAsRoot(["config", "scrolling-column-width", "0.5"])
+        as? ConfigCommand.ScrollingColumnWidth
+    )
+    let fit = try #require(
+      Arguments.parseAsRoot(["config", "scrolling-focus-fit", "center"])
+        as? ConfigCommand.ScrollingFocusFit
+    )
+
+    #expect(layout.arguments == ["scrolling"])
+    #expect(width.arguments == ["recent", "next"])
+    #expect(center.arguments == ["12"])
+    #expect(query.arguments == ["--space", "1"])
+    #expect(defaultWidth.arguments == ["0.5"])
+    #expect(fit.arguments == ["center"])
+  }
+
+  @Test(
+    "scrolling commands: reject invalid widths and focus policies",
+    arguments: [
+      ["config", "scrolling-column-width", "nan"],
+      ["config", "scrolling-column-width", "0"],
+      ["config", "scrolling-column-width", "1.1"],
+      ["config", "scrolling-focus-fit", "unknown"],
+      ["window", "column-width", "1.5"],
+      ["window", "column-width", "abs:0.5"],
+    ]
+  )
+  func invalidScrollingCommands(arguments: [String]) {
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(Arguments.resolve(arguments))
+    }
+  }
+
   @Test(
     "parseAsRoot: sets plain values and adjusts signed ones",
     arguments: [
@@ -341,6 +391,8 @@ struct ArgumentsTests {
       (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
       (["space", "split-ratio", "0.6", "--space", "2"], ["--space", "2", "abs:0.6"]),
       (["config", "split-ratio", "-0.05"], ["rel:-0.05"]),
+      (["window", "column-width", "0.5"], ["abs:0.5"]),
+      (["window", "column-width", "-0.1"], ["rel:-0.1"]),
       (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
       (["config", "padding", "--bottom", "6", "--top", "-2"], ["top=rel:-2", "bottom=abs:6"]),
       (["config", "gap", "6"], ["abs:6"]),

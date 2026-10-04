@@ -1,3 +1,5 @@
+import CoreGraphics
+
 /// Handles IPC commands that update global configuration for every known space.
 @MainActor
 struct ConfigCommandHandler {
@@ -26,6 +28,10 @@ struct ConfigCommandHandler {
         return try animationDuration(request)
       case "layout":
         return try layout(request)
+      case "scrolling-column-width":
+        return try scrollingColumnWidth(request)
+      case "scrolling-focus-fit":
+        return try scrollingFocusFit(request)
       case "focus-follows-mouse":
         return try focusFollowsMouse(request)
       case "master-ratio":
@@ -59,6 +65,8 @@ struct ConfigCommandHandler {
     case "master-placement": return state.masterPlacement.rawValue
     case "split-ratio": return String(Double(state.splitRatio))
     case "preserve-split": return state.preserveSplitDirections ? "on" : "off"
+    case "scrolling-column-width": return String(Double(tiling.defaultScrollingColumnWidth))
+    case "scrolling-focus-fit": return tiling.scrollingFocusFit.rawValue
     case "gap": return String(settings.gap)
     case "padding": return settings.padding.commandOptions
     default: return nil
@@ -183,6 +191,26 @@ struct ConfigCommandHandler {
     tiling.setLayoutForSpaces(selection)
 
     return .success(id: request.id, message: selection.rawValue)
+  }
+
+  private func scrollingColumnWidth(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(request.args, context: "config scrolling-column-width")
+      .requiredValue()
+    guard let width = Double(argument), width.isFinite, (0.1...1).contains(width) else {
+      throw IPCCommandError.invalidRequest("scrolling-column-width must be between 0.1 and 1")
+    }
+    tiling.setScrollingColumnWidth(CGFloat(width))
+    return .acknowledged(id: request.id)
+  }
+
+  private func scrollingFocusFit(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(request.args, context: "config scrolling-focus-fit")
+      .requiredValue()
+    guard let fit = ScrollingFocusFit(rawValue: argument) else {
+      throw IPCCommandError.invalidRequest("scrolling-focus-fit must be fit or center")
+    }
+    tiling.setScrollingFocusFit(fit)
+    return .success(id: request.id, message: fit.rawValue)
   }
 
   /// Set or adjust the global window gap, and apply it to every known space.

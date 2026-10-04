@@ -111,7 +111,7 @@ extension WindowIPCCommand {
 
 /// Values shared by multiple command domains.
 enum LayoutName: String, CaseIterable, ExpressibleByArgument {
-  case float, master, monocle, dwindle
+  case float, master, monocle, dwindle, scrolling
 }
 
 /// A master-area edge, or the next or previous edge in turn.

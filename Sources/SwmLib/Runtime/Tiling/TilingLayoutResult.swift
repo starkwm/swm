@@ -37,4 +37,10 @@ enum TilingLayoutConstraint: Equatable {
 
   /// A recursively split tile is shorter than the minimum window height.
   case tileHeight
+
+  /// A scrolling column cannot fit its gap and minimum width.
+  case scrollingColumnWidth
+
+  /// No display edge can park windows without overlapping another display.
+  case scrollingParking
 }

@@ -297,6 +297,35 @@ struct ConfigCommandHandlerTests {
     #expect(response.message == "unsupported config command: set")
   }
 
+  @Test("dispatch: scrolling defaults affect new columns and preserve existing widths")
+  func scrollingDefaults() throws {
+    var snapshots = [window(id: 1)]
+    let spaces = Spaces(activeSpaceID: nil)
+    let tiling = makeTiling(windows: { snapshots }, memberships: { [1: [10], 2: [10]] })
+    tiling.initialize()
+    let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      tiling: tiling
+    )
+
+    #expect(handler.dispatch(request(command: "layout", args: ["scrolling"])).ok)
+    #expect(handler.dispatch(request(command: "scrolling-column-width", args: ["1"])).ok)
+    #expect(handler.dispatch(request(command: "scrolling-focus-fit", args: ["center"])).ok)
+    snapshots.append(window(id: 2))
+    tiling.reconcileAndReflowVisibleSpaces()
+
+    let layout = try #require(tiling.layoutSnapshots().first { $0.spaceID == 10 })
+    #expect(layout.columns.map(\.width) == [0.5, 1])
+    for command in ["scrolling-column-width", "scrolling-focus-fit"] {
+      for args in [["0.5", "1"], ["nan"], ["invalid"]] {
+        let response = handler.dispatch(request(command: command, args: args))
+        #expect(!response.ok)
+        #expect(response.errorCode == .invalidRequest)
+      }
+    }
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .config, command: command, args: args)
   }
@@ -311,6 +340,7 @@ struct ConfigCommandHandlerTests {
     for (command, args) in [
       ("gap", ["abs:6"]), ("padding", ["top=abs:8"]), ("layout", ["dwindle"]),
       ("master-ratio", ["abs:0.6"]), ("split-ratio", ["abs:0.4"]), ("preserve-split", ["on"]),
+      ("scrolling-column-width", ["0.75"]), ("scrolling-focus-fit", ["center"]),
     ] {
       #expect(handler.dispatch(request(command: command, args: args)).ok)
     }
@@ -320,7 +350,8 @@ struct ConfigCommandHandlerTests {
       "master-ratio": "0.6", "split-ratio": "0.4", "preserve-split": "on",
       "master-placement": "left",
       "focus-follows-mouse": "off", "animation-duration": "0.0",
-      "animation-easing": "ease-out-quad",
+      "animation-easing": "ease-out-quad", "scrolling-column-width": "0.75",
+      "scrolling-focus-fit": "center",
     ]
     for (command, value) in expected {
       let response = handler.dispatch(request(command: command, args: []))
