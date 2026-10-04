@@ -20,7 +20,7 @@ struct IPCCommandDispatcher {
   func dispatch(_ request: IPCRequest) async -> IPCResponse {
     switch request.domain {
     case .query:
-      return QueryCommandHandler(windows: windows).dispatch(request)
+      return QueryCommandHandler(windows: windows, tiling: tiling).dispatch(request)
 
     case .space:
       return await SpaceCommandHandler(

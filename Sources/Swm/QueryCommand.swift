@@ -7,7 +7,9 @@ struct QueryCommand: ParsableCommand {
     commandName: "query",
     abstract: "Query displays, spaces, and windows.",
     discussion: "Query results are written as JSON.",
-    subcommands: [Displays.self, Spaces.self, Windows.self, Display.self, Space.self, Window.self]
+    subcommands: [
+      Displays.self, Spaces.self, Windows.self, Layouts.self, Display.self, Space.self, Window.self,
+    ]
   )
 
   struct Displays: QueryIPCCommand {
@@ -31,6 +33,17 @@ struct QueryCommand: ParsableCommand {
   struct Windows: QueryIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Query all windows.")
     static let command = "--windows"
+
+    @OptionGroup var selector: QuerySelectorOptions
+
+    var arguments: [String] { selector.arguments }
+  }
+
+  struct Layouts: QueryIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Query logical tiling layouts and scrolling columns."
+    )
+    static let command = "--layouts"
 
     @OptionGroup var selector: QuerySelectorOptions
 

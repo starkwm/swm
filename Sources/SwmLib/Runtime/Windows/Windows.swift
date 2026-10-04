@@ -35,6 +35,9 @@ public final class Windows {
     focusedWindowState.last
   }
 
+  /// Parked edge slivers must not trigger a focus-following scroll loop.
+  var canFocusWithMouse: (CGWindowID) -> Bool = { _ in true }
+
   private let workspace: Workspace
   private var mouseEventMonitor: Any?
   private var pendingMouseFocusWindowID: CGWindowID?
@@ -89,14 +92,15 @@ public final class Windows {
   func directionalWindow(
     from sourceWindow: Window,
     in direction: CardinalDirection,
-    spaces: Spaces
+    spaces: Spaces,
+    isEligible: (CGWindowID) -> Bool = { _ in true }
   ) -> Window? {
     let candidateWindows = allWindows()
     let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
     let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
     let framesByWindowID = Dictionary(
       uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
-        guard !window.isMinimized else { return nil }
+        guard !window.isMinimized, isEligible(window.id) else { return nil }
         guard
           let spaceIDs = topology.spaceIDsByWindowID[window.id],
           !spaceIDs.isDisjoint(with: visibleSpaceIDs),
@@ -150,6 +154,7 @@ public final class Windows {
     guard windowID != currentFocusedWindowID else { return }
     guard windowID != pendingMouseFocusWindowID else { return }
     guard let window = window(by: windowID), !window.isMinimized else { return }
+    guard canFocusWithMouse(windowID) else { return }
 
     let focused: Bool
     switch focusFollowsMouseMode {

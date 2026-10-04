@@ -97,7 +97,10 @@ public final class Spaces {
       spaceIDsByWindowID: spaceIDsByWindowID,
       displaysByID: Dictionary(
         uniqueKeysWithValues: NSScreen.screens.map { screen in
-          (screen.uuid, SpaceTopologyDisplay(visibleFrame: screen.axVisibleFrame))
+          (
+            screen.uuid,
+            SpaceTopologyDisplay(visibleFrame: screen.axVisibleFrame, frame: screen.axFrame)
+          )
         }
       )
     )

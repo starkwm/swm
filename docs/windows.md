@@ -69,6 +69,9 @@ swm window focus-master [--window <window|recent>]
 swm window split-ratio [--window <window|recent>] <abs|rel>:<ratio>
 swm window toggle-split [--window <window|recent>]
 swm window swap-split [--window <window|recent>]
+swm window column-width [--window <window|recent>] <abs|rel>:<fraction>
+swm window column-width [--window <window|recent>] <next|prev>
+swm window column-center [--window <window|recent>]
 ```
 
 - `layout` floats a window, returns it to tiling, or toggles its state.
@@ -80,5 +83,9 @@ swm window swap-split [--window <window|recent>]
 - `split-ratio` changes the nearest dwindle split; ratios are clamped to `0.1...0.9`.
 - `toggle-split` switches the nearest retained dwindle split between columns and rows.
 - `swap-split` exchanges the two subtrees at the nearest dwindle split.
+- `column-width` changes a scrolling column width, clamped to `0.1...1`, or cycles the width presets.
+- `column-center` centers a scrolling column in its display.
 
-See [space layouts](spaces.md#layouts) for master, monocle, and dwindle behavior, and [window animation](configuration.md#window-animation) for movement settings.
+In a scrolling layout, directional focus and swap use column order. Left and right stop at the strip ends; up and down return an error. Cycle and swap-cycle still wrap. Direct focus by window ID or `recent` also reveals the selected column. Floating windows continue to use geometric directional navigation.
+
+See [space layouts](spaces.md#layouts) for layout behavior, and [window animation](configuration.md#window-animation) for movement settings.

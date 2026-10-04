@@ -14,7 +14,7 @@ enum QuerySelection: Equatable {
   /// Select a window by ID, or the focused window when the ID is absent.
   case window(CGWindowID?)
 
-  private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
+  private static let commandFlags = Set(["--displays", "--spaces", "--windows", "--layouts"])
   private static let selectorFlags = Set(["--display", "--space", "--window"])
 
   /// Parse selector arguments from an IPC request.

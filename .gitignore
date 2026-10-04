@@ -7,4 +7,5 @@ Brewfile.lock.json
 swm*.tar.gz
 swm.tar.gz
 swmrc
+!examples/scrolling/swmrc
 xcuserdata/

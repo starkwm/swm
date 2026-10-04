@@ -82,4 +82,7 @@ struct SpaceTopologyDescriptor: Equatable {
 struct SpaceTopologyDisplay: Equatable {
   /// Visible frame in Accessibility coordinates.
   let visibleFrame: CGRect
+
+  /// Complete display bounds, including the menu bar and Dock, in Accessibility coordinates.
+  var frame: CGRect? = nil
 }
