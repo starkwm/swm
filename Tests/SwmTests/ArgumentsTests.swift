@@ -224,6 +224,52 @@ struct ArgumentsTests {
     #expect(command.arguments == ["autofocus"])
   }
 
+  @Test("scrolling commands: preserve layout, width, centering, and query IPC arguments")
+  func scrollingCommands() throws {
+    let layout = try #require(
+      Arguments.parseAsRoot(["space", "layout", "scrolling"]) as? SpaceCommand.Layout
+    )
+    let width = try #require(
+      Arguments.parseAsRoot(["window", "column-width", "--window", "recent", "rel:0.1"])
+        as? WindowCommand.ColumnWidth
+    )
+    let center = try #require(
+      Arguments.parseAsRoot(["window", "column-center", "--window", "12"])
+        as? WindowCommand.ColumnCenter
+    )
+    let query = try #require(
+      Arguments.parseAsRoot(["query", "layouts", "--space", "0"]) as? QueryCommand.Layouts
+    )
+    let defaultWidth = try #require(
+      Arguments.parseAsRoot(["config", "scrolling-column-width", "0.5"])
+        as? ConfigCommand.ScrollingColumnWidth
+    )
+    let fit = try #require(
+      Arguments.parseAsRoot(["config", "scrolling-focus-fit", "center"])
+        as? ConfigCommand.ScrollingFocusFit
+    )
+
+    #expect(layout.arguments == ["scrolling"])
+    #expect(width.arguments == ["recent", "rel:0.1"])
+    #expect(center.arguments == ["12"])
+    #expect(query.arguments == ["--space", "0"])
+    #expect(defaultWidth.arguments == ["0.5"])
+    #expect(fit.arguments == ["center"])
+  }
+
+  @Test(
+    "scrolling commands: reject invalid default widths and focus policies",
+    arguments: [
+      ["config", "scrolling-column-width", "nan"],
+      ["config", "scrolling-column-width", "0"],
+      ["config", "scrolling-column-width", "1.1"],
+      ["config", "scrolling-focus-fit", "unknown"],
+    ]
+  )
+  func invalidScrollingCommands(arguments: [String]) {
+    #expect(throws: (any Error).self) { try Arguments.parseAsRoot(arguments) }
+  }
+
   @Test("typed config point commands preserve integer IPC values")
   func typedConfigPointCommandsPreserveIntegerIPCValues() throws {
     let commandNames = [

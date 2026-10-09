@@ -68,6 +68,36 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { [String(ratio)] }
   }
 
+  struct ScrollingColumnWidth: ConfigIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Set the width of new scrolling columns."
+    )
+    static let command = "scrolling-column-width"
+
+    @Argument(help: "Fraction from 0.1 through 1. Existing columns keep their widths.")
+    var width: Double
+
+    var arguments: [String] { [String(width)] }
+
+    func validate() throws {
+      guard width.isFinite, (0.1...1).contains(width) else {
+        throw ValidationError("Scrolling column width must be between 0.1 and 1.")
+      }
+    }
+  }
+
+  struct ScrollingFocusFit: ConfigIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Set how scrolling columns follow focus."
+    )
+    static let command = "scrolling-focus-fit"
+
+    @Argument(help: "Fit the focused column into view or center it.")
+    var fit: ScrollingFocusFitName
+
+    var arguments: [String] { [fit.rawValue] }
+  }
+
   struct MasterPlacement: ConfigIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Set the master-area edge.")
     static let command = "master-placement"
@@ -146,6 +176,7 @@ struct ConfigCommand: ParsableCommand {
     subcommands: [
       Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
       PreserveSplit.self, AnimationDuration.self, AnimationEasingCommand.self,
+      ScrollingColumnWidth.self, ScrollingFocusFit.self,
       WindowGap.self, TopPadding.self, BottomPadding.self, LeftPadding.self, RightPadding.self,
     ]
   )
@@ -157,4 +188,8 @@ enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
 
 enum FocusFollowsMouseName: String, CaseIterable, ExpressibleByArgument {
   case off, autofocus, autoraise
+}
+
+enum ScrollingFocusFitName: String, CaseIterable, ExpressibleByArgument {
+  case fit, center
 }

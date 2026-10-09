@@ -35,6 +35,9 @@ public final class Windows {
     focusedWindowState.last
   }
 
+  /// Parked edge slivers must not trigger a focus-following scroll loop.
+  var canFocusWithMouse: (CGWindowID) -> Bool = { _ in true }
+
   private let workspace: Workspace
   private var mouseEventMonitor: Any?
   private var pendingMouseFocusWindowID: CGWindowID?
@@ -151,6 +154,7 @@ public final class Windows {
     guard windowID != currentFocusedWindowID else { return }
     guard windowID != pendingMouseFocusWindowID else { return }
     guard let window = window(by: windowID), !window.isMinimized else { return }
+    guard canFocusWithMouse(windowID) else { return }
 
     let focused: Bool
     switch focusFollowsMouseMode {

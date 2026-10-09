@@ -22,4 +22,7 @@ struct TilingLayoutState {
 
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
+
+  /// Independent column order and widths retained across layout switches.
+  var scrolling = ScrollingLayoutState()
 }

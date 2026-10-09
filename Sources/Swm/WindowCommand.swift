@@ -12,6 +12,7 @@ struct WindowCommand: ParsableCommand {
       Space.self,
       Layout.self, Cycle.self, Swap.self, SwapCycle.self, SwapWithMaster.self, FocusMaster.self,
       SplitRatio.self, ToggleSplit.self, SwapSplit.self,
+      ColumnWidth.self, ColumnCenter.self,
     ]
   )
 
@@ -195,6 +196,44 @@ struct WindowCommand: ParsableCommand {
     var layout: WindowLayoutName
 
     var arguments: [String] { [window, layout.rawValue].compactMap { $0 } }
+  }
+
+  struct ColumnWidth: WindowIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Resize or cycle a scrolling column width."
+    )
+    static let command = "--column-width"
+
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var window: String?
+
+    @Argument(
+      help: "abs:<fraction>, rel:<fraction>, next, or prev.",
+      completion: .list(["next", "prev"])
+    )
+    var change: String
+
+    var arguments: [String] { [window, change].compactMap { $0 } }
+  }
+
+  struct ColumnCenter: WindowIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Center a scrolling column in its display."
+    )
+    static let command = "--column-center"
+
+    @Option(
+      name: .shortAndLong,
+      help: "Window ID or recent; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var window: String?
+
+    var arguments: [String] { window.map { [$0] } ?? [] }
   }
 
   struct Cycle: WindowIPCCommand {
