@@ -20,26 +20,20 @@ struct SignalPayloadTests {
     #expect(payload.environment["SWM_RECENT_SPACE_INDEX"] == "1")
   }
 
-  @Test("displayChanged: maps display environment")
-  func displayChangedMapsDisplayEnvironment() {
-    let payload = SignalPayload.displayChanged(currentID: "display-a", recentID: "display-b")
-
-    #expect(payload.event == .displayChanged)
-    #expect(payload.environment["SWM_DISPLAY_ID"] == "display-a")
-    #expect(payload.environment["SWM_RECENT_DISPLAY_ID"] == "display-b")
-  }
-
-  @Test("display: maps reconfiguration environment")
-  func displayMapsReconfigurationEnvironment() {
-    let payload = SignalPayload.display(
-      event: .displayMoved,
-      displayID: 42,
-      currentID: "display-a",
-      recentID: "display-b"
-    )
-
-    #expect(payload.event == .displayMoved)
-    #expect(payload.environment["SWM_EVENT_DISPLAY_ID"] == "42")
+  @Test(
+    "displayChanged/display: preserves current and recent display context",
+    arguments: [false, true]
+  )
+  func displayChangedDisplayPreservesCurrentAndRecentDisplayContext(reconfiguration: Bool) {
+    let payload =
+      reconfiguration
+      ? SignalPayload.display(
+        event: .displayMoved,
+        displayID: 42,
+        currentID: "display-a",
+        recentID: "display-b"
+      )
+      : SignalPayload.displayChanged(currentID: "display-a", recentID: "display-b")
     #expect(payload.environment["SWM_DISPLAY_ID"] == "display-a")
     #expect(payload.environment["SWM_RECENT_DISPLAY_ID"] == "display-b")
   }

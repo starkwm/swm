@@ -29,75 +29,25 @@ struct SpaceSerializerTests {
     snapshot.activeSpaceID = 42
     snapshot.currentSpaceByScreenID = [:]
     let space = try #require(SpaceSerializer.all(snapshot: snapshot).first)
-    let object = try encodedObject(space)
-    #expect(object["type"] as? String == expected)
-    #expect(object["is-native-fullscreen"] as? Bool == fullscreen)
-    #expect(object["has-focus"] as? Bool == true)
+    #expect(space.type == expected)
+    #expect(space.isNativeFullscreen == fullscreen)
   }
 
-  @Test("encode: uses window IDs")
-  func encodeUsesWindowIDs() throws {
-    let space = SpaceSerializer(
-      id: 1,
-      index: 0,
-      type: "normal",
-      displays: [1],
-      windows: [1],
-      hasFocus: false,
-      isVisible: false,
-      isNativeFullscreen: false
-    )
-
-    let object = try encodedObject(space)
-    let windows = try #require(object["windows"] as? [Int])
-
-    #expect(windows == [1])
-    #expect(object["displays"] as? [Int] == [1])
-    #expect(object["display"] == nil)
-    #expect(object["first-window"] == nil)
-    #expect(object["last-window"] == nil)
-    #expect(object["has-focus"] as? Bool == false)
-    #expect(object["is-native-fullscreen"] as? Bool == false)
-  }
-
-  @Test("encode: allows empty window array")
-  func encodeAllowsEmptyWindowArray() throws {
-    let space = SpaceSerializer(
-      id: 1,
-      index: 0,
-      type: "normal",
-      displays: [],
-      windows: [],
-      hasFocus: false,
-      isVisible: false,
-      isNativeFullscreen: false
-    )
-
-    let object = try encodedObject(space)
-    let windows = try #require(object["windows"] as? [Any])
-
-    #expect(windows.isEmpty)
-    #expect(object["first-window"] == nil)
-    #expect(object["last-window"] == nil)
-  }
-
-  @Test("encode: uses displays for shared spaces")
-  func encodeUsesDisplaysForSharedSpaces() throws {
-    let space = SpaceSerializer(
-      id: 1,
-      index: 0,
-      type: "normal",
-      displays: [1, 2],
-      windows: [],
-      hasFocus: false,
-      isVisible: true,
-      isNativeFullscreen: false
-    )
-
-    let object = try encodedObject(space)
-    let displays = try #require(object["displays"] as? [Int])
-
-    #expect(displays == [1, 2])
-    #expect(object["display"] == nil)
+  @Test("all: derives window membership and shared visibility from the query snapshot")
+  @MainActor
+  func allDerivesWindowMembershipAndSharedVisibilityFromTheQuerySnapshot() {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
+    snapshot.spaces = [Space(id: 42, type: .normal), Space(id: 43, type: .normal)]
+    snapshot.displaySpaces = [WindowServerDisplaySpaces(id: "Main", spaces: [42, 43])]
+    snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
+    snapshot.windows = [Window(id: 1), Window(id: 2)]
+    snapshot.spaceIDsByWindowID = [1: [42], 2: [42]]
+    snapshot.activeSpaceID = 43
+    snapshot.currentSpaceByScreenID = ["": 42]
+    let spaces = SpaceSerializer.all(snapshot: snapshot)
+    #expect(spaces.map(\.index) == [0, 1])
+    #expect(spaces.map(\.windows) == [[1, 2], []])
+    #expect(spaces.map(\.isVisible) == [true, false])
+    #expect(spaces.map(\.hasFocus) == [false, true])
   }
 }

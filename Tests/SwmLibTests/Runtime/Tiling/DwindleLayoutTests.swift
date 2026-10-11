@@ -5,20 +5,6 @@ import Testing
 
 @Suite("DwindleLayout")
 struct DwindleLayoutTests {
-  @Test("layout: fills padded bounds for one window")
-  func layoutFillsPaddedBoundsForOneWindow() {
-    var settings = SpaceSettings.defaults
-    settings.padding = SpacePadding(top: 10, bottom: 20, left: 30, right: 40)
-
-    let result = DwindleLayout().layout(
-      tree: tilingTree([1]),
-      in: CGRect(x: -300, y: 24, width: 300, height: 200),
-      settings: settings
-    )
-
-    #expect(result == .frames([1: CGRect(x: -270, y: 34, width: 230, height: 170)]))
-  }
-
   @Test("layout: recursively bisects the longest remaining edge")
   func layoutRecursivelyBisectsTheLongestRemainingEdge() {
     var settings = SpaceSettings.defaults

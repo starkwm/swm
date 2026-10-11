@@ -767,27 +767,6 @@ struct TilingTests {
     #expect(tiling.layoutPlan(for: layoutID(10)) == initial)
   }
 
-  @Test("setLayout: gives every tiled window the complete visible bounds in monocle")
-  func setLayoutGivesEveryTiledWindowTheCompleteVisibleBoundsInMonocle() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-
-    #expect(tiling.setLayout(.monocle, for: 10))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 1_000, height: 800),
-            2: CGRect(x: 0, y: 0, width: 1_000, height: 800),
-            3: CGRect(x: 0, y: 0, width: 1_000, height: 800),
-          ])
-        )
-    )
-  }
-
   @Test("setLayout: retains dwindle selection and plans its geometry")
   func setLayoutRetainsDwindleSelectionAndPlansItsGeometry() {
     let tiling = makeTiling(
@@ -890,27 +869,46 @@ struct TilingTests {
     )
   }
 
-  @Test("changeMasterRatio/setMasterPlacement: update ratio and placement for a Space")
-  func changeMasterRatioSetMasterPlacementUpdateRatioAndPlacementForASpace() {
+  @Test(
+    "changeMasterRatio/setMasterPlacement: update ratio and placement for a Space",
+    arguments: [MasterPlacement.right, .top, .bottom]
+  )
+  func changeMasterRatioSetMasterPlacementUpdateRatioAndPlacementForASpace(
+    placement: MasterPlacement
+  ) {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
     tiling.initialize()
     tiling.setLayout(.master, for: 10)
-
     #expect(tiling.changeMasterRatio(.absolute(0.6), for: 10))
-    #expect(tiling.setMasterPlacement(.right, for: 10))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 400, y: 0, width: 600, height: 800),
-            2: CGRect(x: 0, y: 0, width: 400, height: 400),
-            3: CGRect(x: 0, y: 400, width: 400, height: 400),
-          ])
-        )
-    )
+    #expect(tiling.setMasterPlacement(placement, for: 10))
+    let frames: [CGWindowID: CGRect]
+    switch placement {
+    case .right:
+      frames = [
+        1: CGRect(x: 400, y: 0, width: 600, height: 800),
+        2: CGRect(x: 0, y: 0, width: 400, height: 400),
+        3: CGRect(x: 0, y: 400, width: 400, height: 400),
+      ]
+    case .top:
+      frames = [
+        1: CGRect(x: 0, y: 0, width: 1000, height: 480),
+        2: CGRect(x: 0, y: 480, width: 500, height: 320),
+        3: CGRect(x: 500, y: 480, width: 500, height: 320),
+      ]
+    case .bottom:
+      frames = [
+        1: CGRect(x: 0, y: 320, width: 1000, height: 480),
+        2: CGRect(x: 0, y: 0, width: 500, height: 320),
+        3: CGRect(x: 500, y: 0, width: 500, height: 320),
+      ]
+    default:
+      Issue.record("unexpected placement")
+      return
+    }
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(frames)))
   }
 
   @Test("cycleMasterPlacement: cycle placement clockwise and counter-clockwise")
@@ -1008,8 +1006,8 @@ struct TilingTests {
     var finder = window(id: 1)
     finder.app = "Finder"
     let tiling = makeTiling(
-      windows: [finder, window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
+      windows: [finder, window(id: 2), window(id: 3), window(id: 4)],
+      memberships: [1: [10], 2: [10], 3: [10], 4: [10]]
     )
     tiling.initialize()
     tiling.setLayout(.master, for: 10)
@@ -1018,26 +1016,14 @@ struct TilingTests {
     #expect(tiling.swapWindowWithMaster(3))
     #expect(tiling.masterWindowID(inLayoutContaining: 3) == 3)
     #expect(!tiling.swapWindowWithMaster(1))
-  }
-
-  @Test("swapWindowWithMaster: swap a selected window with master")
-  func swapWindowWithMasterSwapASelectedWindowWithMaster() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-
-    #expect(tiling.swapWindowWithMaster(3))
-    #expect(tiling.swapWindowWithMaster(99) == false)
+    #expect(!tiling.swapWindowWithMaster(99))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
         == .layout(
           .frames([
             3: CGRect(x: 0, y: 0, width: 500, height: 800),
             2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            1: CGRect(x: 500, y: 400, width: 500, height: 400),
+            4: CGRect(x: 500, y: 400, width: 500, height: 400),
           ])
         )
     )
@@ -1483,6 +1469,46 @@ struct TilingTests {
     hiddenTiling.setLayout(.master, for: 10)
 
     #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
+  }
+
+  @Test(
+    "layoutPlan: applies padding while ignoring gaps in single-tile and monocle layouts",
+    arguments: [
+      (LayoutSelection.master, [CGWindowID(1)]),
+      (.dwindle, [1]), (.monocle, [1, 2, 3]),
+    ]
+  )
+  func layoutPlanAppliesPaddingWhileIgnoringGapsInSingleTileAndMonocleLayouts(
+    selection: LayoutSelection,
+    windowIDs: [CGWindowID]
+  ) {
+    let spaces = Spaces(activeSpaceID: nil)
+    spaces.setPadding(SpacePadding(top: 10, bottom: 20, left: 30, right: 40), for: 10)
+    spaces.setGap(50, for: 10)
+    let tiling = makeTestTiling(
+      spaces: spaces,
+      windows: windowIDs.map { window(id: $0) },
+      topology: SpaceTopology(
+        spacesByID: [10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)],
+        visibleSpaceIDByDisplayID: ["display": 10],
+        spaceIDsByWindowID: Dictionary(
+          uniqueKeysWithValues: windowIDs.map { ($0, Set([UInt64(10)])) }
+        ),
+        displaysByID: [
+          "display": SpaceTopologyDisplay(
+            visibleFrame: CGRect(x: -300, y: 24, width: 300, height: 200)
+          )
+        ]
+      )
+    )
+    tiling.initialize()
+    #expect(tiling.setLayout(selection, for: 10))
+    let expected = Dictionary(
+      uniqueKeysWithValues: windowIDs.map {
+        ($0, CGRect(x: -270, y: 34, width: 230, height: 170))
+      }
+    )
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expected)))
   }
 
   @Test("membership polling: reflows without lifecycle events")
