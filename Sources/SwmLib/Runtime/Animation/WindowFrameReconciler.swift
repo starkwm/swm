@@ -154,7 +154,8 @@ final class WindowFrameReconciler {
   /// Calculate each frame from elapsed time so delayed ticks do not slow the animation.
   func advanceAnimations(
     at now: ContinuousClock.Instant = .now,
-    windowIDs: Set<CGWindowID>? = nil
+    windowIDs: Set<CGWindowID>? = nil,
+    finishImmediately: Bool = false
   ) {
     let tickStart = ContinuousClock.now
     defer { AnimationDiagnostics.shared.record("tick", since: tickStart) }
@@ -165,7 +166,7 @@ final class WindowFrameReconciler {
       if let windowIDs, !windowIDs.contains(windowID) { continue }
       if delivery != nil {
         let progress =
-          reduceMotion()
+          finishImmediately || reduceMotion()
           ? 1
           : min(1, max(0, animation.startedAt.duration(to: now) / .seconds(1) / animation.duration))
         submitFrame(animation.frame(at: progress), for: windowID, final: progress == 1)
@@ -178,7 +179,8 @@ final class WindowFrameReconciler {
         continue
       }
       let elapsed = animation.startedAt.duration(to: now)
-      let progress = min(1, max(0, elapsed / .seconds(1) / animation.duration))
+      let progress =
+        finishImmediately ? 1 : min(1, max(0, elapsed / .seconds(1) / animation.duration))
       frames[windowID] = animation.frame(at: progress)
       currentFrames[windowID] = current
       if progress == 1 { finished.insert(windowID) }
@@ -276,9 +278,14 @@ final class WindowFrameReconciler {
       displayLink.update(frames: animations.mapValues(\.target))
       return
     }
-    let link = AnimationDisplayLink { [weak self] ids, time in
-      self?.advanceAnimations(at: time, windowIDs: ids)
-    }
+    let link = AnimationDisplayLink(
+      stalled: { [weak self] ids, time in
+        self?.advanceAnimations(at: time, windowIDs: ids, finishImmediately: true)
+      },
+      tick: { [weak self] ids, time in
+        self?.advanceAnimations(at: time, windowIDs: ids)
+      }
+    )
     link.update(frames: animations.mapValues(\.target))
     displayLink = link
   }

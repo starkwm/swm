@@ -1,7 +1,7 @@
 import AppKit
 import QuartzCore
 
-/// One capped display link per active display, with a bounded no-display fallback.
+/// One capped display link per active display, with stalled-link recovery and a no-display fallback.
 @MainActor
 final class AnimationDisplayLink {
   typealias Tick = (ContinuousClock.Instant) -> Void
@@ -15,7 +15,10 @@ final class AnimationDisplayLink {
   private struct Session {
     let token: UUID
     let link: any AnimationScreenLink
+    var lastTick: ContinuousClock.Instant
   }
+
+  private static let stallTimeout = Duration.seconds(2)
 
   /// Convert the presentation timestamp's Core Animation clock into ContinuousClock time.
   static func presentationTime(
@@ -42,14 +45,18 @@ final class AnimationDisplayLink {
   private var windowsByDisplay = [UInt32: Set<CGWindowID>]()
   private var fallback: Task<Void, Never>?
   private var fallbackIDs = Set<CGWindowID>()
+  private var watchdog: Task<Void, Never>?
   private let tick: (Set<CGWindowID>, ContinuousClock.Instant) -> Void
+  private let stalled: (Set<CGWindowID>, ContinuousClock.Instant) -> Void
 
   init(
     displays: (() -> [Display])? = nil,
+    stalled: ((Set<CGWindowID>, ContinuousClock.Instant) -> Void)? = nil,
     tick: @escaping (Set<CGWindowID>, ContinuousClock.Instant) -> Void
   ) {
     self.displays = displays ?? Self.currentDisplays
     self.tick = tick
+    self.stalled = stalled ?? tick
   }
 
   isolated deinit { stop() }
@@ -79,10 +86,12 @@ final class AnimationDisplayLink {
         guard let self, self.links[id]?.token == token,
           let ids = self.windowsByDisplay[id]
         else { return }
+        self.links[id]?.lastTick = time
         self.tick(ids, time)
       }
-      links[id] = Session(token: token, link: link)
+      links[id] = Session(token: token, link: link, lastTick: .now)
     }
+    updateWatchdog()
     fallbackIDs = missing
     if missing.isEmpty {
       fallback?.cancel()
@@ -106,6 +115,20 @@ final class AnimationDisplayLink {
     }
   }
 
+  /// Retire silent links before settling their windows, so late callbacks cannot resume them.
+  func checkForStalledLinks(at now: ContinuousClock.Instant = .now) {
+    let stale = links.compactMap { id, session in
+      session.lastTick.duration(to: now) >= Self.stallTimeout ? id : nil
+    }
+    var ids = Set<CGWindowID>()
+    for id in stale {
+      links.removeValue(forKey: id)?.link.stop()
+      ids.formUnion(windowsByDisplay.removeValue(forKey: id) ?? [])
+    }
+    updateWatchdog()
+    if !ids.isEmpty { stalled(ids, now) }
+  }
+
   func stop() {
     for session in links.values { session.link.stop() }
     links.removeAll()
@@ -113,6 +136,23 @@ final class AnimationDisplayLink {
     fallbackIDs.removeAll()
     fallback?.cancel()
     fallback = nil
+    watchdog?.cancel()
+    watchdog = nil
+  }
+
+  private func updateWatchdog() {
+    if links.isEmpty {
+      watchdog?.cancel()
+      watchdog = nil
+    } else if watchdog == nil {
+      watchdog = Task { [weak self] in
+        while !Task.isCancelled {
+          do { try await Task.sleep(for: .seconds(1)) } catch { return }
+          guard !Task.isCancelled else { return }
+          self?.checkForStalledLinks()
+        }
+      }
+    }
   }
 }
 

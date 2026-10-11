@@ -352,6 +352,28 @@ struct WindowFrameReconcilerTests {
     #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(20)))
   }
 
+  @Test("advanceAnimations: finishes only stalled display windows during long animations")
+  func advanceAnimationsFinishesOnlyStalledDisplayWindowsDuringLongAnimations() async throws {
+    let app = AnimationTestApp(processID: 1)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { app.frame(for: $0) },
+      frameMutation: { _, _, _ in nil },
+      delivery: AnimationFrameDelivery { app.backend(for: $0) },
+      automaticallySchedule: false,
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 10
+    reconciler.apply([1: animationFrame(100), 2: animationFrame(200)])
+    try await waitForAnimation { reconciler.isAnimating(1) && reconciler.isAnimating(2) }
+    reconciler.advanceAnimations(windowIDs: [1], finishImmediately: true)
+    try await waitForAnimation { app.frame(for: 1) == animationFrame(100) }
+    #expect(!reconciler.isAnimating(1))
+    #expect(reconciler.isAnimating(2))
+    #expect(app.frame(for: 2) == animationFrame(0))
+    reconciler.cancelAnimations(for: [2])
+    try await waitForAnimation { reconciler.isIdle }
+  }
+
   @Test("advanceAnimations: intermediate ticks read each window once and feedback does not read it")
   func advanceAnimationsIntermediateTicksReadEachWindowOnceAndFeedbackDoesNotReadIt() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
