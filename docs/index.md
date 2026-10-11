@@ -9,6 +9,7 @@ Start with [getting started](getting-started.md) for requirements and installati
 - [Configuration](configuration.md): startup scripts, global defaults, and window animation.
 - [Command line](cli.md): daemon startup, command syntax, help, and shell completions.
 - [Keyboard shortcuts](keyboard-shortcuts.md): invoke swm commands from a hotkey daemon.
+- [Testing](testing.md): run focused suites and benchmark the edit-build-test cycle.
 
 ## Command reference
 
