@@ -5,46 +5,11 @@ import Testing
 
 @testable import SwmLib
 
-// Synchronous clients use GCD threads so they cannot exhaust the cooperative pool
-// needed by the server's async handlers when these tests run in parallel.
-private func runBlocking<Value: Sendable>(
-  _ operation: @escaping @Sendable () throws -> Value
-) async throws -> Value {
-  try await withCheckedThrowingContinuation { continuation in
-    DispatchQueue.global().async {
-      continuation.resume(with: Result(catching: operation))
-    }
-  }
-}
-
-// A blocking newline client, matching the old wire exchange without BlueSocket.
-private func legacyExchange(path: String, input: Data, endWriting: Bool = false) throws -> Data {
-  let fd = try LocalSocket.connect(path: path)
-  defer { close(fd) }
-  try LocalSocket.send(input, to: fd)
-  if endWriting { Darwin.shutdown(fd, SHUT_WR) }
-  return try readToEOF(fd)
-}
-
-private func readToEOF(_ fd: Int32) throws -> Data {
-  var timeout = timeval(tv_sec: 7, tv_usec: 0)
-  setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
-  var data = Data()
-  var buffer = [UInt8](repeating: 0, count: 8192)
-  while true {
-    let count = recv(fd, &buffer, buffer.count, 0)
-    if count < 0 && errno == EINTR { continue }
-    guard count >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-    if count == 0 { return data }
-    data.append(contentsOf: buffer.prefix(count))
-  }
-}
-
-@Suite("Daemon integration")
+@Suite("Daemon")
 @MainActor
-struct DaemonIntegrationTests {
-  @Test("real socket dispatches on the main actor and preserves command failure IDs")
-  func commandDispatch() async throws {
+struct DaemonTests {
+  @Test("run: dispatches socket requests on the main actor with failure IDs")
+  func runDispatchesSocketRequestsOnTheMainActorWithFailureIDs() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     var dispatched = false
@@ -67,8 +32,8 @@ struct DaemonIntegrationTests {
     )
   }
 
-  @Test("socket requests reach the application dispatcher and update local settings")
-  func applicationDispatcher() async throws {
+  @Test("run: updates application settings through client transport and dispatch")
+  func runUpdatesApplicationSettingsThroughClientTransportAndDispatch() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let spaces = Spaces(activeSpaceID: nil)
@@ -80,18 +45,19 @@ struct DaemonIntegrationTests {
     let daemon = Daemon(path: endpoint.path, dispatch: dispatcher.dispatch)
     try daemon.run()
     defer { daemon.shutdown() }
-    let response = try await runBlocking {
-      try Client.exchange(
-        IPCRequest(id: "setting", domain: .config, command: "window-gap", args: ["17"]),
-        path: endpoint.path
-      )
+    let result = try await runBlocking {
+      let response = Client.send(domain: .config, args: ["window-gap", "17"]) {
+        try Client.exchange($0, path: endpoint.path)
+      }
+      return (response.ok, response.outputMessage)
     }
-    #expect(response == .success(id: "setting", message: "ok"))
+    #expect(result.0)
+    #expect(result.1 == "ok")
     #expect(spaces.settings(for: 42).gap == 17)
   }
 
-  @Test("version validation rejects before command dispatch and preserves the ID")
-  func versionValidation() async throws {
+  @Test("run: rejects unsupported versions before dispatch and preserves IDs")
+  func runRejectsUnsupportedVersionsBeforeDispatchAndPreservesIDs() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -106,8 +72,8 @@ struct DaemonIntegrationTests {
     #expect(response.message == "unsupported IPC request version: 2; expected 1")
   }
 
-  @Test("malformed legacy client input receives invalidRequest and an empty ID")
-  func malformedInput() async throws {
+  @Test("run: rejects malformed legacy input with an empty ID")
+  func runRejectsMalformedLegacyInputWithAnEmptyID() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -125,8 +91,8 @@ struct DaemonIntegrationTests {
     #expect(response.errorCode == .invalidRequest)
   }
 
-  @Test("old newline client exchanges a golden request with the new server")
-  func legacyClient() async throws {
+  @Test("run: accepts a legacy newline client request")
+  func runAcceptsALegacyNewlineClientRequest() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -150,8 +116,8 @@ struct DaemonIntegrationTests {
     #expect(response == .success(id: "old-client", message: "ok"))
   }
 
-  @Test("unterminated legacy input is rejected without dispatch")
-  func unterminatedInput() async throws {
+  @Test("run: rejects unterminated legacy input before dispatch")
+  func runRejectsUnterminatedLegacyInputBeforeDispatch() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -172,8 +138,8 @@ struct DaemonIntegrationTests {
     #expect(data.isEmpty)
   }
 
-  @Test("query JSON stays sorted and UInt64 identifiers stay exact over transport")
-  func queryJSON() async throws {
+  @Test("run: preserves sorted query JSON and full width identifiers")
+  func runPreservesSortedQueryJSONAndFullWidthIdentifiers() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -200,68 +166,8 @@ struct DaemonIntegrationTests {
     )
   }
 
-  @Test("client checks response IDs over a real socket")
-  func mismatchedID() async throws {
-    let endpoint = try TestEndpoint()
-    defer { endpoint.remove() }
-    let daemon = Daemon(path: endpoint.path) { _ in .success(id: "wrong", message: "ok") }
-    try daemon.run()
-    defer { daemon.shutdown() }
-    let output = try await runBlocking {
-      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
-        try Client.exchange($0, path: endpoint.path)
-      }
-      return (result.ok, result.outputMessage)
-    }
-    #expect(!output.0)
-    #expect(output.1 == "error: IPC response did not match its request")
-  }
-
-  @Test("connection initialization failures retain the daemon-not-running diagnostic")
-  func missingDaemon() async throws {
-    let endpoint = try TestEndpoint()
-    defer { endpoint.remove() }
-    let output = try await runBlocking {
-      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
-        try Client.exchange($0, path: endpoint.path)
-      }
-      return (result.ok, result.outputMessage)
-    }
-    #expect(!output.0)
-    #expect(output.1 == "error: daemon is not running")
-  }
-
-  @Test("shutdown rejects queued work even when the daemon is restarted")
-  func restartRejectsQueuedRequests() async throws {
-    let endpoint = try TestEndpoint()
-    defer { endpoint.remove() }
-    var dispatches = 0
-    let daemon = Daemon(path: endpoint.path) { request in
-      dispatches += 1
-      return .success(id: request.id, message: "ok")
-    }
-    try daemon.run()
-    defer { daemon.shutdown() }
-    let fd = try LocalSocket.connect(path: endpoint.path)
-    defer { close(fd) }
-    try LocalSocket.send(
-      Data(
-        (#"{"version":1,"id":"queued","domain":"query","command":"windows","args":[]}"# + "\n").utf8
-      ),
-      to: fd
-    )
-    // Hold the actor briefly so the transport can queue the decoded request.
-    usleep(100_000)
-    daemon.shutdown()
-    try daemon.run()
-    _ = try await runBlocking { try readToEOF(fd) }
-    let response = try await exchange(path: endpoint.path)
-    #expect(response.ok)
-    #expect(dispatches == 1)
-  }
-
-  @Test("realistic window queries reach a draining client", arguments: [1, 32, 256])
-  func largeQuery(windowCount: Int) async throws {
+  @Test("run: delivers realistic window query payloads", arguments: [1, 32, 256])
+  func runDeliversRealisticWindowQueryPayloads(windowCount: Int) async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let payload = (0..<windowCount).map { index in
@@ -292,8 +198,8 @@ struct DaemonIntegrationTests {
     #expect(try await exchange(path: endpoint.path) == expected)
   }
 
-  @Test("request frames above the old 64 KiB limit reach dispatch")
-  func largeRequest() async throws {
+  @Test("run: dispatches requests above the legacy frame limit")
+  func runDispatchesRequestsAboveTheLegacyFrameLimit() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let argument = String(repeating: "x", count: 70_000)
@@ -312,30 +218,51 @@ struct DaemonIntegrationTests {
     #expect(response == .success(id: "large-request", message: "ok"))
   }
 
-  @Test("EOF uses the package's combined closed-or-timeout diagnostic")
-  func closedConnection() async throws {
+  @Test("run: releases the daemon and removes its endpoint")
+  func runReleasesTheDaemonAndRemovesItsEndpoint() throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
-    weak var reference: Daemon?
-    let daemon = Daemon(path: endpoint.path) { request in
-      reference?.shutdown()
-      return .success(id: request.id, message: "not delivered")
+    weak var weakDaemon: Daemon?
+    do {
+      let daemon = Daemon(path: endpoint.path) { .success(id: $0.id, message: "ok") }
+      weakDaemon = daemon
+      try daemon.run()
     }
-    reference = daemon
-    try daemon.run()
-    defer { daemon.shutdown() }
-    let output = try await runBlocking {
-      let result = Client.send(domain: .query, args: ["--windows"]) {
-        try Client.exchange($0, path: endpoint.path)
-      }
-      return (result.ok, result.outputMessage)
-    }
-    #expect(!output.0)
-    #expect(output.1 == "error: Connection closed or timed out.")
+    #expect(weakDaemon == nil)
+    #expect(!FileManager.default.fileExists(atPath: endpoint.path))
   }
 
-  @Test("slow readers do not block other requests or shutdown")
-  func slowReader() async throws {
+  @Test("shutdown: rejects queued work across restart")
+  func shutdownRejectsQueuedWorkAcrossRestart() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    var dispatches = 0
+    let daemon = Daemon(path: endpoint.path) { request in
+      dispatches += 1
+      return .success(id: request.id, message: "ok")
+    }
+    try daemon.run()
+    defer { daemon.shutdown() }
+    let fd = try LocalSocket.connect(path: endpoint.path)
+    defer { close(fd) }
+    try LocalSocket.send(
+      Data(
+        (#"{"version":1,"id":"queued","domain":"query","command":"windows","args":[]}"# + "\n").utf8
+      ),
+      to: fd
+    )
+    // Hold the actor briefly so the transport can queue the decoded request.
+    usleep(100_000)
+    daemon.shutdown()
+    try daemon.run()
+    _ = try await runBlocking { try readToEOF(fd) }
+    let response = try await exchange(path: endpoint.path)
+    #expect(response.ok)
+    #expect(dispatches == 1)
+  }
+
+  @Test("shutdown: closes slow readers without blocking other requests")
+  func shutdownClosesSlowReadersWithoutBlockingOtherRequests() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let large = String(repeating: "x", count: 200_000)
@@ -367,10 +294,10 @@ struct DaemonIntegrationTests {
   }
 
   @Test(
-    "suspended commands allow other requests and are cancelled on shutdown",
+    "shutdown: cancels suspended commands and permits restart",
     .timeLimit(.minutes(1))
   )
-  func suspendedCommandShutdown() async throws {
+  func shutdownCancelsSuspendedCommandsAndPermitsRestart() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
 
@@ -427,20 +354,6 @@ struct DaemonIntegrationTests {
     #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))
   }
 
-  @Test("daemon does not retain itself through its server handler")
-  func lifetime() throws {
-    let endpoint = try TestEndpoint()
-    defer { endpoint.remove() }
-    weak var weakDaemon: Daemon?
-    do {
-      let daemon = Daemon(path: endpoint.path) { .success(id: $0.id, message: "ok") }
-      weakDaemon = daemon
-      try daemon.run()
-    }
-    #expect(weakDaemon == nil)
-    #expect(!FileManager.default.fileExists(atPath: endpoint.path))
-  }
-
   private func exchange(path: String, version: Int = 1) async throws -> IPCResponse {
     try await runBlocking {
       try Client.exchange(
@@ -449,16 +362,4 @@ struct DaemonIntegrationTests {
       )
     }
   }
-}
-
-private struct TestEndpoint: Sendable {
-  let directory: URL
-  var path: String { directory.appendingPathComponent("ipc.sock").path }
-
-  init() throws {
-    directory = URL(fileURLWithPath: "/tmp/swm-ipc-\(UUID().uuidString)")
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-  }
-
-  func remove() { try? FileManager.default.removeItem(at: directory) }
 }

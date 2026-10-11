@@ -7,7 +7,7 @@ import Testing
 @Suite("SpaceCommandHandler")
 struct SpaceCommandHandlerTests {
   @Test("dispatch: activates a Space without requiring a tracked active Space")
-  func activatesSpace() async {
+  func dispatchActivatesASpaceWithoutRequiringATrackedActiveSpace() async {
     let spaces = Spaces(activeSpaceID: nil)
     var selectedIndex: Int?
     let handler = SpaceCommandHandler(
@@ -24,7 +24,7 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: activation failures remain failures")
-  func activationFailure() async {
+  func dispatchActivationFailuresRemainFailures() async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = SpaceCommandHandler(
       spaces: spaces,
@@ -42,7 +42,7 @@ struct SpaceCommandHandlerTests {
     "dispatch: activation rejects missing, extra, and invalid indexes",
     arguments: [[], ["0", "1"], ["-1"], ["next"], ["18446744073709551615"], ["--space", "1"]]
   )
-  func invalidActivation(args: [String]) async {
+  func dispatchActivationRejectsMissingExtraAndInvalidIndexes(args: [String]) async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = SpaceCommandHandler(
       spaces: spaces,
@@ -55,7 +55,7 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: selects floating or automatic layout for the active Space")
-  func dispatchSelectsLayout() async {
+  func dispatchSelectsFloatingOrAutomaticLayoutForTheActiveSpace() async {
     let spaces = Spaces(activeSpaceID: 42)
     let tiling = makeTestTiling(
       spaces: spaces,
@@ -231,12 +231,12 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test(
-    "dispatch rejects unsupported space commands",
+    "dispatch: rejects unsupported Space commands",
     arguments: [
       ("--unknown", [String]()), ("--toggle", ["tiling"]), ("--focus", ["recent"]),
     ]
   )
-  func unsupportedCommands(command: String, args: [String]) async {
+  func dispatchRejectsUnsupportedSpaceCommands(command: String, args: [String]) async {
     let response = await handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
       request(command: command, args: args)
     )
@@ -246,13 +246,18 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test(
-    "overflow returns invalid request and leaves all settings unchanged",
+    "dispatch: rejects overflow without changing settings",
     arguments: [
       ("--gap", "abs:\(Int.max)", "rel:1", "gap"),
       ("--padding", "abs:10:20:30:\(Int.max)", "rel:1:1:1:1", "padding"),
     ]
   )
-  func overflow(command: String, absolute: String, relative: String, setting: String) async {
+  func dispatchRejectsOverflowWithoutChangingSettings(
+    command: String,
+    absolute: String,
+    relative: String,
+    setting: String
+  ) async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
     #expect(await handler.dispatch(request(command: command, args: [absolute])).ok)
@@ -277,7 +282,7 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test("dispatch: updates a selected space by index")
-  func dispatchUpdatesSelectedSpaceByIndex() async {
+  func dispatchUpdatesASelectedSpaceByIndex() async {
     let spaces = Spaces(activeSpaceID: 1)
     let handler = SpaceCommandHandler(
       spaces: spaces,

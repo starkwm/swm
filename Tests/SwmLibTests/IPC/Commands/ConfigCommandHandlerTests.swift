@@ -6,7 +6,7 @@ import Testing
 @MainActor
 @Suite("ConfigCommandHandler")
 struct ConfigCommandHandlerTests {
-  @Test("dispatch selects layout geometry", arguments: ["master", "monocle", "dwindle", "float"])
+  @Test("dispatch: selects layout geometry", arguments: ["master", "monocle", "dwindle", "float"])
   func dispatchSelectsLayoutGeometry(selection: String) {
     let spaces = Spaces(activeSpaceID: nil)
     let tiling = makeTiling(
@@ -56,17 +56,68 @@ struct ConfigCommandHandlerTests {
     #expect(spaces.settings(for: 2).gap == 12)
   }
 
-  @Test("dispatch: accepts layout controls")
-  func dispatchAcceptsLayoutControls() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
-
-    let ratio = handler.dispatch(request(command: "master-ratio", args: ["0.65"]))
-    let placement = handler.dispatch(request(command: "master-placement", args: ["top"]))
-    let preserve = handler.dispatch(request(command: "preserve-split", args: ["true"]))
-
-    #expect(ratio.ok)
-    #expect(placement.ok && placement.message == "top")
-    #expect(preserve.ok && preserve.message == "on")
+  @Test("dispatch: applies master controls and split preservation to geometry")
+  func dispatchAppliesMasterControlsAndSplitPreservationToGeometry() {
+    let spaces = Spaces(activeSpaceID: nil)
+    var bounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
+    let tiling = Tiling(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [window(id: 1), window(id: 2)],
+          topology: SpaceTopology(
+            spacesByID: [10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)],
+            visibleSpaceIDByDisplayID: ["display": 10],
+            spaceIDsByWindowID: [1: [10], 2: [10]],
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                visibleFrame: bounds
+              )
+            ]
+          )
+        )
+      },
+      spaces: spaces
+    )
+    tiling.initialize()
+    let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      tiling: tiling
+    )
+    #expect(handler.dispatch(request(command: "layout", args: ["master"])).ok)
+    #expect(handler.dispatch(request(command: "master-ratio", args: ["0.65"])).ok)
+    #expect(handler.dispatch(request(command: "master-placement", args: ["top"])).ok)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 1000, height: 520),
+            2: CGRect(x: 0, y: 520, width: 1000, height: 280),
+          ])
+        )
+    )
+    #expect(handler.dispatch(request(command: "preserve-split", args: ["true"])).ok)
+    #expect(handler.dispatch(request(command: "layout", args: ["dwindle"])).ok)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 800),
+          ])
+        )
+    )
+    bounds.size.width = 400
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 200, height: 800),
+            2: CGRect(x: 200, y: 0, width: 200, height: 800),
+          ])
+        )
+    )
   }
 
   @Test("dispatch: selects focus follows mouse mode")
@@ -111,7 +162,7 @@ struct ConfigCommandHandlerTests {
   }
 
   @Test(
-    "dispatch rejects malformed arguments with exact diagnostics",
+    "dispatch: rejects malformed arguments with exact diagnostics",
     arguments: [
       ("window-gap", [], "invalid config window-gap arguments"),
       ("window-gap", ["10", "20"], "invalid config window-gap arguments"),
@@ -128,7 +179,11 @@ struct ConfigCommandHandlerTests {
       ("focus-follows-mouse", ["maybe"], "invalid config focus-follows-mouse value: maybe"),
     ]
   )
-  func malformedArguments(command: String, args: [String], message: String) {
+  func dispatchRejectsMalformedArgumentsWithExactDiagnostics(
+    command: String,
+    args: [String],
+    message: String
+  ) {
     let response = handler(spaces: Spaces(activeSpaceID: nil)).dispatch(
       request(command: command, args: args)
     )
@@ -137,21 +192,33 @@ struct ConfigCommandHandlerTests {
     #expect(response.message == message)
   }
 
-  @Test("dispatch: validates animation duration")
-  func animationDurationValidation() {
-    let handler = handler(spaces: Spaces(activeSpaceID: nil))
+  @Test("dispatch: applies animation duration and preserves it after invalid requests")
+  func dispatchAppliesAnimationDurationAndPreservesItAfterInvalidRequests() {
+    let spaces = Spaces(activeSpaceID: nil)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in .zero },
+      frameMutation: { _, _, _ in .success },
+      automaticallySchedule: false
+    )
+    let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      tiling: makeTiling(frameReconciler: reconciler)
+    )
     for argument in ["0", "0.18", "1"] {
       #expect(handler.dispatch(request(command: "animation-duration", args: [argument])).ok)
+      #expect(reconciler.animationDuration == Double(argument))
     }
     for args in [[], ["-1"], ["1.1"], ["nan"], ["inf"], ["fast"], ["0.1", "0.2"]] {
       let response = handler.dispatch(request(command: "animation-duration", args: args))
       #expect(!response.ok)
       #expect(response.errorCode == .invalidRequest)
+      #expect(reconciler.animationDuration == 1)
     }
   }
 
   @Test("dispatch: validates and applies animation easing")
-  func animationEasingValidation() {
+  func dispatchValidatesAndAppliesAnimationEasing() {
     let spaces = Spaces(activeSpaceID: nil)
     let reconciler = WindowFrameReconciler(
       currentFrame: { _ in .zero },
@@ -174,6 +241,23 @@ struct ConfigCommandHandlerTests {
       #expect(response.errorCode == .invalidRequest)
       #expect(reconciler.animationEasing == previous)
     }
+  }
+
+  @Test("dispatch: config rejects unsupported commands")
+  func dispatchConfigRejectsUnsupportedCommands() {
+    let spaces = Spaces(activeSpaceID: nil)
+    let response = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      tiling: makeTestTiling(spaces: spaces)
+    ).dispatch(
+      request(command: "set", args: [])
+    )
+
+    #expect(response.id == "request-id")
+    #expect(response.ok == false)
+    #expect(response.errorCode == .unsupportedCommand)
+    #expect(response.message == "unsupported config command: set")
   }
 
   private func request(command: String, args: [String]) -> IPCRequest {

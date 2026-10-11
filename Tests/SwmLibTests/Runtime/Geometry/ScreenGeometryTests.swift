@@ -3,10 +3,10 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("Screen geometry")
+@Suite("ScreenGeometry")
 struct ScreenGeometryTests {
   @Test(
-    "uses the primary screen origin for every display",
+    "accessibilityFrame: converts every display relative to the primary origin",
     arguments: [
       (CGRect(x: 0, y: 0, width: 1440, height: 900), CGRect(x: 0, y: 0, width: 1440, height: 900)),
       (
@@ -27,7 +27,10 @@ struct ScreenGeometryTests {
       ),
     ]
   )
-  func displayPositions(frame: CGRect, expected: CGRect) {
+  func accessibilityFrameConvertsEveryDisplayRelativeToThePrimaryOrigin(
+    frame: CGRect,
+    expected: CGRect
+  ) {
     let primary = CGRect(x: 0, y: 0, width: 1440, height: 900)
     #expect(ScreenGeometry.accessibilityFrame(frame, primaryFrame: primary) == expected)
     // A 24-point menu bar, 60-point bottom Dock, and 8-point left inset.

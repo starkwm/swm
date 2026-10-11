@@ -2,10 +2,9 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("IPCRequest query")
-struct IPCRequestQueryTests {
-  @Test("accepts plural query flags", arguments: ["--displays", "--spaces", "--windows"])
-  func pluralFlags(flag: String) throws {
+extension IPCRequestTests {
+  @Test("make: accepts plural query flags", arguments: ["--displays", "--spaces", "--windows"])
+  func makeAcceptsPluralQueryFlags(flag: String) throws {
     let request = try IPCRequest.make(domain: .query, arguments: [flag])
     #expect(request.domain == .query)
     #expect(request.command == flag)
@@ -13,10 +12,10 @@ struct IPCRequestQueryTests {
   }
 
   @Test(
-    "defaults singular queries to focused selection",
+    "make: defaults singular queries to focused selection",
     arguments: ["--display", "--space", "--window"]
   )
-  func singularDefaults(flag: String) throws {
+  func makeDefaultsSingularQueriesToFocusedSelection(flag: String) throws {
     let request = try IPCRequest.make(domain: .query, arguments: [flag])
     #expect(request.domain == .query)
     #expect(request.command == flag + "s")
@@ -24,7 +23,7 @@ struct IPCRequestQueryTests {
   }
 
   @Test(
-    "preserves explicit selectors",
+    "make: preserves explicit query selectors",
     arguments: [
       (["--windows", "--display"], "--windows", ["--display"]),
       (["--spaces", "--window", "42"], "--spaces", ["--window", "42"]),
@@ -33,14 +32,16 @@ struct IPCRequestQueryTests {
       (["--window", "42"], "--windows", ["--window", "42"]),
     ]
   )
-  func explicitSelectors(arguments: [String], command: String, args: [String]) throws {
+  func makePreservesExplicitQuerySelectors(arguments: [String], command: String, args: [String])
+    throws
+  {
     let request = try IPCRequest.make(domain: .query, arguments: arguments)
     #expect(request.command == command)
     #expect(request.args == args)
   }
 
   @Test(
-    "rejects malformed queries with the expected error",
+    "make: rejects malformed queries with exact diagnostics",
     arguments: [
       ([], "exactly one query flag is required"),
       (["--displays", "--windows"], "exactly one query flag is required"),
@@ -54,7 +55,7 @@ struct IPCRequestQueryTests {
       (["--windows", "--window", "abc"], "query window selector value must be a window id"),
     ]
   )
-  func malformedQuery(arguments: [String], message: String) {
+  func makeRejectsMalformedQueriesWithExactDiagnostics(arguments: [String], message: String) {
     #expect(throws: IPCCommandError.invalidRequest(message)) {
       try IPCRequest.make(domain: .query, arguments: arguments)
     }

@@ -3,51 +3,9 @@ import Testing
 
 @testable import SwmLib
 
-@MainActor
-@Suite("Tiling window controls")
-struct TilingWindowControlTests {
-  @Test("master controls: swap a selected window with master")
-  func masterControlsSwapSelectedWindowWithMaster() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-
-    #expect(tiling.swapWindowWithMaster(3))
-    #expect(tiling.swapWindowWithMaster(99) == false)
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            3: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            1: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
-    )
-  }
-
-  @Test("master controls: find the first available master window")
-  func masterControlsFindAvailableMasterWindow() {
-    let tiling = makeTiling(
-      windows: [window(id: 1, isMinimized: true), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-
-    #expect(tiling.masterWindowID(inLayoutContaining: 3) == 2)
-    #expect(tiling.setWindowLayout(.float, for: 2))
-    #expect(tiling.masterWindowID(inLayoutContaining: 3) == 3)
-
-    tiling.setLayout(.dwindle, for: 10)
-    #expect(tiling.masterWindowID(inLayoutContaining: 3) == nil)
-  }
-
-  @Test("directional swap: exchanges neighbouring windows in master")
-  func directionalSwapExchangesMasterNeighbors() {
+extension TilingTests {
+  @Test("swapWindow: exchanges neighbouring windows in master")
+  func swapWindowExchangesNeighbouringWindowsInMaster() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -69,8 +27,8 @@ struct TilingWindowControlTests {
     )
   }
 
-  @Test("directional swap: exchanges neighbouring windows in dwindle")
-  func directionalSwapExchangesDwindleNeighbors() {
+  @Test("swapWindow: exchanges neighbouring windows in dwindle")
+  func swapWindowExchangesNeighbouringWindowsInDwindle() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -92,8 +50,48 @@ struct TilingWindowControlTests {
     )
   }
 
-  @Test("window layout: float removes a window and tile restores it")
-  func windowLayoutFloatsAndRestoresWindow() {
+  @Test("swapWindowWithMaster: swap a selected window with master")
+  func swapWindowWithMasterSwapASelectedWindowWithMaster() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+
+    #expect(tiling.swapWindowWithMaster(3))
+    #expect(tiling.swapWindowWithMaster(99) == false)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            3: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            1: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("masterWindowID: find the first available master window")
+  func masterWindowIDFindTheFirstAvailableMasterWindow() {
+    let tiling = makeTiling(
+      windows: [window(id: 1, isMinimized: true), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+
+    #expect(tiling.masterWindowID(inLayoutContaining: 3) == 2)
+    #expect(tiling.setWindowLayout(.float, for: 2))
+    #expect(tiling.masterWindowID(inLayoutContaining: 3) == 3)
+
+    tiling.setLayout(.dwindle, for: 10)
+    #expect(tiling.masterWindowID(inLayoutContaining: 3) == nil)
+  }
+
+  @Test("setWindowLayout: float removes a window and tile restores it")
+  func setWindowLayoutFloatRemovesAWindowAndTileRestoresIt() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -118,8 +116,8 @@ struct TilingWindowControlTests {
     #expect(tiling.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
-  @Test("window layout: toggle alternates floating participation")
-  func windowLayoutToggleAlternatesParticipation() {
+  @Test("setWindowLayout: toggle alternates floating participation")
+  func setWindowLayoutToggleAlternatesFloatingParticipation() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]]
@@ -138,8 +136,35 @@ struct TilingWindowControlTests {
     #expect(tiling.layoutPlan(for: layoutID(10)) == tiledPlan)
   }
 
-  @Test("window cycle: follows layout order, wraps, and skips unavailable windows")
-  func windowCycleFollowsAvailableLayoutOrder() {
+  @Test("setWindowLayout: floating the insertion anchor excludes it from focused insertion")
+  func setWindowLayoutFloatingTheInsertionAnchorExcludesItFromFocusedInsertion() {
+    var windows = [window(id: 1), window(id: 2), window(id: 3)]
+    let tiling = makeTiling(
+      windows: { windows },
+      memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
+    )
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    tiling.windowDidFocus(1)
+
+    #expect(tiling.setWindowLayout(.float, for: 1))
+    windows.append(window(id: 4))
+    tiling.reconcile()
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            2: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 400),
+            4: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("cycledWindowID: follows layout order, wraps, and skips unavailable windows")
+  func cycledWindowIDFollowsLayoutOrderWrapsAndSkipsUnavailableWindows() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3, isMinimized: true)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -155,8 +180,8 @@ struct TilingWindowControlTests {
     #expect(tiling.cycledWindowID(from: 1, in: .next) == nil)
   }
 
-  @Test("window cycle: includes fixed-size windows only in floating layouts")
-  func windowCycleIncludesFixedSizeWindows() {
+  @Test("cycledWindowID: includes fixed-size windows only in floating layouts")
+  func cycledWindowIDIncludesFixedSizeWindowsOnlyInFloatingLayouts() {
     var windows = [
       window(id: 1), window(id: 2, isResizable: false),
       window(id: 3, isMinimized: true, isResizable: false),
@@ -192,8 +217,8 @@ struct TilingWindowControlTests {
     #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == nil)
   }
 
-  @Test("window cycle: resumes on the active Space after the focused window closes")
-  func windowCycleResumesAfterFocusedWindowCloses() {
+  @Test("cycledWindowID: resumes on the active Space after the focused window closes")
+  func cycledWindowIDResumesOnTheActiveSpaceAfterTheFocusedWindowCloses() {
     var windows = [window(id: 1), window(id: 2), window(id: 3), window(id: 4, isMinimized: true)]
     let tiling = makeTiling(
       windows: { windows },
@@ -221,8 +246,8 @@ struct TilingWindowControlTests {
     #expect(tiling.cycledWindowID(from: nil, in: .next, fallbackSpaceID: 10) == nil)
   }
 
-  @Test("window swap cycle: exchanges adjacent leaves and wraps")
-  func windowSwapCycleExchangesAdjacentLeaves() {
+  @Test("swapWindowInOrder: exchanges adjacent leaves and wraps")
+  func swapWindowInOrderExchangesAdjacentLeavesAndWraps() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -244,32 +269,5 @@ struct TilingWindowControlTests {
 
     tiling.setLayout(.float, for: 10)
     #expect(tiling.swapWindowInOrder(1, in: .next) == false)
-  }
-
-  @Test("window layout: floating the insertion anchor excludes it from focused insertion")
-  func windowLayoutFloatingInsertionAnchor() {
-    var windows = [window(id: 1), window(id: 2), window(id: 3)]
-    let tiling = makeTiling(
-      windows: { windows },
-      memberships: { [1: [10], 2: [10], 3: [10], 4: [10]] }
-    )
-    tiling.initialize()
-    tiling.setLayout(.dwindle, for: 10)
-    tiling.windowDidFocus(1)
-
-    #expect(tiling.setWindowLayout(.float, for: 1))
-    windows.append(window(id: 4))
-    tiling.reconcile()
-
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            4: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
-    )
   }
 }

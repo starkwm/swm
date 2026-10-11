@@ -5,10 +5,10 @@ import Testing
 @Suite("AnimationEasing")
 struct AnimationEasingTests {
   @Test(
-    "curves are bounded, monotonic, and have exact endpoints",
+    "value: bounds monotonic curves with exact endpoints",
     arguments: AnimationEasing.allCases
   )
-  func endpointsAndMonotonicity(easing: AnimationEasing) {
+  func valueBoundsMonotonicCurvesWithExactEndpoints(easing: AnimationEasing) {
     #expect(easing.value(at: -1) == 0)
     #expect(easing.value(at: 0) == 0)
     #expect(easing.value(at: 1) == 1)
@@ -22,8 +22,8 @@ struct AnimationEasingTests {
     }
   }
 
-  @Test("curves have distinct expected midpoints")
-  func midpoints() {
+  @Test("value: calculates each curve midpoint")
+  func valueCalculatesEachCurveMidpoint() {
     #expect(AnimationEasing.linear.value(at: 0.5) == 0.5)
     #expect(AnimationEasing.easeOutQuad.value(at: 0.5) == 0.75)
     #expect(AnimationEasing.easeOutCubic.value(at: 0.5) == 0.875)

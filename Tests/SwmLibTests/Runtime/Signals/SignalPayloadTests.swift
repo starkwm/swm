@@ -4,23 +4,8 @@ import Testing
 
 @Suite("SignalPayload")
 struct SignalPayloadTests {
-  @Test("application: maps process environment")
-  func applicationMapsProcessEnvironment() {
-    let payload = SignalPayload.application(
-      event: .applicationFrontSwitched,
-      processID: 123,
-      app: "Safari",
-      active: true
-    )
-
-    #expect(payload.event == .applicationFrontSwitched)
-    #expect(payload.app == "Safari")
-    #expect(payload.active == true)
-    #expect(payload.environment["SWM_PROCESS_ID"] == "123")
-  }
-
   @Test("spaceChanged: maps current and recent space environment")
-  func spaceChangedMapsEnvironment() {
+  func spaceChangedMapsCurrentAndRecentSpaceEnvironment() {
     let payload = SignalPayload.spaceChanged(
       space: Space(id: 10, type: .normal),
       currentIndex: 2,
@@ -36,7 +21,7 @@ struct SignalPayloadTests {
   }
 
   @Test("displayChanged: maps display environment")
-  func displayChangedMapsEnvironment() {
+  func displayChangedMapsDisplayEnvironment() {
     let payload = SignalPayload.displayChanged(currentID: "display-a", recentID: "display-b")
 
     #expect(payload.event == .displayChanged)

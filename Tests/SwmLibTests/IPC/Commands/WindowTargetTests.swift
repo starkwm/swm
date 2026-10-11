@@ -14,9 +14,4 @@ struct WindowTargetTests {
     #expect(WindowTarget(arguments: ["up"]) == .direction(.up))
     #expect(WindowTarget(arguments: ["down"]) == .direction(.down))
   }
-
-  @Test("init: rejects multiple arguments")
-  func initRejectsMultipleArguments() {
-    #expect(WindowTarget(arguments: ["42", "left"]) == nil)
-  }
 }

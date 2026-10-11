@@ -6,7 +6,7 @@ import Testing
 @Suite("SpaceTopology")
 struct SpaceTopologyTests {
   @Test("layout IDs: keeps separate Spaces on their physical displays")
-  func layoutIDsKeepSeparateSpacesOnTheirPhysicalDisplays() {
+  func layoutIDsKeepsSeparateSpacesOnTheirPhysicalDisplays() {
     let topology = makeTopology(
       spacesByID: [
         10: SpaceTopologyDescriptor(id: 10, displayID: "display-a", type: .normal),
@@ -31,7 +31,7 @@ struct SpaceTopologyTests {
   }
 
   @Test("layout IDs: expands a shared Space across physical displays")
-  func layoutIDsExpandSharedSpaceAcrossPhysicalDisplays() {
+  func layoutIDsExpandsASharedSpaceAcrossPhysicalDisplays() {
     let topology = makeTopology(
       spacesByID: [
         10: SpaceTopologyDescriptor(id: 10, displayID: "shared", type: .normal),

@@ -1,10 +1,40 @@
 import Foundation
+import StarkSkyLight
 import Testing
 
 @testable import SwmLib
 
 @Suite("SpaceSerializer")
 struct SpaceSerializerTests {
+  @Test(
+    "all: preserves package Space types in query output",
+    arguments: [
+      (StarkSkyLight.SpaceType.desktop, "normal", false),
+      (.fullscreen, "fullscreen", true), (.unknown(1), "unknown", false),
+      (.unknown(99), "unknown", false),
+    ]
+  )
+  @MainActor
+  func allPreservesPackageSpaceTypesInQueryOutput(
+    type: StarkSkyLight.SpaceType,
+    expected: String,
+    fullscreen: Bool
+  ) throws {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
+    snapshot.spaces = [Space(id: 42, type: SwmLib.SpaceType(type))]
+    snapshot.displaySpaces = []
+    snapshot.arrangedScreens = []
+    snapshot.windows = []
+    snapshot.spaceIDsByWindowID = [:]
+    snapshot.activeSpaceID = 42
+    snapshot.currentSpaceByScreenID = [:]
+    let space = try #require(SpaceSerializer.all(snapshot: snapshot).first)
+    let object = try encodedObject(space)
+    #expect(object["type"] as? String == expected)
+    #expect(object["is-native-fullscreen"] as? Bool == fullscreen)
+    #expect(object["has-focus"] as? Bool == true)
+  }
+
   @Test("encode: uses window IDs")
   func encodeUsesWindowIDs() throws {
     let space = SpaceSerializer(

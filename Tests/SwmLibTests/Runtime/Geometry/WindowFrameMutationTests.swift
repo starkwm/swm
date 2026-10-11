@@ -102,11 +102,12 @@ struct WindowFrameMutationTests {
     #expect(result == .success)
     #expect(mutated == false)
   }
+
   @Test(
-    "growing animation frames move first and restore position if resizing fails",
+    "apply: moves growing animations first and rolls back on resize failure",
     arguments: [true, false]
   )
-  func growingFramesMoveFirst(resizeSucceeds: Bool) {
+  func applyMovesGrowingAnimationsFirstAndRollsBackOnResizeFailure(resizeSucceeds: Bool) {
     var operations = [String]()
     let result = WindowFrameMutation.apply(
       from: currentFrame,
@@ -125,8 +126,8 @@ struct WindowFrameMutationTests {
     #expect(operations == (resizeSucceeds ? ["move", "resize"] : ["move", "resize", "rollback"]))
   }
 
-  @Test("growing animation reports a failed position rollback")
-  func growingRollbackFailure() {
+  @Test("apply: reports position rollback failure while growing")
+  func applyReportsPositionRollbackFailureWhileGrowing() {
     var moves = 0
     let result = WindowFrameMutation.apply(
       from: currentFrame,
@@ -141,8 +142,8 @@ struct WindowFrameMutationTests {
     #expect(result == .resizeFailedAndRollbackFailed)
   }
 
-  @Test("shrinking animation frames retain resize-before-move ordering")
-  func shrinkingFramesResizeFirst() {
+  @Test("apply: resizes shrinking animations before moving")
+  func applyResizesShrinkingAnimationsBeforeMoving() {
     var operations = [String]()
     let result = WindowFrameMutation.apply(
       from: targetFrame,
@@ -160,5 +161,4 @@ struct WindowFrameMutationTests {
     #expect(result == .success)
     #expect(operations == ["resize", "move"])
   }
-
 }

@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct WindowSpaceBridgeTests {
   @Test("move: invokes the Objective-C initializer and perform method with correct arguments")
-  func invocation() throws {
+  func moveInvokesTheObjectiveCInitializerAndPerformMethodWithCorrectArguments() throws {
     TestSpaceOperation.receivedWindows = nil
     TestSpaceOperation.receivedSpaceID = nil
     TestSpaceOperation.releasedCount = 0
@@ -24,7 +24,7 @@ struct WindowSpaceBridgeTests {
   }
 
   @Test("move: reports missing classes and selectors before invocation")
-  func unavailable() {
+  func moveReportsMissingClassesAndSelectorsBeforeInvocation() {
     for operationClass: AnyClass? in [nil, NSObject.self] {
       #expect(throws: WindowSpaceBridgeError.unavailable) {
         try WindowSpaceBridge.move(windowID: 42, to: 33, operationClass: operationClass)

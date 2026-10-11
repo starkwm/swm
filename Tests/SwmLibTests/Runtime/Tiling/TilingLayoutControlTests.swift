@@ -3,11 +3,9 @@ import Testing
 
 @testable import SwmLib
 
-@MainActor
-@Suite("Tiling layout controls")
-struct TilingLayoutControlTests {
+extension TilingTests {
   @Test("setLayout: gives every tiled window the complete visible bounds in monocle")
-  func setLayoutPlansMonocleGeometry() {
+  func setLayoutGivesEveryTiledWindowTheCompleteVisibleBoundsInMonocle() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
@@ -65,123 +63,8 @@ struct TilingLayoutControlTests {
     )
   }
 
-  @Test("master controls: update ratio and placement for a Space")
-  func masterControlsUpdateRatioAndPlacement() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-
-    #expect(tiling.changeMasterRatio(.absolute(0.6), for: 10))
-    #expect(tiling.setMasterPlacement(.right, for: 10))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 400, y: 0, width: 600, height: 800),
-            2: CGRect(x: 0, y: 0, width: 400, height: 400),
-            3: CGRect(x: 0, y: 400, width: 400, height: 400),
-          ])
-        )
-    )
-  }
-
-  @Test("master controls: cycle placement clockwise and counter-clockwise")
-  func masterControlsCyclePlacement() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2)],
-      memberships: [1: [10], 2: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-
-    #expect(tiling.cycleMasterPlacement(.next, for: 10) == .top)
-    #expect(tiling.cycleMasterPlacement(.prev, for: 10) == .left)
-  }
-
-  @Test("dwindle controls: adjust a window's nearest split")
-  func dwindleControlsAdjustNearestSplit() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.dwindle, for: 10)
-
-    #expect(tiling.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
-    #expect(tiling.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 700, height: 800),
-            2: CGRect(x: 700, y: 0, width: 300, height: 400),
-            3: CGRect(x: 700, y: 400, width: 300, height: 400),
-          ])
-        )
-    )
-  }
-
-  @Test("dwindle controls: toggle and retain the nearest dynamic split")
-  func dwindleControlsToggleAndRetainNearestDynamicSplit() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.dwindle, for: 10)
-
-    #expect(tiling.toggleDwindleSplit(for: 2))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 250, height: 800),
-            3: CGRect(x: 750, y: 0, width: 250, height: 800),
-          ])
-        )
-    )
-
-    #expect(tiling.toggleDwindleSplit(for: 2))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            3: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
-    )
-  }
-
-  @Test("dwindle controls: swap the nearest sibling subtrees")
-  func dwindleControlsSwapNearestSiblingSubtrees() {
-    let tiling = makeTiling(
-      windows: [window(id: 1), window(id: 2), window(id: 3)],
-      memberships: [1: [10], 2: [10], 3: [10]]
-    )
-    tiling.initialize()
-    tiling.setLayout(.dwindle, for: 10)
-
-    #expect(tiling.swapDwindleSplit(for: 2))
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            2: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
-    )
-  }
-
-  @Test("global controls: apply layout settings to current and future Spaces")
-  func globalControlsApplyLayoutSettingsToCurrentAndFutureSpaces() {
+  @Test("setLayoutForSpaces: apply layout settings to current and future Spaces")
+  func setLayoutForSpacesApplyLayoutSettingsToCurrentAndFutureSpaces() {
     var spaceIDs = Set([UInt64(10)])
     var visibleSpaceID = UInt64(10)
     var visibleFrame = CGRect(x: 0, y: 0, width: 1_000, height: 800)
@@ -239,6 +122,121 @@ struct TilingLayoutControlTests {
           .frames([
             1: CGRect(x: 0, y: 0, width: 300, height: 1_000),
             2: CGRect(x: 300, y: 0, width: 300, height: 1_000),
+          ])
+        )
+    )
+  }
+
+  @Test("changeMasterRatio/setMasterPlacement: update ratio and placement for a Space")
+  func changeMasterRatioSetMasterPlacementUpdateRatioAndPlacementForASpace() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+
+    #expect(tiling.changeMasterRatio(.absolute(0.6), for: 10))
+    #expect(tiling.setMasterPlacement(.right, for: 10))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 400, y: 0, width: 600, height: 800),
+            2: CGRect(x: 0, y: 0, width: 400, height: 400),
+            3: CGRect(x: 0, y: 400, width: 400, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("cycleMasterPlacement: cycle placement clockwise and counter-clockwise")
+  func cycleMasterPlacementCyclePlacementClockwiseAndCounterClockwise() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2)],
+      memberships: [1: [10], 2: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+
+    #expect(tiling.cycleMasterPlacement(.next, for: 10) == .top)
+    #expect(tiling.cycleMasterPlacement(.prev, for: 10) == .left)
+  }
+
+  @Test("changeDwindleSplitRatio: adjust a window's nearest split")
+  func changeDwindleSplitRatioAdjustAWindowsNearestSplit() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+
+    #expect(tiling.changeDwindleSplitRatio(.relative(0.2), for: 1) == 0.7)
+    #expect(tiling.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 700, height: 800),
+            2: CGRect(x: 700, y: 0, width: 300, height: 400),
+            3: CGRect(x: 700, y: 400, width: 300, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("toggleDwindleSplit: toggle and retain the nearest dynamic split")
+  func toggleDwindleSplitToggleAndRetainTheNearestDynamicSplit() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+
+    #expect(tiling.toggleDwindleSplit(for: 2))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 250, height: 800),
+            3: CGRect(x: 750, y: 0, width: 250, height: 800),
+          ])
+        )
+    )
+
+    #expect(tiling.toggleDwindleSplit(for: 2))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            2: CGRect(x: 500, y: 0, width: 500, height: 400),
+            3: CGRect(x: 500, y: 400, width: 500, height: 400),
+          ])
+        )
+    )
+  }
+
+  @Test("swapDwindleSplit: swap the nearest sibling subtrees")
+  func swapDwindleSplitSwapTheNearestSiblingSubtrees() {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+
+    #expect(tiling.swapDwindleSplit(for: 2))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 400),
+            2: CGRect(x: 500, y: 400, width: 500, height: 400),
           ])
         )
     )

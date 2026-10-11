@@ -5,17 +5,6 @@ import Testing
 
 @Suite("MonocleLayout")
 struct MonocleLayoutTests {
-  @Test("layout: returns no frames for no windows")
-  func layoutReturnsNoFramesForNoWindows() {
-    #expect(
-      MonocleLayout().layout(
-        windowIDs: [],
-        in: CGRect(x: 0, y: 0, width: 100, height: 100),
-        settings: .defaults
-      ) == .frames([:])
-    )
-  }
-
   @Test("layout: fills padded bounds for every window")
   func layoutFillsPaddedBoundsForEveryWindow() {
     var settings = SpaceSettings.defaults

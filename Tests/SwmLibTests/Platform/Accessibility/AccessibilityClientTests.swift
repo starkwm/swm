@@ -7,7 +7,7 @@ import Testing
 @Suite("AccessibilityClient")
 struct AccessibilityClientTests {
   @Test("frame: decodes batched position and size")
-  func decodesFrame() throws {
+  func frameDecodesBatchedPositionAndSize() throws {
     let values = try frameValues()
     #expect(
       AccessibilityClient.frame(from: values)
@@ -19,7 +19,7 @@ struct AccessibilityClientTests {
     "frame: rejects missing, unsupported, and incorrectly typed attributes",
     arguments: ["empty", "missing", "null", "string", "error", "swapped", "extra"]
   )
-  func rejectsInvalidFrame(kind: String) throws {
+  func frameRejectsMissingUnsupportedAndIncorrectlyTypedAttributes(kind: String) throws {
     var values = try frameValues()
     switch kind {
     case "empty": values = []

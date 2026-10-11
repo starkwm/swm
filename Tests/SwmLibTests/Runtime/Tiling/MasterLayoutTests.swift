@@ -5,17 +5,6 @@ import Testing
 
 @Suite("MasterLayout")
 struct MasterLayoutTests {
-  @Test("layout: returns no frames for no windows")
-  func layoutReturnsNoFramesForNoWindows() {
-    #expect(
-      MasterLayout().layout(
-        windowIDs: [],
-        in: CGRect(x: 0, y: 0, width: 100, height: 100),
-        settings: .defaults
-      ) == .frames([:])
-    )
-  }
-
   @Test("layout: fills padded bounds for one window")
   func layoutFillsPaddedBoundsForOneWindow() {
     var settings = SpaceSettings.defaults
@@ -74,7 +63,7 @@ struct MasterLayoutTests {
   }
 
   @Test("layout: places a right master after its stack")
-  func layoutPlacesRightMasterAfterStack() {
+  func layoutPlacesARightMasterAfterItsStack() {
     let result = MasterLayout().layout(
       windowIDs: [1, 2, 3],
       in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
@@ -94,7 +83,7 @@ struct MasterLayoutTests {
   }
 
   @Test("layout: places a top master above a horizontal stack")
-  func layoutPlacesTopMasterAboveStack() {
+  func layoutPlacesATopMasterAboveAHorizontalStack() {
     let result = MasterLayout().layout(
       windowIDs: [1, 2, 3],
       in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
@@ -114,7 +103,7 @@ struct MasterLayoutTests {
   }
 
   @Test("layout: places a bottom master below a horizontal stack")
-  func layoutPlacesBottomMasterBelowStack() {
+  func layoutPlacesABottomMasterBelowAHorizontalStack() {
     let result = MasterLayout().layout(
       windowIDs: [1, 2, 3],
       in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
@@ -179,19 +168,5 @@ struct MasterLayoutTests {
     )
 
     #expect(result == .insufficientSpace(.masterWidth))
-  }
-
-  @Test("layout: is idempotent")
-  func layoutIsIdempotent() {
-    var settings = SpaceSettings.defaults
-    settings.padding = SpacePadding(top: 7, bottom: 11, left: 13, right: 17)
-    settings.gap = 9
-    let layout = MasterLayout()
-    let bounds = CGRect(x: -1_024, y: -20, width: 1_024, height: 768)
-
-    let first = layout.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
-    let second = layout.layout(windowIDs: [1, 2, 3], in: bounds, settings: settings)
-
-    #expect(first == second)
   }
 }

@@ -45,7 +45,7 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects warp when no recent window exists")
-  func dispatchWarpWithoutRecentWindow() async {
+  func dispatchRejectsWarpWhenNoRecentWindowExists() async {
     let response = await handler().dispatch(request(command: "--warp", args: ["recent"]))
 
     #expect(response.ok == false)
@@ -114,18 +114,21 @@ struct WindowCommandHandlerTests {
     #expect(extra.message == "invalid window display arguments")
   }
 
-  @Test("dispatch: rejects invalid display value")
-  func dispatchRejectsInvalidDisplayValue() async {
+  @Test(
+    "dispatch: rejects invalid display value",
+    arguments: ["sideways", "primary", "secondary", "recent", "0", "-1", "x"]
+  )
+  func dispatchRejectsInvalidDisplayValue(argument: String) async {
     let handler = handler()
-    let response = await handler.dispatch(request(command: "--display", args: ["sideways"]))
+    let response = await handler.dispatch(request(command: "--display", args: [argument]))
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid window display value: sideways")
+    #expect(response.message == "invalid window display value: \(argument)")
   }
 
   @Test("dispatch: rejects malformed Space movement arguments and invalid targets")
-  func dispatchRejectsMalformedSpaceArguments() async {
+  func dispatchRejectsMalformedSpaceMovementArgumentsAndInvalidTargets() async {
     let handler = handler()
 
     for args in [[], ["42", "next", "extra"]] {
@@ -142,7 +145,7 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: resolves window selectors before attempting a Space move")
-  func dispatchSpaceWindowSelectors() async {
+  func dispatchResolvesWindowSelectorsBeforeAttemptingASpaceMove() async {
     let handler = handler()
 
     let invalid = await handler.dispatch(request(command: "--space", args: ["nope", "next"]))
@@ -227,7 +230,7 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects a selector for layout-order cycling")
-  func dispatchRejectsCycleSelector() async {
+  func dispatchRejectsASelectorForLayoutOrderCycling() async {
     let response = await handler().dispatch(request(command: "--cycle", args: ["42", "next"]))
 
     #expect(response.ok == false)
@@ -236,7 +239,7 @@ struct WindowCommandHandlerTests {
   }
 
   @Test("dispatch: rejects a selector for layout-order swapping")
-  func dispatchRejectsSwapCycleSelector() async {
+  func dispatchRejectsASelectorForLayoutOrderSwapping() async {
     let response = await handler().dispatch(request(command: "--swap-cycle", args: ["42", "next"]))
 
     #expect(response.ok == false)

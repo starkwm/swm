@@ -5,8 +5,51 @@ import Testing
 @Suite("QueryResolver")
 @MainActor
 struct QueryResolverTests {
-  @Test("windows(for:): loads only required snapshots")
-  func windowsForLoadsOnlyRequiredSnapshots() throws {
+  @Test("displays: resolves display selectors")
+  func displaysResolvesDisplaySelectors() throws {
+    let resolver = queryResolver()
+
+    #expect(try many(resolver.displays(for: .none)).map(\.index) == [1, 2])
+    #expect(try one(resolver.displays(for: .display(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .display(2)))?.index == 2)
+    #expect(try one(resolver.displays(for: .space(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .space(1)))?.index == 2)
+    #expect(try one(resolver.displays(for: .window(nil)))?.index == 1)
+    #expect(try one(resolver.displays(for: .window(200)))?.index == 2)
+  }
+
+  @Test("spaces: resolves space selectors")
+  func spacesResolvesSpaceSelectors() throws {
+    let resolver = queryResolver()
+
+    #expect(try many(resolver.spaces(for: .none)).map(\.index) == [0, 1])
+    #expect(try many(resolver.spaces(for: .display(nil))).map(\.index) == [0])
+    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [1])
+    #expect(try one(resolver.spaces(for: .space(nil)))?.index == 0)
+    #expect(try one(resolver.spaces(for: .space(1)))?.index == 1)
+    #expect(try one(resolver.spaces(for: .window(nil)))?.index == 0)
+    #expect(try one(resolver.spaces(for: .window(200)))?.index == 1)
+  }
+
+  @Test("spaces: resolves shared spaces by display")
+  func spacesResolvesSharedSpacesByDisplay() throws {
+    let resolver = QueryResolver(
+      displays: [
+        display(index: 1, id: 1, uuid: "display-0", hasFocus: true),
+        display(index: 2, id: 2, uuid: "display-1", hasFocus: false),
+      ],
+      spaces: [
+        space(index: 0, id: 10, displays: [1, 2], hasFocus: true)
+      ],
+      windows: []
+    )
+
+    #expect(try many(resolver.spaces(for: .display(1))).map(\.index) == [0])
+    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [0])
+  }
+
+  @Test("windows: loads only required snapshots")
+  func windowsLoadsOnlyRequiredSnapshots() throws {
     var loaded = [String]()
     let resolver = QueryResolver(
       displayProvider: {
@@ -28,51 +71,8 @@ struct QueryResolverTests {
     #expect(loaded == ["windows"])
   }
 
-  @Test("displays(for:): resolves display selectors")
-  func displaysForResolvesDisplaySelectors() throws {
-    let resolver = queryResolver()
-
-    #expect(try many(resolver.displays(for: .none)).map(\.index) == [1, 2])
-    #expect(try one(resolver.displays(for: .display(nil)))?.index == 1)
-    #expect(try one(resolver.displays(for: .display(2)))?.index == 2)
-    #expect(try one(resolver.displays(for: .space(nil)))?.index == 1)
-    #expect(try one(resolver.displays(for: .space(1)))?.index == 2)
-    #expect(try one(resolver.displays(for: .window(nil)))?.index == 1)
-    #expect(try one(resolver.displays(for: .window(200)))?.index == 2)
-  }
-
-  @Test("spaces(for:): resolves space selectors")
-  func spacesForResolvesSpaceSelectors() throws {
-    let resolver = queryResolver()
-
-    #expect(try many(resolver.spaces(for: .none)).map(\.index) == [0, 1])
-    #expect(try many(resolver.spaces(for: .display(nil))).map(\.index) == [0])
-    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [1])
-    #expect(try one(resolver.spaces(for: .space(nil)))?.index == 0)
-    #expect(try one(resolver.spaces(for: .space(1)))?.index == 1)
-    #expect(try one(resolver.spaces(for: .window(nil)))?.index == 0)
-    #expect(try one(resolver.spaces(for: .window(200)))?.index == 1)
-  }
-
-  @Test("spaces(for:): resolves shared spaces by display")
-  func spacesForResolvesSharedSpacesByDisplay() throws {
-    let resolver = QueryResolver(
-      displays: [
-        display(index: 1, id: 1, uuid: "display-0", hasFocus: true),
-        display(index: 2, id: 2, uuid: "display-1", hasFocus: false),
-      ],
-      spaces: [
-        space(index: 0, id: 10, displays: [1, 2], hasFocus: true)
-      ],
-      windows: []
-    )
-
-    #expect(try many(resolver.spaces(for: .display(1))).map(\.index) == [0])
-    #expect(try many(resolver.spaces(for: .display(2))).map(\.index) == [0])
-  }
-
-  @Test("windows(for:): resolves window selectors")
-  func windowsForResolvesWindowSelectors() throws {
+  @Test("windows: resolves window selectors")
+  func windowsResolvesWindowSelectors() throws {
     let resolver = queryResolver()
 
     #expect(try many(resolver.windows(for: .none)).map(\.id) == [100, 200])

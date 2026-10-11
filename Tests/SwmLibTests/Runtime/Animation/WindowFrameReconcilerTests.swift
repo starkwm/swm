@@ -6,8 +6,56 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
-  @Test("animation: easing changes affect new animations, not active ones")
-  func easingIsCapturedPerAnimation() {
+  @Test(
+    "nextAnimationDeadline: frame work does not shift the next deadline",
+    arguments: [0, 5, 15]
+  )
+  func nextAnimationDeadlineFrameWorkDoesNotShiftTheNextDeadline(workMilliseconds: Int) {
+    let start = ContinuousClock.now
+    let interval = Duration.seconds(1.0 / 60)
+    let previous = start.advanced(by: interval)
+    let deadline = WindowFrameReconciler.nextAnimationDeadline(
+      after: previous,
+      now: previous.advanced(by: .milliseconds(workMilliseconds))
+    )
+
+    #expect(deadline == previous.advanced(by: interval))
+  }
+
+  @Test("nextAnimationDeadline: slow frames skip missed deadlines without shifting the cadence")
+  func nextAnimationDeadlineSlowFramesSkipMissedDeadlinesWithoutShiftingTheCadence() {
+    let previous = ContinuousClock.now
+    let interval = Duration.seconds(1.0 / 60)
+    let deadline = WindowFrameReconciler.nextAnimationDeadline(
+      after: previous,
+      now: previous.advanced(by: .milliseconds(40))
+    )
+
+    #expect(deadline == previous.advanced(by: interval * 3))
+  }
+
+  @Test("animationDuration: disabling finishes the pending destination")
+  func animationDurationDisablingFinishesThePendingDestination() {
+    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, _ in
+        frame = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let target = CGRect(x: 300, y: 100, width: 200, height: 200)
+    reconciler.apply([1: target])
+    reconciler.animationDuration = 0
+    #expect(frame == target)
+    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
+    #expect(frame == target)
+  }
+
+  @Test("apply: easing changes affect new animations, not active ones")
+  func applyEasingChangesAffectNewAnimationsNotActiveOnes() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
     let reconciler = WindowFrameReconciler(
       currentFrame: { _ in frame },
@@ -31,8 +79,8 @@ struct WindowFrameReconcilerTests {
     reconciler.cancelAnimations()
   }
 
-  @Test("animation: scheduler does not retain the reconciler")
-  func schedulerDoesNotRetainReconciler() {
+  @Test("apply: scheduler does not retain the reconciler")
+  func applySchedulerDoesNotRetainTheReconciler() {
     var reconciler: WindowFrameReconciler? = WindowFrameReconciler(
       currentFrame: { _ in .zero },
       frameMutation: { _, _, _ in .success },
@@ -45,33 +93,157 @@ struct WindowFrameReconcilerTests {
     #expect(reference == nil)
   }
 
-  @Test("animation: frame work does not shift the next deadline", arguments: [0, 5, 15])
-  func frameWorkDoesNotShiftDeadline(workMilliseconds: Int) {
+  @Test("apply: retargets from the current frame and suppresses intermediate feedback")
+  func applyRetargetsFromTheCurrentFrameAndSuppressesIntermediateFeedback() {
+    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, _ in
+        frame = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
     let start = ContinuousClock.now
-    let interval = Duration.seconds(1.0 / 60)
-    let previous = start.advanced(by: interval)
-    let deadline = WindowFrameReconciler.nextAnimationDeadline(
-      after: previous,
-      now: previous.advanced(by: .milliseconds(workMilliseconds))
-    )
+    reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)], at: start)
+    let halfway = start.advanced(by: .milliseconds(500))
+    reconciler.advanceAnimations(at: halfway)
+    #expect(frame.minX == 75)
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
 
-    #expect(deadline == previous.advanced(by: interval))
+    let intermediate = frame
+    let destination = CGRect(x: -100, y: 0, width: 200, height: 100)
+    reconciler.apply([1: destination], at: halfway)
+    #expect(frame == intermediate)
+    #expect(reconciler.frames(for: [1])[1] == destination)
+    reconciler.advanceAnimations(at: halfway.advanced(by: .seconds(1)))
+    #expect(frame == destination)
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
+    reconciler.animationDuration = 0
   }
 
-  @Test("animation: slow frames skip missed deadlines without shifting the cadence")
-  func slowFramesSkipMissedDeadlines() {
-    let previous = ContinuousClock.now
-    let interval = Duration.seconds(1.0 / 60)
-    let deadline = WindowFrameReconciler.nextAnimationDeadline(
-      after: previous,
-      now: previous.advanced(by: .milliseconds(40))
+  @Test("apply: Reduce Motion applies frames immediately")
+  func applyReduceMotionAppliesFramesImmediately() {
+    var frame = CGRect.zero
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, target, _ in
+        frame = target
+        return .success
+      },
+      reduceMotion: { true }
     )
-
-    #expect(deadline == previous.advanced(by: interval * 3))
+    reconciler.animationDuration = 1
+    let target = CGRect(x: 300, y: 100, width: 200, height: 200)
+    reconciler.apply([1: target])
+    #expect(frame == target)
   }
 
-  @Test("animation: intermediate ticks read each window once and feedback does not read it")
-  func intermediateTicksAvoidRedundantFrameReads() {
+  @Test("apply: skips matching frames within tolerance")
+  func applySkipsMatchingFramesWithinTolerance() {
+    var mutationCount = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in CGRect(x: 0.5, y: 0, width: 100, height: 100) },
+      frameMutation: { _, _, _ in
+        mutationCount += 1
+        return .success
+      }
+    )
+
+    reconciler.apply([1: CGRect(x: 0, y: 0, width: 100, height: 100)])
+
+    #expect(mutationCount == 0)
+  }
+
+  @Test("apply: registers the entire batch before the first mutation")
+  func applyRegistersTheEntireBatchBeforeTheFirstMutation() throws {
+    var reconciler: WindowFrameReconciler!
+    reconciler = WindowFrameReconciler(
+      currentFrame: { _ in .zero },
+      frameMutation: { windowID, _, _ in
+        #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
+        #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero))
+        #expect([CGWindowID(1), 2].contains(windowID))
+        return .success
+      }
+    )
+
+    reconciler.apply([
+      1: CGRect(x: 0, y: 0, width: 100, height: 100),
+      2: CGRect(x: 100, y: 0, width: 100, height: 100),
+    ])
+  }
+
+  @Test("apply: reports failures and bounds their feedback suppression")
+  func applyReportsFailuresAndBoundsTheirFeedbackSuppression() {
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { windowID in windowID == 1 ? .zero : nil },
+      frameMutation: { _, _, _ in .resizeFailed }
+    )
+
+    reconciler.apply([
+      1: CGRect(x: 0, y: 0, width: 100, height: 100),
+      2: CGRect(x: 100, y: 0, width: 100, height: 100),
+    ])
+
+    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
+    #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero) == false)
+  }
+
+  @Test("apply: retries a successful mutation that did not reach its target")
+  func applyRetriesASuccessfulMutationThatDidNotReachItsTarget() {
+    let initialFrame = CGRect(x: 750, y: 400, width: 250, height: 400)
+    let targetFrame = CGRect(x: 500, y: 400, width: 500, height: 400)
+    var frame = initialFrame
+    var mutationCount = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { _ in frame },
+      frameMutation: { _, targetFrame, currentFrame in
+        mutationCount += 1
+        if mutationCount == 1 {
+          frame = CGRect(origin: targetFrame.origin, size: currentFrame.size)
+        } else {
+          frame = targetFrame
+        }
+        return .success
+      }
+    )
+
+    reconciler.apply([1: targetFrame])
+
+    #expect(mutationCount == 2)
+    #expect(frame == targetFrame)
+  }
+
+  @Test("cancelAnimations: cancellation preserves a newer frame and other animations")
+  func cancelAnimationsCancellationPreservesANewerFrameAndOtherAnimations() {
+    var frames = [CGWindowID(1): CGRect.zero, 2: CGRect.zero]
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { frames[$0] },
+      frameMutation: { id, target, _ in
+        frames[id] = target
+        return .success
+      },
+      reduceMotion: { false }
+    )
+    reconciler.animationDuration = 1
+    let start = ContinuousClock.now
+    let target = CGRect(x: 100, y: 0, width: 100, height: 100)
+    reconciler.apply([1: target, 2: target], at: start)
+    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
+    reconciler.cancelAnimations(for: [1])
+    let newerFrame = CGRect(x: 300, y: 0, width: 200, height: 100)
+    frames[1] = newerFrame
+    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
+    #expect(frames[1] == newerFrame)
+    #expect(frames[2] == target)
+    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: newerFrame))
+  }
+
+  @Test("advanceAnimations: intermediate ticks read each window once and feedback does not read it")
+  func advanceAnimationsIntermediateTicksReadEachWindowOnceAndFeedbackDoesNotReadIt() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
     var frameReads = 0
     var mutations = 0
@@ -111,8 +283,8 @@ struct WindowFrameReconcilerTests {
     #expect(frameReads == 5)
   }
 
-  @Test("animation: clamped frames are retried at the destination")
-  func clampedFramesAreRetriedAtDestination() {
+  @Test("advanceAnimations: clamped frames are retried at the destination")
+  func advanceAnimationsClampedFramesAreRetriedAtTheDestination() {
     var frame = CGRect(x: 750, y: 400, width: 250, height: 400)
     var lastTarget: CGRect?
     var mutations = 0
@@ -141,8 +313,8 @@ struct WindowFrameReconcilerTests {
     #expect(frame == target)
   }
 
-  @Test("animation: a vanished window is removed without another read or mutation")
-  func vanishedWindowStopsAnimating() {
+  @Test("advanceAnimations: a vanished window is removed without another read or mutation")
+  func advanceAnimationsAVanishedWindowIsRemovedWithoutAnotherReadOrMutation() {
     var frame: CGRect? = CGRect(x: 0, y: 0, width: 100, height: 100)
     var frameReads = 0
     var mutations = 0
@@ -171,47 +343,8 @@ struct WindowFrameReconcilerTests {
     #expect(frameReads == 1)
   }
 
-  @Test("direct commands: one-point moves are not skipped")
-  func directCommandAppliesSmallMove() {
-    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
-    reconciler.animationDuration = 1
-    let target = frame.offsetBy(dx: 1, dy: 0)
-    #expect(makeTiling(frameReconciler: reconciler).animateFrame(target, for: 1))
-    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
-    #expect(frame == target)
-  }
-
-  @Test(
-    "direct commands: disabled animation and Reduce Motion use the synchronous fallback",
-    arguments: [false, true]
-  )
-  func directCommandsUseSynchronousFallback(reduceMotion: Bool) {
-    var mutations = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in
-        mutations += 1
-        return .success
-      },
-      reduceMotion: { reduceMotion }
-    )
-    reconciler.animationDuration = reduceMotion ? 1 : 0
-    let tiling = makeTiling(frameReconciler: reconciler)
-    #expect(!tiling.animateFrame(CGRect(x: 100, y: 0, width: 100, height: 100), for: 1))
-    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
-    #expect(mutations == 0)
-  }
-
-  @Test("animation: final tick applies a destination within one point")
-  func finalTickAppliesExactDestination() {
+  @Test("advanceAnimations: final tick applies a destination within one point")
+  func advanceAnimationsFinalTickAppliesADestinationWithinOnePoint() {
     var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
     let reconciler = WindowFrameReconciler(
       currentFrame: { _ in frame },
@@ -231,218 +364,8 @@ struct WindowFrameReconcilerTests {
     #expect(frame == target)
   }
 
-  @Test("animation: cancellation preserves a newer frame and other animations")
-  func cancellationPreservesNewerFrame() {
-    var frames = [CGWindowID(1): CGRect.zero, 2: CGRect.zero]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, target, _ in
-        frames[id] = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
-    reconciler.animationDuration = 1
-    let start = ContinuousClock.now
-    let target = CGRect(x: 100, y: 0, width: 100, height: 100)
-    reconciler.apply([1: target, 2: target], at: start)
-    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
-    reconciler.cancelAnimations(for: [1])
-    let newerFrame = CGRect(x: 300, y: 0, width: 200, height: 100)
-    frames[1] = newerFrame
-    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
-    #expect(frames[1] == newerFrame)
-    #expect(frames[2] == target)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: newerFrame))
-  }
-
-  @Test(
-    "animation: tiling changes discard old destinations",
-    arguments: ["window-float", "space-float", "all-float", "membership", "direct-command"]
-  )
-  func tilingChangesCancelAnimations(change: String) {
-    var frame = CGRect.zero
-    var memberships: [CGWindowID: Set<UInt64>] = [1: [10]]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
-    let tiling = makeTiling(
-      windows: { [window(id: 1)] },
-      memberships: { memberships },
-      frameReconciler: reconciler
-    )
-    tiling.initialize()
-    reconciler.animationDuration = 1
-    let start = ContinuousClock.now
-    reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)], at: start)
-    reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
-
-    switch change {
-    case "window-float": #expect(tiling.setWindowLayout(.float, for: 1))
-    case "space-float": #expect(tiling.setLayout(.float, for: 10))
-    case "all-float": tiling.setLayoutForSpaces(.float)
-    case "membership":
-      memberships = [1: [11]]
-      tiling.reconcileAndReflowVisibleSpaces()
-    default: tiling.cancelAnimation(for: 1)
-    }
-    let stoppedFrame = frame
-    reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
-    #expect(frame == stoppedFrame)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-  }
-
-  @Test("animation: retargets from the current frame and suppresses intermediate feedback")
-  func animationRetargets() {
-    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
-    reconciler.animationDuration = 1
-    let start = ContinuousClock.now
-    reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)], at: start)
-    let halfway = start.advanced(by: .milliseconds(500))
-    reconciler.advanceAnimations(at: halfway)
-    #expect(frame.minX == 75)
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-
-    let intermediate = frame
-    let destination = CGRect(x: -100, y: 0, width: 200, height: 100)
-    reconciler.apply([1: destination], at: halfway)
-    #expect(frame == intermediate)
-    #expect(reconciler.frames(for: [1])[1] == destination)
-    reconciler.advanceAnimations(at: halfway.advanced(by: .seconds(1)))
-    #expect(frame == destination)
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-    reconciler.animationDuration = 0
-  }
-
-  @Test("animation: disabling finishes the pending destination")
-  func disablingAnimationFinishes() {
-    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
-    reconciler.animationDuration = 1
-    let target = CGRect(x: 300, y: 100, width: 200, height: 200)
-    reconciler.apply([1: target])
-    reconciler.animationDuration = 0
-    #expect(frame == target)
-    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
-    #expect(frame == target)
-  }
-
-  @Test("animation: Reduce Motion applies frames immediately")
-  func reduceMotionSkipsAnimation() {
-    var frame = CGRect.zero
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { true }
-    )
-    reconciler.animationDuration = 1
-    let target = CGRect(x: 300, y: 100, width: 200, height: 200)
-    reconciler.apply([1: target])
-    #expect(frame == target)
-  }
-
-  @Test("apply: skips matching frames within tolerance")
-  func applySkipsMatchingFramesWithinTolerance() {
-    var mutationCount = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in CGRect(x: 0.5, y: 0, width: 100, height: 100) },
-      frameMutation: { _, _, _ in
-        mutationCount += 1
-        return .success
-      }
-    )
-
-    reconciler.apply([1: CGRect(x: 0, y: 0, width: 100, height: 100)])
-
-    #expect(mutationCount == 0)
-  }
-
-  @Test("apply: registers the entire batch before the first mutation")
-  func applyRegistersEntireBatchBeforeFirstMutation() throws {
-    var reconciler: WindowFrameReconciler!
-    reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { windowID, _, _ in
-        #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
-        #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero))
-        #expect([CGWindowID(1), 2].contains(windowID))
-        return .success
-      }
-    )
-
-    reconciler.apply([
-      1: CGRect(x: 0, y: 0, width: 100, height: 100),
-      2: CGRect(x: 100, y: 0, width: 100, height: 100),
-    ])
-  }
-
-  @Test("apply: reports failures and bounds their feedback suppression")
-  func applyReportsFailuresAndBoundsTheirFeedbackSuppression() {
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { windowID in windowID == 1 ? .zero : nil },
-      frameMutation: { _, _, _ in .resizeFailed }
-    )
-
-    reconciler.apply([
-      1: CGRect(x: 0, y: 0, width: 100, height: 100),
-      2: CGRect(x: 100, y: 0, width: 100, height: 100),
-    ])
-
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: .zero))
-    #expect(reconciler.shouldSuppressNotification(for: 2, actualFrame: .zero) == false)
-  }
-
-  @Test("apply: retries a successful mutation that did not reach its target")
-  func applyRetriesIncompleteSuccessfulMutation() {
-    let initialFrame = CGRect(x: 750, y: 400, width: 250, height: 400)
-    let targetFrame = CGRect(x: 500, y: 400, width: 500, height: 400)
-    var frame = initialFrame
-    var mutationCount = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, targetFrame, currentFrame in
-        mutationCount += 1
-        if mutationCount == 1 {
-          frame = CGRect(origin: targetFrame.origin, size: currentFrame.size)
-        } else {
-          frame = targetFrame
-        }
-        return .success
-      }
-    )
-
-    reconciler.apply([1: targetFrame])
-
-    #expect(mutationCount == 2)
-    #expect(frame == targetFrame)
-  }
-
   @Test("shouldSuppressNotification: holds intermediate and duplicate destination events")
-  func shouldSuppressNotificationHoldsIntermediateAndDuplicateEvents() {
+  func shouldSuppressNotificationHoldsIntermediateAndDuplicateDestinationEvents() {
     let reconciler = WindowFrameReconciler(
       currentFrame: { _ in .zero },
       frameMutation: { _, _, _ in .success }

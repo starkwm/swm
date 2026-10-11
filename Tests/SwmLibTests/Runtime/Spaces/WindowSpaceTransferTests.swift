@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct WindowSpaceTransferTests {
   @Test("move: waits for destination membership and removal from the source")
-  func confirmsMovement() async throws {
+  func moveWaitsForDestinationMembershipAndRemovalFromTheSource() async throws {
     var membership: [UInt64] = [11]
     var waits = 0
     var submitted = false
@@ -34,7 +34,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: an unchanged membership times out without reporting success")
-  func timesOut() async throws {
+  func moveAnUnchangedMembershipTimesOutWithoutReportingSuccess() async throws {
     var waits = 0
 
     let transfer = WindowSpaceTransfer(
@@ -56,7 +56,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: accepts confirmation on the final poll")
-  func finalPollConfirmation() async throws {
+  func moveAcceptsConfirmationOnTheFinalPoll() async throws {
     var waits = 0
 
     let transfer = WindowSpaceTransfer(
@@ -70,7 +70,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: targeting the current desktop does not submit a private operation")
-  func currentDesktop() async throws {
+  func moveTargetingTheCurrentDesktopDoesNotSubmitAPrivateOperation() async throws {
     let transfer = WindowSpaceTransfer(
       spaceProvider: { spaces },
       membershipProvider: { _ in [11] },
@@ -84,7 +84,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: rejects fullscreen destinations and missing indexes")
-  func invalidDestinations() async {
+  func moveRejectsFullscreenDestinationsAndMissingIndexes() async {
     let transfer = WindowSpaceTransfer(
       spaceProvider: { spaces },
       membershipProvider: { _ in [11] },
@@ -106,7 +106,7 @@ struct WindowSpaceTransferTests {
     "move: rejects unknown, fullscreen, and sticky source windows",
     arguments: [[], [22], [99], [11, 33]]
   )
-  func invalidSources(membership: [UInt64]) async {
+  func moveRejectsUnknownFullscreenAndStickySourceWindows(membership: [UInt64]) async {
     let transfer = WindowSpaceTransfer(
       spaceProvider: { spaces },
       membershipProvider: { _ in membership },
@@ -121,7 +121,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: reports an unavailable bridge without waiting")
-  func unavailableBridge() async {
+  func moveReportsAnUnavailableBridgeWithoutWaiting() async {
     let transfer = WindowSpaceTransfer(
       spaceProvider: { spaces },
       membershipProvider: { _ in [11] },
@@ -135,7 +135,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: detects a window that disappears while waiting")
-  func disappearedWindow() async {
+  func moveDetectsAWindowThatDisappearsWhileWaiting() async {
     var valid = true
 
     let transfer = WindowSpaceTransfer(
@@ -153,7 +153,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: refuses overlapping moves for the same window")
-  func overlappingMoves() async throws {
+  func moveRefusesOverlappingMovesForTheSameWindow() async throws {
     var membership: [UInt64] = [11]
     var transfer: WindowSpaceTransfer!
 
@@ -176,7 +176,7 @@ struct WindowSpaceTransferTests {
   }
 
   @Test("move: cancellation releases the window for subsequent requests")
-  func cancellation() async throws {
+  func moveCancellationReleasesTheWindowForSubsequentRequests() async throws {
     var cancelledWait = false
     var membership: [UInt64] = [11]
 

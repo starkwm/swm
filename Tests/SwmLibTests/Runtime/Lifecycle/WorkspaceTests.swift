@@ -6,68 +6,13 @@ import Testing
 @Suite("Workspace")
 @MainActor
 struct WorkspaceTests {
-  @Test("Launch retries register each readiness observer only once")
-  func repeatedObservation() {
-    let workspace = Workspace()
-    let application = ObservationRecordingApplication()
-    let process = makeProcess(application: application)
-
-    for _ in 0..<3 {
-      workspace.observeFinishedLaunching(process)
-      workspace.observeActivationPolicy(process)
-    }
-
-    #expect(application.addedKeyPaths == ["finishedLaunching", "activationPolicy"])
-
-    workspace.unobserveFinishedLaunching(process)
-    workspace.unobserveActivationPolicy(process)
-    workspace.unobserveFinishedLaunching(process)
-    workspace.unobserveActivationPolicy(process)
-
-    #expect(application.removedKeyPaths == application.addedKeyPaths)
-  }
-
-  @Test("Observation can restart after cleanup")
-  func observeAfterCleanup() {
-    let workspace = Workspace()
-    let application = ObservationRecordingApplication()
-    let process = makeProcess(application: application)
-
-    for _ in 0..<2 {
-      workspace.observeFinishedLaunching(process)
-      workspace.observeActivationPolicy(process)
-      workspace.unobserveFinishedLaunching(process)
-      workspace.unobserveActivationPolicy(process)
-    }
-
-    #expect(
-      application.addedKeyPaths == [
-        "finishedLaunching", "activationPolicy", "finishedLaunching", "activationPolicy",
-      ]
-    )
-    #expect(application.removedKeyPaths == application.addedKeyPaths)
-  }
-
-  @Test("Cleanup uses the retained application after the process loses it")
-  func cleanupAfterApplicationLoss() {
-    let workspace = Workspace()
-    let application = ObservationRecordingApplication()
-    let process = makeProcess(application: application)
-
-    workspace.observeFinishedLaunching(process)
-    workspace.observeActivationPolicy(process)
-    process.application = nil
-    workspace.unobserveFinishedLaunching(process)
-    workspace.unobserveActivationPolicy(process)
-
-    #expect(application.removedKeyPaths == ["finishedLaunching", "activationPolicy"])
-  }
-
   @Test(
-    "KVO callbacks revalidate registration after cancellation or termination",
+    "observeValue: revalidates queued callbacks after cancellation or termination",
     arguments: ["cancel", "restart", "terminate", "late", "deliver"]
   )
-  func queuedCallbacks(action: String) async throws {
+  func observeValueRevalidatesQueuedCallbacksAfterCancellationOrTermination(action: String)
+    async throws
+  {
     var launched = [pid_t]()
     let workspace = Workspace { event in
       if case .application(.launched(let process)) = event { launched.append(process.pid) }
@@ -101,8 +46,8 @@ struct WorkspaceTests {
     workspace.unobserveFinishedLaunching(process)
   }
 
-  @Test("KVO accepts background delivery without accessing mutable process state off actor")
-  func backgroundCallback() async throws {
+  @Test("observeValue: delivers background callbacks on the main actor")
+  func observeValueDeliversBackgroundCallbacksOnTheMainActor() async throws {
     var launched = [pid_t]()
     let workspace = Workspace { event in
       if case .application(.launched(let process)) = event { launched.append(process.pid) }
@@ -125,6 +70,63 @@ struct WorkspaceTests {
     }
     #expect(launched == [42])
     #expect(application.removedKeyPaths == ["activationPolicy"])
+  }
+
+  @Test("observeFinishedLaunching/observeActivationPolicy: registers each observer once")
+  func observeFinishedLaunchingObserveActivationPolicyRegistersEachObserverOnce() {
+    let workspace = Workspace()
+    let application = ObservationRecordingApplication()
+    let process = makeProcess(application: application)
+
+    for _ in 0..<3 {
+      workspace.observeFinishedLaunching(process)
+      workspace.observeActivationPolicy(process)
+    }
+
+    #expect(application.addedKeyPaths == ["finishedLaunching", "activationPolicy"])
+
+    workspace.unobserveFinishedLaunching(process)
+    workspace.unobserveActivationPolicy(process)
+    workspace.unobserveFinishedLaunching(process)
+    workspace.unobserveActivationPolicy(process)
+
+    #expect(application.removedKeyPaths == application.addedKeyPaths)
+  }
+
+  @Test("observeFinishedLaunching/observeActivationPolicy: restarts after cleanup")
+  func observeFinishedLaunchingObserveActivationPolicyRestartsAfterCleanup() {
+    let workspace = Workspace()
+    let application = ObservationRecordingApplication()
+    let process = makeProcess(application: application)
+
+    for _ in 0..<2 {
+      workspace.observeFinishedLaunching(process)
+      workspace.observeActivationPolicy(process)
+      workspace.unobserveFinishedLaunching(process)
+      workspace.unobserveActivationPolicy(process)
+    }
+
+    #expect(
+      application.addedKeyPaths == [
+        "finishedLaunching", "activationPolicy", "finishedLaunching", "activationPolicy",
+      ]
+    )
+    #expect(application.removedKeyPaths == application.addedKeyPaths)
+  }
+
+  @Test("unobserveFinishedLaunching/unobserveActivationPolicy: cleans up after application loss")
+  func unobserveFinishedLaunchingUnobserveActivationPolicyCleansUpAfterApplicationLoss() {
+    let workspace = Workspace()
+    let application = ObservationRecordingApplication()
+    let process = makeProcess(application: application)
+
+    workspace.observeFinishedLaunching(process)
+    workspace.observeActivationPolicy(process)
+    process.application = nil
+    workspace.unobserveFinishedLaunching(process)
+    workspace.unobserveActivationPolicy(process)
+
+    #expect(application.removedKeyPaths == ["finishedLaunching", "activationPolicy"])
   }
 
   private func makeProcess(application: NSRunningApplication) -> SwmLib.Process {

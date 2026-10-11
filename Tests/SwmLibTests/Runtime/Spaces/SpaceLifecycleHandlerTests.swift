@@ -7,9 +7,11 @@ import Testing
 @MainActor
 struct SpaceLifecycleHandlerTests {
   @Test("refresh: reconciles layouts and removes stale settings without changing focus history")
-  func refresh() {
+  func refreshReconcilesLayoutsAndRemovesStaleSettingsWithoutChangingFocusHistory() {
     let spaces = Spaces(activeSpaceID: 33)
     spaces.activeSpaceDidChange(to: 11)
+    spaces.updateAllSettings { $0.gap = 5 }
+    spaces.setGap(10, for: 33)
     spaces.setGap(20, for: 99)
     var visibleFrame = CGRect(x: 0, y: 0, width: 1_000, height: 800)
     let tiling = Tiling(
@@ -41,7 +43,8 @@ struct SpaceLifecycleHandlerTests {
     handler.refresh(spaceIDs: [11, 33])
 
     #expect(tiling.layoutPlan(for: layoutID(11)) == .layout(.frames([1: visibleFrame])))
-    #expect(spaces.settings(for: 99) == .defaults)
+    #expect(spaces.settings(for: 99).gap == 5)
+    #expect(spaces.settings(for: 33).gap == 10)
     #expect(spaces.currentActiveSpaceID == 11)
     #expect(spaces.lastActiveSpaceID == 33)
   }

@@ -9,7 +9,7 @@ struct WindowMouseWarpTests {
   @Test(
     "sourceWindow: prefers the on-screen managed window under the cursor without resolving focus"
   )
-  func pointerSource() throws {
+  func sourceWindowPrefersTheOnScreenManagedWindowUnderTheCursorWithoutResolvingFocus() throws {
     let pointerWindow = Window(id: 42)
     let warp = WindowMouseWarp(
       isOnScreen: { $0 == 42 },
@@ -28,7 +28,9 @@ struct WindowMouseWarpTests {
     "sourceWindow: falls back to focus for missing, unmanaged, or off-screen pointer windows",
     arguments: [nil, 42, 99] as [CGWindowID?]
   )
-  func focusedFallback(cursorID: CGWindowID?) throws {
+  func sourceWindowFallsBackToFocusForMissingUnmanagedOrOffScreenPointerWindows(
+    cursorID: CGWindowID?
+  ) throws {
     let pointerWindow = Window(id: 42)
     let focusedWindow = Window(id: 7)
     let warp = WindowMouseWarp(
@@ -45,7 +47,7 @@ struct WindowMouseWarpTests {
   }
 
   @Test("sourceWindow: reads the cursor window again for successive navigation")
-  func successiveSources() throws {
+  func sourceWindowReadsTheCursorWindowAgainForSuccessiveNavigation() throws {
     let firstWindow = Window(id: 42)
     let secondWindow = Window(id: 43)
     var cursorID: CGWindowID = 42
@@ -64,7 +66,7 @@ struct WindowMouseWarpTests {
   }
 
   @Test("sourceWindow: reports a missing focused window when the pointer has no managed window")
-  func missingSource() {
+  func sourceWindowReportsAMissingFocusedWindowWhenThePointerHasNoManagedWindow() {
     let warp = WindowMouseWarp(cursorWindowID: { nil })
 
     #expect(throws: IPCCommandError.invalidRequest("no focused window")) {
@@ -82,7 +84,7 @@ struct WindowMouseWarpTests {
       CGRect(x: -490, y: -180, width: 80, height: 60),
     ]
   )
-  func windowCenter(frame: CGRect) throws {
+  func warpUsesGlobalCoordinatesOnPrimaryAndOffsetDisplays(frame: CGRect) throws {
     var received: CGPoint?
     let warp = WindowMouseWarp(
       isOnScreen: { windowID in windowID == 42 },
@@ -104,7 +106,7 @@ struct WindowMouseWarpTests {
   }
 
   @Test("warp: uses the largest visible intersection when the center is off-screen")
-  func visibleIntersection() throws {
+  func warpUsesTheLargestVisibleIntersectionWhenTheCenterIsOffScreen() throws {
     var received: CGPoint?
     let warp = WindowMouseWarp(
       isOnScreen: { _ in true },
@@ -126,7 +128,7 @@ struct WindowMouseWarpTests {
   }
 
   @Test("warp: rejects hidden, minimized, and off-Space windows before moving the cursor")
-  func unavailableWindow() {
+  func warpRejectsHiddenMinimizedAndOffSpaceWindowsBeforeMovingTheCursor() {
     let warp = WindowMouseWarp(
       isOnScreen: { _ in false },
       displayFrames: {
@@ -155,7 +157,7 @@ struct WindowMouseWarpTests {
       CGRect(x: 0, y: 0, width: CGFloat.infinity, height: 100),
     ] as [CGRect?]
   )
-  func invalidFrame(frame: CGRect?) {
+  func warpRejectsMissingEmptyAndNonFiniteFrames(frame: CGRect?) {
     let warp = WindowMouseWarp(
       isOnScreen: { _ in true },
       displayFrames: {
@@ -179,7 +181,7 @@ struct WindowMouseWarpTests {
       [], [CGRect(x: 0, y: 0, width: 100, height: 100)],
     ] as [[CGRect]]
   )
-  func outsideDisplay(frames: [CGRect]) {
+  func warpRejectsWindowsOutsideDisplayBoundsOrWithNoConnectedDisplays(frames: [CGRect]) {
     let warp = WindowMouseWarp(
       isOnScreen: { _ in true },
       displayFrames: { frames },
@@ -195,7 +197,7 @@ struct WindowMouseWarpTests {
   }
 
   @Test("warp: reports Core Graphics failures")
-  func cursorFailure() {
+  func warpReportsCoreGraphicsFailures() {
     let warp = WindowMouseWarp(
       isOnScreen: { _ in true },
       displayFrames: { [CGRect(x: 0, y: 0, width: 100, height: 100)] },
