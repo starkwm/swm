@@ -8,7 +8,12 @@ final class AnimationTestApp: @unchecked Sendable {
   let processID: pid_t
   var frame: CGRect {
     get { frame(for: 1) }
-    set { lock.withLock { frames[1] = newValue } }
+    set {
+      lock.withLock {
+        pendingFrames.removeValue(forKey: 1)
+        frames[1] = newValue
+      }
+    }
   }
   var clampWrites: Bool {
     get { lock.withLock { clamp } }
@@ -22,7 +27,10 @@ final class AnimationTestApp: @unchecked Sendable {
 
   private let lock = NSLock()
   private let gate = DispatchSemaphore(value: 0)
+  private let settlementDelay: Double
   private var frames = [CGWindowID: CGRect]()
+  private var pendingFrames = [CGWindowID: (CGRect, ContinuousClock.Instant)]()
+  private var ignoredWrites: Int
   private var reads = 0
   private var writes = 0
   private var begins = 0
@@ -30,8 +38,14 @@ final class AnimationTestApp: @unchecked Sendable {
   private var shouldBlock = false
   private var clamp = false
 
-  init(processID: pid_t) {
+  init(
+    processID: pid_t,
+    settlementDelay: Double = 0,
+    ignoredWrites: Int = 0
+  ) {
     self.processID = processID
+    self.settlementDelay = settlementDelay
+    self.ignoredWrites = ignoredWrites
   }
 
   func backend(for windowID: CGWindowID) -> AnimationFrameBackend {
@@ -40,7 +54,7 @@ final class AnimationTestApp: @unchecked Sendable {
       read: {
         return self.lock.withLock {
           self.reads += 1
-          return self.frames[windowID] ?? Self.initialFrame
+          return self.settledFrame(for: windowID)
         }
       },
       write: { target, _, generation in
@@ -53,7 +67,17 @@ final class AnimationTestApp: @unchecked Sendable {
         }
         if block { _ = self.gate.wait(timeout: .now() + 3) }
         self.lock.withLock {
-          if !self.clamp { self.frames[windowID] = target }
+          if self.ignoredWrites > 0 {
+            self.ignoredWrites -= 1
+          } else if !self.clamp {
+            if self.settlementDelay > 0 {
+              self.pendingFrames[windowID] = (
+                target, .now.advanced(by: .seconds(self.settlementDelay))
+              )
+            } else {
+              self.frames[windowID] = target
+            }
+          }
         }
         return .success
       },
@@ -66,9 +90,17 @@ final class AnimationTestApp: @unchecked Sendable {
   }
 
   func frame(for windowID: CGWindowID) -> CGRect {
-    lock.withLock { frames[windowID] ?? Self.initialFrame }
+    lock.withLock { settledFrame(for: windowID) }
   }
 
   func blockNextWrite() { lock.withLock { shouldBlock = true } }
   func release() { gate.signal() }
+
+  private func settledFrame(for windowID: CGWindowID) -> CGRect {
+    if let (frame, deadline) = pendingFrames[windowID], ContinuousClock.now >= deadline {
+      frames[windowID] = frame
+      pendingFrames.removeValue(forKey: windowID)
+    }
+    return frames[windowID] ?? Self.initialFrame
+  }
 }

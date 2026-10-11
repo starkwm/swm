@@ -198,4 +198,103 @@ struct AnimationFrameDeliveryTests {
     #expect(app.frame == animationFrame(100))
   }
 
+  @Test("submit: settles lazy geometry before verifying writes and corrections", arguments: [0, 1])
+  func submitSettlesLazyGeometryBeforeVerifyingWritesAndCorrections(ignoredWrites: Int) async throws
+  {
+    let app = AnimationTestApp(processID: 1, settlementDelay: 0.05, ignoredWrites: ignoredWrites)
+    let delivery = AnimationFrameDelivery { _ in app.backend }
+    var result: AnimationFrameCompletion?
+    delivery.submit(
+      windowID: 1,
+      generation: AnimationGeneration(),
+      sequence: 1,
+      target: animationFrame(100),
+      final: true
+    ) { result = $0 }
+    try await waitForAnimation { result != nil }
+    #expect(result?.outcome == .verified)
+    #expect(result?.frame == animationFrame(100))
+    #expect(app.writeCount == ignoredWrites + 1)
+    #expect(app.readCount == ignoredWrites + 2)
+  }
+
+  @Test("submit: keeps the app lane available during settlement")
+  func submitKeepsTheAppLaneAvailableDuringSettlement() async throws {
+    let app = AnimationTestApp(processID: 1)
+    let delivery = AnimationFrameDelivery(settlementDelay: 0.5) { app.backend(for: $0) }
+    var finalFinished = false
+    delivery.submit(
+      windowID: 1,
+      generation: AnimationGeneration(),
+      sequence: 1,
+      target: animationFrame(100),
+      final: true
+    ) { _ in finalFinished = true }
+    delivery.waitForPendingOperations(for: 1)
+    #expect(app.writeCount == 1)
+    #expect(app.beginCount == app.endCount)
+    var intermediateFinished = false
+    delivery.submit(
+      windowID: 2,
+      generation: AnimationGeneration(),
+      sequence: 1,
+      target: animationFrame(200),
+      final: false
+    ) { intermediateFinished = $0.outcome == .applied }
+    try await waitForAnimation { intermediateFinished }
+    #expect(!finalFinished)
+    #expect(app.frame(for: 2) == animationFrame(200))
+    try await waitForAnimation { finalFinished }
+  }
+
+  @Test("submit: discards cancelled and superseded settlement")
+  func submitDiscardsCancelledAndSupersededSettlement() async throws {
+    let app = AnimationTestApp(processID: 1)
+    let delivery = AnimationFrameDelivery { _ in app.backend }
+    let generation = AnimationGeneration()
+    var obsolete = false
+    delivery.submit(
+      windowID: 1,
+      generation: generation,
+      sequence: 1,
+      target: animationFrame(100),
+      final: true
+    ) { _ in obsolete = true }
+    // Stay on the main actor until the replacement is queued. Polling here can let
+    // verification finish before this test gets another turn under full-suite load.
+    delivery.waitForPendingOperations(for: 1)
+    #expect(app.writeCount == 1)
+    // Superseding a sequence is sufficient even when the generation stays valid.
+    var replacement: AnimationFrameCompletion?
+    delivery.submit(
+      windowID: 1,
+      generation: generation,
+      sequence: 2,
+      target: animationFrame(200),
+      final: true
+    ) { replacement = $0 }
+    try await waitForAnimation { replacement != nil }
+    #expect(!obsolete)
+    #expect(replacement?.outcome == .verified)
+    #expect(app.readCount == 3)
+    #expect(app.writeCount == 2)
+
+    var cancelled = false
+    delivery.submit(
+      windowID: 1,
+      generation: generation,
+      sequence: 3,
+      target: animationFrame(300),
+      final: true
+    ) { _ in cancelled = true }
+    delivery.waitForPendingOperations(for: 1)
+    #expect(app.writeCount == 3)
+    generation.cancel()
+    let reads = app.readCount
+    try await Task.sleep(for: .milliseconds(150))
+    #expect(!cancelled)
+    #expect(app.readCount == reads)
+    #expect(app.writeCount == 3)
+  }
+
 }
