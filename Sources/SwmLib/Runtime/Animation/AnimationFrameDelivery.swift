@@ -8,9 +8,14 @@ final class AnimationFrameDelivery {
   typealias Completion = @MainActor @Sendable (AnimationFrameCompletion) -> Void
 
   private var lanes = [pid_t: AnimationAppLane]()
+  private let settlementDelay: TimeInterval
   private let backend: (CGWindowID) -> AnimationFrameBackend?
 
-  init(backend: @escaping (CGWindowID) -> AnimationFrameBackend?) {
+  init(
+    settlementDelay: TimeInterval = 0.1,
+    backend: @escaping (CGWindowID) -> AnimationFrameBackend?
+  ) {
+    self.settlementDelay = settlementDelay
     self.backend = backend
   }
 
@@ -68,7 +73,7 @@ final class AnimationFrameDelivery {
     if let existing = lanes[backend.processID] {
       lane = existing
     } else {
-      lane = AnimationAppLane(processID: backend.processID)
+      lane = AnimationAppLane(processID: backend.processID, settlementDelay: settlementDelay)
       lanes[backend.processID] = lane
     }
     lane.submit(
@@ -142,19 +147,34 @@ struct AnimationFrameCompletion: Sendable {
 
 private final class AnimationAppLane: @unchecked Sendable {
   private struct Pending: Sendable {
+    enum Phase: Sendable {
+      case write
+      case verify
+      case verifyCorrection
+    }
+
     let request: AnimationFrameRequest
     let completion: AnimationFrameDelivery.Completion
+    var phase = Phase.write
   }
 
-  var isIdle: Bool { lock.withLock { !running } }
+  private struct Settlement {
+    let token: UUID
+    let work: DispatchWorkItem
+  }
+
+  var isIdle: Bool { lock.withLock { !running && settlements.isEmpty } }
 
   private let queue: DispatchQueue
   private let lock = NSLock()
+  private let settlementDelay: TimeInterval
   private var pending = [CGWindowID: Pending]()
+  private var settlements = [CGWindowID: Settlement]()
   private var running = false
   private var latest = [CGWindowID: (AnimationGeneration, UInt64)]()
 
-  init(processID: pid_t) {
+  init(processID: pid_t, settlementDelay: TimeInterval) {
+    self.settlementDelay = settlementDelay
     queue = DispatchQueue(label: "swm.animation.ax.\(processID)", qos: .userInteractive)
   }
 
@@ -163,6 +183,7 @@ private final class AnimationAppLane: @unchecked Sendable {
     completion: @escaping AnimationFrameDelivery.Completion
   ) {
     let start = lock.withLock {
+      settlements.removeValue(forKey: request.windowID)?.work.cancel()
       pending[request.windowID] = Pending(request: request, completion: completion)
       latest[request.windowID] = (request.generation, request.sequence)
       if running { return false }
@@ -183,7 +204,7 @@ private final class AnimationAppLane: @unchecked Sendable {
         pending.removeAll(keepingCapacity: true)
         if batch.isEmpty {
           running = false
-          latest.removeAll()
+          latest = latest.filter { settlements[$0.key] != nil }
         }
         return batch
       }
@@ -202,19 +223,14 @@ private final class AnimationAppLane: @unchecked Sendable {
 
   private func executeBatch(_ batch: [Pending]) -> [(Pending, AnimationFrameCompletion)] {
     guard let backend = batch.first?.request.backend else { return [] }
-    let writes = batch.contains { $0.request.target != nil }
+    let writes = batch.contains { $0.request.target != nil && $0.phase != .verifyCorrection }
     let restore = writes ? backend.beginBatch() : false
     defer { if writes { backend.endBatch(restore) } }
     var results = [(Pending, AnimationFrameCompletion)]()
     for item in batch {
       let request = item.request
-      guard request.generation.isValid,
-        lock.withLock({
-          latest[request.windowID]?.0 === request.generation
-            && latest[request.windowID]?.1 == request.sequence
-        })
-      else { continue }
-      results.append((item, execute(request)))
+      guard isCurrent(request), let result = execute(item) else { continue }
+      results.append((item, result))
       lock.withLock {
         if latest[request.windowID]?.0 === request.generation,
           latest[request.windowID]?.1 == request.sequence
@@ -226,7 +242,52 @@ private final class AnimationAppLane: @unchecked Sendable {
     return results
   }
 
-  private func execute(_ request: AnimationFrameRequest) -> AnimationFrameCompletion {
+  private func isCurrent(_ request: AnimationFrameRequest) -> Bool {
+    request.generation.isValid
+      && lock.withLock {
+        latest[request.windowID]?.0 === request.generation
+          && latest[request.windowID]?.1 == request.sequence
+      }
+  }
+
+  /// Schedule readback without holding the app's AX lane or its enhanced-UI workaround open.
+  private func settle(_ item: Pending, phase: Pending.Phase) {
+    let token = UUID()
+    var verification = item
+    verification.phase = phase
+    let next = verification
+    let work = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      let start = self.lock.withLock {
+        guard self.settlements[next.request.windowID]?.token == token else { return false }
+        self.settlements.removeValue(forKey: next.request.windowID)
+        guard next.request.generation.isValid,
+          self.latest[next.request.windowID]?.0 === next.request.generation,
+          self.latest[next.request.windowID]?.1 == next.request.sequence
+        else {
+          self.latest.removeValue(forKey: next.request.windowID)
+          return false
+        }
+        self.pending[next.request.windowID] = next
+        if self.running { return false }
+        self.running = true
+        return true
+      }
+      if start { self.drain() }
+    }
+    let scheduled = lock.withLock {
+      guard item.request.generation.isValid,
+        latest[item.request.windowID]?.0 === item.request.generation,
+        latest[item.request.windowID]?.1 == item.request.sequence
+      else { return false }
+      settlements[item.request.windowID] = Settlement(token: token, work: work)
+      return true
+    }
+    if scheduled { queue.asyncAfter(deadline: .now() + settlementDelay, execute: work) }
+  }
+
+  private func execute(_ item: Pending) -> AnimationFrameCompletion? {
+    let request = item.request
     let backend = request.backend
     let diagnostics = AnimationDiagnostics.shared
     func read() -> CGRect? {
@@ -236,6 +297,19 @@ private final class AnimationAppLane: @unchecked Sendable {
       -> AnimationFrameCompletion
     {
       AnimationFrameCompletion(request: request, frame: frame, outcome: outcome)
+    }
+    if item.phase != .write {
+      guard let target = request.target, let actual = read(), isCurrent(request) else {
+        return result(nil, .failed)
+      }
+      if actual.matches(target, tolerance: 1) { return result(actual, .verified) }
+      guard item.phase == .verify else { return result(actual, .failed) }
+      let correction = diagnostics.measure("mutation", processID: backend.processID) {
+        backend.write(target, actual, request.generation)
+      }
+      guard correction == .success, isCurrent(request) else { return result(nil, .failed) }
+      settle(item, phase: .verifyCorrection)
+      return nil
     }
     let cached = request.generation.acceptedFrame
     guard let current = request.target == nil || request.final || cached == nil ? read() : cached
@@ -247,7 +321,7 @@ private final class AnimationAppLane: @unchecked Sendable {
       request.generation.acceptedFrame = current
       return result(current, .read)
     }
-    guard request.generation.isValid else { return result(nil, .failed) }
+    guard isCurrent(request) else { return result(nil, .failed) }
     if !request.final, current.matches(target, tolerance: 1) {
       return result(current, .applied)
     }
@@ -263,15 +337,8 @@ private final class AnimationAppLane: @unchecked Sendable {
       return result(target, .applied)
     }
     request.generation.acceptedFrame = nil
-    guard var actual = read() else { return result(nil, .failed) }
-    if !actual.matches(target, tolerance: 1), request.generation.isValid {
-      let correction = diagnostics.measure("mutation", processID: backend.processID) {
-        backend.write(target, actual, request.generation)
-      }
-      guard correction == .success, let verified = read() else { return result(nil, .failed) }
-      actual = verified
-    }
-    return result(actual, actual.matches(target, tolerance: 1) ? .verified : .failed)
+    settle(item, phase: .verify)
+    return nil
   }
 }
 
