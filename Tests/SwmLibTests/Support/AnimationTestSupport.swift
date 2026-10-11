@@ -8,6 +8,7 @@ func animationFrame(_ x: Double) -> CGRect { CGRect(x: x, y: 0, width: 100, heig
 @MainActor
 func makeDeliveryReconciler(
   _ app: AnimationTestApp,
+  delivery: AnimationFrameDelivery? = nil,
   reduceMotion: @escaping () -> Bool = { false },
   terminalFailure: @escaping (CGWindowID) -> Void = { _ in }
 ) -> WindowFrameReconciler {
@@ -17,7 +18,7 @@ func makeDeliveryReconciler(
       Issue.record("synchronous mutation")
       return nil
     },
-    delivery: AnimationFrameDelivery { _ in app.backend },
+    delivery: delivery ?? AnimationFrameDelivery { _ in app.backend },
     automaticallySchedule: false,
     terminalFailure: terminalFailure,
     reduceMotion: reduceMotion

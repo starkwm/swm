@@ -1536,18 +1536,9 @@ struct TilingTests {
     tiling.setLayout(.master, for: 10)
     tiling.windowFrameDidChange(2)
 
-    memberships[2] = [11]
-    for _ in 0..<100 where framesByWindowID[1]?.width != 1_000 {
-      try await Task.sleep(for: .milliseconds(10))
-    }
-
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
-    )
-    #expect(framesByWindowID[1] == CGRect(x: 0, y: 0, width: 1_000, height: 800))
-
+    // Exercise departing and arriving windows in the same automatic polling tick.
     framesByWindowID[3] = CGRect(x: 100, y: 100, width: 300, height: 300)
+    memberships[2] = [11]
     memberships[3] = [10]
     for _ in 0..<100 where framesByWindowID[3]?.origin.x != 500 {
       try await Task.sleep(for: .milliseconds(10))

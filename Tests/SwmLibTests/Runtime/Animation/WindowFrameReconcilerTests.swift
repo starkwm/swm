@@ -331,9 +331,10 @@ struct WindowFrameReconcilerTests {
   }
 
   @Test("retainWindows/beginInteraction: cancels pending reads and prevents restart")
-  func retainWindowsBeginInteractionCancelsPendingReadsAndPreventsRestart() async throws {
+  func retainWindowsBeginInteractionCancelsPendingReadsAndPreventsRestart() async {
     let app = AnimationTestApp(processID: 1)
-    let reconciler = makeDeliveryReconciler(app)
+    let delivery = AnimationFrameDelivery { _ in app.backend }
+    let reconciler = makeDeliveryReconciler(app, delivery: delivery)
     reconciler.animationDuration = 1
     reconciler.apply([1: animationFrame(100)])
     reconciler.beginInteraction(for: 1)
@@ -343,7 +344,9 @@ struct WindowFrameReconcilerTests {
     reconciler.endInteractions()
     reconciler.apply([1: animationFrame(300)])
     reconciler.retainWindows([])
-    try await Task.sleep(for: .milliseconds(20))
+    // Drain cancelled backend work before checking for writes, without a timed delay.
+    delivery.waitForPendingOperations(for: 1)
+    await Task.yield()
     #expect(reconciler.isIdle)
     #expect(app.writeCount == 0)
     #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(20)))

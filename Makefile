@@ -1,5 +1,6 @@
 VERSION_TMPL=Sources/Swm/Version.swift.tmpl
 VERSION_FILE=Sources/Swm/Version.swift
+TEST_ARGS ?=
 
 build:
 	@swift build
@@ -14,7 +15,7 @@ lint:
 	@swift format lint -r Sources Tests Package.swift
 
 test:
-	@swift test --parallel --disable-xctest
+	@swift test --parallel --disable-xctest $(TEST_ARGS)
 
 clean:
 	@swift package clean
