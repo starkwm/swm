@@ -3,11 +3,9 @@ import Testing
 
 @testable import SwmLib
 
-@MainActor
-@Suite("Tiling reconciliation")
-struct TilingReconciliationTests {
+extension TilingTests {
   @Test("initialize: excludes ineligible windows from disabled Space geometry")
-  func startExcludesIneligibleWindowsFromDisabledSpaceGeometry() {
+  func initializeExcludesIneligibleWindowsFromDisabledSpaceGeometry() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10, 11], 3: []]
@@ -53,9 +51,9 @@ struct TilingReconciliationTests {
   }
 
   @Test(
-    "reconcile batches discards while preserving order, omitted leaves, focus insertion and settings"
+    "reconcile: preserves order and settings across batched removals"
   )
-  func batchRemoval() {
+  func reconcilePreservesOrderAndSettingsAcrossBatchedRemovals() {
     var candidates = (1...6).map { window(id: CGWindowID($0)) }
     let tiling = makeTiling(
       windows: { candidates },
@@ -105,62 +103,8 @@ struct TilingReconciliationTests {
     )
   }
 
-  @Test("membership polling: reflows without lifecycle events")
-  func membershipPollingReflowsWithoutLifecycleEvents() async throws {
-    let windows = [window(id: 1), window(id: 2), window(id: 3)]
-    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [11]]
-    var framesByWindowID: [CGWindowID: CGRect] = [
-      1: .zero,
-      2: .zero,
-      3: .zero,
-    ]
-    let frameReconciler = WindowFrameReconciler(
-      currentFrame: { framesByWindowID[$0] },
-      frameMutation: { windowID, targetFrame, _ in
-        framesByWindowID[windowID] = targetFrame
-        return .success
-      }
-    )
-    let tiling = makeTiling(
-      windows: { windows },
-      memberships: { memberships },
-      frameReconciler: frameReconciler
-    )
-    tiling.initialize()
-    tiling.setLayout(.master, for: 10)
-    tiling.windowFrameDidChange(2)
-
-    memberships[2] = [11]
-    for _ in 0..<100 where framesByWindowID[1]?.width != 1_000 {
-      try await Task.sleep(for: .milliseconds(10))
-    }
-
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
-    )
-    #expect(framesByWindowID[1] == CGRect(x: 0, y: 0, width: 1_000, height: 800))
-
-    framesByWindowID[3] = CGRect(x: 100, y: 100, width: 300, height: 300)
-    memberships[3] = [10]
-    for _ in 0..<100 where framesByWindowID[3]?.origin.x != 500 {
-      try await Task.sleep(for: .milliseconds(10))
-    }
-
-    #expect(
-      tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
-    )
-    #expect(framesByWindowID[3] == CGRect(x: 500, y: 0, width: 500, height: 800))
-  }
-
-  @Test("dwindle: a new window splits the focused leaf")
-  func dwindleNewWindowSplitsFocusedLeaf() {
+  @Test("reconcile: a new window splits the focused leaf")
+  func reconcileANewWindowSplitsTheFocusedLeaf() {
     var windows = [window(id: 1), window(id: 2), window(id: 3)]
     let tiling = makeTiling(
       windows: { windows },
@@ -184,47 +128,6 @@ struct TilingReconciliationTests {
           ])
         )
     )
-  }
-
-  @Test(
-    "dwindle: retains pending focus unless a newer focus event supersedes it",
-    arguments: [false, true]
-  )
-  func dwindleRetainsFocusBeforeSpaceMembership(focusChanged: Bool) {
-    var windows = [window(id: 1)]
-    var memberships: [CGWindowID: Set<UInt64>] = [1: [10]]
-    let tiling = makeTiling(windows: { windows }, memberships: { memberships })
-    tiling.initialize()
-    tiling.setLayout(.dwindle, for: 10)
-    tiling.windowDidFocus(1)
-
-    windows.append(window(id: 2))
-    tiling.reconcile()
-    tiling.windowDidFocus(2)
-    tiling.reconcile()
-    if focusChanged {
-      tiling.windowDidFocus(1)
-    }
-
-    memberships[2] = [10]
-    tiling.reconcile()
-    windows.append(window(id: 3))
-    memberships[3] = [10]
-    tiling.reconcile()
-
-    let expectedFrames: [CGWindowID: CGRect] =
-      focusChanged
-      ? [
-        1: CGRect(x: 0, y: 0, width: 500, height: 400),
-        3: CGRect(x: 0, y: 400, width: 500, height: 400),
-        2: CGRect(x: 500, y: 0, width: 500, height: 800),
-      ]
-      : [
-        1: CGRect(x: 0, y: 0, width: 500, height: 800),
-        2: CGRect(x: 500, y: 0, width: 500, height: 400),
-        3: CGRect(x: 500, y: 400, width: 500, height: 400),
-      ]
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expectedFrames)))
   }
 
   @Test("reconcile: preserves minimized leaves but omits them from geometry")
@@ -254,7 +157,7 @@ struct TilingReconciliationTests {
   }
 
   @Test("reconcile: preserves native-fullscreen leaves at their prior position")
-  func reconcilePreservesNativeFullscreenLeafPosition() {
+  func reconcilePreservesNativeFullscreenLeavesAtTheirPriorPosition() {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [10]]
     let tiling = makeTiling(windows: { windows }, memberships: { memberships })
@@ -313,17 +216,8 @@ struct TilingReconciliationTests {
     #expect(tiling.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
-  @Test("layoutPlan: requires a visible Space")
-  func layoutPlanRequiresVisibleSpace() {
-    let hiddenTiling = makeTiling(visibleSpaceID: 11)
-    hiddenTiling.initialize()
-    hiddenTiling.setLayout(.master, for: 10)
-
-    #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
-  }
-
-  @Test("shared Space: tiles and migrates windows independently per monitor")
-  func sharedSpaceTilesAndMigratesWindowsIndependentlyPerMonitor() {
+  @Test("reconcile: tiles and migrates windows independently per monitor")
+  func reconcileTilesAndMigratesWindowsIndependentlyPerMonitor() {
     var windows = [
       window(id: 1, displayID: "display-a"),
       window(id: 2, displayID: "display-a"),
@@ -367,8 +261,8 @@ struct TilingReconciliationTests {
     #expect(tiling.setLayout(.dwindle, for: 10))
   }
 
-  @Test("shared Space: a new monitor inherits the layout selection")
-  func sharedSpaceNewMonitorInheritsState() {
+  @Test("reconcile: a new monitor inherits the layout selection")
+  func reconcileANewMonitorInheritsTheLayoutSelection() {
     var displays = [
       "display-a": SpaceTopologyDisplay(
         visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
@@ -386,5 +280,109 @@ struct TilingReconciliationTests {
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
     )
+  }
+
+  @Test(
+    "windowDidFocus: retains pending focus unless a newer focus event supersedes it",
+    arguments: [false, true]
+  )
+  func windowDidFocusRetainsPendingFocusUnlessANewerFocusEventSupersedesIt(focusChanged: Bool) {
+    var windows = [window(id: 1)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10]]
+    let tiling = makeTiling(windows: { windows }, memberships: { memberships })
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    tiling.windowDidFocus(1)
+
+    windows.append(window(id: 2))
+    tiling.reconcile()
+    tiling.windowDidFocus(2)
+    tiling.reconcile()
+    if focusChanged {
+      tiling.windowDidFocus(1)
+    }
+
+    memberships[2] = [10]
+    tiling.reconcile()
+    windows.append(window(id: 3))
+    memberships[3] = [10]
+    tiling.reconcile()
+
+    let expectedFrames: [CGWindowID: CGRect] =
+      focusChanged
+      ? [
+        1: CGRect(x: 0, y: 0, width: 500, height: 400),
+        3: CGRect(x: 0, y: 400, width: 500, height: 400),
+        2: CGRect(x: 500, y: 0, width: 500, height: 800),
+      ]
+      : [
+        1: CGRect(x: 0, y: 0, width: 500, height: 800),
+        2: CGRect(x: 500, y: 0, width: 500, height: 400),
+        3: CGRect(x: 500, y: 400, width: 500, height: 400),
+      ]
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expectedFrames)))
+  }
+
+  @Test("layoutPlan: requires a visible Space")
+  func layoutPlanRequiresAVisibleSpace() {
+    let hiddenTiling = makeTiling(visibleSpaceID: 11)
+    hiddenTiling.initialize()
+    hiddenTiling.setLayout(.master, for: 10)
+
+    #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
+  }
+
+  @Test("membership polling: reflows without lifecycle events")
+  func membershipPollingReflowsWithoutLifecycleEvents() async throws {
+    let windows = [window(id: 1), window(id: 2), window(id: 3)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [11]]
+    var framesByWindowID: [CGWindowID: CGRect] = [
+      1: .zero,
+      2: .zero,
+      3: .zero,
+    ]
+    let frameReconciler = WindowFrameReconciler(
+      currentFrame: { framesByWindowID[$0] },
+      frameMutation: { windowID, targetFrame, _ in
+        framesByWindowID[windowID] = targetFrame
+        return .success
+      }
+    )
+    let tiling = makeTiling(
+      windows: { windows },
+      memberships: { memberships },
+      frameReconciler: frameReconciler
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    tiling.windowFrameDidChange(2)
+
+    memberships[2] = [11]
+    for _ in 0..<100 where framesByWindowID[1]?.width != 1_000 {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+    #expect(framesByWindowID[1] == CGRect(x: 0, y: 0, width: 1_000, height: 800))
+
+    framesByWindowID[3] = CGRect(x: 100, y: 100, width: 300, height: 300)
+    memberships[3] = [10]
+    for _ in 0..<100 where framesByWindowID[3]?.origin.x != 500 {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 800),
+          ])
+        )
+    )
+    #expect(framesByWindowID[3] == CGRect(x: 500, y: 0, width: 500, height: 800))
   }
 }

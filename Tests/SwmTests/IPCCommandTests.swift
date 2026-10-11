@@ -6,10 +6,10 @@ import Testing
 @testable import Swm
 @testable import SwmLib
 
-@Suite("IPC command output")
+@Suite("IPCCommand")
 struct IPCCommandTests {
-  @Test("routes responses and preserves failure exit status", arguments: [true, false])
-  func outputRouting(ok: Bool) throws {
+  @Test("run: routes responses and preserves failure exit status", arguments: [true, false])
+  func runRoutesResponsesAndPreservesFailureExitStatus(ok: Bool) throws {
     let output = try #require(tmpfile())
     defer { fclose(output) }
     let errors = try #require(tmpfile())

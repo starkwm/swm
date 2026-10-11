@@ -3,34 +3,58 @@ import Testing
 @testable import SwmLib
 
 @Suite("Client")
+@MainActor
 struct ClientTests {
-  @Test("send: accepts matching response")
-  func sendAcceptsMatchingResponse() {
-    let result = Client.send(domain: .window, args: ["--focus", "42"]) { request in
-      .success(id: request.id, message: "ok")
+  @Test("send: rejects mismatched response IDs over a real socket")
+  func sendRejectsMismatchedResponseIDsOverARealSocket() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    let daemon = Daemon(path: endpoint.path) { _ in .success(id: "wrong", message: "ok") }
+    try daemon.run()
+    defer { daemon.shutdown() }
+    let output = try await runBlocking {
+      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
+        try Client.exchange($0, path: endpoint.path)
+      }
+      return (result.ok, result.outputMessage)
     }
-
-    #expect(result.ok)
-    #expect(result.outputMessage == "ok")
+    #expect(!output.0)
+    #expect(output.1 == "error: IPC response did not match its request")
   }
 
-  @Test("send: rejects mismatched response ID")
-  func sendRejectsMismatchedResponseID() {
-    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
-      .success(id: "another-request", message: "ok")
+  @Test("send: reports a missing daemon at the socket boundary")
+  func sendReportsAMissingDaemonAtTheSocketBoundary() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    let output = try await runBlocking {
+      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
+        try Client.exchange($0, path: endpoint.path)
+      }
+      return (result.ok, result.outputMessage)
     }
-
-    #expect(result.ok == false)
-    #expect(result.outputMessage == "error: IPC response did not match its request")
+    #expect(!output.0)
+    #expect(output.1 == "error: daemon is not running")
   }
 
-  @Test("send: presents daemon connection failure")
-  func sendPresentsDaemonConnectionFailure() {
-    let result = Client.send(domain: .window, args: ["--focus", "42"]) { _ in
-      throw IPCClientError.daemonNotRunning
+  @Test("send: reports a connection closed during dispatch")
+  func sendReportsAConnectionClosedDuringDispatch() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    weak var reference: Daemon?
+    let daemon = Daemon(path: endpoint.path) { request in
+      reference?.shutdown()
+      return .success(id: request.id, message: "not delivered")
     }
-
-    #expect(result.ok == false)
-    #expect(result.outputMessage == "error: daemon is not running")
+    reference = daemon
+    try daemon.run()
+    defer { daemon.shutdown() }
+    let output = try await runBlocking {
+      let result = Client.send(domain: .query, args: ["--windows"]) {
+        try Client.exchange($0, path: endpoint.path)
+      }
+      return (result.ok, result.outputMessage)
+    }
+    #expect(!output.0)
+    #expect(output.1 == "error: Connection closed or timed out.")
   }
 }

@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct SpaceActivationBridgeTests {
   @Test("activate: shows, hides, then sets current with full-width IDs and owned objects")
-  func invocation() throws {
+  func activateShowsHidesThenSetsCurrentWithFullWidthIDsAndOwnedObjects() throws {
     ActivationCalls.values = []
     ActivationCalls.releasedCount = 0
 
@@ -22,7 +22,7 @@ struct SpaceActivationBridgeTests {
   }
 
   @Test("activate: missing classes and selectors do not submit any operations")
-  func unavailable() {
+  func activateMissingClassesAndSelectorsDoNotSubmitAnyOperations() {
     for operationClass: AnyClass? in [nil, NSObject.self] {
       ActivationCalls.values = []
       #expect(throws: SpaceActivationBridgeError.unavailable) {
@@ -37,7 +37,7 @@ struct SpaceActivationBridgeTests {
   }
 
   @Test("activate: rejects changed argument and return types despite matching argument counts")
-  func changedABI() {
+  func activateRejectsChangedArgumentAndReturnTypesDespiteMatchingArgumentCounts() {
     for operationClass: AnyClass in [WrongActivationArgument.self, WrongActivationReturn.self] {
       ActivationCalls.values = []
       #expect(throws: SpaceActivationBridgeError.unavailable) {
@@ -48,7 +48,7 @@ struct SpaceActivationBridgeTests {
   }
 
   @Test("activate: a failed initializer prevents partial submission")
-  func failedCreation() {
+  func activateAFailedInitializerPreventsPartialSubmission() {
     ActivationCalls.values = []
     #expect(throws: SpaceActivationBridgeError.creationFailed) {
       try activate(hideClass: FailedActivationOperation.self)

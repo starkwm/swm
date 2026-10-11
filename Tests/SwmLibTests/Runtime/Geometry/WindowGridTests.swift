@@ -72,10 +72,10 @@ struct WindowGridTests {
   }
 
   @Test(
-    "frame rejects padding and gaps that exhaust either dimension",
+    "frame: rejects padding and gaps that exhaust either dimension",
     arguments: [120, 300, Int.max]
   )
-  func exhaustedBounds(value: Int) throws {
+  func frameRejectsPaddingAndGapsThatExhaustEitherDimension(value: Int) throws {
     let grid = try #require(WindowGrid(argument: "3:3:1:1:1:1"))
     let bounds = CGRect(x: -1440, y: -900, width: 300, height: 120)
     #expect(
@@ -91,10 +91,10 @@ struct WindowGridTests {
   }
 
   @Test(
-    "frame rejects nonfinite and nonpositive input bounds",
+    "frame: rejects nonfinite and nonpositive bounds",
     arguments: [CGFloat.nan, .infinity, -.infinity, 0, -1]
   )
-  func invalidBounds(value: CGFloat) throws {
+  func frameRejectsNonfiniteAndNonpositiveBounds(value: CGFloat) throws {
     let grid = try #require(WindowGrid(argument: "1:1:0:0:1:1"))
     #expect(
       grid.frame(in: CGRect(x: 0, y: 0, width: value, height: 100), settings: .defaults) == nil
@@ -112,8 +112,8 @@ struct WindowGridTests {
     }
   }
 
-  @Test("frame handles large grid counts and padding without integer overflow")
-  func largeValues() throws {
+  @Test("frame: handles large grid counts and padding without integer overflow")
+  func frameHandlesLargeGridCountsAndPaddingWithoutIntegerOverflow() throws {
     let grid = try #require(
       WindowGrid(rows: Int.max, columns: Int.max, x: 0, y: 0, width: Int.max, height: Int.max)
     )

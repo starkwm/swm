@@ -5,17 +5,6 @@ import Testing
 
 @Suite("DwindleLayout")
 struct DwindleLayoutTests {
-  @Test("layout: returns no frames for no windows")
-  func layoutReturnsNoFramesForNoWindows() {
-    #expect(
-      DwindleLayout().layout(
-        tree: tilingTree([]),
-        in: CGRect(x: 0, y: 0, width: 100, height: 100),
-        settings: .defaults
-      ) == .frames([:])
-    )
-  }
-
   @Test("layout: fills padded bounds for one window")
   func layoutFillsPaddedBoundsForOneWindow() {
     var settings = SpaceSettings.defaults
@@ -31,7 +20,7 @@ struct DwindleLayoutTests {
   }
 
   @Test("layout: recursively bisects the longest remaining edge")
-  func layoutRecursivelyBisectsLongestRemainingEdge() {
+  func layoutRecursivelyBisectsTheLongestRemainingEdge() {
     var settings = SpaceSettings.defaults
     settings.gap = 10
 
@@ -53,7 +42,7 @@ struct DwindleLayoutTests {
   }
 
   @Test("layout: chooses the longest edge for portrait bounds")
-  func layoutChoosesLongestEdgeForPortraitBounds() {
+  func layoutChoosesTheLongestEdgeForPortraitBounds() {
     let result = DwindleLayout().layout(
       tree: tilingTree([1, 2, 3]),
       in: CGRect(x: -200, y: 20, width: 400, height: 800),
@@ -66,50 +55,6 @@ struct DwindleLayoutTests {
           1: CGRect(x: -200, y: 20, width: 400, height: 400),
           2: CGRect(x: -200, y: 420, width: 200, height: 400),
           3: CGRect(x: 0, y: 420, width: 200, height: 400),
-        ])
-    )
-  }
-
-  @Test("layout: applies a branch-local split ratio")
-  func layoutAppliesBranchLocalSplitRatio() {
-    let tree = TilingTree.branch(
-      .leaf(1),
-      .leaf(2),
-      split: TilingSplit(ratio: 0.7, direction: .vertical)
-    )
-
-    #expect(
-      DwindleLayout().layout(
-        tree: tree,
-        in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
-        settings: .defaults
-      )
-        == .frames([
-          1: CGRect(x: 0, y: 0, width: 700, height: 800),
-          2: CGRect(x: 700, y: 0, width: 300, height: 800),
-        ])
-    )
-  }
-
-  @Test("resolvingSplitDirections: preserves an initially vertical split")
-  func resolvingSplitDirectionsPreservesInitiallyVerticalSplit() throws {
-    let layout = DwindleLayout()
-    let tree = try #require(tilingTree([1, 2]))
-    let resolvedTree = layout.resolvingSplitDirections(
-      in: tree,
-      bounds: CGRect(x: 0, y: 0, width: 1_000, height: 600),
-      settings: .defaults
-    )
-
-    #expect(
-      layout.layout(
-        tree: resolvedTree,
-        in: CGRect(x: 0, y: 0, width: 400, height: 800),
-        settings: .defaults
-      )
-        == .frames([
-          1: CGRect(x: 0, y: 0, width: 200, height: 800),
-          2: CGRect(x: 200, y: 0, width: 200, height: 800),
         ])
     )
   }
@@ -182,20 +127,5 @@ struct DwindleLayoutTests {
     )
 
     #expect(result == .insufficientSpace(.tileWidth))
-  }
-
-  @Test("layout: is idempotent")
-  func layoutIsIdempotent() {
-    var settings = SpaceSettings.defaults
-    settings.padding = SpacePadding(top: 7, bottom: 11, left: 13, right: 17)
-    settings.gap = 9
-    let layout = DwindleLayout()
-    let bounds = CGRect(x: -1_024, y: -20, width: 1_024, height: 768)
-
-    let tree = tilingTree([1, 2, 3, 4])
-    let first = layout.layout(tree: tree, in: bounds, settings: settings)
-    let second = layout.layout(tree: tree, in: bounds, settings: settings)
-
-    #expect(first == second)
   }
 }

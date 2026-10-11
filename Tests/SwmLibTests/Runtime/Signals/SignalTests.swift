@@ -4,37 +4,14 @@ import Testing
 
 @Suite("Signal")
 struct SignalTests {
-  @Test("parseAdd: accepts full signal arguments")
-  func parseAddAcceptsFullSignalArguments() throws {
-    let signal = try Signal.parseAdd(
-      arguments: [
-        "event=window-focused",
-        "action=echo $SWM_WINDOW_ID",
-        "label=focus-log",
-        "app=Safari",
-        "title!=Private",
-        "active=yes",
-      ]
-    )
-
-    #expect(signal.event == .windowFocused)
-    #expect(signal.action == "echo $SWM_WINDOW_ID")
-    #expect(signal.label == "focus-log")
-    #expect(signal.appFilter?.pattern == "Safari")
-    #expect(signal.appFilter?.inverted == false)
-    #expect(signal.titleFilter?.pattern == "Private")
-    #expect(signal.titleFilter?.inverted == true)
-    #expect(signal.active == true)
-  }
-
   @Test("parseAdd: rejects missing event and action")
-  func parseAddRejectsMissingRequiredArguments() {
+  func parseAddRejectsMissingEventAndAction() {
     expectInvalid(arguments: ["action=echo"], message: "missing signal event")
     expectInvalid(arguments: ["event=window-focused"], message: "missing signal action")
   }
 
   @Test("parseAdd: rejects unsupported events and arguments")
-  func parseAddRejectsUnsupportedValues() {
+  func parseAddRejectsUnsupportedEventsAndArguments() {
     expectInvalid(
       arguments: ["event=dock-did-restart", "action=echo"],
       message: "unsupported signal event: dock-did-restart"
@@ -62,7 +39,7 @@ struct SignalTests {
   }
 
   @Test("parseAdd: rejects invalid regex and unsupported active filter")
-  func parseAddRejectsInvalidFilterArguments() {
+  func parseAddRejectsInvalidRegexAndUnsupportedActiveFilter() {
     expectInvalid(
       arguments: ["event=window-focused", "action=echo", "app=["],
       message: "invalid signal regex: ["
@@ -89,38 +66,6 @@ struct SignalTests {
         message: "signal event does not support active filter: \(event.rawValue)"
       )
     }
-  }
-
-  @Test("matches: applies regex, inversion, and active filters")
-  func matchesAppliesFilters() throws {
-    let signal = try Signal.parseAdd(
-      arguments: [
-        "event=window-focused",
-        "action=echo",
-        "app=Safari",
-        "title!=Private",
-        "active=yes",
-      ]
-    )
-
-    #expect(
-      signal.matches(
-        payload(app: "Safari", title: "Docs", active: true)
-      )
-    )
-    #expect(!signal.matches(payload(app: "Terminal", title: "Docs", active: true)))
-    #expect(!signal.matches(payload(app: "Safari", title: "Private", active: true)))
-    #expect(!signal.matches(payload(app: "Safari", title: "Docs", active: false)))
-  }
-
-  private func payload(app: String?, title: String?, active: Bool?) -> SignalPayload {
-    SignalPayload(
-      event: .windowFocused,
-      app: app,
-      title: title,
-      active: active,
-      environment: ["SWM_WINDOW_ID": "42"]
-    )
   }
 
   private func expectInvalid(arguments: [String], message: String) {

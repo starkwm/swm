@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct SpaceActivationTests {
   @Test("activate: confirms the target display without requiring keyboard focus")
-  func confirmation() async throws {
+  func activateConfirmsTheTargetDisplayWithoutRequiringKeyboardFocus() async throws {
     var observed = snapshot(focused: 55)
     var waits = 0
     let activation = SpaceActivation(
@@ -32,7 +32,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: targeting a visible Desktop does not submit a write")
-  func visibleDesktop() async throws {
+  func activateTargetingAVisibleDesktopDoesNotSubmitAWrite() async throws {
     let before = snapshot()
     let activation = SpaceActivation(
       snapshotProvider: { before },
@@ -44,7 +44,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: rejects out-of-range indexes", arguments: [-1, 4, Int.max])
-  func invalidIndex(index: Int) async {
+  func activateRejectsOutOfRangeIndexes(index: Int) async {
     let activation = SpaceActivation(
       snapshotProvider: { snapshot() },
       submitActivation: { _, _, _ in Issue.record("unexpected submission") }
@@ -56,7 +56,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: refuses fullscreen or unknown Spaces on the target display")
-  func unsupportedLayouts() async {
+  func activateRefusesFullscreenOrUnknownSpacesOnTheTargetDisplay() async {
     for type: StarkSkyLight.SpaceType in [.fullscreen, .unknown(3)] {
       let activation = SpaceActivation(
         snapshotProvider: { snapshot(targetType: type) },
@@ -76,7 +76,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: refuses incomplete topology before submission")
-  func incompleteTopology() async {
+  func activateRefusesIncompleteTopologyBeforeSubmission() async {
     let activation = SpaceActivation(
       snapshotProvider: { snapshot(current: nil) },
       submitActivation: { _, _, _ in Issue.record("unexpected submission") }
@@ -92,7 +92,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: a submitted but unchanged current Space times out")
-  func timeout() async {
+  func activateASubmittedButUnchangedCurrentSpaceTimesOut() async {
     var waits = 0
     let activation = SpaceActivation(
       snapshotProvider: { snapshot() },
@@ -111,7 +111,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: accepts confirmation on the last poll")
-  func finalPoll() async throws {
+  func activateAcceptsConfirmationOnTheLastPoll() async throws {
     var waits = 0
     let activation = SpaceActivation(
       snapshotProvider: { snapshot(current: waits == 40 ? 33 : 11) },
@@ -128,7 +128,7 @@ struct SpaceActivationTests {
     "activate: detects removal of the target or its display after submission",
     arguments: [false, true]
   )
-  func disappearance(removeDisplay: Bool) async {
+  func activateDetectsRemovalOfTheTargetOrItsDisplayAfterSubmission(removeDisplay: Bool) async {
     var observed = snapshot()
     let activation = SpaceActivation(
       snapshotProvider: { observed },
@@ -158,7 +158,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: a failed query reports that activation was already requested")
-  func queryFailure() async {
+  func activateAFailedQueryReportsThatActivationWasAlreadyRequested() async {
     var submitted = false
     let activation = SpaceActivation(
       snapshotProvider: {
@@ -181,7 +181,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: an unavailable bridge does not wait for confirmation")
-  func unavailableBridge() async {
+  func activateAnUnavailableBridgeDoesNotWaitForConfirmation() async {
     let activation = SpaceActivation(
       snapshotProvider: { snapshot() },
       submitActivation: { _, _, _ in throw SpaceActivationBridgeError.unavailable },
@@ -194,7 +194,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: prevents overlapping writes on one display but permits another display")
-  func overlappingRequests() async throws {
+  func activatePreventsOverlappingWritesOnOneDisplayButPermitsAnotherDisplay() async throws {
     var observed = snapshot()
     var activation: SpaceActivation!
     activation = SpaceActivation(
@@ -222,7 +222,7 @@ struct SpaceActivationTests {
   }
 
   @Test("activate: cancellation releases the display for a subsequent request")
-  func cancellation() async throws {
+  func activateCancellationReleasesTheDisplayForASubsequentRequest() async throws {
     var observed = snapshot()
     var cancelled = false
     let activation = SpaceActivation(

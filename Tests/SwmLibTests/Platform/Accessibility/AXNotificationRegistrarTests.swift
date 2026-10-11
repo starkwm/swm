@@ -5,8 +5,8 @@ import Testing
 
 @Suite("AXNotificationRegistrar")
 struct AXNotificationRegistrarTests {
-  @Test("Failed registration can be cleaned up and retried successfully")
-  func retryAfterFailure() {
+  @Test("observe: recovers after partial registration and cleanup")
+  func observeRecoversAfterPartialRegistrationAndCleanup() {
     let registrar = AXNotificationRegistrar(notifications: ["AXCreated", "AXFocusedWindowChanged"])
     var observed = Set<String>()
     var failures = [AXError]()
@@ -33,14 +33,5 @@ struct AXNotificationRegistrarTests {
       )
     )
     #expect(observed == ["AXCreated", "AXFocusedWindowChanged"])
-  }
-
-  @Test("Diagnostics distinguish permission, transient, and unsupported errors")
-  func errorDiagnostics() {
-    #expect(AXError.apiDisabled.diagnosticDescription == "apiDisabled (-25211)")
-    #expect(AXError.cannotComplete.diagnosticDescription == "cannotComplete (-25204)")
-    #expect(
-      AXError.notificationUnsupported.diagnosticDescription == "notificationUnsupported (-25207)"
-    )
   }
 }

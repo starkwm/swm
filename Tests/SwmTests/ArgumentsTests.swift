@@ -5,16 +5,16 @@ import Testing
 
 @Suite("Arguments")
 struct ArgumentsTests {
-  @Test("start converts log levels in the CLI", arguments: ["debug", "info", "warn", "error"])
-  func logLevels(value: String) throws {
+  @Test("parseAsRoot: parses the start log level", arguments: ["debug", "info", "warn", "error"])
+  func parseAsRootParsesTheStartLogLevel(value: String) throws {
     let command = try #require(
       Arguments.parseAsRoot(["start", "--log-level", value]) as? StartCommand
     )
     #expect(command.logLevel.rawValue == value)
   }
 
-  @Test("start defaults to info and rejects unknown log levels")
-  func logLevelValidation() throws {
+  @Test("parseAsRoot: defaults the log level and rejects unknown values")
+  func parseAsRootDefaultsTheLogLevelAndRejectsUnknownValues() throws {
     let command = try #require(Arguments.parseAsRoot(["start"]) as? StartCommand)
     #expect(command.logLevel.rawValue == "info")
     do {
@@ -25,8 +25,8 @@ struct ArgumentsTests {
     }
   }
 
-  @Test("root help groups command domains")
-  func rootHelpGroupsCommandDomains() {
+  @Test("helpMessage: groups command domains")
+  func helpMessageGroupsCommandDomains() {
     let help = Arguments.helpMessage()
 
     #expect(help.contains("DAEMON SUBCOMMANDS:"))
@@ -37,8 +37,8 @@ struct ArgumentsTests {
     #expect(!help.contains("<args>"))
   }
 
-  @Test("subcommand help omits the top-level version flag")
-  func subcommandHelpOmitsTopLevelVersionFlag() {
+  @Test("helpMessage: omits the root version flag from subcommands")
+  func helpMessageOmitsTheRootVersionFlagFromSubcommands() {
     let domainHelp = Arguments.helpMessage(for: WindowCommand.self)
     let commandHelp = Arguments.helpMessage(for: WindowCommand.Move.self)
 
@@ -46,16 +46,16 @@ struct ArgumentsTests {
     #expect(!commandHelp.contains("--version"))
   }
 
-  @Test("leaf help describes exact command arguments")
-  func leafHelpDescribesExactCommandArguments() {
+  @Test("helpMessage: describes leaf arguments")
+  func helpMessageDescribesLeafArguments() {
     let help = Arguments.helpMessage(for: WindowCommand.Move.self)
 
     #expect(help.contains("USAGE: swm window move [--window <window>] <position>"))
     #expect(help.contains("Position in the form abs|rel:<x>:<y>."))
   }
 
-  @Test("completion scripts include commands and typed values")
-  func completionScriptsIncludeCommandsAndTypedValues() {
+  @Test("completionScript: includes commands and typed values")
+  func completionScriptIncludesCommandsAndTypedValues() {
     for shell in CompletionShell.allCases {
       let script = Arguments.completionScript(for: shell)
 
@@ -69,8 +69,8 @@ struct ArgumentsTests {
     }
   }
 
-  @Test("typed window command translates to IPC arguments")
-  func typedWindowCommandTranslatesToIPCArguments() throws {
+  @Test("parseAsRoot: translates window moves to IPC arguments")
+  func parseAsRootTranslatesWindowMovesToIPCArguments() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "window", "move", "--window", "recent", "rel:10:20",
@@ -80,8 +80,8 @@ struct ArgumentsTests {
     #expect(command.arguments == ["recent", "rel:10:20"])
   }
 
-  @Test("typed warp command preserves selectors and defaults to the focused window")
-  func typedWarpCommand() throws {
+  @Test("parseAsRoot: preserves warp selectors and focused defaults")
+  func parseAsRootPreservesWarpSelectorsAndFocusedDefaults() throws {
     let focused = try #require(
       Arguments.parseAsRoot(["window", "warp"]) as? WindowCommand.Warp
     )
@@ -108,10 +108,10 @@ struct ArgumentsTests {
   }
 
   @Test(
-    "typed directional warp command preserves every cardinal direction",
+    "parseAsRoot: preserves directional warp arguments",
     arguments: ["left", "right", "up", "down"]
   )
-  func directionalWarp(direction: String) throws {
+  func parseAsRootPreservesDirectionalWarpArguments(direction: String) throws {
     let command = try #require(
       Arguments.parseAsRoot(["window", "warp", "--direction", direction]) as? WindowCommand.Warp
     )
@@ -120,8 +120,8 @@ struct ArgumentsTests {
     #expect(command.window == nil)
   }
 
-  @Test("typed warp command rejects combined targets and invalid directions")
-  func invalidWarpTargets() {
+  @Test("parseAsRoot: rejects conflicting warp targets and invalid directions")
+  func parseAsRootRejectsConflictingWarpTargetsAndInvalidDirections() {
     #expect(throws: (any Error).self) {
       try Arguments.parseAsRoot(["window", "warp", "--window", "recent", "--direction", "left"])
     }
@@ -130,8 +130,8 @@ struct ArgumentsTests {
     }
   }
 
-  @Test("typed directional window command translates to IPC arguments")
-  func typedDirectionalWindowCommandTranslatesToIPCArguments() throws {
+  @Test("parseAsRoot: translates directional focus to IPC arguments")
+  func parseAsRootTranslatesDirectionalFocusToIPCArguments() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "window", "focus", "--direction", "left",
@@ -141,8 +141,8 @@ struct ArgumentsTests {
     #expect(command.arguments == ["left"])
   }
 
-  @Test("typed window Space command translates selectors and destinations to IPC arguments")
-  func typedWindowSpaceCommand() throws {
+  @Test("parseAsRoot: translates window Space selectors and destinations")
+  func parseAsRootTranslatesWindowSpaceSelectorsAndDestinations() throws {
     let command = try #require(
       Arguments.parseAsRoot(["window", "space", "--window", "recent", "0"]) as? WindowCommand.Space
     )
@@ -157,8 +157,8 @@ struct ArgumentsTests {
     #expect(focused.arguments == ["next"])
   }
 
-  @Test("typed space command translates a space selector to IPC arguments")
-  func typedSpaceCommandTranslatesSpaceSelectorToIPCArguments() throws {
+  @Test("parseAsRoot: translates Space settings selectors")
+  func parseAsRootTranslatesSpaceSettingsSelectors() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "space", "gap", "--space", "2", "abs:10",
@@ -168,8 +168,8 @@ struct ArgumentsTests {
     #expect(command.arguments == ["--space", "2", "abs:10"])
   }
 
-  @Test("typed Space activation command sends a zero-based index")
-  func spaceActivation() throws {
+  @Test("parseAsRoot: translates zero based Space activation indexes")
+  func parseAsRootTranslatesZeroBasedSpaceActivationIndexes() throws {
     let command = try #require(
       Arguments.parseAsRoot(["space", "activate", "2"]) as? SpaceCommand.Activate
     )
@@ -178,8 +178,8 @@ struct ArgumentsTests {
     #expect(SpaceCommand.Activate.domain == .space)
   }
 
-  @Test("Space activation rejects missing, negative, and nonnumeric indexes")
-  func invalidSpaceActivation() {
+  @Test("parseAsRoot: rejects missing and invalid Space activation indexes")
+  func parseAsRootRejectsMissingAndInvalidSpaceActivationIndexes() {
     for args in [[], ["-1"], ["next"], ["0", "1"]] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(["space", "activate"] + args)
@@ -187,8 +187,8 @@ struct ArgumentsTests {
     }
   }
 
-  @Test("typed rule command preserves matching properties")
-  func typedRuleCommand() throws {
+  @Test("parseAsRoot: preserves rule registration and removal arguments")
+  func parseAsRootPreservesRuleRegistrationAndRemovalArguments() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "rule", "add", "label=finder", "app=^Finder$", "manage=off",
@@ -204,8 +204,8 @@ struct ArgumentsTests {
     #expect(try Arguments.parseAsRoot(["rule", "list"]) is RuleCommand.List)
   }
 
-  @Test("typed window command rejects multiple targets")
-  func typedWindowCommandRejectsMultipleTargets() {
+  @Test("parseAsRoot: rejects conflicting focus targets")
+  func parseAsRootRejectsConflictingFocusTargets() {
     #expect(throws: (any Error).self) {
       try Arguments.parseAsRoot([
         "window", "focus", "--window", "recent", "--direction", "left",
@@ -213,8 +213,8 @@ struct ArgumentsTests {
     }
   }
 
-  @Test("typed focus follows mouse command translates to IPC arguments")
-  func typedFocusFollowsMouseCommandTranslatesToIPCArguments() throws {
+  @Test("parseAsRoot: translates focus follows mouse settings")
+  func parseAsRootTranslatesFocusFollowsMouseSettings() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "config", "focus-follows-mouse", "autofocus",
@@ -224,8 +224,8 @@ struct ArgumentsTests {
     #expect(command.arguments == ["autofocus"])
   }
 
-  @Test("typed config point commands preserve integer IPC values")
-  func typedConfigPointCommandsPreserveIntegerIPCValues() throws {
+  @Test("parseAsRoot: preserves integer config values")
+  func parseAsRootPreservesIntegerConfigValues() throws {
     let commandNames = [
       "window-gap", "top-padding", "right-padding", "bottom-padding", "left-padding",
     ]
@@ -238,8 +238,9 @@ struct ArgumentsTests {
       #expect(command.arguments == ["6"])
     }
   }
-  @Test("rule placement commands preserve grid and display properties")
-  func rulePlacementCommand() throws {
+
+  @Test("parseAsRoot: preserves rule placement arguments")
+  func parseAsRootPreservesRulePlacementArguments() throws {
     let command = try #require(
       Arguments.parseAsRoot([
         "rule", "add", "app=^Finder$", "grid=2:1:1:0:1:1", "display=2",
@@ -247,5 +248,4 @@ struct ArgumentsTests {
     )
     #expect(command.arguments == ["app=^Finder$", "grid=2:1:1:0:1:1", "display=2"])
   }
-
 }

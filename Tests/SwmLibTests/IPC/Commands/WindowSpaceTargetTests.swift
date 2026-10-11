@@ -5,7 +5,7 @@ import Testing
 @Suite("WindowSpaceTarget")
 struct WindowSpaceTargetTests {
   @Test("init: accepts zero-based indexes and desktop cycling")
-  func parsing() {
+  func initAcceptsZeroBasedIndexesAndDesktopCycling() {
     #expect(WindowSpaceTarget(argument: "0") == .index(0))
     #expect(WindowSpaceTarget(argument: "2") == .index(2))
 
@@ -18,12 +18,12 @@ struct WindowSpaceTargetTests {
     "init: rejects invalid indexes",
     arguments: ["", "-1", "1.5", "sideways", "999999999999999999999"]
   )
-  func invalidArguments(argument: String) {
+  func initRejectsInvalidIndexes(argument: String) {
     #expect(WindowSpaceTarget(argument: argument) == nil)
   }
 
   @Test("space: numeric indexes include fullscreen Spaces in query order")
-  func indexedSpace() {
+  func spaceNumericIndexesIncludeFullscreenSpacesInQueryOrder() {
     #expect(WindowSpaceTarget.index(0).space(from: 11, spaces: spaces)?.id == 11)
     #expect(WindowSpaceTarget.index(1).space(from: 11, spaces: spaces)?.id == 22)
 
@@ -32,7 +32,7 @@ struct WindowSpaceTargetTests {
   }
 
   @Test("space: cycling skips fullscreen Spaces and wraps")
-  func cycling() {
+  func spaceCyclingSkipsFullscreenSpacesAndWraps() {
     #expect(WindowSpaceTarget.next.space(from: 11, spaces: spaces)?.id == 33)
     #expect(WindowSpaceTarget.next.space(from: 33, spaces: spaces)?.id == 11)
 

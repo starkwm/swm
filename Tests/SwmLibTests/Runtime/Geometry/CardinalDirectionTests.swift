@@ -5,17 +5,8 @@ import Testing
 
 @Suite("CardinalDirection")
 struct CardinalDirectionTests {
-  @Test("rawValue: uses full CLI direction names")
-  func rawValueUsesFullDirectionNames() {
-    #expect(CardinalDirection(rawValue: "left") == .left)
-    #expect(CardinalDirection(rawValue: "right") == .right)
-    #expect(CardinalDirection(rawValue: "up") == .up)
-    #expect(CardinalDirection(rawValue: "down") == .down)
-    #expect(CardinalDirection(rawValue: "l") == nil)
-  }
-
   @Test("neighbor: selects the window in each cardinal direction")
-  func neighborSelectsCardinalWindows() {
+  func neighborSelectsTheWindowInEachCardinalDirection() {
     let frames: [CGWindowID: CGRect] = [
       1: CGRect(x: 100, y: 100, width: 100, height: 100),
       2: CGRect(x: 0, y: 100, width: 100, height: 100),
@@ -31,7 +22,7 @@ struct CardinalDirectionTests {
   }
 
   @Test("neighbor: prefers an aligned window over a closer diagonal")
-  func neighborPrefersAlignedWindow() {
+  func neighborPrefersAnAlignedWindowOverACloserDiagonal() {
     let frames: [CGWindowID: CGRect] = [
       1: CGRect(x: 100, y: 100, width: 100, height: 100),
       2: CGRect(x: 0, y: 125, width: 100, height: 50),

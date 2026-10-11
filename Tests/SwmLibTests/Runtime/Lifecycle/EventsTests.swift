@@ -6,8 +6,8 @@ import Testing
 @Suite("Events")
 @MainActor
 struct EventsTests {
-  @Test("queued lifecycle events preserve order and capture destruction facts before invalidation")
-  func orderedDestruction() async {
+  @Test("post: preserves lifecycle order and destruction facts before invalidation")
+  func postPreservesLifecycleOrderAndDestructionFactsBeforeInvalidation() async {
     let windows = Windows(workspace: Workspace(), focusedWindowID: 42)
     let mapper = RuntimeEventSignalMapper(
       windows: windows,

@@ -4,10 +4,28 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("Animation display links")
+@Suite("AnimationDisplayLink")
 struct AnimationDisplayLinkTests {
-  @Test("each display advances only its windows and idle links stop")
-  func displayLocalTicks() {
+  @Test("presentationTime: bounds stale and invalid timestamps")
+  func presentationTimeBoundsStaleAndInvalidTimestamps() {
+    let now = ContinuousClock.now
+    #expect(
+      AnimationDisplayLink.presentationTime(targetTimestamp: 10.01, mediaTime: 10, now: now) > now
+    )
+    #expect(
+      AnimationDisplayLink.presentationTime(targetTimestamp: 9, mediaTime: 10, now: now) == now
+    )
+    #expect(
+      AnimationDisplayLink.presentationTime(targetTimestamp: .nan, mediaTime: 10, now: now) == now
+    )
+    #expect(
+      AnimationDisplayLink.presentationTime(targetTimestamp: 100, mediaTime: 10, now: now)
+        == now.advanced(by: .seconds(1.0 / 30))
+    )
+  }
+
+  @Test("update: advances windows on their display and stops idle links")
+  func updateAdvancesWindowsOnTheirDisplayAndStopsIdleLinks() {
     var created = [UInt32: TestScreenLink]()
     let displays = [
       display(1, x: 0, created: { created[1] = $0 }),
@@ -29,8 +47,8 @@ struct AnimationDisplayLinkTests {
     #expect(created[2]?.stopped == true)
   }
 
-  @Test("disconnect migrates work and callbacks from retired links cannot tick new sessions")
-  func displayChanges() throws {
+  @Test("update: migrates disconnected displays and rejects retired callbacks")
+  func updateMigratesDisconnectedDisplaysAndRejectsRetiredCallbacks() throws {
     var created = [UInt32: TestScreenLink]()
     let first = display(1, x: 0, created: { created[1] = $0 })
     let second = display(2, x: 1000, created: { created[2] = $0 })
@@ -56,8 +74,8 @@ struct AnimationDisplayLinkTests {
     scheduler.stop()
   }
 
-  @Test("no-display fallback advances and releases its owner when idle")
-  func fallbackLifetime() async throws {
+  @Test("update: schedules a fallback without retaining its owner")
+  func updateSchedulesAFallbackWithoutRetainingItsOwner() async throws {
     var ticks = 0
     var scheduler: AnimationDisplayLink? = AnimationDisplayLink(
       displays: { [] },

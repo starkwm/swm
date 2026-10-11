@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct WindowsTests {
   @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
-  func addAndRemoveLostFrontSwitchedEventConsumesOnce() {
+  func addLostFrontSwitchedEventRemoveLostFrontSwitchedEventConsumesOnce() {
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
     let processID: pid_t = 42
 
@@ -21,7 +21,7 @@ struct WindowsTests {
   }
 
   @Test("addLostFocusedEvent/removeLostFocusedEvent: tracks and consumes once")
-  func addAndRemoveLostFocusedEventTracksAndConsumesOnce() {
+  func addLostFocusedEventRemoveLostFocusedEventTracksAndConsumesOnce() {
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
     let windowID: CGWindowID = 42
 

@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct RuntimeEventSignalMapperTests {
   @Test("payload after handling: skips window events without subscribers")
-  func skipsUnobservedWindowEvents() {
+  func payloadAfterHandlingSkipsWindowEventsWithoutSubscribers() {
     var observedEvents = Set<SignalEvent>()
     let mapper = RuntimeEventSignalMapper(
       windows: Windows(workspace: Workspace(), focusedWindowID: nil),
@@ -42,7 +42,7 @@ struct RuntimeEventSignalMapperTests {
   }
 
   @Test("payload after handling: leaves application lifecycle signals with their handler")
-  func payloadAfterHandlingLeavesApplicationLifecycleSignalsWithHandler() {
+  func payloadAfterHandlingLeavesApplicationLifecycleSignalsWithTheirHandler() {
     let process = Process(
       psn: ProcessSerialNumber(highLongOfPSN: 1, lowLongOfPSN: 2),
       pid: 42,

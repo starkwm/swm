@@ -8,7 +8,7 @@ import Testing
 @MainActor
 struct QuerySnapshotTests {
   @Test("indexWindowInfo: indexes metadata by window id")
-  func indexWindowInfoIndexesMetadataByWindowID() throws {
+  func indexWindowInfoIndexesMetadataByWindowId() throws {
     let metadata: [[String: Any]] = [
       [
         kCGWindowNumber as String: NSNumber(value: UInt32(1)),

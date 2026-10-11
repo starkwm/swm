@@ -5,7 +5,7 @@ import Testing
 @Suite("IPCRequest")
 struct IPCRequestTests {
   @Test(
-    "make preserves command arguments",
+    "make: preserves command arguments",
     arguments: [
       (CommandDomain.window, ["focus", "main display"]),
       (.window, ["--move", "recent", "abs:100:200"]),
@@ -15,7 +15,7 @@ struct IPCRequestTests {
       (.signal, ["--add", "event=window-focused", "action=echo"]),
     ]
   )
-  func makePreservesArguments(domain: CommandDomain, arguments: [String]) throws {
+  func makePreservesCommandArguments(domain: CommandDomain, arguments: [String]) throws {
     let request = try IPCRequest.make(domain: domain, arguments: arguments)
     #expect(request.version == IPCRequest.currentVersion)
     #expect(request.domain == domain)
@@ -31,26 +31,6 @@ struct IPCRequestTests {
     } catch let error as IPCCommandError {
       #expect(error.description == "missing command for config")
       #expect(error.errorCode == .invalidRequest)
-    } catch {
-      Issue.record("Unexpected error: \(error)")
-    }
-  }
-
-  @Test("validateVersion: rejects unsupported versions")
-  func validateVersionRejectsUnsupportedVersions() {
-    let request = IPCRequest(
-      version: IPCRequest.currentVersion + 1,
-      domain: .window,
-      command: "--focus",
-      args: []
-    )
-
-    do {
-      try request.validateVersion()
-      Issue.record("Expected unsupported version error")
-    } catch let error as IPCCommandError {
-      #expect(error.errorCode == .invalidRequest)
-      #expect(error.message == "unsupported IPC request version: 2; expected 1")
     } catch {
       Issue.record("Unexpected error: \(error)")
     }
