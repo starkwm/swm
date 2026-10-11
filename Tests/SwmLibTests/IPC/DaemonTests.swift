@@ -138,8 +138,11 @@ struct DaemonTests {
     #expect(data.isEmpty)
   }
 
-  @Test("run: preserves sorted query JSON and full width identifiers")
-  func runPreservesSortedQueryJSONAndFullWidthIdentifiers() async throws {
+  @Test(
+    "run: preserves sorted query JSON and full width identifiers",
+    arguments: [false, true]
+  )
+  func runPreservesSortedQueryJSONAndFullWidthIdentifiers(emptyWindows: Bool) async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let daemon = Daemon(path: endpoint.path) { request in
@@ -149,8 +152,8 @@ struct DaemonTests {
           id: UInt64.max,
           index: 0,
           type: "user",
-          displays: [1],
-          windows: [42],
+          displays: [1, 2],
+          windows: emptyWindows ? [] : [42],
           hasFocus: true,
           isVisible: true,
           isNativeFullscreen: false
@@ -160,9 +163,10 @@ struct DaemonTests {
     try daemon.run()
     defer { daemon.shutdown() }
     let response = try await exchange(path: endpoint.path)
+    let windowsJSON = emptyWindows ? "[]" : "[42]"
     #expect(
       response.message
-        == #"{"displays":[1],"has-focus":true,"id":18446744073709551615,"index":0,"is-native-fullscreen":false,"is-visible":true,"type":"user","windows":[42]}"#
+        == #"{"displays":[1,2],"has-focus":true,"id":18446744073709551615,"index":0,"is-native-fullscreen":false,"is-visible":true,"type":"user","windows":\#(windowsJSON)}"#
     )
   }
 

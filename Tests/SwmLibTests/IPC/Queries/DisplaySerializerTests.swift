@@ -70,12 +70,3 @@ struct DisplaySerializerTests {
     #expect(spaces == [1])
   }
 }
-
-/// Screen geometry independent of the test host's connected displays.
-private final class QueryTestScreen: NSScreen {
-  override var deviceDescription: [NSDeviceDescriptionKey: Any] { [:] }
-
-  override var frame: NSRect {
-    NSRect(x: 0, y: 0, width: 1920, height: 1080)
-  }
-}

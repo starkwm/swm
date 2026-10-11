@@ -8,8 +8,19 @@ import Testing
 
 @Suite("IPCCommand")
 struct IPCCommandTests {
-  @Test("run: routes responses and preserves failure exit status", arguments: [true, false])
-  func runRoutesResponsesAndPreservesFailureExitStatus(ok: Bool) throws {
+  @Test(
+    "run: formats daemon responses, routes output, and preserves failure exit status",
+    arguments: [
+      (true, #"{"id":1}"#, #"{"id":1}"#),
+      (false, "window not found", "error: window not found"),
+      (false, "error: window not found", "error: window not found"),
+    ]
+  )
+  func runFormatsDaemonResponsesRoutesOutputAndPreservesFailureExitStatus(
+    ok: Bool,
+    message: String,
+    expected: String
+  ) throws {
     let output = try #require(tmpfile())
     defer { fclose(output) }
     let errors = try #require(tmpfile())
@@ -17,11 +28,15 @@ struct IPCCommandTests {
     var command = try #require(
       Arguments.parseAsRoot(["window", "focus", "--window", "42"]) as? WindowCommand.Focus
     )
-    let message = ok ? "ok" : "error: window not found"
     let send: (CommandDomain, [String]) -> Client.SendResult = { domain, args in
-      #expect(domain == .window)
-      #expect(args == ["--focus", "42"])
-      return Client.SendResult(ok: ok, outputMessage: message)
+      Client.send(domain: domain, args: args) { request in
+        #expect(request.domain == .window)
+        #expect(request.command == "--focus")
+        #expect(request.args == ["42"])
+        return ok
+          ? .success(id: request.id, message: message)
+          : .failure(id: request.id, message: message, errorCode: .invalidRequest)
+      }
     }
     if ok {
       try command.run(send: send, output: output, errors: errors)
@@ -30,8 +45,8 @@ struct IPCCommandTests {
         try command.run(send: send, output: output, errors: errors)
       }
     }
-    #expect(read(output) == (ok ? message + "\n" : ""))
-    #expect(read(errors) == (ok ? "" : message + "\n"))
+    #expect(read(output) == (ok ? expected + "\n" : ""))
+    #expect(read(errors) == (ok ? "" : expected + "\n"))
   }
 
   private func read(_ stream: UnsafeMutablePointer<FILE>) -> String {

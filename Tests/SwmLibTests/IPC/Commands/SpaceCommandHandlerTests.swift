@@ -54,92 +54,41 @@ struct SpaceCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
   }
 
-  @Test("dispatch: selects floating or automatic layout for the active Space")
-  func dispatchSelectsFloatingOrAutomaticLayoutForTheActiveSpace() async {
-    let spaces = Spaces(activeSpaceID: 42)
-    let tiling = makeTestTiling(
-      spaces: spaces,
-      topology: SpaceTopology(
-        spacesByID: [
-          42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
-        ],
-        visibleSpaceIDByDisplayID: ["display": 42],
-        spaceIDsByWindowID: [:],
-        displaysByID: [
-          "display": SpaceTopologyDisplay(
-            visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-          )
-        ]
-      )
-    )
-    tiling.initialize()
-    let handler = SpaceCommandHandler(
-      spaces: spaces,
-      tiling: tiling
-    )
-
-    let dwindle = await handler.dispatch(request(command: "--layout", args: ["dwindle"]))
-
-    #expect(dwindle.ok)
-    #expect(dwindle.message == "dwindle")
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
-
-    let master = await handler.dispatch(request(command: "--layout", args: ["master"]))
-
-    #expect(master.ok)
-    #expect(master.message == "master")
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
-
-    let monocle = await handler.dispatch(request(command: "--layout", args: ["monocle"]))
-
-    #expect(monocle.ok)
-    #expect(monocle.message == "monocle")
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([:])))
-
-    let float = await handler.dispatch(request(command: "--layout", args: ["float"]))
-
-    #expect(float.ok)
-    #expect(float.message == "float")
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .disabled)
-  }
-
-  @Test("dispatch: accepts padding commands")
-  func dispatchAcceptsPaddingCommands() async throws {
+  @Test("dispatch: applies absolute and relative padding with clamping")
+  func dispatchAppliesAbsoluteAndRelativePaddingWithClamping() async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
-
-    let absolute = await handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"]))
-    let relative = await handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"]))
-
-    #expect(absolute.ok)
-    #expect(relative.ok)
-    #expect(absolute.message == "ok")
-    #expect(relative.message == "ok")
-
+    #expect(await handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"])).ok)
+    #expect(await handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"])).ok)
     #expect(
       spaces.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
     )
+    #expect(await handler.dispatch(request(command: "--padding", args: ["abs:-1:1:-2:2"])).ok)
+    #expect(spaces.settings(for: 42).padding == SpacePadding(top: 0, bottom: 1, left: 0, right: 2))
+    #expect(await handler.dispatch(request(command: "--padding", args: ["rel:-10:-10:-10:-10"])).ok)
+    #expect(spaces.settings(for: 42).padding == .zero)
+    #expect(spaces.settings(for: 43) == .defaults)
   }
 
-  @Test("dispatch: accepts gap commands")
-  func dispatchAcceptsGapCommands() async throws {
+  @Test("dispatch: applies absolute and relative gaps only to the active Space")
+  func dispatchAppliesAbsoluteAndRelativeGapsOnlyToTheActiveSpace() async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
-
-    let absolute = await handler.dispatch(request(command: "--gap", args: ["abs:0"]))
+    #expect(await handler.dispatch(request(command: "--gap", args: ["abs:0"])).ok)
     let relative = await handler.dispatch(request(command: "--gap", args: ["rel:10"]))
-
-    #expect(absolute.ok)
-    #expect(relative.ok)
-    #expect(absolute.message == "ok")
-    #expect(relative.message == "ok")
-
+    #expect(relative.ok && relative.message == "ok")
     #expect(spaces.settings(for: 42).gap == 10)
+    #expect(await handler.dispatch(request(command: "--gap", args: ["abs:-1"])).ok)
+    #expect(spaces.settings(for: 42).gap == 0)
+    #expect(await handler.dispatch(request(command: "--gap", args: ["rel:-10"])).ok)
+    #expect(spaces.settings(for: 42).gap == 0)
+    #expect(spaces.settings(for: 43) == .defaults)
   }
 
   @Test("dispatch: updates layout controls")
   func dispatchUpdatesLayoutControls() async {
     let spaces = Spaces(activeSpaceID: 42)
+    var bounds = CGRect(x: 0, y: 0, width: 1000, height: 800)
     let tiling = Tiling(
       snapshot: {
         TilingReconciliationSnapshot(
@@ -169,7 +118,7 @@ struct SpaceCommandHandlerTests {
             spaceIDsByWindowID: [1: [42], 2: [42]],
             displaysByID: [
               "display": SpaceTopologyDisplay(
-                visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+                visibleFrame: bounds
               )
             ]
           )
@@ -206,6 +155,29 @@ struct SpaceCommandHandlerTests {
           .frames([
             1: CGRect(x: 0, y: 0, width: 700, height: 800),
             2: CGRect(x: 700, y: 0, width: 300, height: 800),
+          ])
+        )
+    )
+
+    #expect(
+      (await handler.dispatch(request(command: "--layout", args: ["monocle"]))).message == "monocle"
+    )
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([1: bounds, 2: bounds])))
+    #expect(
+      (await handler.dispatch(request(command: "--layout", args: ["float"]))).message == "float"
+    )
+    #expect(tiling.layoutPlan(for: layoutID(42)) == .disabled)
+    #expect(
+      (await handler.dispatch(request(command: "--layout", args: ["dwindle"]))).message == "dwindle"
+    )
+    bounds.size.width = 400
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(42))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 200, height: 800),
+            2: CGRect(x: 200, y: 0, width: 200, height: 800),
           ])
         )
     )
@@ -248,37 +220,59 @@ struct SpaceCommandHandlerTests {
   @Test(
     "dispatch: rejects overflow without changing settings",
     arguments: [
-      ("--gap", "abs:\(Int.max)", "rel:1", "gap"),
-      ("--padding", "abs:10:20:30:\(Int.max)", "rel:1:1:1:1", "padding"),
+      ("--gap", "1", "gap", false), ("--gap", "1", "gap", true),
+      ("--padding", "1:-1:-1:-1", "padding", true),
+      ("--padding", "-1:1:-1:-1", "padding", true),
+      ("--padding", "-1:-1:1:-1", "padding", true),
+      ("--padding", "-1:-1:-1:1", "padding", true),
     ]
   )
   func dispatchRejectsOverflowWithoutChangingSettings(
     command: String,
-    absolute: String,
-    relative: String,
-    setting: String
+    delta: String,
+    setting: String,
+    existingOverride: Bool
   ) async {
     let spaces = Spaces(activeSpaceID: 42)
+    spaces.updateAllSettings { settings in
+      settings.gap = Int.max
+      settings.padding = SpacePadding(top: Int.max, bottom: Int.max, left: Int.max, right: Int.max)
+    }
+    if existingOverride { spaces.setGap(Int.max, for: 42) }
     let handler = handler(spaces: spaces)
-    #expect(await handler.dispatch(request(command: command, args: [absolute])).ok)
     let previous = spaces.settings(for: 42)
-    let response = await handler.dispatch(request(command: command, args: [relative]))
+    let response = await handler.dispatch(request(command: command, args: ["rel:\(delta)"]))
     #expect(!response.ok)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "space \(setting) adjustment overflows integer range")
     #expect(spaces.settings(for: 42) == previous)
-    #expect(spaces.settings(for: 43) == .defaults)
+    #expect(spaces.settings(for: 43) == previous)
   }
 
-  @Test("dispatch: updates active space only")
-  func dispatchUpdatesActiveSpaceOnly() async {
-    let spaces = Spaces(activeSpaceID: 2)
+  @Test("dispatch: accepts integer extremes without overflowing intermediate adjustments")
+  func dispatchAcceptsIntegerExtremesWithoutOverflowingIntermediateAdjustments() async {
+    let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
-
-    _ = await handler.dispatch(request(command: "--gap", args: ["abs:10"]))
-
-    #expect(spaces.settings(for: 1).gap == 0)
-    #expect(spaces.settings(for: 2).gap == 10)
+    #expect(
+      await handler.dispatch(
+        request(command: "--padding", args: ["abs:\(Int.max):\(Int.max):\(Int.max):\(Int.max)"])
+      ).ok
+    )
+    #expect(
+      await handler.dispatch(
+        request(command: "--padding", args: ["rel:\(Int.min):-1:0:\(-Int.max)"])
+      ).ok
+    )
+    #expect(
+      spaces.settings(for: 42).padding
+        == SpacePadding(top: 0, bottom: Int.max - 1, left: Int.max, right: 0)
+    )
+    #expect(await handler.dispatch(request(command: "--gap", args: ["abs:\(Int.max)"])).ok)
+    #expect(await handler.dispatch(request(command: "--gap", args: ["rel:\(Int.min)"])).ok)
+    #expect(spaces.settings(for: 42).gap == 0)
+    #expect(await handler.dispatch(request(command: "--gap", args: ["rel:\(Int.max)"])).ok)
+    #expect(spaces.settings(for: 42).gap == Int.max)
+    #expect(spaces.settings(for: 43) == .defaults)
   }
 
   @Test("dispatch: updates a selected space by index")

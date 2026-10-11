@@ -22,22 +22,6 @@ struct SignalTests {
     )
   }
 
-  @Test("parseAdd: accepts display reconfiguration events")
-  func parseAddAcceptsDisplayReconfigurationEvents() throws {
-    let events: [SignalEvent] = [
-      .displayAdded,
-      .displayRemoved,
-      .displayMoved,
-      .displayResized,
-    ]
-
-    for event in events {
-      let signal = try Signal.parseAdd(arguments: ["event=\(event.rawValue)", "action=echo"])
-
-      #expect(signal.event == event)
-    }
-  }
-
   @Test("parseAdd: rejects invalid regex and unsupported active filter")
   func parseAddRejectsInvalidRegexAndUnsupportedActiveFilter() {
     expectInvalid(

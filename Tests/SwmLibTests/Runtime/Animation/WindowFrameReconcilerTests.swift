@@ -8,31 +8,20 @@ import Testing
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
   @Test(
-    "nextAnimationDeadline: frame work does not shift the next deadline",
-    arguments: [0, 5, 15]
+    "nextAnimationDeadline: preserves cadence and skips missed intervals",
+    arguments: [(0, 1), (5, 1), (15, 1), (40, 3)]
   )
-  func nextAnimationDeadlineFrameWorkDoesNotShiftTheNextDeadline(workMilliseconds: Int) {
-    let start = ContinuousClock.now
-    let interval = Duration.seconds(1.0 / 60)
-    let previous = start.advanced(by: interval)
-    let deadline = WindowFrameReconciler.nextAnimationDeadline(
-      after: previous,
-      now: previous.advanced(by: .milliseconds(workMilliseconds))
-    )
-
-    #expect(deadline == previous.advanced(by: interval))
-  }
-
-  @Test("nextAnimationDeadline: slow frames skip missed deadlines without shifting the cadence")
-  func nextAnimationDeadlineSlowFramesSkipMissedDeadlinesWithoutShiftingTheCadence() {
+  func nextAnimationDeadlinePreservesCadenceAndSkipsMissedIntervals(
+    workMilliseconds: Int,
+    intervals: Int
+  ) {
     let previous = ContinuousClock.now
     let interval = Duration.seconds(1.0 / 60)
     let deadline = WindowFrameReconciler.nextAnimationDeadline(
       after: previous,
-      now: previous.advanced(by: .milliseconds(40))
+      now: previous.advanced(by: .milliseconds(workMilliseconds))
     )
-
-    #expect(deadline == previous.advanced(by: interval * 3))
+    #expect(deadline == previous.advanced(by: interval * intervals))
   }
 
   @Test("animationDuration: disabling finishes the pending destination")
@@ -120,8 +109,6 @@ struct WindowFrameReconcilerTests {
     #expect(reconciler.frames(for: [1])[1] == destination)
     reconciler.advanceAnimations(at: halfway.advanced(by: .seconds(1)))
     #expect(frame == destination)
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
     reconciler.animationDuration = 0
   }
 

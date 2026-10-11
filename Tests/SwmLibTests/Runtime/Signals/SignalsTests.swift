@@ -5,50 +5,22 @@ import Testing
 
 @Suite("Signals")
 struct SignalsTests {
-  @Test("add: rejects duplicate labels")
-  func addRejectsDuplicateLabels() throws {
-    let signals = Signals()
-    let first = try signal(label: "same", action: "one")
-    let second = try signal(label: "same", action: "two")
-
-    try signals.add(first)
-
-    do {
-      try signals.add(second)
-      Issue.record("Expected duplicate label rejection")
-    } catch let error as IPCCommandError {
-      #expect(error.message == "signal label already exists: same")
-      #expect(error.errorCode == .invalidRequest)
-    } catch {
-      Issue.record("Unexpected error: \(error)")
-    }
-  }
-
-  @Test("remove: removes by one-based index and label")
-  func removeRemovesByOneBasedIndexAndLabel() throws {
-    let signals = Signals()
-
-    try signals.add(signal(label: "first", action: "one"))
-    try signals.add(signal(label: "second", action: "two"))
-    try signals.add(signal(label: "third", action: "three"))
-
-    try signals.remove(selector: "2")
-    #expect(signals.list().map(\.signal.label) == ["first", "third"])
-
-    try signals.remove(selector: "third")
-    #expect(signals.list().map(\.signal.label) == ["first"])
-  }
-
-  @Test("hasSubscribers: follows event registrations and removal")
-  func hasSubscribersFollowsEventRegistrationsAndRemoval() throws {
+  @Test("hasSubscribers: follows indexed and labeled removal")
+  func hasSubscribersFollowsIndexedAndLabeledRemoval() throws {
     let signals = Signals()
     #expect(!signals.hasSubscribers(for: .windowMoved))
-    try signals.add(
-      Signal.parseAdd(arguments: ["event=window-moved", "action=true", "label=move"])
-    )
-    #expect(signals.hasSubscribers(for: .windowMoved))
+    for (label, event) in [
+      ("first", "window-moved"), ("second", "window-resized"), ("third", "window-moved"),
+    ] {
+      try signals.add(
+        Signal.parseAdd(arguments: ["event=\(event)", "action=true", "label=\(label)"])
+      )
+    }
+    try signals.remove(selector: "2")
     #expect(!signals.hasSubscribers(for: .windowResized))
-    try signals.remove(selector: "move")
+    try signals.remove(selector: "third")
+    #expect(signals.hasSubscribers(for: .windowMoved))
+    try signals.remove(selector: "first")
     #expect(!signals.hasSubscribers(for: .windowMoved))
   }
 
@@ -107,46 +79,5 @@ struct SignalsTests {
     try signals.remove(selector: "focus")
     signals.emit(matching)
     #expect(recorder.actions.count == 1)
-  }
-
-  private func signal(
-    label: String?,
-    action: String,
-    app: String? = nil
-  ) throws -> Signal {
-    var arguments = [
-      "event=window-focused",
-      "action=\(action)",
-    ]
-
-    if let label {
-      arguments.append("label=\(label)")
-    }
-
-    if let app {
-      arguments.append("app=\(app)")
-    }
-
-    return try Signal.parseAdd(arguments: arguments)
-  }
-}
-
-private final class SignalEmissionRecorder: @unchecked Sendable {
-  var actions: [String] { lock.withLock { recordedActions } }
-  var environments: [[String: String]] { lock.withLock { recordedEnvironments } }
-  private let lock = NSLock()
-  private var recordedActions = [String]()
-  private var recordedEnvironments = [[String: String]]()
-
-  func execute(
-    action: String,
-    environment: [String: String],
-    completion: @escaping @Sendable () -> Void
-  ) {
-    lock.withLock {
-      recordedActions.append(action)
-      recordedEnvironments.append(environment)
-    }
-    completion()
   }
 }

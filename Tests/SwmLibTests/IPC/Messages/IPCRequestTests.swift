@@ -5,22 +5,13 @@ import Testing
 
 @Suite("IPCRequest")
 struct IPCRequestTests {
-  @Test(
-    "make: preserves command arguments",
-    arguments: [
-      (CommandDomain.window, ["focus", "main display"]),
-      (.window, ["--move", "recent", "abs:100:200"]),
-      (.window, ["--resize", "100", "abs:500:800"]),
-      (.window, ["--grid", "3:1:0:0:2:1"]),
-      (.window, ["--grid", "recent", "3:1:0:0:2:1"]),
-      (.signal, ["--add", "event=window-focused", "action=echo"]),
-    ]
-  )
-  func makePreservesCommandArguments(domain: CommandDomain, arguments: [String]) throws {
-    let request = try IPCRequest.make(domain: domain, arguments: arguments)
+  @Test("make: preserves literal command arguments")
+  func makePreservesLiteralCommandArguments() throws {
+    let arguments = ["--focus", "main display", "--title=A window with spaces", "a=b"]
+    let request = try IPCRequest.make(domain: .window, arguments: arguments)
     #expect(request.version == IPCRequest.currentVersion)
-    #expect(request.domain == domain)
-    #expect(request.command == arguments[0])
+    #expect(request.domain == .window)
+    #expect(request.command == "--focus")
     #expect(request.args == Array(arguments.dropFirst()))
   }
 

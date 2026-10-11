@@ -76,12 +76,25 @@ struct RuntimeEventSignalMapperTests {
     #expect(focused?.environment["SWM_WINDOW_ID"] == "200")
   }
 
-  @Test("payload after handling: maps display reconfiguration")
-  func payloadAfterHandlingMapsDisplayReconfiguration() {
-    let payload = mapper().payload(afterHandling: .display(.moved(42)))
-
-    #expect(payload?.event == .displayMoved)
-    #expect(payload?.environment["SWM_EVENT_DISPLAY_ID"] == "42")
+  @Test(
+    "payload after handling: maps display reconfiguration to parsed signal actions",
+    arguments: [
+      (DisplayEvent.added(42), SignalEvent.displayAdded),
+      (.removed(42), .displayRemoved), (.moved(42), .displayMoved), (.resized(42), .displayResized),
+    ]
+  )
+  func payloadAfterHandlingMapsDisplayReconfigurationToParsedSignalActions(
+    event: DisplayEvent,
+    expected: SignalEvent
+  ) throws {
+    let recorder = SignalEmissionRecorder()
+    let signals = Signals(executionQueue: SignalExecutionQueue(executor: recorder.execute))
+    try signals.add(Signal.parseAdd(arguments: ["event=\(expected.rawValue)", "action=record"]))
+    let payload = try #require(mapper().payload(afterHandling: .display(event)))
+    #expect(payload.event == expected)
+    signals.emit(payload)
+    #expect(recorder.actions == ["record"])
+    #expect(recorder.environments.first?["SWM_EVENT_DISPLAY_ID"] == "42")
   }
 
   private func mapper() -> RuntimeEventSignalMapper {
