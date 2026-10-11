@@ -6,6 +6,15 @@ import Testing
 @Suite("RuntimeEventSignalMapper")
 @MainActor
 struct RuntimeEventSignalMapperTests {
+  @Test("payload before handling: ignores events that remain projectable")
+  func payloadBeforeHandlingIgnoresEventsThatRemainProjectable() {
+    let mapper = mapper()
+
+    #expect(mapper.payload(beforeHandling: .window(.created(42, 100))) == nil)
+    #expect(mapper.payload(beforeHandling: .space(.changed(Space(id: 10)))) == nil)
+    #expect(mapper.payload(beforeHandling: .display(.changed)) == nil)
+  }
+
   @Test("payload after handling: skips window events without subscribers")
   func payloadAfterHandlingSkipsWindowEventsWithoutSubscribers() {
     var observedEvents = Set<SignalEvent>()
@@ -73,15 +82,6 @@ struct RuntimeEventSignalMapperTests {
 
     #expect(payload?.event == .displayMoved)
     #expect(payload?.environment["SWM_EVENT_DISPLAY_ID"] == "42")
-  }
-
-  @Test("payload before handling: ignores events that remain projectable")
-  func payloadBeforeHandlingIgnoresEventsThatRemainProjectable() {
-    let mapper = mapper()
-
-    #expect(mapper.payload(beforeHandling: .window(.created(42, 100))) == nil)
-    #expect(mapper.payload(beforeHandling: .space(.changed(Space(id: 10)))) == nil)
-    #expect(mapper.payload(beforeHandling: .display(.changed)) == nil)
   }
 
   private func mapper() -> RuntimeEventSignalMapper {
