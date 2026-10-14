@@ -86,7 +86,7 @@ public final class Tiling {
     self.windows = windows
     self.frameReconciler = frameReconciler
     self.windowSpaceMembership =
-      windowSpaceMembership ?? { snapshot().topology.spaceIDsByWindowID }
+      windowSpaceMembership ?? { snapshot().topology?.spaceIDsByWindowID ?? [:] }
     if let windows {
       frameReconciler?.onInteractionEnded = { [weak self] in
         self?.reconcileAndReflowVisibleSpaces()
@@ -154,6 +154,10 @@ public final class Tiling {
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
   func reconcile() {
     var snapshot = snapshot()
+    guard snapshot.topology != nil else {
+      suspendTopology()
+      return
+    }
     var windows = snapshot.windows.sorted { $0.id < $1.id }
     var liveIDs = Set(windows.map(\.id))
     let previousFloatingIDs = floatingOverrideWindowIDs
@@ -168,13 +172,19 @@ public final class Tiling {
         manualFloatingByWindowID[$0.id] ?? (actions[$0.id]?.manage == false)
       }.map(\.id)
     )
-    if applyRulePlacements(actions, snapshot: snapshot) {
+    let placedWindowIDs = applyRulePlacements(actions, snapshot: snapshot)
+    if !placedWindowIDs.isEmpty {
       // Transfers must be reflected in membership and display facts before planning a layout.
       snapshot = self.snapshot()
       windows = snapshot.windows.sorted { $0.id < $1.id }
       liveIDs = Set(windows.map(\.id))
     }
-    let topology = snapshot.topology
+    guard let topology = snapshot.topology else {
+      suspendTopology()
+      return
+    }
+    for windowID in placedWindowIDs { layoutIDByWindowID.removeValue(forKey: windowID) }
+    spaces.retainSettings(for: Set(topology.spacesByID.keys))
     let availableLayoutIDs = topology.layoutIDs
     let previousLayoutsByID = layoutsByID
     let resolvedSpaceIDs = Set(availableLayoutIDs.map(\.spaceID))
@@ -763,9 +773,10 @@ public final class Tiling {
   private func applyRulePlacements(
     _ actions: [CGWindowID: WindowRuleActions],
     snapshot: TilingReconciliationSnapshot
-  ) -> Bool {
+  ) -> Set<CGWindowID> {
+    guard let topology = snapshot.topology else { return [] }
     appliedRulePlacements = appliedRulePlacements.filter { actions[$0.key] != nil }
-    var changed = false
+    var changedWindowIDs = Set<CGWindowID>()
     for window in snapshot.windows.sorted(by: { $0.id < $1.id }) {
       let desired = actions[window.id]?.placement ?? WindowRulePlacement()
       if desired.isEmpty {
@@ -784,13 +795,13 @@ public final class Tiling {
       guard !placement.isEmpty else { continue }
       guard !isInteractingWithWindow(window.id),
         !window.isMinimized, window.isMovable, window.subrole == "AXStandardWindow",
-        let layoutID = snapshot.topology.layoutID(for: window.id, on: window.displayID),
-        snapshot.topology.visibleLayoutIDs.contains(layoutID)
+        let layoutID = topology.layoutID(for: window.id, on: window.displayID),
+        topology.visibleLayoutIDs.contains(layoutID)
       else { continue }
       let destinationLayoutID: TilingLayoutID
       if let display = placement.display {
         guard let displayID = display.resolve(in: ruleDisplayIDs()),
-          let target = snapshot.topology.visibleLayoutIDs.first(where: { $0.displayID == displayID }
+          let target = topology.visibleLayoutIDs.first(where: { $0.displayID == displayID }
           )
         else { continue }
         destinationLayoutID = target
@@ -810,8 +821,7 @@ public final class Tiling {
         continue
       case .applied, .failed:
         // Record rejected mutations too, so their frame notifications cannot trigger retries.
-        changed = true
-        layoutIDByWindowID.removeValue(forKey: window.id)
+        changedWindowIDs.insert(window.id)
       }
       if let display = placement.display {
         applied.display = display
@@ -821,14 +831,14 @@ public final class Tiling {
       if let grid = placement.grid { applied.grid = grid }
       appliedRulePlacements[window.id] = applied
     }
-    return changed
+    return changedWindowIDs
   }
 
   /// Reflow when authoritative WindowServer membership changed without a lifecycle event.
   private func reflowIfMembershipChanged() {
     let membership = windowSpaceMembership()
     let previousMembership = currentTopology?.spaceIDsByWindowID ?? [:]
-    guard membership != previousMembership else { return }
+    guard currentTopology == nil || membership != previousMembership else { return }
 
     let changedWindowIDs = Set(membership.keys).union(previousMembership.keys).filter {
       membership[$0] != previousMembership[$0]
@@ -844,9 +854,18 @@ public final class Tiling {
     reconcileAndReflowVisibleSpaces()
   }
 
+  /// Retain layout state while preventing writes with stale display geometry.
+  private func suspendTopology() {
+    frameReconciler?.cancelAnimations()
+    currentTopology = nil
+    updateMembershipPolling()
+  }
+
   /// Poll membership while automatic tiling is active because Mission Control emits no event.
   private func updateMembershipPolling() {
-    guard layoutsByID.values.contains(where: { $0.selection != .float }) else {
+    guard
+      defaultSelection != .float || layoutsByID.values.contains(where: { $0.selection != .float })
+    else {
       membershipPollingTask?.cancel()
       membershipPollingTask = nil
       return
@@ -963,7 +982,7 @@ struct TilingReconciliationSnapshot {
   let windows: [TilingWindowSnapshot]
 
   /// Space membership and visible display topology for those windows.
-  let topology: SpaceTopology
+  let topology: SpaceTopology?
 }
 
 /// Explainable result of asking the runtime coordinator for Space geometry.
