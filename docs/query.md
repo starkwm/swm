@@ -28,4 +28,6 @@ swm query window [window-id]
 
 Display indexes are one-based and follow the physical display arrangement. Space indexes are zero-based. A filtered query returns one JSON object when the selector identifies the same type as the query; otherwise it returns an array of related objects.
 
+Window `has-focus` compares each ID with the focused window of the frontmost application. It is `null` when focus cannot be determined; a singular window query then returns `null`.
+
 Use the returned IDs and indexes to target [window commands](windows.md) and [space commands](spaces.md).

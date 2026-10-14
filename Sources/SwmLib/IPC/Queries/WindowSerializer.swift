@@ -32,6 +32,7 @@ struct WindowSerializer: Encodable, Equatable {
 
       return WindowSerializer(
         window: window,
+        focusedWindowID: snapshot.focusedWindowID,
         info: snapshot.windowInfoByID[window.id],
         screens: snapshot.screens,
         spaceIndex: spaceIndex,
@@ -77,7 +78,7 @@ struct WindowSerializer: Encodable, Equatable {
   /// Whether the window's size can be changed through accessibility.
   let canResize: Bool?
 
-  /// Whether the window is the main accessibility window.
+  /// Whether this is the focused window of the frontmost application, when known.
   let hasFocus: Bool?
 
   /// Whether the window has an accessibility element reference.
@@ -135,6 +136,7 @@ struct WindowSerializer: Encodable, Equatable {
   @MainActor
   init(
     window: Window,
+    focusedWindowID: CGWindowID?,
     info: [String: Any]?,
     screens: [NSScreen] = NSScreen.screens,
     spaceIndex: Int? = nil,
@@ -184,7 +186,7 @@ struct WindowSerializer: Encodable, Equatable {
     canResize = element.map {
       AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: $0)
     }
-    hasFocus = element.map { AccessibilityClient.shared.isMainWindow($0) }
+    hasFocus = focusedWindowID.map { $0 == window.id }
     hasAXReference = element != nil
     isNativeFullscreen =
       nativeFullscreen ?? spaceIDs.first.map {

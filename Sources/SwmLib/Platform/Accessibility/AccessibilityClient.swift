@@ -194,11 +194,6 @@ public final class AccessibilityClient {
     stringAttribute(for: element, attribute: kAXSubroleAttribute as String)
   }
 
-  /// Return whether an element is marked as the main window.
-  func isMainWindow(_ element: AXUIElement) -> Bool {
-    boolAttribute(for: element, attribute: kAXMainAttribute as String) ?? false
-  }
-
   /// Return whether an element has the accessibility window role.
   func isWindow(_ element: AXUIElement) -> Bool {
     stringAttribute(for: element, attribute: kAXRoleAttribute as String) == kAXWindowRole
