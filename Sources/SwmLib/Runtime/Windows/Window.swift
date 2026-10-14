@@ -154,68 +154,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Move the window to an absolute point.
-  @discardableResult
-  func move(to point: CGPoint) -> Bool {
-    guard let application else { return false }
-
-    var moved = false
-    application.enhancedUIWorkaround {
-      guard let element else { return }
-      moved = AccessibilityClient.shared.setPoint(
-        point,
-        for: element,
-        attribute: kAXPositionAttribute as String
-      )
-    }
-
-    return moved
-  }
-
-  /// Move the window by a relative offset.
-  @discardableResult
-  func move(by offset: CGVector) -> Bool {
-    guard let frame = frame() else { return false }
-
-    return move(
-      to: CGPoint(
-        x: frame.origin.x + offset.dx,
-        y: frame.origin.y + offset.dy
-      )
-    )
-  }
-
-  /// Resize the window to an absolute size.
-  @discardableResult
-  func resize(to size: CGSize) -> Bool {
-    guard let application else { return false }
-
-    var resized = false
-    application.enhancedUIWorkaround {
-      guard let element else { return }
-      resized = AccessibilityClient.shared.setSize(
-        size,
-        for: element,
-        attribute: kAXSizeAttribute as String
-      )
-    }
-
-    return resized
-  }
-
-  /// Resize the window by a relative offset.
-  @discardableResult
-  func resize(by offset: CGVector) -> Bool {
-    guard let frame = frame() else { return false }
-
-    return resize(
-      to: CGSize(
-        width: frame.size.width + offset.dx,
-        height: frame.size.height + offset.dy
-      )
-    )
-  }
-
   /// Return the window frame from accessibility.
   func frame() -> CGRect? {
     guard let element else { return nil }
