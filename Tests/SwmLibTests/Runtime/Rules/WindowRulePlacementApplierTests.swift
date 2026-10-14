@@ -25,6 +25,7 @@ struct WindowRulePlacementTests {
     )
     var settings = SpaceSettings.defaults
     settings.padding = SpacePadding(top: 10, bottom: 10, left: 20, right: 20)
+    settings.gap = 20
     #expect(
       placement.frame(
         from: original,
@@ -32,7 +33,7 @@ struct WindowRulePlacementTests {
         targetBounds: target,
         settings: settings
       )
-        == CGRect(x: 1_800, y: -90, width: 780, height: 980)
+        == CGRect(x: 1_810, y: -90, width: 770, height: 980)
     )
     #expect(
       WindowRulePlacement(display: .index(2)).frame(

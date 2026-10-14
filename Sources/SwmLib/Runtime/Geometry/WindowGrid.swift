@@ -40,38 +40,36 @@ struct WindowGrid: Equatable {
       bounds.size.width > 0, bounds.size.height > 0
     else { return nil }
 
-    let gap = settings.tilingGap
-    var bounds = settings.tilingBounds(in: bounds)
-
-    if x > 0 {
-      bounds.origin.x += gap
-      bounds.size.width -= gap
+    let bounds = settings.tilingBounds(in: bounds)
+    func axis(origin: CGFloat, length: CGFloat, count: Int, index: Int, span: Int) -> (
+      CGFloat, CGFloat
+    )? {
+      guard length.isFinite, length > 0 else { return nil }
+      if span == count { return (origin, length) }
+      let gap = settings.tilingGap
+      let cell = (length - gap * CGFloat(count - 1)) / CGFloat(count)
+      guard cell.isFinite, cell > 0 else { return nil }
+      return (
+        origin + CGFloat(index) * (cell + gap), CGFloat(span) * cell + CGFloat(span - 1) * gap
+      )
     }
-
-    if y > 0 {
-      bounds.origin.y += gap
-      bounds.size.height -= gap
-    }
-
-    if columns > x + width {
-      bounds.size.width -= gap
-    }
-
-    if rows > y + height {
-      bounds.size.height -= gap
-    }
-
-    guard bounds.size.width > 0, bounds.size.height > 0 else { return nil }
-
-    let cellWidth = bounds.width / CGFloat(columns)
-    let cellHeight = bounds.height / CGFloat(rows)
-
-    let frame = CGRect(
-      x: bounds.minX + bounds.width - cellWidth * CGFloat(columns - x),
-      y: bounds.minY + bounds.height - cellHeight * CGFloat(rows - y),
-      width: cellWidth * CGFloat(width),
-      height: cellHeight * CGFloat(height)
-    )
+    guard
+      let horizontal = axis(
+        origin: bounds.minX,
+        length: bounds.width,
+        count: columns,
+        index: x,
+        span: width
+      ),
+      let vertical = axis(
+        origin: bounds.minY,
+        length: bounds.height,
+        count: rows,
+        index: y,
+        span: height
+      )
+    else { return nil }
+    let frame = CGRect(x: horizontal.0, y: vertical.0, width: horizontal.1, height: vertical.1)
     guard frame.origin.x.isFinite, frame.origin.y.isFinite,
       frame.size.width.isFinite, frame.size.height.isFinite,
       frame.size.width > 0, frame.size.height > 0

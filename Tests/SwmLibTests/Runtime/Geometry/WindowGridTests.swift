@@ -5,6 +5,29 @@ import Testing
 
 @Suite("WindowGrid")
 struct WindowGridTests {
+  @Test("frame: neighboring rows and columns share cells, gaps, and span boundaries")
+  func frameNeighboringRowsAndColumnsShareCellsGapsAndSpanBoundaries() throws {
+    let bounds = CGRect(x: -30, y: 10, width: 300, height: 300)
+    let settings = SpaceSettings(padding: .zero, gap: 15)
+    for index in 0..<3 {
+      let column = try #require(WindowGrid(argument: "3:1:\(index):0:1:1"))
+      let row = try #require(WindowGrid(argument: "1:3:0:\(index):1:1"))
+      expect(
+        column.frame(in: bounds, settings: settings),
+        equals: CGRect(x: -30 + index * 105, y: 10, width: 90, height: 300)
+      )
+      expect(
+        row.frame(in: bounds, settings: settings),
+        equals: CGRect(x: -30, y: 10 + index * 105, width: 300, height: 90)
+      )
+    }
+    let span = try #require(WindowGrid(argument: "3:3:0:0:2:2"))
+    expect(
+      span.frame(in: bounds, settings: settings),
+      equals: CGRect(x: -30, y: 10, width: 195, height: 195)
+    )
+  }
+
   @Test("init: clamps position and size")
   func initClampsPositionAndSize() throws {
     let grid = try #require(
@@ -39,7 +62,7 @@ struct WindowGridTests {
 
     expect(
       grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: settings),
-      equals: CGRect(x: 205, y: 0, width: 95, height: 120)
+      equals: CGRect(x: 210, y: 0, width: 90, height: 120)
     )
   }
 
@@ -53,7 +76,7 @@ struct WindowGridTests {
 
     expect(
       grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: settings),
-      equals: CGRect(x: 0, y: 0, width: 190, height: 120)
+      equals: CGRect(x: 0, y: 0, width: 195, height: 120)
     )
   }
 
