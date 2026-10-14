@@ -4,6 +4,31 @@ import Testing
 
 @Suite("Signal")
 struct SignalTests {
+  @Test("parseAdd: preserves operators in values and inverts only text filters")
+  func parseAddPreservesOperatorsInValuesAndInvertsOnlyTextFilters() throws {
+    let signal = try Signal.parseAdd(arguments: [
+      "event=window-focused", "action=test a != b && echo changed",
+      "app=^a!=b=c$", "title!=^Settings$",
+    ])
+    #expect(signal.action == "test a != b && echo changed")
+    #expect(signal.appFilter?.pattern == "^a!=b=c$")
+    #expect(signal.appFilter?.matches("a!=b=c") == true)
+    #expect(signal.titleFilter?.matches("Settings") == false)
+    #expect(signal.titleFilter?.matches("Other") == true)
+    for key in ["event", "action", "label", "active", "unknown"] {
+      expectInvalid(
+        arguments: ["event=window-focused", "action=true", "\(key)!=value"],
+        message: "unsupported signal argument: \(key)!"
+      )
+    }
+    for argument in ["=value", "title=", "title", "!=value"] {
+      expectInvalid(
+        arguments: ["event=window-focused", "action=true", argument],
+        message: "invalid signal argument: \(argument)"
+      )
+    }
+  }
+
   @Test("parseAdd: rejects missing event and action")
   func parseAddRejectsMissingEventAndAction() {
     expectInvalid(arguments: ["action=echo"], message: "missing signal event")

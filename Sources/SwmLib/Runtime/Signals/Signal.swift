@@ -158,22 +158,18 @@ private struct SignalArgument {
   let inverted: Bool
 
   init(_ argument: String) throws {
-    if let range = argument.range(of: "!=") {
-      rawKey = String(argument[..<range.lowerBound]) + "!"
-      key = String(argument[..<range.lowerBound])
-      value = String(argument[range.upperBound...])
-      inverted = true
-    } else if let range = argument.range(of: "=") {
-      rawKey = String(argument[..<range.lowerBound])
-      key = rawKey
-      value = String(argument[range.upperBound...])
-      inverted = false
-    } else {
+    guard let separator = argument.firstIndex(of: "=") else {
       throw IPCCommandError.invalidRequest("invalid signal argument: \(argument)")
     }
-
+    rawKey = String(argument[..<separator])
+    inverted = rawKey.hasSuffix("!")
+    key = inverted ? String(rawKey.dropLast()) : rawKey
+    value = String(argument[argument.index(after: separator)...])
     guard !key.isEmpty, !value.isEmpty else {
       throw IPCCommandError.invalidRequest("invalid signal argument: \(argument)")
+    }
+    guard !inverted || key == "app" || key == "title" else {
+      throw IPCCommandError.invalidRequest("unsupported signal argument: \(rawKey)")
     }
   }
 }
