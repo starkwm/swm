@@ -103,6 +103,12 @@ final class WindowServerClient {
     return connectionID > 0 ? connectionID : nil
   }
 
+  /// Capture topology without turning query failure into an empty Space list.
+  @MainActor
+  func spaceSnapshot() throws -> SpaceSnapshot {
+    try Self.spaceClient.get().snapshot()
+  }
+
   /// Return the active WindowServer space ID.
   @MainActor
   func activeSpace() -> UInt64 {

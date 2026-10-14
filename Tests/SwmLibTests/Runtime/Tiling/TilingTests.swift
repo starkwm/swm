@@ -104,6 +104,158 @@ struct TilingTests {
     #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
   }
 
+  @Test("reconcile: preserves layouts through unavailable topology and recovers by polling")
+  func reconcilePreservesLayoutsThroughUnavailableTopologyAndRecoversByPolling() async throws {
+    let spaces = Spaces(activeSpaceID: 10)
+    spaces.setPadding(SpacePadding(top: 10, bottom: 20, left: 30, right: 40), for: 10)
+    spaces.setGap(14, for: 10)
+    let settings = spaces.settings(for: 10)
+    var candidates = [window(id: 1), window(id: 2), window(id: 3)]
+    let complete = SpaceTopology(
+      spacesByID: [10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)],
+      visibleSpaceIDByDisplayID: ["display": 10],
+      spaceIDsByWindowID: [1: [10], 2: [10], 3: [10], 4: [10]],
+      displaysByID: [
+        "display": SpaceTopologyDisplay(visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800))
+      ]
+    )
+    var topology: SpaceTopology? = complete
+    var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero, 3: .zero, 4: .zero]
+    var writes = 0
+    var placements = 0
+    let reconciler = WindowFrameReconciler(
+      currentFrame: { frames[$0] },
+      frameMutation: { id, frame, _ in
+        writes += 1
+        frames[id] = frame
+        return .success
+      },
+      automaticallySchedule: false,
+      reduceMotion: { false }
+    )
+    let tiling = Tiling(
+      snapshot: { TilingReconciliationSnapshot(windows: candidates, topology: topology) },
+      spaces: spaces,
+      frameReconciler: reconciler,
+      windowSpaceMembership: { complete.spaceIDsByWindowID },
+      rulePlacement: { _, _, _ in
+        placements += 1
+        return .applied
+      }
+    )
+    tiling.initialize()
+    #expect(tiling.setLayout(.master, for: 10))
+    #expect(tiling.swapWindowInOrder(1, in: .next))
+    #expect(tiling.changeMasterRatio(.absolute(0.65), for: 10))
+    #expect(tiling.setWindowLayout(.float, for: 3))
+    tiling.windowDidFocus(2)
+    let plan = tiling.layoutPlan(for: layoutID(10))
+    let expectedFrame = try #require(frames[2])
+    reconciler.animationDuration = 1
+    reconciler.apply([1: CGRect(x: 100, y: 100, width: 100, height: 100)])
+    #expect(reconciler.isAnimating(1))
+    topology = nil
+    tiling.reconcileAndReflowVisibleSpaces()
+    #expect(!reconciler.isAnimating(1))
+    let stoppedWrites = writes
+    #expect(spaces.settings(for: 10) == settings)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
+    // Settings commands must retain their changes without writing stale frames.
+    let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
+    let response = await handler.dispatch(
+      IPCRequest(id: "gap", domain: .space, command: "--gap", args: ["abs:20"])
+    )
+    #expect(response.ok)
+    #expect(spaces.settings(for: 10).gap == 20)
+    tiling.setMasterPlacementForAllSpaces(.left)
+    #expect(writes == stoppedWrites)
+    #expect(placements == 0)
+    spaces.setGap(14, for: 10)
+    reconciler.animationDuration = 0
+    frames[2] = .zero
+    topology = complete
+    try await waitForAnimation { frames[2] == expectedFrame }
+    #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
+    #expect(spaces.settings(for: 10) == settings)
+    #expect(placements == 1)
+    #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
+    candidates.append(window(id: 4))
+    tiling.reconcile()
+    #expect(tiling.cycledWindowID(from: 2, in: .next) == 4)
+    #expect(tiling.setLayout(.dwindle, for: 10))
+    #expect(tiling.setSplitDirectionPreservation(true, for: 10))
+    #expect(tiling.changeDwindleSplitRatio(.absolute(0.7), for: 4) != nil)
+    #expect(tiling.toggleDwindleSplit(for: 4))
+    let splitPlan = tiling.layoutPlan(for: layoutID(10))
+    topology = nil
+    tiling.reconcileAndReflowVisibleSpaces()
+    topology = complete
+    tiling.reconcile()
+    #expect(tiling.layoutPlan(for: layoutID(10)) == splitPlan)
+    topology = SpaceTopology(
+      spacesByID: [:],
+      visibleSpaceIDByDisplayID: [:],
+      spaceIDsByWindowID: [:],
+      displaysByID: [:]
+    )
+    tiling.reconcile()
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    #expect(spaces.settings(for: 10) == .defaults)
+  }
+
+  @Test("reconcile: retains pending window relationships after a placement's topology read fails")
+  func reconcileRetainsPendingWindowRelationshipsAfterAPlacementsTopologyReadFails() throws {
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
+    var available = true
+    let tiling = Tiling(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: [window(id: 1), window(id: 2)],
+          topology: available
+            ? SpaceTopology(
+              spacesByID: [
+                10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)
+              ],
+              visibleSpaceIDByDisplayID: ["display": 10],
+              spaceIDsByWindowID: memberships,
+              displaysByID: [
+                "display": SpaceTopologyDisplay(
+                  visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+                )
+              ]
+            ) : nil
+        )
+      },
+      spaces: Spaces(activeSpaceID: 10),
+      rulePlacement: { _, id, _ in
+        available = false
+        memberships[id] = []
+        return .applied
+      },
+      ruleDisplayIDs: { ["display"] }
+    )
+    tiling.initialize()
+    #expect(tiling.setLayout(.dwindle, for: 10))
+    #expect(tiling.swapWindowInOrder(1, in: .next))
+    try tiling.addRule(WindowRule.parse(arguments: ["display=1"]))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    available = true
+    tiling.reconcile()
+    #expect(tiling.changeDwindleSplitRatio(.absolute(0.7), for: 1) == 0.7)
+    memberships = [1: [10], 2: [10]]
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            2: CGRect(x: 0, y: 0, width: 300, height: 800),
+            1: CGRect(x: 300, y: 0, width: 700, height: 800),
+          ])
+        )
+    )
+  }
+
   @Test("reconcile: cancels animation only for changed membership")
   func reconcileCancelsAnimationOnlyForChangedMembership() {
     var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero]

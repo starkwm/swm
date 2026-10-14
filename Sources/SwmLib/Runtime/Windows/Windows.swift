@@ -164,7 +164,9 @@ public final class Windows {
     isEligible: (CGWindowID) -> Bool = { _ in true }
   ) -> Window? {
     let candidateWindows = allWindows()
-    let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id))
+    guard let topology = spaces.snapshotTopology(for: candidateWindows.map(\.id)) else {
+      return nil
+    }
     let visibleSpaceIDs = Set(topology.visibleSpaceIDByDisplayID.values)
     let framesByWindowID = Dictionary(
       uniqueKeysWithValues: candidateWindows.compactMap { window -> (CGWindowID, CGRect)? in
