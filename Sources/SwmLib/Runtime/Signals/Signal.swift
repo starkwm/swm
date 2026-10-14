@@ -25,6 +25,9 @@ struct Signal: Equatable, Sendable {
         action = item.value
 
       case "label":
+        guard Int(item.value) == nil else {
+          throw IPCCommandError.invalidRequest("signal label must not be an integer")
+        }
         label = item.value
 
       case "app":
