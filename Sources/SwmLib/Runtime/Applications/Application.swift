@@ -82,7 +82,7 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   /// Debug description including process, app name, and bundle identifier.
   var description: String {
     """
-    <Application pid: \(application.processIdentifier), name: \(application.localizedName ?? "-"), \
+    <Application pid: \(processID), name: \(application.localizedName ?? "-"), \
     bundle: \(application.bundleIdentifier ?? "-")>
     """
   }
@@ -96,9 +96,7 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   var bundleID: String? { application.bundleIdentifier }
 
   /// Process identifier for the running application.
-  var processID: pid_t {
-    application.processIdentifier
-  }
+  let processID: pid_t
 
   /// Carbon process serial number used by private WindowServer operations.
   private(set) var processSerialNumber: ProcessSerialNumber
@@ -113,26 +111,39 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   private(set) var element: AXUIElement
 
   private var application: NSRunningApplication
-  private var connection: Int32 = -1
+  private let lookupConnection: () -> Int32?
+  private let enumerateWindows: (Int32) -> [CGWindowID]
+  private var connection: Int32?
   private var observedNotifications = Set<String>()
   private var observing = false
 
   /// Create an application model for a process discovered by the process service.
-  init?(for process: Process) {
+  init?(
+    for process: Process,
+    lookupConnection: (() -> Int32?)? = nil,
+    enumerateWindows: ((Int32) -> [CGWindowID])? = nil
+  ) {
+    self.lookupConnection =
+      lookupConnection ?? {
+        WindowServerClient.shared.connectionID(for: process.psn)
+      }
+    self.enumerateWindows =
+      enumerateWindows ?? {
+        WindowServerClient.shared.windowIdentifiers(
+          applicationConnectionID: $0,
+          spaceIDs: Spaces.all().map(\.id)
+        )
+      }
+    processID = process.pid
     processSerialNumber = process.psn
     element = AccessibilityClient.shared.applicationElement(for: process.pid)
 
-    guard let app = NSRunningApplication(processIdentifier: process.pid) else {
+    guard let app = process.application ?? NSRunningApplication(processIdentifier: process.pid)
+    else {
       return nil
     }
 
     application = app
-
-    if let connectionID = WindowServerClient.shared.connectionID(
-      for: process.psn,
-    ) {
-      connection = connectionID
-    }
   }
 
   isolated deinit {
@@ -140,9 +151,12 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   }
 
   /// Register accessibility notifications for this application.
-  func observe() -> Result<Void, AccessibilityClientError> {
+  func observe(
+    addNotification: ((String) -> AXError)? = nil
+  ) -> Result<Void, AccessibilityClientError> {
+    retryObserving = false
     switch AccessibilityClient.shared.createObserver(
-      processID: application.processIdentifier,
+      processID: processID,
       callback: accessibilityObserverCallback
     ) {
     case .success(let observer):
@@ -158,16 +172,16 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
 
     let observedAllNotifications = Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
-      addNotification: { notification in
+      addNotification: addNotification ?? { notification in
         AccessibilityClient.shared.addNotification(
           observer: observer,
-          element: element,
+          element: self.element,
           notification: notification,
           context: context
         )
       },
       onFailure: { notification, result in
-        retryObserving = result == .cannotComplete
+        retryObserving = retryObserving || result == .cannotComplete
         log(
           "notification \(notification) not added \(self): AXError \(result.diagnosticDescription) (retry: \(retryObserving))",
           level: .warn
@@ -221,11 +235,13 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   }
 
   /// Return window IDs owned by this application on known spaces.
-  func windowIdentifiers() -> [CGWindowID] {
-    WindowServerClient.shared.windowIdentifiers(
-      applicationConnectionID: connection,
-      spaceIDs: Spaces.all().map(\.id)
-    )
+  func windowIdentifiers() -> [CGWindowID]? {
+    if connection == nil { connection = lookupConnection() }
+    guard let connection, connection > 0 else {
+      self.connection = nil
+      return nil
+    }
+    return enumerateWindows(connection)
   }
 
   /// Return accessibility elements for this application's windows.
