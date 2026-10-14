@@ -100,7 +100,7 @@ final class WindowServerClient {
       return nil
     }
 
-    return connectionID
+    return connectionID > 0 ? connectionID : nil
   }
 
   /// Return the active WindowServer space ID.
@@ -159,6 +159,9 @@ final class WindowServerClient {
     applicationConnectionID: Int32,
     spaceIDs: [UInt64]
   ) -> [CGWindowID] {
+    guard let connectionID = UInt32(exactly: applicationConnectionID), connectionID != 0 else {
+      return []
+    }
     let spaces = spaceIDs as CFArray
     let options: UInt32 = 0x7
     var setTags: UInt64 = 0
@@ -166,7 +169,7 @@ final class WindowServerClient {
 
     let windows = SLSCopyWindowsWithOptionsAndTags(
       mainConnectionID(),
-      UInt32(applicationConnectionID),
+      connectionID,
       spaces,
       options,
       &setTags,

@@ -57,7 +57,7 @@ func runSwm(with arguments: StartCommand) {
     fail("unable to start process observation - \(error)")
   }
 
-  windows.discover(from: processes.all())
+  windows.discover(from: processes) { tiling.initialize() }
   tiling.initialize()
 
   let daemon = Daemon(

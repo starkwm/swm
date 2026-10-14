@@ -36,6 +36,11 @@ public final class Windows {
   }
 
   private let workspace: Workspace
+  private let isObservable: (Process) -> Bool
+  private let makeApplication: (Process) -> Application?
+  private let observeApplication: (Application) -> Result<Void, AccessibilityClientError>
+  private let accessibleWindows: ((Application) -> [Window])?
+  private var discoveryRetries = [ObjectIdentifier: Task<Void, Never>]()
   private var mouseEventMonitor: Any?
   private var pendingMouseFocusWindowID: CGWindowID?
   private var focusFollowsMouseMode = FocusFollowsMouseMode.off
@@ -52,16 +57,82 @@ public final class Windows {
     self.init(workspace: workspace, focusedWindowID: Self.focusedWindowID())
   }
 
-  init(workspace: Workspace, focusedWindowID: CGWindowID?) {
+  init(
+    workspace: Workspace,
+    focusedWindowID: CGWindowID?,
+    isObservable: ((Process) -> Bool)? = nil,
+    makeApplication: @escaping (Process) -> Application? = { Application(for: $0) },
+    observeApplication: @escaping (Application) -> Result<Void, AccessibilityClientError> = {
+      $0.observe()
+    },
+    accessibleWindows: ((Application) -> [Window])? = nil
+  ) {
     self.workspace = workspace
+    self.isObservable = isObservable ?? workspace.isObservable
+    self.makeApplication = makeApplication
+    self.observeApplication = observeApplication
+    self.accessibleWindows = accessibleWindows
     focusedWindowState = TrackedState(current: focusedWindowID)
   }
 
+  isolated deinit {
+    for task in discoveryRetries.values { task.cancel() }
+  }
+
   /// Discover and observe windows from all supplied processes.
-  public func discover(from processes: [Process]) {
-    for process in processes {
-      guard let application = manage(process) else { continue }
-      reconcileWindows(for: application, mode: .initialDiscovery)
+  public func discover(from processes: Processes, onRecovery: @escaping () -> Void) {
+    for process in processes.all() {
+      if !workspace.isFinishedLaunching(process) {
+        workspace.observeFinishedLaunching(process)
+        guard workspace.isFinishedLaunching(process) else { continue }
+        workspace.unobserveFinishedLaunching(process)
+      }
+      discover(process, resolveProcess: { processes.find(by: process.psn) }, onRecovery: onRecovery)
+    }
+  }
+
+  func discover(
+    _ process: Process,
+    resolveProcess: @escaping () -> Process?,
+    onRecovery: @escaping () -> Void
+  ) {
+    guard !process.terminated else { return }
+    let retry = { [weak self] in
+      self?.retryDiscovery(for: process, resolveProcess: resolveProcess) { [weak self] in
+        self?.discover(process, resolveProcess: resolveProcess, onRecovery: onRecovery)
+        onRecovery()
+      }
+    }
+    guard let application = manage(process, retryObservation: { retry() }) else { return }
+    if !reconcileWindows(for: application, mode: .initialDiscovery) { retry() }
+  }
+
+  /// Share launch and startup retries, rejecting late work for a replaced process.
+  func retryDiscovery(
+    for process: Process,
+    resolveProcess: @escaping () -> Process?,
+    retry: @escaping () -> Void
+  ) {
+    let identity = ObjectIdentifier(process)
+    guard !process.terminated, discoveryRetries[identity] == nil else { return }
+    discoveryRetries[identity] = Task { @MainActor [weak self] in
+      do {
+        try await Task.sleep(for: .milliseconds(100))
+      } catch { return }
+      guard let self else { return }
+      discoveryRetries.removeValue(forKey: identity)
+      guard !process.terminated, resolveProcess() === process else { return }
+      retry()
+    }
+  }
+
+  func cancelDiscoveryRetry(for process: Process) {
+    discoveryRetries.removeValue(forKey: ObjectIdentifier(process))?.cancel()
+  }
+
+  func waitForDiscoveryRetries() async {
+    while !discoveryRetries.isEmpty {
+      for task in Array(discoveryRetries.values) { await task.value }
     }
   }
 
@@ -180,7 +251,8 @@ public final class Windows {
   }
 
   /// Rediscover windows, including windows lost after an earlier successful discovery.
-  func refreshWindows(for application: Application) {
+  @discardableResult
+  func refreshWindows(for application: Application) -> Bool {
     reconcileWindows(for: application, mode: .refreshAttempt)
   }
 
@@ -283,6 +355,12 @@ public final class Windows {
 
   /// Add all currently accessible windows for an application.
   func addWindows(for application: Application) {
+    if let accessibleWindows {
+      for window in accessibleWindows(application) where windowsByID[window.id] == nil {
+        windowsByID[window.id] = window
+      }
+      return
+    }
     for element in application.windowElements() {
       guard
         let windowID = AccessibilityClient.shared.optionalWindowID(for: element),
@@ -297,20 +375,26 @@ public final class Windows {
 
   /// Manage one observable process and register its application observer.
   func manage(_ process: Process, retryObservation: (() -> Void)? = nil) -> Application? {
-    guard applicationsByPID[process.pid] == nil else { return nil }
+    guard !process.terminated else { return nil }
+    if let application = applicationsByPID[process.pid] {
+      guard application.processSerialNumber.highLongOfPSN == process.psn.highLongOfPSN,
+        application.processSerialNumber.lowLongOfPSN == process.psn.lowLongOfPSN
+      else { return nil }
+      return application
+    }
 
-    guard workspace.isObservable(process) else {
+    guard isObservable(process) else {
       log("application is not observable \(process)")
       workspace.observeActivationPolicy(process)
       return nil
     }
 
-    guard let application = Application(for: process) else {
+    guard let application = makeApplication(process) else {
       log("could not create application for process \(process)", level: .info)
       return nil
     }
 
-    switch application.observe() {
+    switch observeApplication(application) {
     case .success:
       break
     case .failure(let error):
@@ -341,16 +425,20 @@ public final class Windows {
   private func reconcileWindows(
     for application: Application,
     mode: WindowDiscoveryMode
-  ) {
+  ) -> Bool {
     let globalWindowIDs = application.windowIdentifiers()
     addWindows(for: application)
+    guard let globalWindowIDs else {
+      unresolvedApplicationIDs.insert(application.processID)
+      return false
+    }
 
     var unresolvedWindowIDs = globalWindowIDs.filter { windowsByID[$0] == nil }
 
     guard !unresolvedWindowIDs.isEmpty else {
       remoteTokenCursors.removeValue(forKey: application.processID)
       finishResolution(for: application, mode: mode)
-      return
+      return true
     }
 
     resolveRemoteWindows(&unresolvedWindowIDs, for: application)
@@ -360,13 +448,14 @@ public final class Windows {
       unresolvedWindowIDs: unresolvedWindowIDs,
       mode: mode
     )
+    return true
   }
 
   /// Finish a refresh attempt when all windows are resolved.
   private func finishResolution(for application: Application, mode: WindowDiscoveryMode) {
+    unresolvedApplicationIDs.remove(application.processID)
     guard mode == .refreshAttempt else { return }
     log("all windows resolved \(application)")
-    unresolvedApplicationIDs.remove(application.processID)
   }
 
   /// Attempt to resolve missing windows by creating accessibility elements from remote tokens.
@@ -432,7 +521,9 @@ public final class Windows {
   ) {
     switch mode {
     case .initialDiscovery:
-      if !unresolvedWindowIDs.isEmpty {
+      if unresolvedWindowIDs.isEmpty {
+        unresolvedApplicationIDs.remove(application.processID)
+      } else {
         log("workaround failed to resolve all windows \(application)", level: .info)
         unresolvedApplicationIDs.insert(application.processID)
       }
