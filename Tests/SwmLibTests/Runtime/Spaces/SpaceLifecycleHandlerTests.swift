@@ -20,7 +20,8 @@ struct SpaceLifecycleHandlerTests {
           windows: [window(id: 1)],
           topology: SpaceTopology(
             spacesByID: [
-              11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal)
+              11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal),
+              33: SpaceTopologyDescriptor(id: 33, displayID: "display", type: .normal),
             ],
             visibleSpaceIDByDisplayID: ["display": 11],
             spaceIDsByWindowID: [1: [11]],
@@ -40,7 +41,7 @@ struct SpaceLifecycleHandlerTests {
     )
 
     visibleFrame.size.width = 800
-    handler.refresh(spaceIDs: [11, 33])
+    handler.refresh()
 
     #expect(tiling.layoutPlan(for: layoutID(11)) == .layout(.frames([1: visibleFrame])))
     #expect(spaces.settings(for: 99).gap == 5)

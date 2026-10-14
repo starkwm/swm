@@ -5,6 +5,36 @@ import Testing
 
 @Suite("Signals")
 struct SignalsTests {
+  @Test("add/remove: numeric labels cannot collide with index selectors")
+  func addRemoveNumericLabelsCannotCollideWithIndexSelectors() throws {
+    let recorder = SignalEmissionRecorder()
+    let signals = Signals(executionQueue: SignalExecutionQueue(executor: recorder.execute))
+    for label in ["first", "second"] {
+      try signals.add(
+        Signal.parseAdd(arguments: [
+          "event=window-focused", "action=test a != b && echo changed", "label=\(label)",
+        ])
+      )
+    }
+    let original = signals.list()
+    for label in ["2", "0", "-1", "+2", "02"] {
+      #expect(throws: IPCCommandError.self) {
+        try signals.add(
+          Signal.parseAdd(arguments: [
+            "event=window-focused", "action=true", "label=\(label)",
+          ])
+        )
+      }
+      #expect(signals.list() == original)
+    }
+    #expect(recorder.actions.isEmpty)
+    #expect(signals.list().first?.signal.action == "test a != b && echo changed")
+    try signals.remove(selector: "2")
+    #expect(signals.list().map { $0.signal.label } == ["first"])
+    try signals.remove(selector: "first")
+    #expect(signals.list().isEmpty)
+  }
+
   @Test("hasSubscribers: follows indexed and labeled removal")
   func hasSubscribersFollowsIndexedAndLabeledRemoval() throws {
     let signals = Signals()

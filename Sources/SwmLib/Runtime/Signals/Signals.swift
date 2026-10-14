@@ -17,6 +17,9 @@ public final class Signals {
   /// Register a signal, preserving insertion order.
   func add(_ signal: Signal) throws {
     try lock.withLock {
+      if let label = signal.label, Int(label) != nil {
+        throw IPCCommandError.invalidRequest("signal label must not be an integer")
+      }
       if let label = signal.label, signals.contains(where: { $0.label == label }) {
         throw IPCCommandError.invalidRequest("signal label already exists: \(label)")
       }

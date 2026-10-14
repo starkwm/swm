@@ -41,7 +41,7 @@ swm window grid [--window <window|recent>] <columns>:<rows>:<x>:<y>:<width>:<hei
 swm window display [--window <window|recent>] <next|prev|display-index>
 ```
 
-`abs` sets coordinates or dimensions; `rel` adds signed values to the current frame. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
+`abs` sets coordinates or dimensions; `rel` adds signed values to the current frame. Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
 
 ```sh
 swm window grid 2:1:1:0:1:1

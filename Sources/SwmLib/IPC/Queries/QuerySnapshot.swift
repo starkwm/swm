@@ -14,6 +14,7 @@ final class QuerySnapshot {
     }
   }
 
+  lazy var focusedWindowID = focusProvider()
   lazy var activeSpaceID = Spaces.active().id
   lazy var arrangedScreens = NSScreen.arrangedScreens
   lazy var displaySpaces = WindowServerClient.shared.displaySpaces()
@@ -51,8 +52,10 @@ final class QuerySnapshot {
   }()
 
   private let managedWindows: Windows
+  private let focusProvider: () -> CGWindowID?
 
-  init(windows: Windows) {
+  init(windows: Windows, focusedWindowID: @escaping () -> CGWindowID? = Windows.focusedWindowID) {
     managedWindows = windows
+    focusProvider = focusedWindowID
   }
 }

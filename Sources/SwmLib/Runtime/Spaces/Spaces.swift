@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import StarkSkyLight
 
 /// Owns active Space state, per-Space settings, and runtime topology observations.
 @MainActor
@@ -63,44 +64,47 @@ public final class Spaces {
   }
 
   /// Capture the Space facts needed by one tiling reconciliation.
-  func snapshotTopology(for windowIDs: [CGWindowID]) -> SpaceTopology {
-    let displaySpaces = WindowServerClient.shared.displaySpaces()
-    let spacesByID = Dictionary(
-      uniqueKeysWithValues: displaySpaces.flatMap { display in
-        display.spaces.map { spaceID in
-          (
-            spaceID,
-            SpaceTopologyDescriptor(
-              id: spaceID,
-              displayID: display.id,
-              type: WindowServerClient.shared.spaceType(for: spaceID)
-            )
+  func snapshotTopology(
+    for windowIDs: [CGWindowID],
+    snapshot: () throws -> SpaceSnapshot = { try WindowServerClient.shared.spaceSnapshot() },
+    membership: (CGWindowID) throws -> [UInt64] = {
+      try WindowServerClient.spaceClient.get().spaceIDs(containing: $0).map(\.rawValue)
+    },
+    displays: () -> [String: SpaceTopologyDisplay] = {
+      Dictionary(
+        uniqueKeysWithValues: NSScreen.screens.map {
+          ($0.uuid, SpaceTopologyDisplay(visibleFrame: $0.axVisibleFrame))
+        }
+      )
+    }
+  ) -> SpaceTopology? {
+    do {
+      let snapshot = try snapshot()
+      guard snapshot.isComplete else { return nil }
+      var spacesByID = [UInt64: SpaceTopologyDescriptor]()
+      var visibleSpaceIDByDisplayID = [String: UInt64]()
+      for display in snapshot.displays {
+        visibleSpaceIDByDisplayID[display.id.rawValue] = display.currentSpaceID?.rawValue
+        for space in display.spaces {
+          spacesByID[space.id.rawValue] = SpaceTopologyDescriptor(
+            id: space.id.rawValue,
+            displayID: display.id.rawValue,
+            type: SpaceType(space.type)
           )
         }
       }
-    )
-    let visibleSpaceIDByDisplayID = Dictionary(
-      uniqueKeysWithValues: displaySpaces.compactMap { display in
-        let spaceID = WindowServerClient.shared.currentSpace(for: display.id)
-        return spaceID == 0 ? nil : (display.id, spaceID)
-      }
-    )
-    let spaceIDsByWindowID = Dictionary(
-      uniqueKeysWithValues: windowIDs.map { windowID in
-        (windowID, Set(WindowServerClient.shared.spaceIDs(containing: windowID)))
-      }
-    )
-
-    return SpaceTopology(
-      spacesByID: spacesByID,
-      visibleSpaceIDByDisplayID: visibleSpaceIDByDisplayID,
-      spaceIDsByWindowID: spaceIDsByWindowID,
-      displaysByID: Dictionary(
-        uniqueKeysWithValues: NSScreen.screens.map { screen in
-          (screen.uuid, SpaceTopologyDisplay(visibleFrame: screen.axVisibleFrame))
-        }
+      return SpaceTopology(
+        spacesByID: spacesByID,
+        visibleSpaceIDByDisplayID: visibleSpaceIDByDisplayID,
+        spaceIDsByWindowID: try Dictionary(
+          uniqueKeysWithValues: windowIDs.map { ($0, Set(try membership($0))) }
+        ),
+        displaysByID: displays()
       )
-    )
+    } catch {
+      log("could not capture Space topology: \(error)", level: .warn)
+      return nil
+    }
   }
 
   /// Apply a global configuration change to defaults and existing overrides.

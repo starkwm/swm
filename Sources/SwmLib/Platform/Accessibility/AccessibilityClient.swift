@@ -53,34 +53,6 @@ public final class AccessibilityClient {
     attributeValue(for: element, attribute: attribute) as? String
   }
 
-  /// Read a point accessibility attribute.
-  func pointAttribute(for element: AXUIElement, attribute: String) -> CGPoint? {
-    var point = CGPoint.zero
-
-    guard
-      let value = axValueAttribute(for: element, attribute: attribute, type: .cgPoint),
-      AXValueGetValue(value, .cgPoint, &point)
-    else {
-      return nil
-    }
-
-    return point
-  }
-
-  /// Read a size accessibility attribute.
-  func sizeAttribute(for element: AXUIElement, attribute: String) -> CGSize? {
-    var size = CGSize.zero
-
-    guard
-      let value = axValueAttribute(for: element, attribute: attribute, type: .cgSize),
-      AXValueGetValue(value, .cgSize, &size)
-    else {
-      return nil
-    }
-
-    return size
-  }
-
   /// Read position and size together to avoid a second synchronous app round trip.
   func frame(for element: AXUIElement) -> CGRect? {
     var values: CFArray?
@@ -194,11 +166,6 @@ public final class AccessibilityClient {
     stringAttribute(for: element, attribute: kAXSubroleAttribute as String)
   }
 
-  /// Return whether an element is marked as the main window.
-  func isMainWindow(_ element: AXUIElement) -> Bool {
-    boolAttribute(for: element, attribute: kAXMainAttribute as String) ?? false
-  }
-
   /// Return whether an element has the accessibility window role.
   func isWindow(_ element: AXUIElement) -> Bool {
     stringAttribute(for: element, attribute: kAXRoleAttribute as String) == kAXWindowRole
@@ -249,22 +216,6 @@ public final class AccessibilityClient {
     return value
   }
 
-  /// Read an accessibility value after verifying its Core Foundation and payload types.
-  private func axValueAttribute(
-    for element: AXUIElement,
-    attribute: String,
-    type: AXValueType
-  ) -> AXValue? {
-    guard
-      let value = attributeValue(for: element, attribute: attribute),
-      CFGetTypeID(value) == AXValueGetTypeID()
-    else {
-      return nil
-    }
-
-    let axValue = value as! AXValue
-    return AXValueGetType(axValue) == type ? axValue : nil
-  }
 }
 
 extension AccessibilityClient: @unchecked Sendable {}

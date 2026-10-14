@@ -35,7 +35,7 @@ non-integer `label` to remove a rule by name.
   neither `next` nor `prev`.
 - `grid=<columns>:<rows>:<x>:<y>:<width>:<height>` places a floating window within
   the display's visible bounds. It uses the destination Space's padding and gaps,
-  with the same coordinate clamping as `swm window grid`.
+  with the same cell sizes, gaps, and coordinate clamping as `swm window grid`.
 
 ## Match windows
 

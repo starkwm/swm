@@ -66,7 +66,7 @@ struct IPCCommandDispatcher {
       )
     } else {
       SpaceLifecycleHandler(spaces: spaces, windows: windows, tiling: tiling)
-        .refresh(spaceIDs: Set(snapshot.allSpaceIDs.map(\.rawValue)))
+        .refresh()
     }
   }
 }

@@ -1,5 +1,3 @@
-import Dispatch
-
 /// Handles application lifecycle events and starts or stops application/window management.
 @MainActor
 struct ApplicationLifecycleHandler {
@@ -49,22 +47,24 @@ struct ApplicationLifecycleHandler {
       workspace.unobserveActivationPolicy(process)
     }
 
+    let wasManaged = windows.application(by: process.pid) != nil
+    let retry = {
+      windows.retryDiscovery(
+        for: process,
+        resolveProcess: { processes.find(by: process.psn) },
+        retry: { Events.shared.post(.application(.launched(process))) }
+      )
+    }
     guard
       let application = windows.manage(
         process,
-        retryObservation: {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            [processes, psn = process.psn] in
-            guard let process = processes.find(by: psn) else { return }
-            Events.shared.post(.application(.launched(process)))
-          }
-        }
+        retryObservation: retry
       )
     else { return }
 
-    windows.addWindows(for: application)
+    if !windows.refreshWindows(for: application) { retry() }
     tiling.reconcileAndReflowVisibleSpaces()
-    emitApplicationSignal(.applicationLaunched, application: application)
+    if !wasManaged { emitApplicationSignal(.applicationLaunched, application: application) }
 
     if windows.removeLostFrontSwitchedEvent(for: process.pid) {
       Events.shared.post(.application(.frontSwitched(process)))
@@ -75,6 +75,7 @@ struct ApplicationLifecycleHandler {
 
   /// Stop observing a terminated application and remove its windows.
   private func applicationTerminated(for process: Process) {
+    windows.cancelDiscoveryRetry(for: process)
     workspace.unobserveActivationPolicy(process)
     workspace.unobserveFinishedLaunching(process)
     windows.removeLostFrontSwitchedEvent(for: process.pid)
