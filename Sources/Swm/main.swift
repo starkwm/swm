@@ -1,10 +1,11 @@
 import AppKit
 import SwmLib
 
-if CommandLine.arguments.dropFirst() == ["--version"] {
-  print("swm version \(Version.current.value)")
-} else {
-  Arguments.main()
+do {
+  Arguments.main(try Arguments.resolve(Array(CommandLine.arguments.dropFirst())))
+} catch {
+  fputs("\(error)\n", stderr)
+  exit(EX_USAGE)
 }
 
 /// Execute one parsed client or daemon invocation.
