@@ -40,7 +40,7 @@ swm config left-padding <points>
 swm config right-padding <points>
 ```
 
-Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. Negative padding or gap values are clamped to zero.
+Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. The master ratio must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
 
 ## Window animation
 

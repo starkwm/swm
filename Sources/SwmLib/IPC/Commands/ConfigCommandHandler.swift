@@ -95,6 +95,9 @@ struct ConfigCommandHandler {
     guard let ratio = CommandValueParser.ratio(from: argument) else {
       throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(argument)")
     }
+    guard (0.1...0.9).contains(ratio) else {
+      throw IPCCommandError.invalidRequest("master-ratio must be between 0.1 and 0.9")
+    }
     tiling.setMasterRatioForAllSpaces(ratio)
     return .success(id: request.id, message: "ok")
   }
