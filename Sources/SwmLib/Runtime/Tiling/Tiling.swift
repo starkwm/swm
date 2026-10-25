@@ -615,7 +615,7 @@ public final class Tiling {
   /// Apply fresh plans for all currently visible normal Spaces.
   func reflowVisibleSpaces() {
     guard let currentTopology else { return }
-    applyPlans(for: sorted(currentTopology.visibleLayoutIDs))
+    applyPlans(for: currentTopology.visibleLayoutIDs.sorted())
   }
 
   /// Calculate the current plan for an enabled, visible layout without applying frames.
@@ -875,7 +875,7 @@ public final class Tiling {
 
   /// Return stable layout IDs for a Space.
   private func layoutIDs(for spaceID: UInt64) -> [TilingLayoutID] {
-    sorted(layoutsByID.keys.filter { $0.spaceID == spaceID })
+    layoutsByID.keys.filter { $0.spaceID == spaceID }.sorted()
   }
 
   /// Swap complete frames for neighbouring windows outside automatic layout geometry.
@@ -911,7 +911,7 @@ public final class Tiling {
   /// Apply fresh plans for every visible layout with the selected kind.
   private func reflowVisibleLayouts(matching selection: LayoutSelection) {
     guard let currentTopology else { return }
-    applyPlans(for: sorted(currentTopology.visibleLayoutIDs), matching: selection)
+    applyPlans(for: currentTopology.visibleLayoutIDs.sorted(), matching: selection)
   }
 
   /// Apply fresh plans only where the selected layout settings affect geometry.
@@ -920,16 +920,6 @@ public final class Tiling {
     matching selection: LayoutSelection
   ) {
     applyPlans(for: layoutIDs.filter { layoutsByID[$0]?.selection == selection })
-  }
-
-  /// Sort composite IDs for deterministic reconciliation and frame application.
-  private func sorted(_ layoutIDs: some Sequence<TilingLayoutID>) -> [TilingLayoutID] {
-    layoutIDs.sorted {
-      if $0.spaceID != $1.spaceID {
-        return $0.spaceID < $1.spaceID
-      }
-      return $0.displayID < $1.displayID
-    }
   }
 }
 
