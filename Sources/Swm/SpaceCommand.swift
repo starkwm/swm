@@ -7,7 +7,7 @@ struct SpaceCommand: ParsableCommand {
     @Option(
       name: .long,
       help: ArgumentHelp(
-        "Zero-based space index; defaults to active.",
+        "Zero-based Space index; defaults to active.",
         valueName: "space-index"
       )
     )
@@ -26,7 +26,7 @@ struct SpaceCommand: ParsableCommand {
 
   static let configuration = CommandConfiguration(
     commandName: "space",
-    abstract: "Activate or configure a space.",
+    abstract: "Activate or configure a Space.",
     subcommands: [
       Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, PreserveSplit.self,
       Padding.self,
@@ -38,7 +38,7 @@ struct SpaceCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")
     static let command = "--activate"
 
-    @Argument(help: "Zero-based space index from swm query spaces.")
+    @Argument(help: "Zero-based Space index from swm query spaces.")
     var index: Int
 
     var arguments: [String] { [String(index)] }
@@ -51,12 +51,12 @@ struct SpaceCommand: ParsableCommand {
   }
 
   struct Layout: SpaceIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set a space layout.")
+    static let configuration = CommandConfiguration(abstract: "Set a Space layout.")
     static let command = "--layout"
 
     @OptionGroup var target: TargetOptions
 
-    @Argument(help: "Layout used by the selected space.")
+    @Argument(help: "Layout used by the selected Space.")
     var layout: LayoutName
 
     var arguments: [String] { target.arguments + [layout.rawValue] }
@@ -64,7 +64,12 @@ struct SpaceCommand: ParsableCommand {
 
   struct MasterRatio: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust a space master ratio."
+      abstract: "Set or adjust a Space master ratio.",
+      discussion: """
+        Examples:
+          swm space master-ratio abs:0.6
+          swm space master-ratio rel:-0.05
+        """
     )
     static let command = "--master-ratio"
 
@@ -78,7 +83,7 @@ struct SpaceCommand: ParsableCommand {
 
   struct MasterPlacement: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or cycle a space master edge."
+      abstract: "Set or cycle a Space master edge."
     )
     static let command = "--master-placement"
 
@@ -106,7 +111,14 @@ struct SpaceCommand: ParsableCommand {
 
   struct Padding: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust padding around a space."
+      abstract: "Set or adjust padding around a Space.",
+      discussion: """
+        Values are top, bottom, left, and right, in points.
+
+        Examples:
+          swm space padding abs:8:8:8:8
+          swm space padding rel:4:0:0:0
+        """
     )
     static let command = "--padding"
 
@@ -120,7 +132,12 @@ struct SpaceCommand: ParsableCommand {
 
   struct Gap: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust a space window gap."
+      abstract: "Set or adjust a Space window gap.",
+      discussion: """
+        Examples:
+          swm space gap abs:6
+          swm space gap rel:2
+        """
     )
     static let command = "--gap"
 

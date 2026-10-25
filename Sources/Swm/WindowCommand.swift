@@ -78,7 +78,16 @@ struct WindowCommand: ParsableCommand {
   }
 
   struct Move: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Move a window.")
+    static let configuration = CommandConfiguration(
+      abstract: "Move a window.",
+      discussion: """
+        abs sets the top-left corner; rel moves by an offset in points.
+
+        Examples:
+          swm window move abs:0:25
+          swm window move rel:-20:0
+        """
+    )
     static let command = "--move"
 
     @OptionGroup var selector: WindowSelector
@@ -90,7 +99,16 @@ struct WindowCommand: ParsableCommand {
   }
 
   struct Resize: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Resize a window.")
+    static let configuration = CommandConfiguration(
+      abstract: "Resize a window.",
+      discussion: """
+        abs sets the size; rel changes it by an offset in points.
+
+        Examples:
+          swm window resize abs:1200:800
+          swm window resize rel:40:0
+        """
+    )
     static let command = "--resize"
 
     @OptionGroup var selector: WindowSelector
@@ -102,7 +120,17 @@ struct WindowCommand: ParsableCommand {
   }
 
   struct Grid: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Place a window on a grid.")
+    static let configuration = CommandConfiguration(
+      abstract: "Place a window on a grid.",
+      discussion: """
+        x, y, width, and height are measured in grid cells from the top left.
+
+        Examples:
+          swm window grid 2:1:0:0:1:1   # left half
+          swm window grid 2:1:1:0:1:1   # right half
+          swm window grid 1:1:0:0:1:1   # whole display
+        """
+    )
     static let command = "--grid"
 
     @OptionGroup var selector: WindowSelector
@@ -203,7 +231,14 @@ struct WindowCommand: ParsableCommand {
   }
 
   struct SplitRatio: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Change a dwindle split ratio.")
+    static let configuration = CommandConfiguration(
+      abstract: "Change a dwindle split ratio.",
+      discussion: """
+        Examples:
+          swm window split-ratio abs:0.5
+          swm window split-ratio rel:0.05
+        """
+    )
     static let command = "--split-ratio"
 
     @OptionGroup var selector: WindowSelector

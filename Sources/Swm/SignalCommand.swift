@@ -12,8 +12,14 @@ struct SignalCommand: ParsableCommand {
   struct Add: SignalIPCCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a command for a matching event.",
-      discussion:
-        "Requires event=<name> and action=<shell command>. Optional filters are label, app, title, and active."
+      discussion: """
+        Requires event=<name> and action=<shell command>. Optional filters are label, app, \
+        title, and active.
+
+        Examples:
+          swm signal add event=window-focused action='echo "$SWM_WINDOW_ID"'
+          swm signal add event=window-created app='^Safari$' action='swm window warp'
+        """
     )
     static let command = "--add"
 

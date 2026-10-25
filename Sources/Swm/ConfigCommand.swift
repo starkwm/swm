@@ -32,7 +32,7 @@ struct ConfigCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Set the default layout.")
     static let command = "layout"
 
-    @Argument(help: "Layout used for all current and future spaces.")
+    @Argument(help: "Layout used for all current and future Spaces.")
     var layout: LayoutName
 
     var arguments: [String] { [layout.rawValue] }
