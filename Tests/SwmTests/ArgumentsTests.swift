@@ -25,6 +25,67 @@ struct ArgumentsTests {
     }
   }
 
+  @Test(
+    "resolve: starts the daemon without a subcommand",
+    arguments: [
+      ([], ["start"]),
+      (["--config", "swmrc"], ["start", "--config", "swmrc"]),
+      (["-c", "swmrc"], ["start", "-c", "swmrc"]),
+      (["--log-level=debug"], ["start", "--log-level=debug"]),
+      (["--version"], ["--version"]),
+      (["window", "space", "next"], ["window", "space", "next"]),
+      (["help", "window", "focus"], ["help", "window", "focus"]),
+      (["space", "activate", "--", "-1"], ["space", "activate", "--", "-1"]),
+    ]
+  )
+  func resolveStartsTheDaemonWithoutASubcommand(arguments: [String], expected: [String]) throws {
+    #expect(try Arguments.resolve(arguments) == expected)
+  }
+
+  @Test(
+    "resolve: reports unknown subcommands with suggestions",
+    arguments: [
+      (["windo"], UnknownSubcommandError(name: "windo", path: "swm", suggestion: "window")),
+      (
+        ["help", "windo"],
+        UnknownSubcommandError(name: "windo", path: "swm", suggestion: "window")
+      ),
+      (
+        ["window", "focs"],
+        UnknownSubcommandError(name: "focs", path: "swm window", suggestion: "focus")
+      ),
+      (
+        ["config", "gap", "6"],
+        UnknownSubcommandError(name: "gap", path: "swm config", suggestion: "window-gap")
+      ),
+      (
+        ["config", "padding", "6"],
+        UnknownSubcommandError(name: "padding", path: "swm config", suggestion: nil)
+      ),
+      (["version"], UnknownSubcommandError(name: "version", path: "swm", suggestion: nil)),
+    ]
+  )
+  func resolveReportsUnknownSubcommandsWithSuggestions(
+    arguments: [String],
+    expected: UnknownSubcommandError
+  ) {
+    #expect(throws: expected) {
+      try Arguments.resolve(arguments)
+    }
+  }
+
+  @Test("UnknownSubcommandError: points at the parent command help")
+  func unknownSubcommandErrorPointsAtTheParentCommandHelp() {
+    let error = UnknownSubcommandError(name: "focs", path: "swm window", suggestion: "focus")
+
+    #expect(
+      error.description == """
+        Error: Unknown subcommand 'focs' for 'swm window'. Did you mean 'focus'?
+          See 'swm window --help' for available subcommands.
+        """
+    )
+  }
+
   @Test("helpMessage: groups command domains")
   func helpMessageGroupsCommandDomains() {
     let help = Arguments.helpMessage()
