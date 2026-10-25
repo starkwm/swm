@@ -2,6 +2,9 @@ import CoreGraphics
 
 /// Parses shared command argument values.
 enum CommandValueParser {
+  /// Accepted form of a ratio change, for error messages.
+  static let ratioChangeForm = "abs:<ratio> or rel:<ratio>, such as rel:0.05"
+
   /// Parse an `abs:value` or `rel:value` ratio update.
   static func ratioChange(from argument: String) -> LayoutRatioChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)

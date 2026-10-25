@@ -5,6 +5,15 @@ struct IPCCommandError: Error, Equatable, CustomStringConvertible {
     IPCCommandError(message: message, errorCode: .invalidRequest)
   }
 
+  /// Create an error for a malformed value that states the accepted form.
+  static func invalidValue(
+    _ context: String,
+    _ value: String,
+    expected: String
+  ) -> IPCCommandError {
+    .invalidRequest("invalid \(context) value: \(value); expected \(expected)")
+  }
+
   /// Create an error for a well-formed command that is not supported.
   static func unsupportedCommand(_ message: String) -> IPCCommandError {
     IPCCommandError(message: message, errorCode: .unsupportedCommand)

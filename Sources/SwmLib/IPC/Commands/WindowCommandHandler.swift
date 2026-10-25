@@ -49,9 +49,17 @@ struct WindowCommandHandler {
       case "--swap-split":
         return try swapSplit(request)
       case "--move":
-        return try performGeometryAction(request, action: "move") { $1.moving($0) }
+        return try performGeometryAction(
+          request,
+          action: "move",
+          form: "abs|rel:<x>:<y>, such as rel:20:0"
+        ) { $1.moving($0) }
       case "--resize":
-        return try performGeometryAction(request, action: "resize") { $1.resizing($0) }
+        return try performGeometryAction(
+          request,
+          action: "resize",
+          form: "abs|rel:<width>:<height>, such as rel:40:0"
+        ) { $1.resizing($0) }
       case "--grid":
         return try grid(request)
       case "--display":
@@ -231,7 +239,11 @@ struct WindowCommandHandler {
   private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "split-ratio")
     guard let change = CommandValueParser.ratioChange(from: selection.value) else {
-      throw IPCCommandError.invalidRequest("invalid window split-ratio value: \(selection.value)")
+      throw IPCCommandError.invalidValue(
+        "window split-ratio",
+        selection.value,
+        expected: CommandValueParser.ratioChangeForm
+      )
     }
     let window = try selectedWindow(selector: selection.selector)
     guard tiling.changeDwindleSplitRatio(change, for: window.id) != nil else {
@@ -283,12 +295,13 @@ struct WindowCommandHandler {
   private func performGeometryAction(
     _ request: IPCRequest,
     action: String,
+    form: String,
     operation: (CGRect, WindowGeometryChange) -> CGRect
   ) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: action)
 
     guard let change = WindowGeometryChange(argument: selection.value) else {
-      throw IPCCommandError.invalidRequest("invalid window \(action) value: \(selection.value)")
+      throw IPCCommandError.invalidValue("window \(action)", selection.value, expected: form)
     }
 
     let window = try selectedWindow(selector: selection.selector)
@@ -309,7 +322,11 @@ struct WindowCommandHandler {
   private func display(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "display")
     guard let target = WindowDisplayTarget(argument: selection.value) else {
-      throw IPCCommandError.invalidRequest("invalid window display value: \(selection.value)")
+      throw IPCCommandError.invalidValue(
+        "window display",
+        selection.value,
+        expected: "a one-based display index, next, or prev"
+      )
     }
 
     let window = try selectedWindow(selector: selection.selector)
@@ -324,7 +341,11 @@ struct WindowCommandHandler {
 
     guard let targetScreen = target.screen(from: sourceScreen, screens: NSScreen.arrangedScreens)
     else {
-      throw IPCCommandError.invalidRequest("invalid window display value: \(selection.value)")
+      throw IPCCommandError.invalidValue(
+        "window display",
+        selection.value,
+        expected: "a one-based display index, next, or prev"
+      )
     }
 
     try transfer(
@@ -343,7 +364,11 @@ struct WindowCommandHandler {
     let selection = try parseValueSelection(request.args, action: "space")
 
     guard let target = WindowSpaceTarget(argument: selection.value) else {
-      throw IPCCommandError.invalidRequest("invalid window space value: \(selection.value)")
+      throw IPCCommandError.invalidValue(
+        "window space",
+        selection.value,
+        expected: "a zero-based Space index, next, or prev"
+      )
     }
 
     let window = try selectedWindow(selector: selection.selector)
@@ -393,7 +418,11 @@ struct WindowCommandHandler {
     let selection = try parseValueSelection(request.args, action: "grid")
 
     guard let grid = WindowGrid(argument: selection.value) else {
-      throw IPCCommandError.invalidRequest("invalid window grid value: \(selection.value)")
+      throw IPCCommandError.invalidValue(
+        "window grid",
+        selection.value,
+        expected: "columns:rows:x:y:width:height, such as 2:1:0:0:1:1"
+      )
     }
 
     let window = try selectedWindow(selector: selection.selector)

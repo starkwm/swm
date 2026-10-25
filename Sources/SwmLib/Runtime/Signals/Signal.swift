@@ -17,7 +17,10 @@ struct Signal: Equatable, Sendable {
       switch item.key {
       case "event":
         guard let value = SignalEvent(rawValue: item.value) else {
-          throw IPCCommandError.invalidRequest("unsupported signal event: \(item.value)")
+          throw IPCCommandError.invalidRequest(
+            "unsupported signal event: \(item.value); expected one of "
+              + SignalEvent.allCases.map(\.rawValue).joined(separator: ", ")
+          )
         }
         event = value
 
@@ -50,7 +53,10 @@ struct Signal: Equatable, Sendable {
         }
 
       default:
-        throw IPCCommandError.invalidRequest("unsupported signal argument: \(item.rawKey)")
+        throw IPCCommandError.invalidRequest(
+          "unsupported signal argument: \(item.rawKey); expected event, action, label, app, title,"
+            + " or active"
+        )
       }
     }
 
