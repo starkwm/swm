@@ -49,29 +49,9 @@ struct WindowCommandHandler {
       case "--swap-split":
         return try swapSplit(request)
       case "--move":
-        return try performGeometryAction(request, action: "move") { frame, change in
-          var target = frame
-          switch change.mode {
-          case .absolute:
-            target.origin = CGPoint(x: change.first, y: change.second)
-          case .relative:
-            target.origin.x += CGFloat(change.first)
-            target.origin.y += CGFloat(change.second)
-          }
-          return target
-        }
+        return try performGeometryAction(request, action: "move") { $1.moving($0) }
       case "--resize":
-        return try performGeometryAction(request, action: "resize") { frame, change in
-          var target = frame
-          switch change.mode {
-          case .absolute:
-            target.size = CGSize(width: change.first, height: change.second)
-          case .relative:
-            target.size.width += CGFloat(change.first)
-            target.size.height += CGFloat(change.second)
-          }
-          return target
-        }
+        return try performGeometryAction(request, action: "resize") { $1.resizing($0) }
       case "--grid":
         return try grid(request)
       case "--display":
@@ -307,7 +287,7 @@ struct WindowCommandHandler {
   ) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: action)
 
-    guard let change = parseGeometryChange(selection.value) else {
+    guard let change = WindowGeometryChange(argument: selection.value) else {
       throw IPCCommandError.invalidRequest("invalid window \(action) value: \(selection.value)")
     }
 
@@ -347,17 +327,12 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidRequest("invalid window display value: \(selection.value)")
     }
 
-    let targetFrame = WindowDisplayTransfer(
-      windowFrame: frame,
-      sourceFrame: sourceScreen.axVisibleFrame,
-      targetFrame: targetScreen.axVisibleFrame
-    ).targetWindowFrame()
-
-    try applyFrame(
-      targetFrame,
-      window: window,
-      failureMessage: "could not move window to display: \(window.id)",
-      animated: false
+    try transfer(
+      window,
+      frame: frame,
+      from: sourceScreen,
+      to: targetScreen,
+      failureMessage: "could not move window to display: \(window.id)"
     )
 
     return .success(id: request.id, message: "ok")
@@ -394,18 +369,13 @@ struct WindowCommandHandler {
       let sourceScreen = NSScreen.screen(containingLargestIntersectionWith: frame),
       sourceScreen.uuid != targetScreen.uuid
     {
-      let targetFrame = WindowDisplayTransfer(
-        windowFrame: frame,
-        sourceFrame: sourceScreen.axVisibleFrame,
-        targetFrame: targetScreen.axVisibleFrame
-      ).targetWindowFrame()
-
-      try applyFrame(
-        targetFrame,
-        window: window,
+      try transfer(
+        window,
+        frame: frame,
+        from: sourceScreen,
+        to: targetScreen,
         failureMessage:
-          "window moved to Space \(destinationID), but display placement failed: \(windowID)",
-        animated: false
+          "window moved to Space \(destinationID), but display placement failed: \(windowID)"
       )
 
       guard Set(WindowServerClient.shared.spaceIDs(containing: windowID)) == [destinationID] else {
@@ -453,6 +423,22 @@ struct WindowCommandHandler {
     )
 
     return .success(id: request.id, message: "ok")
+  }
+
+  /// Move a window to the equivalent position on another screen without animation.
+  private func transfer(
+    _ window: Window,
+    frame: CGRect,
+    from sourceScreen: NSScreen,
+    to targetScreen: NSScreen,
+    failureMessage: String
+  ) throws {
+    let targetFrame = WindowDisplayTransfer(
+      windowFrame: frame,
+      sourceFrame: sourceScreen.axVisibleFrame,
+      targetFrame: targetScreen.axVisibleFrame
+    ).targetWindowFrame()
+    try applyFrame(targetFrame, window: window, failureMessage: failureMessage, animated: false)
   }
 
   /// Apply a multi-part frame change and report unrecoverable partial state.
@@ -532,9 +518,16 @@ struct WindowCommandHandler {
   ) throws -> (selector: String?, value: String) {
     try IPCArguments(args, context: "window \(action)").selectedValue()
   }
+}
+
+/// Parsed two-axis window geometry change.
+private struct WindowGeometryChange {
+  let mode: NumericChangeMode
+  let first: Int
+  let second: Int
 
   /// Parse a geometry change in `mode:first:second` format.
-  private func parseGeometryChange(_ argument: String) -> WindowGeometryChange? {
+  init?(argument: String) {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 
     guard
@@ -546,13 +539,34 @@ struct WindowCommandHandler {
       return nil
     }
 
-    return WindowGeometryChange(mode: mode, first: first, second: second)
+    self.mode = mode
+    self.first = first
+    self.second = second
   }
-}
 
-/// Parsed two-axis window geometry change.
-private struct WindowGeometryChange {
-  let mode: NumericChangeMode
-  let first: Int
-  let second: Int
+  /// Return the frame with this change applied to its origin.
+  func moving(_ frame: CGRect) -> CGRect {
+    var target = frame
+    switch mode {
+    case .absolute:
+      target.origin = CGPoint(x: first, y: second)
+    case .relative:
+      target.origin.x += CGFloat(first)
+      target.origin.y += CGFloat(second)
+    }
+    return target
+  }
+
+  /// Return the frame with this change applied to its size.
+  func resizing(_ frame: CGRect) -> CGRect {
+    var target = frame
+    switch mode {
+    case .absolute:
+      target.size = CGSize(width: first, height: second)
+    case .relative:
+      target.size.width += CGFloat(first)
+      target.size.height += CGFloat(second)
+    }
+    return target
+  }
 }
