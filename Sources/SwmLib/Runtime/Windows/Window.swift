@@ -194,8 +194,21 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Apply a target frame, restoring the original size when moving fails.
+  /// Apply a target frame, retrying once from the applied frame when an app clamps it.
   func setFrame(_ targetFrame: CGRect, from currentFrame: CGRect) -> WindowFrameMutationResult {
+    let result = applyFrame(targetFrame, from: currentFrame)
+    // Some apps clamp a resize at the old origin before accepting the accompanying move.
+    guard result == .success, let appliedFrame = frame(),
+      !appliedFrame.matches(targetFrame, tolerance: 1)
+    else { return result }
+    return applyFrame(targetFrame, from: appliedFrame)
+  }
+
+  /// Apply a target frame, restoring the original size when moving fails.
+  private func applyFrame(
+    _ targetFrame: CGRect,
+    from currentFrame: CGRect
+  ) -> WindowFrameMutationResult {
     guard targetFrame != currentFrame else { return .success }
     guard let application, let element else {
       return targetFrame.size != currentFrame.size ? .resizeFailed : .moveFailed

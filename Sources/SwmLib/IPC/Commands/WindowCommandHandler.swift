@@ -470,15 +470,7 @@ struct WindowCommandHandler {
     guard let currentFrame = window.frame() else {
       throw IPCCommandError.internalError(failureMessage)
     }
-    var result = window.setFrame(targetFrame, from: currentFrame)
-    if result == .success,
-      let appliedFrame = window.frame(),
-      !appliedFrame.matches(targetFrame, tolerance: 1)
-    {
-      result = window.setFrame(targetFrame, from: appliedFrame)
-    }
-
-    switch result {
+    switch window.setFrame(targetFrame, from: currentFrame) {
     case .success:
       return
     case .resizeFailed, .moveFailed:
