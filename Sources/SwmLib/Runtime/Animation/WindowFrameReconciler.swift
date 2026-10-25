@@ -4,7 +4,6 @@ import AppKit
 @MainActor
 final class WindowFrameReconciler {
   typealias CurrentFrameProvider = (CGWindowID) -> CGRect?
-  typealias FrameMutation = (CGWindowID, CGRect, CGRect) -> WindowFrameMutationResult?
 
   private static let expectationLifetime = Duration.seconds(1)
   private static let animationFrameInterval = Duration.seconds(1.0 / 60)
@@ -20,18 +19,13 @@ final class WindowFrameReconciler {
 
   var animationDuration: Double = 0 {
     didSet {
-      if animationDuration == 0 {
-        let targets = animations.mapValues(\.target).merging(deliveries.mapValues(\.target)) {
-          _,
-          new in new
-        }
-        cancelAnimations()
-        if delivery != nil {
-          applyAsynchronously(targets, animated: false, at: .now)
-        } else {
-          applyImmediately(targets, exactWindowIDs: Set(targets.keys))
-        }
+      guard animationDuration == 0 else { return }
+      let targets = animations.mapValues(\.target).merging(deliveries.mapValues(\.target)) {
+        _,
+        new in new
       }
+      cancelAnimations()
+      deliver(targets, animated: false, at: .now)
     }
   }
 
@@ -44,7 +38,7 @@ final class WindowFrameReconciler {
   var onInteractionEnded: () -> Void = {}
 
   private let automaticallySchedule: Bool
-  private let delivery: AnimationFrameDelivery?
+  private let delivery: AnimationFrameDelivery
   private var deliveries = [CGWindowID: FrameDeliveryState]()
   private var interactingWindows = Set<CGWindowID>()
   private var interactionMonitor: Any?
@@ -55,14 +49,12 @@ final class WindowFrameReconciler {
   private var displayLink: AnimationDisplayLink?
   private let reduceMotion: () -> Bool
   private let currentFrame: CurrentFrameProvider
-  private let frameMutation: FrameMutation
   private var pendingMutations = [CGWindowID: ExpectedFrameMutation]()
 
-  /// Create a reconciler backed by frame access and mutation operations.
+  /// Create a reconciler that reads frames directly and writes them through a delivery.
   init(
     currentFrame: @escaping CurrentFrameProvider,
-    frameMutation: @escaping FrameMutation,
-    delivery: AnimationFrameDelivery? = nil,
+    delivery: AnimationFrameDelivery,
     automaticallySchedule: Bool = true,
     terminalFailure: @escaping (CGWindowID) -> Void = {
       log("animation frame delivery failed window=\($0)", level: .warn)
@@ -76,7 +68,6 @@ final class WindowFrameReconciler {
     self.terminalFailure = terminalFailure
     self.reduceMotion = reduceMotion
     self.currentFrame = currentFrame
-    self.frameMutation = frameMutation
   }
 
   isolated deinit {
@@ -85,38 +76,12 @@ final class WindowFrameReconciler {
     if let interactionMonitor { NSEvent.removeMonitor(interactionMonitor) }
   }
 
-  /// Animate a batch using the same clock, or apply it immediately when disabled.
+  /// Animate a batch using the same clock, or deliver final frames when disabled.
   func apply(
     _ targetFrames: [CGWindowID: CGRect],
     at now: ContinuousClock.Instant = .now
   ) {
-    let targetFrames = targetFrames.filter { !interactingWindows.contains($0.key) }
-    if delivery != nil {
-      applyAsynchronously(targetFrames, animated: animationEnabled, at: now)
-      return
-    }
-    guard animationEnabled else {
-      for windowID in targetFrames.keys { animations.removeValue(forKey: windowID) }
-      applyImmediately(targetFrames)
-      stopSchedulerIfIdle()
-      return
-    }
-
-    for (windowID, target) in targetFrames {
-      if animations[windowID]?.target == target { continue }
-      animations.removeValue(forKey: windowID)
-      guard let start = currentFrame(windowID), start != target else {
-        continue
-      }
-      animations[windowID] = FrameAnimation(
-        start: start,
-        target: target,
-        startedAt: now,
-        duration: animationDuration,
-        easing: animationEasing
-      )
-    }
-    updateScheduler()
+    deliver(targetFrames, animated: animationEnabled, at: now)
   }
 
   /// Drop queued work. An AX operation already started may still settle.
@@ -133,7 +98,7 @@ final class WindowFrameReconciler {
   /// Preserve synchronous command ordering across an already-started asynchronous AX write.
   func prepareForSynchronousMutation(for windowID: CGWindowID) {
     cancelAnimations(for: [windowID])
-    delivery?.waitForPendingOperations(for: windowID)
+    delivery.waitForPendingOperations(for: windowID)
   }
 
   /// Discard destinations calculated before a topology change.
@@ -159,33 +124,16 @@ final class WindowFrameReconciler {
   ) {
     let tickStart = ContinuousClock.now
     defer { AnimationDiagnostics.shared.record("tick", since: tickStart) }
-    var frames = [CGWindowID: CGRect]()
-    var currentFrames = [CGWindowID: CGRect]()
     var finished = Set<CGWindowID>()
     for (windowID, animation) in animations {
       if let windowIDs, !windowIDs.contains(windowID) { continue }
-      if delivery != nil {
-        let progress =
-          finishImmediately || reduceMotion()
-          ? 1
-          : min(1, max(0, animation.startedAt.duration(to: now) / .seconds(1) / animation.duration))
-        submitFrame(animation.frame(at: progress), for: windowID, final: progress == 1)
-        if progress == 1 { finished.insert(windowID) }
-        continue
-      }
-      guard let current = currentFrame(windowID) else {
-        finished.insert(windowID)
-        pendingMutations.removeValue(forKey: windowID)
-        continue
-      }
-      let elapsed = animation.startedAt.duration(to: now)
       let progress =
-        finishImmediately ? 1 : min(1, max(0, elapsed / .seconds(1) / animation.duration))
-      frames[windowID] = animation.frame(at: progress)
-      currentFrames[windowID] = current
+        finishImmediately || reduceMotion()
+        ? 1
+        : min(1, max(0, animation.startedAt.duration(to: now) / .seconds(1) / animation.duration))
+      submitFrame(animation.frame(at: progress), for: windowID, final: progress == 1)
       if progress == 1 { finished.insert(windowID) }
     }
-    applyImmediately(frames, currentFrames: currentFrames, exactWindowIDs: finished)
     for windowID in finished { animations.removeValue(forKey: windowID) }
     updateScheduler()
   }
@@ -290,7 +238,7 @@ final class WindowFrameReconciler {
     displayLink = link
   }
 
-  private func applyAsynchronously(
+  private func deliver(
     _ targets: [CGWindowID: CGRect],
     animated: Bool,
     at now: ContinuousClock.Instant
@@ -308,7 +256,7 @@ final class WindowFrameReconciler {
       if animated {
         let duration = animationDuration
         let easing = animationEasing
-        delivery?.submit(
+        delivery.submit(
           windowID: id,
           generation: state.generation,
           sequence: 0,
@@ -348,7 +296,7 @@ final class WindowFrameReconciler {
       target: target,
       expiresAt: .now.advanced(by: Self.expectationLifetime)
     )
-    delivery?.submit(
+    delivery.submit(
       windowID: id,
       generation: state.generation,
       sequence: state.sequence,
@@ -391,59 +339,6 @@ final class WindowFrameReconciler {
     displayLink = nil
   }
 
-  /// Record expected notifications before moving any windows.
-  private func applyImmediately(
-    _ targetFrames: [CGWindowID: CGRect],
-    currentFrames: [CGWindowID: CGRect]? = nil,
-    exactWindowIDs: Set<CGWindowID> = []
-  ) {
-    expireExpectations()
-
-    var changedFrames = [CGWindowID: FrameApplicationTarget]()
-    for (windowID, targetFrame) in targetFrames {
-      let current =
-        if let currentFrames { currentFrames[windowID] } else { currentFrame(windowID) }
-      guard let currentFrame = current else {
-        pendingMutations.removeValue(forKey: windowID)
-        continue
-      }
-      let tolerance: CGFloat = exactWindowIDs.contains(windowID) ? 0 : 1
-      guard !currentFrame.matches(targetFrame, tolerance: tolerance) else { continue }
-      changedFrames[windowID] = FrameApplicationTarget(
-        currentFrame: currentFrame,
-        targetFrame: targetFrame
-      )
-    }
-
-    guard !changedFrames.isEmpty else { return }
-
-    let expiresAt = ContinuousClock.now.advanced(by: Self.expectationLifetime)
-
-    for (windowID, target) in changedFrames {
-      pendingMutations[windowID] = ExpectedFrameMutation(
-        target: target.targetFrame,
-        expiresAt: expiresAt
-      )
-    }
-
-    for windowID in changedFrames.keys.sorted() {
-      guard let target = changedFrames[windowID] else { continue }
-      guard let result = frameMutation(windowID, target.targetFrame, target.currentFrame) else {
-        pendingMutations.removeValue(forKey: windowID)
-        continue
-      }
-
-      // Some apps clamp a resize at the old origin before accepting the accompanying move.
-      // Intermediate animation frames will be superseded on the next tick.
-      if currentFrames == nil || exactWindowIDs.contains(windowID), result == .success,
-        let appliedFrame = self.currentFrame(windowID),
-        !appliedFrame.matches(target.targetFrame, tolerance: 1)
-      {
-        _ = frameMutation(windowID, target.targetFrame, appliedFrame)
-      }
-    }
-  }
-
   /// Stop suppressing notifications after their timeout.
   private func expireExpectations() {
     let now = ContinuousClock.now
@@ -462,12 +357,6 @@ private struct ExpectedFrameMutation {
 
   /// Keep matching feedback suppressed after arrival, but allow a subsequent external move.
   var reachedTarget = false
-}
-
-/// Current and target frame retained while a batch is applied.
-private struct FrameApplicationTarget {
-  let currentFrame: CGRect
-  let targetFrame: CGRect
 }
 
 /// Start frame, destination, and timing for one window.

@@ -195,11 +195,7 @@ struct ConfigCommandHandlerTests {
   @Test("dispatch: applies animation duration and preserves it after invalid requests")
   func dispatchAppliesAnimationDurationAndPreservesItAfterInvalidRequests() {
     let spaces = Spaces(activeSpaceID: nil)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in .success },
-      automaticallySchedule: false
-    )
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     let handler = ConfigCommandHandler(
       windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
@@ -220,10 +216,7 @@ struct ConfigCommandHandlerTests {
   @Test("dispatch: validates and applies animation easing")
   func dispatchValidatesAndAppliesAnimationEasing() {
     let spaces = Spaces(activeSpaceID: nil)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in .success }
-    )
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     let handler = ConfigCommandHandler(
       windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,

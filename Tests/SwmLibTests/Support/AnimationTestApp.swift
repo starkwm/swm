@@ -8,12 +8,7 @@ final class AnimationTestApp: @unchecked Sendable {
   let processID: pid_t
   var frame: CGRect {
     get { frame(for: 1) }
-    set {
-      lock.withLock {
-        pendingFrames.removeValue(forKey: 1)
-        frames[1] = newValue
-      }
-    }
+    set { setFrame(newValue, for: 1) }
   }
   var clampWrites: Bool {
     get { lock.withLock { clamp } }
@@ -91,6 +86,13 @@ final class AnimationTestApp: @unchecked Sendable {
 
   func frame(for windowID: CGWindowID) -> CGRect {
     lock.withLock { settledFrame(for: windowID) }
+  }
+
+  func setFrame(_ frame: CGRect, for windowID: CGWindowID) {
+    lock.withLock {
+      pendingFrames.removeValue(forKey: windowID)
+      frames[windowID] = frame
+    }
   }
 
   func blockNextWrite() { lock.withLock { shouldBlock = true } }

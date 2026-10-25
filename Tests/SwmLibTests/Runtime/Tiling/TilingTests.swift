@@ -25,21 +25,16 @@ struct TilingTests {
   }
 
   @Test("animateFrame: one-point moves are not skipped")
-  func animateFrameOnePointMovesAreNotSkipped() {
-    var frame = CGRect(x: 0, y: 0, width: 100, height: 100)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
+  func animateFrameOnePointMovesAreNotSkipped() async throws {
+    let app = AnimationTestApp(processID: 1)
+    let reconciler = makeTestReconciler(app)
     reconciler.animationDuration = 1
-    let target = frame.offsetBy(dx: 1, dy: 0)
+    let target = app.frame.offsetBy(dx: 1, dy: 0)
     #expect(makeTiling(frameReconciler: reconciler).animateFrame(target, for: 1))
+    try await waitForAnimation { reconciler.isAnimating(1) }
     reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
-    #expect(frame == target)
+    try await waitForAnimation { reconciler.isIdle }
+    #expect(app.frame == target)
   }
 
   @Test(
@@ -47,37 +42,23 @@ struct TilingTests {
     arguments: [false, true]
   )
   func animateFrameDisabledAnimationAndReduceMotionUseTheSynchronousFallback(reduceMotion: Bool) {
-    var mutations = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in
-        mutations += 1
-        return .success
-      },
-      reduceMotion: { reduceMotion }
-    )
+    let app = AnimationTestApp(processID: 1)
+    let reconciler = makeTestReconciler(app, reduceMotion: { reduceMotion })
     reconciler.animationDuration = reduceMotion ? 1 : 0
     let tiling = makeTiling(frameReconciler: reconciler)
     #expect(!tiling.animateFrame(CGRect(x: 100, y: 0, width: 100, height: 100), for: 1))
-    reconciler.advanceAnimations(at: .now.advanced(by: .seconds(2)))
-    #expect(mutations == 0)
+    #expect(reconciler.isIdle)
+    #expect(app.writeCount == 0)
   }
 
   @Test(
     "cancelAnimation: tiling changes discard old destinations",
     arguments: ["window-float", "space-float", "all-float", "membership", "direct-command"]
   )
-  func cancelAnimationTilingChangesDiscardOldDestinations(change: String) {
-    var frame = CGRect.zero
+  func cancelAnimationTilingChangesDiscardOldDestinations(change: String) async throws {
+    let app = AnimationTestApp(processID: 1)
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10]]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in frame },
-      frameMutation: { _, target, _ in
-        frame = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(app)
     let tiling = makeTiling(
       windows: { [window(id: 1)] },
       memberships: { memberships },
@@ -85,9 +66,11 @@ struct TilingTests {
     )
     tiling.initialize()
     reconciler.animationDuration = 1
-    let start = ContinuousClock.now
-    reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)], at: start)
+    let start = ContinuousClock.now.advanced(by: .seconds(10))
+    reconciler.apply([1: animationFrame(100)], at: start)
+    try await waitForAnimation { reconciler.isAnimating(1) }
     reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
+    try await waitForAnimation { app.writeCount == 1 }
 
     switch change {
     case "window-float": #expect(tiling.setWindowLayout(.float, for: 1))
@@ -98,10 +81,12 @@ struct TilingTests {
       tiling.reconcileAndReflowVisibleSpaces()
     default: tiling.cancelAnimation(for: 1)
     }
-    let stoppedFrame = frame
+    let stoppedFrame = app.frame
     reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
-    #expect(frame == stoppedFrame)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: frame))
+    #expect(reconciler.isIdle)
+    #expect(app.frame == stoppedFrame)
+    #expect(app.writeCount == 1)
+    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: app.frame))
   }
 
   @Test("reconcile: preserves layouts through unavailable topology and recovers by polling")
@@ -120,19 +105,9 @@ struct TilingTests {
       ]
     )
     var topology: SpaceTopology? = complete
-    var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero, 3: .zero, 4: .zero]
-    var writes = 0
+    let app = AnimationTestApp(processID: 1)
     var placements = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, frame, _ in
-        writes += 1
-        frames[id] = frame
-        return .success
-      },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(app)
     let tiling = Tiling(
       snapshot: { TilingReconciliationSnapshot(windows: candidates, topology: topology) },
       spaces: spaces,
@@ -150,14 +125,19 @@ struct TilingTests {
     #expect(tiling.setWindowLayout(.float, for: 3))
     tiling.windowDidFocus(2)
     let plan = tiling.layoutPlan(for: layoutID(10))
-    let expectedFrame = try #require(frames[2])
+    guard case .layout(.frames(let planFrames)) = plan else {
+      Issue.record("expected a master layout plan")
+      return
+    }
+    let expectedFrame = try #require(planFrames[2])
+    try await waitForAnimation { reconciler.isIdle }
     reconciler.animationDuration = 1
     reconciler.apply([1: CGRect(x: 100, y: 100, width: 100, height: 100)])
-    #expect(reconciler.isAnimating(1))
+    try await waitForAnimation { reconciler.isAnimating(1) }
     topology = nil
     tiling.reconcileAndReflowVisibleSpaces()
     #expect(!reconciler.isAnimating(1))
-    let stoppedWrites = writes
+    let stoppedWrites = app.writeCount
     #expect(spaces.settings(for: 10) == settings)
     #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
     try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
@@ -169,13 +149,14 @@ struct TilingTests {
     #expect(response.ok)
     #expect(spaces.settings(for: 10).gap == 20)
     tiling.setMasterPlacementForAllSpaces(.left)
-    #expect(writes == stoppedWrites)
+    #expect(reconciler.isIdle)
+    #expect(app.writeCount == stoppedWrites)
     #expect(placements == 0)
     spaces.setGap(14, for: 10)
     reconciler.animationDuration = 0
-    frames[2] = .zero
+    app.setFrame(.zero, for: 2)
     topology = complete
-    try await waitForAnimation { frames[2] == expectedFrame }
+    try await waitForAnimation { app.frame(for: 2) == expectedFrame }
     #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
     #expect(spaces.settings(for: 10) == settings)
     #expect(placements == 1)
@@ -257,18 +238,9 @@ struct TilingTests {
   }
 
   @Test("reconcile: cancels animation only for changed membership")
-  func reconcileCancelsAnimationOnlyForChangedMembership() {
-    var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero]
+  func reconcileCancelsAnimationOnlyForChangedMembership() async throws {
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, target, _ in
-        frames[id] = target
-        return .success
-      },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     let tiling = makeTiling(
       windows: { [window(id: 1), window(id: 2)] },
       memberships: { memberships },
@@ -278,6 +250,7 @@ struct TilingTests {
     reconciler.animationDuration = 1
     let target = CGRect(x: 100, y: 0, width: 100, height: 100)
     reconciler.apply([1: target, 2: target])
+    try await waitForAnimation { reconciler.isAnimating(1) && reconciler.isAnimating(2) }
     tiling.reconcile()
     #expect(reconciler.isAnimating(1))
     #expect(reconciler.isAnimating(2))
@@ -289,17 +262,8 @@ struct TilingTests {
   }
 
   @Test("reconcile: preserves floating window animation")
-  func reconcilePreservesFloatingWindowAnimation() {
-    var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, target, _ in
-        frames[id] = target
-        return .success
-      },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+  func reconcilePreservesFloatingWindowAnimation() async throws {
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]],
@@ -309,20 +273,16 @@ struct TilingTests {
     #expect(tiling.setWindowLayout(.float, for: 1))
     reconciler.animationDuration = 1
     reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)])
+    try await waitForAnimation { reconciler.isAnimating(1) }
     tiling.reconcile()
     #expect(reconciler.isAnimating(1))
     reconciler.cancelAnimations()
   }
 
   @Test("reconcile: cancels animation for transiently omitted windows")
-  func reconcileCancelsAnimationForTransientlyOmittedWindows() {
+  func reconcileCancelsAnimationForTransientlyOmittedWindows() async throws {
     var candidate = window(id: 1)
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in .success },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     let tiling = makeTiling(
       windows: { [candidate] },
       memberships: { [1: [10]] },
@@ -331,6 +291,7 @@ struct TilingTests {
     tiling.initialize()
     reconciler.animationDuration = 1
     reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)])
+    try await waitForAnimation { reconciler.isAnimating(1) }
     candidate = window(id: 1, displayID: nil)
     tiling.reconcile()
     #expect(reconciler.isIdle)
@@ -338,12 +299,7 @@ struct TilingTests {
 
   @Test("reconcile: applies deferred placement after interaction ends")
   func reconcileAppliesDeferredPlacementAfterInteractionEnds() throws {
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { _ in .zero },
-      frameMutation: { _, _, _ in .success },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     var placements = 0
     let tiling = makeTiling(
       frameReconciler: reconciler,
@@ -857,17 +813,8 @@ struct TilingTests {
   }
 
   @Test("addRule: cancels animation before synchronous placement")
-  func addRuleCancelsAnimationBeforeSynchronousPlacement() throws {
-    var frames: [CGWindowID: CGRect] = [1: .zero, 2: .zero]
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, target, _ in
-        frames[id] = target
-        return .success
-      },
-      automaticallySchedule: false,
-      reduceMotion: { false }
-    )
+  func addRuleCancelsAnimationBeforeSynchronousPlacement() async throws {
+    let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))
     var placed = false
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
@@ -882,6 +829,7 @@ struct TilingTests {
     tiling.initialize()
     reconciler.animationDuration = 1
     reconciler.apply([1: CGRect(x: 100, y: 0, width: 100, height: 100)])
+    try await waitForAnimation { reconciler.isAnimating(1) }
     try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
     #expect(placed)
     reconciler.cancelAnimations()
@@ -1077,18 +1025,13 @@ struct TilingTests {
   }
 
   @Test("swapWindow: exchanges complete frames in a floating layout")
-  func swapWindowExchangesCompleteFramesInAFloatingLayout() {
-    var framesByWindowID: [CGWindowID: CGRect] = [
-      1: CGRect(x: 0, y: 0, width: 400, height: 300),
-      2: CGRect(x: 500, y: 100, width: 300, height: 200),
-    ]
-    let frameReconciler = WindowFrameReconciler(
-      currentFrame: { framesByWindowID[$0] },
-      frameMutation: { windowID, targetFrame, _ in
-        framesByWindowID[windowID] = targetFrame
-        return .success
-      }
-    )
+  func swapWindowExchangesCompleteFramesInAFloatingLayout() async throws {
+    let left = CGRect(x: 0, y: 0, width: 400, height: 300)
+    let right = CGRect(x: 500, y: 100, width: 300, height: 200)
+    let app = AnimationTestApp(processID: 1)
+    app.setFrame(left, for: 1)
+    app.setFrame(right, for: 2)
+    let frameReconciler = makeTestReconciler(app)
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2)],
       memberships: [1: [10], 2: [10]],
@@ -1097,13 +1040,9 @@ struct TilingTests {
     tiling.initialize()
 
     #expect(tiling.swapWindow(1, in: .right))
-    #expect(
-      framesByWindowID
-        == [
-          1: CGRect(x: 500, y: 100, width: 300, height: 200),
-          2: CGRect(x: 0, y: 0, width: 400, height: 300),
-        ]
-    )
+    try await waitForAnimation { frameReconciler.isIdle }
+    #expect(app.frame(for: 1) == right)
+    #expect(app.frame(for: 2) == left)
     #expect(tiling.swapWindow(1, in: .right) == false)
   }
 
@@ -1532,7 +1471,7 @@ struct TilingTests {
   func windowFrameDidChangeSuppressesFailedSettlementFeedback() async throws {
     let app = AnimationTestApp(processID: 1)
     app.clampWrites = true
-    let reconciler = makeDeliveryReconciler(app)
+    let reconciler = makeTestReconciler(app)
     var snapshots = 0
     let tiling = makeTiling(
       windows: {
@@ -1554,20 +1493,16 @@ struct TilingTests {
   @Test(
     "windowFrameDidChange: paired completion notifications do not rescan or cancel other windows"
   )
-  func windowFrameDidChangePairedCompletionNotificationsDoNotRescanOrCancelOtherWindows() {
-    var frames: [CGWindowID: CGRect] = [
-      1: CGRect(x: 0, y: 0, width: 400, height: 300),
-      2: CGRect(x: 500, y: 100, width: 300, height: 200),
-    ]
+  func windowFrameDidChangePairedCompletionNotificationsDoNotRescanOrCancelOtherWindows()
+    async throws
+  {
+    let firstTarget = CGRect(x: 500, y: 100, width: 300, height: 200)
+    let secondTarget = CGRect(x: 0, y: 0, width: 400, height: 300)
+    let app = AnimationTestApp(processID: 1)
+    app.setFrame(secondTarget, for: 1)
+    app.setFrame(firstTarget, for: 2)
     var snapshots = 0
-    let reconciler = WindowFrameReconciler(
-      currentFrame: { frames[$0] },
-      frameMutation: { id, target, _ in
-        frames[id] = target
-        return .success
-      },
-      reduceMotion: { false }
-    )
+    let reconciler = makeTestReconciler(app)
     let tiling = makeTiling(
       windows: {
         snapshots += 1
@@ -1578,14 +1513,14 @@ struct TilingTests {
     )
     tiling.initialize()
     let initialSnapshots = snapshots
-    let start = ContinuousClock.now
-    let firstTarget = CGRect(x: 500, y: 100, width: 300, height: 200)
-    let secondTarget = CGRect(x: 0, y: 0, width: 400, height: 300)
+    let start = ContinuousClock.now.advanced(by: .seconds(10))
     reconciler.animationDuration = 0.18
     reconciler.apply([1: firstTarget], at: start)
     reconciler.animationDuration = 0.3
     reconciler.apply([2: secondTarget], at: start)
+    try await waitForAnimation { reconciler.isAnimating(1) && reconciler.isAnimating(2) }
     reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(180)))
+    try await waitForAnimation { app.frame(for: 1) == firstTarget }
 
     // A combined move and resize can deliver more than one notification at the final frame.
     tiling.windowFrameDidChange(1)
@@ -1595,10 +1530,11 @@ struct TilingTests {
     #expect(snapshots == initialSnapshots)
     #expect(reconciler.frames(for: [2])[2] == secondTarget)
     reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(300)))
-    #expect(frames[2] == secondTarget)
+    try await waitForAnimation { reconciler.isIdle }
+    #expect(app.frame(for: 2) == secondTarget)
 
     // A real user move after completion must still reach reconciliation immediately.
-    frames[1]?.origin.x += 50
+    app.setFrame(firstTarget.offsetBy(dx: 50, dy: 0), for: 1)
     tiling.windowFrameDidChange(1)
     #expect(snapshots == initialSnapshots + 1)
   }
@@ -1667,18 +1603,8 @@ struct TilingTests {
   func membershipPollingReflowsWithoutLifecycleEvents() async throws {
     let windows = [window(id: 1), window(id: 2), window(id: 3)]
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10], 3: [11]]
-    var framesByWindowID: [CGWindowID: CGRect] = [
-      1: .zero,
-      2: .zero,
-      3: .zero,
-    ]
-    let frameReconciler = WindowFrameReconciler(
-      currentFrame: { framesByWindowID[$0] },
-      frameMutation: { windowID, targetFrame, _ in
-        framesByWindowID[windowID] = targetFrame
-        return .success
-      }
-    )
+    let app = AnimationTestApp(processID: 1)
+    let frameReconciler = makeTestReconciler(app)
     let tiling = makeTiling(
       windows: { windows },
       memberships: { memberships },
@@ -1689,12 +1615,10 @@ struct TilingTests {
     tiling.windowFrameDidChange(2)
 
     // Exercise departing and arriving windows in the same automatic polling tick.
-    framesByWindowID[3] = CGRect(x: 100, y: 100, width: 300, height: 300)
+    app.setFrame(CGRect(x: 100, y: 100, width: 300, height: 300), for: 3)
     memberships[2] = [11]
     memberships[3] = [10]
-    for _ in 0..<100 where framesByWindowID[3]?.origin.x != 500 {
-      try await Task.sleep(for: .milliseconds(10))
-    }
+    try await waitForAnimation { app.frame(for: 3).origin.x == 500 }
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
@@ -1705,6 +1629,6 @@ struct TilingTests {
           ])
         )
     )
-    #expect(framesByWindowID[3] == CGRect(x: 500, y: 0, width: 500, height: 800))
+    #expect(app.frame(for: 3) == CGRect(x: 500, y: 0, width: 500, height: 800))
   }
 }
