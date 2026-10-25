@@ -140,17 +140,7 @@ struct StartCommand: ParsableCommand {
   var config: String?
 
   /// Minimum runtime log level.
-  @Option(
-    name: .long,
-    help: "Minimum log level: debug, info, warn, or error.",
-    completion: .list(LogLevel.allCases.map(\.rawValue)),
-    transform: { value in
-      guard let level = LogLevel(rawValue: value) else {
-        throw ValidationError("Invalid log level: \(value)")
-      }
-      return level
-    }
-  )
+  @Option(name: .long, help: "Minimum log level.")
   var logLevel: LogLevel = .info
 
   /// Start the daemon using the parsed options.
@@ -160,3 +150,5 @@ struct StartCommand: ParsableCommand {
     }
   }
 }
+
+extension LogLevel: ExpressibleByArgument {}

@@ -22,18 +22,10 @@ struct ConfigCommand: ParsableCommand {
     )
     static let command = "animation-easing"
 
-    @Argument(
-      help: "linear, ease-out-quad (default), ease-out-cubic, ease-out-circ, or ease-in-out-quad."
-    )
-    var easing: String
+    @Argument(help: "Easing curve. Default: ease-out-quad.")
+    var easing: AnimationEasing
 
-    var arguments: [String] { [easing] }
-
-    func validate() throws {
-      guard AnimationEasing(rawValue: easing) != nil else {
-        throw ValidationError("Unknown animation easing: \(easing)")
-      }
-    }
+    var arguments: [String] { [easing.rawValue] }
   }
 
   struct Layout: ConfigIPCCommand {
@@ -150,6 +142,8 @@ struct ConfigCommand: ParsableCommand {
     ]
   )
 }
+
+extension AnimationEasing: ExpressibleByArgument {}
 
 enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
   case left, right, top, bottom
