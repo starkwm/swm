@@ -486,32 +486,18 @@ public final class Tiling {
     guard let neighborWindowID = direction.neighbor(of: windowID, in: framesByWindowID) else {
       return false
     }
-    guard var state = layoutsByID[layoutID], var tree = state.tree else { return false }
-    guard tree.swap(windowID, with: neighborWindowID) else { return false }
-
-    state.tree = tree
-    state.focusedWindowID = windowID
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
-    return true
+    return mutateTree(containing: windowID, focus: true) {
+      $0.swap(windowID, with: neighborWindowID)
+    }
   }
 
   /// Swap a tiled window with the current master pane.
   @discardableResult
   func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
-    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
-    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
-    guard var state = layoutsByID[layoutID], state.selection == .master else { return false }
-    guard var tree = state.tree,
-      let masterWindowID = masterWindowID(inLayoutContaining: windowID)
-    else { return false }
-    guard tree.swap(windowID, with: masterWindowID) else { return false }
-
-    state.tree = tree
-    state.focusedWindowID = windowID
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
-    return true
+    guard let masterWindowID = masterWindowID(inLayoutContaining: windowID) else { return false }
+    return mutateTree(containing: windowID, requiring: .master, focus: true) {
+      $0.swap(windowID, with: masterWindowID)
+    }
   }
 
   /// Return the active master window in the selected window's layout.
@@ -595,21 +581,12 @@ public final class Tiling {
   /// Swap a tiled window with its neighbour in stable layout order.
   @discardableResult
   func swapWindowInOrder(_ windowID: CGWindowID, in direction: CycleDirection) -> Bool {
-    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
-    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
-    guard var state = layoutsByID[layoutID], state.selection != .float, var tree = state.tree else {
-      return false
-    }
     guard let neighborWindowID = cycledWindowID(from: windowID, in: direction) else {
       return false
     }
-    guard tree.swap(windowID, with: neighborWindowID) else { return false }
-
-    state.tree = tree
-    state.focusedWindowID = windowID
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
-    return true
+    return mutateTree(containing: windowID, focus: true) {
+      $0.swap(windowID, with: neighborWindowID)
+    }
   }
 
   /// Set or adjust the nearest dwindle split containing a tiled window.
@@ -618,17 +595,11 @@ public final class Tiling {
     _ change: LayoutRatioChange,
     for windowID: CGWindowID
   ) -> CGFloat? {
-    guard !floatingOverrideWindowIDs.contains(windowID) else { return nil }
-    guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
-    guard var state = layoutsByID[layoutID], state.selection == .dwindle else { return nil }
-    guard var tree = state.tree else { return nil }
-    guard let ratio = tree.changeSplitRatio(change, containing: windowID) else {
-      return nil
+    var ratio: CGFloat?
+    _ = mutateTree(containing: windowID, requiring: .dwindle) {
+      ratio = $0.changeSplitRatio(change, containing: windowID)
+      return ratio != nil
     }
-
-    state.tree = tree
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
     return ratio
   }
 
@@ -639,37 +610,22 @@ public final class Tiling {
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
     guard layoutsByID[layoutID]?.selection == .dwindle else { return false }
     guard case .layout = layoutPlan(for: layoutID) else { return false }
-    guard var state = layoutsByID[layoutID], var tree = state.tree else { return false }
     guard let display = currentTopology?.displaysByID[layoutID.displayID] else { return false }
-    tree =
-      dwindleLayout.resolvingSplitDirections(
-        in: tree,
-        bounds: display.visibleFrame,
-        settings: spaces.settings(for: layoutID.spaceID)
-      ) ?? tree
-    guard tree.toggleSplitDirection(containing: windowID) else { return false }
-
-    state.tree = tree
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
-    return true
+    return mutateTree(containing: windowID, requiring: .dwindle) { tree in
+      tree =
+        dwindleLayout.resolvingSplitDirections(
+          in: tree,
+          bounds: display.visibleFrame,
+          settings: spaces.settings(for: layoutID.spaceID)
+        ) ?? tree
+      return tree.toggleSplitDirection(containing: windowID)
+    }
   }
 
   /// Exchange the selected window's nearest dwindle sibling subtrees.
   @discardableResult
   func swapDwindleSplit(for windowID: CGWindowID) -> Bool {
-    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
-    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
-    guard var state = layoutsByID[layoutID], state.selection == .dwindle, var tree = state.tree
-    else {
-      return false
-    }
-    guard tree.swapSplit(containing: windowID) else { return false }
-
-    state.tree = tree
-    layoutsByID[layoutID] = state
-    applyPlans(for: [layoutID])
-    return true
+    mutateTree(containing: windowID, requiring: .dwindle) { $0.swapSplit(containing: windowID) }
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
@@ -880,6 +836,26 @@ public final class Tiling {
         self?.reflowIfMembershipChanged()
       }
     }
+  }
+
+  /// Change a tiled window's layout tree, then store and reflow it when the change succeeds.
+  private func mutateTree(
+    containing windowID: CGWindowID,
+    requiring selection: LayoutSelection? = nil,
+    focus: Bool = false,
+    _ mutation: (inout TilingTree) -> Bool
+  ) -> Bool {
+    guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard var state = layoutsByID[layoutID], state.selection != .float else { return false }
+    if let selection, state.selection != selection { return false }
+    guard var tree = state.tree, mutation(&tree) else { return false }
+
+    state.tree = tree
+    if focus { state.focusedWindowID = windowID }
+    layoutsByID[layoutID] = state
+    applyPlans(for: [layoutID])
+    return true
   }
 
   /// Apply actionable plans for a stable sequence of layouts.
