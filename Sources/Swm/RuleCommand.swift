@@ -6,8 +6,14 @@ struct RuleCommand: ParsableCommand {
   struct Add: RuleIPCCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a window management rule.",
-      discussion:
-        "Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, or display=index|uuid. Optional filters are app, title, and bundle-id; label names the rule."
+      discussion: """
+        Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, or \
+        display=index|uuid. Optional filters are app, title, and bundle-id; label names the rule.
+
+        Examples:
+          swm rule add label=finder bundle-id=com.apple.finder manage=off
+          swm rule add app='^Safari$' grid=2:1:1:0:1:1 display=2
+        """
     )
     static let command = "--add"
 

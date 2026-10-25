@@ -9,14 +9,12 @@ struct Arguments: ParsableCommand {
     abstract: "Stark Window Manager for macOS.",
     groupedSubcommands: [
       CommandGroup(name: "DAEMON", subcommands: [StartCommand.self]),
+      CommandGroup(name: "CONTROL", subcommands: [WindowCommand.self, SpaceCommand.self]),
       CommandGroup(
-        name: "WINDOW",
-        subcommands: [SpaceCommand.self, WindowCommand.self]
+        name: "CONFIGURE",
+        subcommands: [ConfigCommand.self, RuleCommand.self, SignalCommand.self]
       ),
-      CommandGroup(
-        name: "OTHER",
-        subcommands: [ConfigCommand.self, QueryCommand.self, SignalCommand.self, RuleCommand.self]
-      ),
+      CommandGroup(name: "INSPECT", subcommands: [QueryCommand.self]),
     ]
   )
 

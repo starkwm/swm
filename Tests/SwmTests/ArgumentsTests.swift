@@ -95,8 +95,9 @@ struct ArgumentsTests {
     let help = Arguments.helpMessage()
 
     #expect(help.contains("DAEMON SUBCOMMANDS:"))
-    #expect(help.contains("WINDOW SUBCOMMANDS:"))
-    #expect(help.contains("OTHER SUBCOMMANDS:"))
+    #expect(help.contains("CONTROL SUBCOMMANDS:"))
+    #expect(help.contains("CONFIGURE SUBCOMMANDS:"))
+    #expect(help.contains("INSPECT SUBCOMMANDS:"))
     #expect(help.contains("See 'swm help <subcommand>' for detailed help."))
     #expect(help.contains("--version"))
     #expect(!help.contains("<args>"))
@@ -117,6 +118,7 @@ struct ArgumentsTests {
 
     #expect(help.contains("USAGE: swm window move [--window <window>] <position>"))
     #expect(help.contains("Position in the form abs|rel:<x>:<y>."))
+    #expect(help.contains("swm window move rel:-20:0"))
   }
 
   @Test("completionScript: includes commands and typed values")

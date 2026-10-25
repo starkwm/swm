@@ -27,7 +27,7 @@ Send commands to the running daemon through command-specific subcommands:
 swm <domain> <command> [arguments]
 ```
 
-The available domains are `query`, `window`, `space`, `config`, and `signal`. Commands print their result to standard output and return a non-zero exit status on failure. Run `swm --help`, `swm <domain> --help`, or `swm help <domain> <command>` for progressively more specific help.
+The available domains are `window`, `space`, `config`, `rule`, `signal`, and `query`. Commands print their result to standard output and return a non-zero exit status on failure. Run `swm --help`, `swm <domain> --help`, or `swm help <domain> <command>` for progressively more specific help.
 
 Top-level options:
 
@@ -36,7 +36,7 @@ Top-level options:
     --version              Show the version
 ```
 
-Command references cover [queries](query.md), [windows](windows.md), [spaces](spaces.md), [global defaults](configuration.md#global-defaults), and [signals](signals.md).
+Command references cover [queries](query.md), [windows](windows.md), [spaces](spaces.md), [global defaults](configuration.md#global-defaults), [rules](rules.md), and [signals](signals.md).
 
 ## Shell completions
 

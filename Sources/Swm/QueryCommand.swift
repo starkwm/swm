@@ -5,7 +5,7 @@ import SwmLib
 struct QueryCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "query",
-    abstract: "Query displays, spaces, and windows.",
+    abstract: "Query displays, Spaces, and windows.",
     discussion: "Query results are written as JSON.",
     subcommands: [Displays.self, Spaces.self, Windows.self, Display.self, Space.self, Window.self]
   )
@@ -20,7 +20,7 @@ struct QueryCommand: ParsableCommand {
   }
 
   struct Spaces: QueryIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Query all spaces.")
+    static let configuration = CommandConfiguration(abstract: "Query all Spaces.")
     static let command = "--spaces"
 
     @OptionGroup var selector: QuerySelectorOptions
@@ -57,11 +57,11 @@ struct QueryCommand: ParsableCommand {
 
   struct Space: QueryIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Query a space by index, or the focused space."
+      abstract: "Query a Space by index, or the focused Space."
     )
     static let command = "--space"
 
-    @Argument(help: "Zero-based space index.")
+    @Argument(help: "Zero-based Space index.")
     var index: Int?
 
     var arguments: [String] { index.map { [String($0)] } ?? [] }
@@ -89,7 +89,7 @@ struct QueryCommand: ParsableCommand {
 /// An optional selector shared by plural query commands.
 struct QuerySelectorOptions: ParsableArguments {
   @Option(help: "Filter by one-based display index.") var display: Int?
-  @Option(help: "Filter by zero-based space index.") var space: Int?
+  @Option(help: "Filter by zero-based Space index.") var space: Int?
   @Option(help: "Filter by window ID.") var window: UInt32?
 
   var arguments: [String] {
