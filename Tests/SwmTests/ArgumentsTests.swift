@@ -21,7 +21,11 @@ struct ArgumentsTests {
       _ = try Arguments.parseAsRoot(["start", "--log-level", "verbose"])
       Issue.record("Expected invalid log level")
     } catch {
-      #expect(Arguments.message(for: error).contains("Invalid log level: verbose"))
+      #expect(
+        Arguments.message(for: error).contains(
+          "Please provide one of 'debug', 'info', 'warn' or 'error'."
+        )
+      )
     }
   }
 
@@ -124,6 +128,7 @@ struct ArgumentsTests {
       #expect(script.contains("focus-follows-mouse"))
       #expect(script.contains("warp"))
       #expect(script.contains("autofocus"))
+      #expect(script.contains("ease-out-circ"))
       #expect(script.contains("recent"))
       #expect(script.contains("next"))
       #expect(script.contains("prev"))
