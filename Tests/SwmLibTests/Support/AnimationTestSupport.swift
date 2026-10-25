@@ -6,20 +6,17 @@ import Testing
 func animationFrame(_ x: Double) -> CGRect { CGRect(x: x, y: 0, width: 100, height: 100) }
 
 @MainActor
-func makeDeliveryReconciler(
+func makeTestReconciler(
   _ app: AnimationTestApp,
   delivery: AnimationFrameDelivery? = nil,
+  automaticallySchedule: Bool = false,
   reduceMotion: @escaping () -> Bool = { false },
   terminalFailure: @escaping (CGWindowID) -> Void = { _ in }
 ) -> WindowFrameReconciler {
   WindowFrameReconciler(
-    currentFrame: { _ in app.frame },
-    frameMutation: { _, _, _ in
-      Issue.record("synchronous mutation")
-      return nil
-    },
-    delivery: delivery ?? AnimationFrameDelivery { _ in app.backend },
-    automaticallySchedule: false,
+    currentFrame: { app.frame(for: $0) },
+    delivery: delivery ?? AnimationFrameDelivery { app.backend(for: $0) },
+    automaticallySchedule: automaticallySchedule,
     terminalFailure: terminalFailure,
     reduceMotion: reduceMotion
   )

@@ -49,9 +49,6 @@ public final class Tiling {
       windows: windows,
       frameReconciler: WindowFrameReconciler(
         currentFrame: { windows.window(by: $0)?.frame() },
-        frameMutation: { windowID, targetFrame, currentFrame in
-          windows.window(by: windowID)?.setFrame(targetFrame, from: currentFrame)
-        },
         delivery: AnimationFrameDelivery(windows: windows)
       ),
       windowSpaceMembership: {
