@@ -75,13 +75,17 @@ struct WindowCommandHandlerTests {
   @Test("dispatch: rejects invalid geometry action value")
   func dispatchRejectsInvalidGeometryActionValue() async {
     let handler = handler()
+    let forms = [
+      "move": "abs|rel:<x>:<y>, such as rel:20:0",
+      "resize": "abs|rel:<width>:<height>, such as rel:40:0",
+    ]
 
-    for action in ["move", "resize"] {
+    for (action, form) in forms {
       let response = await handler.dispatch(request(command: "--\(action)", args: ["rel:100:x"]))
 
       #expect(response.ok == false)
       #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "invalid window \(action) value: rel:100:x")
+      #expect(response.message == "invalid window \(action) value: rel:100:x; expected \(form)")
     }
   }
 
@@ -124,7 +128,10 @@ struct WindowCommandHandlerTests {
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid window display value: \(argument)")
+    #expect(
+      response.message
+        == "invalid window display value: \(argument); expected a one-based display index, next, or prev"
+    )
   }
 
   @Test("dispatch: rejects malformed Space movement arguments and invalid targets")
@@ -141,7 +148,10 @@ struct WindowCommandHandlerTests {
     let response = await handler.dispatch(request(command: "--space", args: ["42", "sideways"]))
 
     #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid window space value: sideways")
+    #expect(
+      response.message
+        == "invalid window space value: sideways; expected a zero-based Space index, next, or prev"
+    )
   }
 
   @Test("dispatch: resolves window selectors before attempting a Space move")
@@ -178,7 +188,10 @@ struct WindowCommandHandlerTests {
 
     #expect(response.ok == false)
     #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "invalid window grid value: 1:3:0:0:2:x")
+    #expect(
+      response.message
+        == "invalid window grid value: 1:3:0:0:2:x; expected columns:rows:x:y:width:height, such as 2:1:0:0:1:1"
+    )
   }
 
   @Test("dispatch: rejects grid with invalid window selector")
@@ -209,7 +222,11 @@ struct WindowCommandHandlerTests {
     )
 
     #expect(layout.ok == false && layout.message == "invalid window layout: stack")
-    #expect(ratio.ok == false && ratio.message == "invalid window split-ratio value: middle")
+    #expect(
+      ratio.ok == false
+        && ratio.message
+          == "invalid window split-ratio value: middle; expected abs:<ratio> or rel:<ratio>, such as rel:0.05"
+    )
     #expect(
       directionalSwap.ok == false
         && directionalSwap.message == "invalid window swap direction: sideways"

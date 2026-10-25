@@ -2,6 +2,11 @@ import Foundation
 
 /// Window filters and optional management and placement actions.
 struct WindowRule: Encodable {
+  /// Keys accepted by rule registration.
+  static let keys = [
+    "label", "app", "app!", "title", "title!", "bundle-id", "manage", "grid", "display",
+  ]
+
   /// Parse and validate a registration before changing runtime state.
   static func parse(arguments: [String]) throws -> WindowRule {
     var values = [String: String]()
@@ -11,11 +16,12 @@ struct WindowRule: Encodable {
       }
       let key = String(argument[..<separator])
       let value = String(argument[argument.index(after: separator)...])
-      guard
-        ["label", "app", "app!", "title", "title!", "bundle-id", "manage", "grid", "display"]
-          .contains(key),
-        !value.isEmpty
-      else { throw IPCCommandError.invalidRequest("invalid rule argument: \(argument)") }
+      guard keys.contains(key), !value.isEmpty else {
+        throw IPCCommandError.invalidRequest(
+          "invalid rule argument: \(argument); expected key=value with one of "
+            + keys.joined(separator: ", ")
+        )
+      }
       let base = key.hasSuffix("!") ? String(key.dropLast()) : key
       guard values[base] == nil, values[base + "!"] == nil else {
         throw IPCCommandError.invalidRequest("duplicate rule argument: \(base)")

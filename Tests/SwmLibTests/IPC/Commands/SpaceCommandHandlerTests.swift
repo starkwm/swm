@@ -203,6 +203,32 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test(
+    "dispatch: names the accepted form of malformed values",
+    arguments: [
+      ("--gap", "6", "space gap", "abs:<points> or rel:<points>, such as rel:4"),
+      (
+        "--padding", "abs:1:2:3", "space padding",
+        "abs|rel:<top>:<bottom>:<left>:<right>, such as abs:8:8:8:8"
+      ),
+      (
+        "--master-ratio", "0.6", "space master-ratio",
+        "abs:<ratio> or rel:<ratio>, such as rel:0.05"
+      ),
+    ]
+  )
+  func dispatchNamesTheAcceptedFormOfMalformedValues(
+    command: String,
+    value: String,
+    context: String,
+    form: String
+  ) async {
+    let response = await handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
+      request(command: command, args: [value])
+    )
+    #expect(response.message == "invalid \(context) value: \(value); expected \(form)")
+  }
+
+  @Test(
     "dispatch: rejects unsupported Space commands",
     arguments: [
       ("--unknown", [String]()), ("--toggle", ["tiling"]), ("--focus", ["recent"]),

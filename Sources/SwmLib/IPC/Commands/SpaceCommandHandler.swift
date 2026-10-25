@@ -61,7 +61,11 @@ struct SpaceCommandHandler {
   private func masterRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space master-ratio").requiredValue()
     guard let change = CommandValueParser.ratioChange(from: argument) else {
-      throw IPCCommandError.invalidRequest("invalid space master-ratio value: \(argument)")
+      throw IPCCommandError.invalidValue(
+        "space master-ratio",
+        argument,
+        expected: CommandValueParser.ratioChangeForm
+      )
     }
 
     guard tiling.changeMasterRatio(change, for: spaceID) else {
@@ -128,7 +132,11 @@ struct SpaceCommandHandler {
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space padding").requiredValue()
     guard let change = parsePaddingChange(argument) else {
-      throw IPCCommandError.invalidRequest("invalid space padding value: \(argument)")
+      throw IPCCommandError.invalidValue(
+        "space padding",
+        argument,
+        expected: "abs|rel:<top>:<bottom>:<left>:<right>, such as abs:8:8:8:8"
+      )
     }
 
     switch change.mode {
@@ -147,7 +155,11 @@ struct SpaceCommandHandler {
   private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space gap").requiredValue()
     guard let change = parseGapChange(argument) else {
-      throw IPCCommandError.invalidRequest("invalid space gap value: \(argument)")
+      throw IPCCommandError.invalidValue(
+        "space gap",
+        argument,
+        expected: "abs:<points> or rel:<points>, such as rel:4"
+      )
     }
 
     switch change.mode {

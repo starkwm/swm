@@ -37,13 +37,18 @@ struct SignalTests {
 
   @Test("parseAdd: rejects unsupported events and arguments")
   func parseAddRejectsUnsupportedEventsAndArguments() {
-    expectInvalid(
-      arguments: ["event=dock-did-restart", "action=echo"],
-      message: "unsupported signal event: dock-did-restart"
+    let error = #expect(throws: IPCCommandError.self) {
+      try Signal.parseAdd(arguments: ["event=dock-did-restart", "action=echo"])
+    }
+    #expect(
+      error?.message.hasPrefix("unsupported signal event: dock-did-restart; expected one of ")
+        == true
     )
+    #expect(error?.message.contains("window-focused") == true)
     expectInvalid(
       arguments: ["event=window-focused", "action=echo", "foo=bar"],
-      message: "unsupported signal argument: foo"
+      message:
+        "unsupported signal argument: foo; expected event, action, label, app, title, or active"
     )
   }
 

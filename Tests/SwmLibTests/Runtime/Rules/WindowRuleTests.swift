@@ -19,6 +19,18 @@ struct WindowRuleTests {
     #expect(throws: IPCCommandError.self) { try WindowRule.parse(arguments: arguments) }
   }
 
+  @Test("parse: lists accepted keys for an unknown key")
+  func parseListsAcceptedKeysForAnUnknownKey() {
+    let error = #expect(throws: IPCCommandError.self) {
+      try WindowRule.parse(arguments: ["manage=off", "application=Finder"])
+    }
+    #expect(
+      error?.message
+        == "invalid rule argument: application=Finder; expected key=value with one of label, app,"
+        + " app!, title, title!, bundle-id, manage, grid, display"
+    )
+  }
+
   @Test(
     "parse: rejects invalid placement arguments",
     arguments: [
