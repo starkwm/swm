@@ -26,11 +26,7 @@ struct WindowRulePlacementApplier {
         settings: spaces.settings(for: destination.spaceID)
       )
     else { return .failed }
-    var result = window.setFrame(targetFrame, from: frame)
-    if result == .success, let applied = window.frame(), !applied.matches(targetFrame, tolerance: 1)
-    {
-      result = window.setFrame(targetFrame, from: applied)
-    }
+    let result = window.setFrame(targetFrame, from: frame)
     guard result == .success else {
       log("rule placement failed for window \(windowID): \(result)", level: .warn)
       return .failed
