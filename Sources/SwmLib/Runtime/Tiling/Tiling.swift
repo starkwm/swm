@@ -23,10 +23,15 @@ public final class Tiling {
   private let rulePlacement: RulePlacementHandler
   private var appliedRulePlacements = [CGWindowID: WindowRulePlacement]()
   private var currentTopology: SpaceTopology?
-  private var defaultSelection = LayoutSelection.float
-  private var defaultMasterRatio: CGFloat = 0.5
-  private var defaultMasterPlacement = MasterPlacement.left
-  private var defaultPreserveSplitDirections = false
+  private var defaultState = TilingLayoutState(
+    selection: .float,
+    masterRatio: 0.5,
+    masterPlacement: .left,
+    preserveSplitDirections: false,
+    tree: nil,
+    omittedWindowIDs: [],
+    focusedWindowID: nil
+  )
   private var manualFloatingByWindowID = [CGWindowID: Bool]()
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
@@ -342,13 +347,12 @@ public final class Tiling {
   /// Select floating or an automatic layout for a known normal Space.
   @discardableResult
   func setLayout(_ selection: LayoutSelection, for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return false }
-
-    for layoutID in layoutIDs {
-      frameReconciler?.cancelAnimations(for: layoutsByID[layoutID]?.tree?.windowIDs ?? [])
-      layoutsByID[layoutID]?.selection = selection
+    let updated = updateLayouts(for: spaceID, reflowing: nil) { state in
+      frameReconciler?.cancelAnimations(for: state.tree?.windowIDs ?? [])
+      state.selection = selection
     }
+    guard updated else { return false }
+
     updateMembershipPolling()
     if selection != .float {
       reflow(spaceID: spaceID)
@@ -359,13 +363,7 @@ public final class Tiling {
   /// Select floating or an automatic layout for all current and future Spaces.
   func setLayoutForSpaces(_ selection: LayoutSelection) {
     frameReconciler?.cancelAnimations()
-    defaultSelection = selection
-
-    layoutsByID = layoutsByID.mapValues { currentState in
-      var state = currentState
-      state.selection = selection
-      return state
-    }
+    updateAllLayouts(reflowing: nil) { $0.selection = selection }
     updateMembershipPolling()
     if selection != .float {
       reflowVisibleSpaces()
@@ -375,40 +373,21 @@ public final class Tiling {
   /// Set or adjust the master ratio for one Space.
   @discardableResult
   func changeMasterRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return false }
-
-    let ratio = change.applying(to: layoutsByID[layoutIDs[0]]?.masterRatio ?? defaultMasterRatio)
-    for layoutID in layoutIDs {
-      layoutsByID[layoutID]?.masterRatio = ratio
-    }
-    applyPlans(for: layoutIDs, matching: .master)
-    return true
+    guard let state = firstLayoutState(for: spaceID) else { return false }
+    let ratio = change.applying(to: state.masterRatio)
+    return updateLayouts(for: spaceID, reflowing: .master) { $0.masterRatio = ratio }
   }
 
   /// Set the default master ratio for all current and future Spaces.
   func setMasterRatioForAllSpaces(_ ratio: CGFloat) {
-    let ratio = LayoutRatioChange.absolute(ratio).applying(to: defaultMasterRatio)
-    defaultMasterRatio = ratio
-    layoutsByID = layoutsByID.mapValues { currentState in
-      var state = currentState
-      state.masterRatio = ratio
-      return state
-    }
-    reflowVisibleLayouts(matching: .master)
+    let ratio = LayoutRatioChange.absolute(ratio).applying(to: defaultState.masterRatio)
+    updateAllLayouts(reflowing: .master) { $0.masterRatio = ratio }
   }
 
   /// Set the master placement for one Space.
   @discardableResult
   func setMasterPlacement(_ placement: MasterPlacement, for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return false }
-
-    for layoutID in layoutIDs {
-      layoutsByID[layoutID]?.masterPlacement = placement
-    }
-    applyPlans(for: layoutIDs, matching: .master)
-    return true
+    updateLayouts(for: spaceID, reflowing: .master) { $0.masterPlacement = placement }
   }
 
   /// Cycle the master placement for one Space.
@@ -417,59 +396,28 @@ public final class Tiling {
     _ direction: CycleDirection,
     for spaceID: UInt64
   ) -> MasterPlacement? {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return nil }
-
-    let placement =
-      (layoutsByID[layoutIDs[0]]?.masterPlacement ?? defaultMasterPlacement).cycled(in: direction)
-    for layoutID in layoutIDs {
-      layoutsByID[layoutID]?.masterPlacement = placement
-    }
-    applyPlans(for: layoutIDs, matching: .master)
+    guard let state = firstLayoutState(for: spaceID) else { return nil }
+    let placement = state.masterPlacement.cycled(in: direction)
+    updateLayouts(for: spaceID, reflowing: .master) { $0.masterPlacement = placement }
     return placement
   }
 
-  /// Set the default master placement for all current and future Spaces.
+  /// Set the master placement for all current and future Spaces.
   func setMasterPlacementForAllSpaces(_ placement: MasterPlacement) {
-    defaultMasterPlacement = placement
-    layoutsByID = layoutsByID.mapValues { currentState in
-      var state = currentState
-      state.masterPlacement = placement
-      return state
-    }
-    reflowVisibleLayouts(matching: .master)
+    updateAllLayouts(reflowing: .master) { $0.masterPlacement = placement }
   }
 
   /// Enable or disable retained dwindle split directions for one Space.
   @discardableResult
   func setSplitDirectionPreservation(_ enabled: Bool, for spaceID: UInt64) -> Bool {
-    let layoutIDs = layoutIDs(for: spaceID)
-    guard !layoutIDs.isEmpty else { return false }
-
-    for layoutID in layoutIDs {
-      guard var state = layoutsByID[layoutID] else { continue }
-      state.preserveSplitDirections = enabled
-      if !enabled {
-        state.tree = state.tree?.clearingSplitDirections()
-      }
-      layoutsByID[layoutID] = state
+    updateLayouts(for: spaceID, reflowing: .dwindle) {
+      $0.setPreserveSplitDirections(enabled)
     }
-    applyPlans(for: layoutIDs, matching: .dwindle)
-    return true
   }
 
   /// Set retained dwindle split directions for all current and future Spaces.
   func setSplitDirectionPreservationForAllSpaces(_ enabled: Bool) {
-    defaultPreserveSplitDirections = enabled
-    layoutsByID = layoutsByID.mapValues { currentState in
-      var state = currentState
-      state.preserveSplitDirections = enabled
-      if !enabled {
-        state.tree = state.tree?.clearingSplitDirections()
-      }
-      return state
-    }
-    reflowVisibleLayouts(matching: .dwindle)
+    updateAllLayouts(reflowing: .dwindle) { $0.setPreserveSplitDirections(enabled) }
   }
 
   /// Swap a window with its closest neighbour in a direction.
@@ -761,7 +709,7 @@ public final class Tiling {
       } else {
         destinationLayoutID = layoutID
       }
-      let selection = layoutsByID[destinationLayoutID]?.selection ?? defaultSelection
+      let selection = layoutsByID[destinationLayoutID]?.selection ?? defaultState.selection
       if !window.isResizable
         || (selection != .float && !floatingOverrideWindowIDs.contains(window.id))
       {
@@ -817,7 +765,8 @@ public final class Tiling {
   /// Poll membership while automatic tiling is active because Mission Control emits no event.
   private func updateMembershipPolling() {
     guard
-      defaultSelection != .float || layoutsByID.values.contains(where: { $0.selection != .float })
+      defaultState.selection != .float
+        || layoutsByID.values.contains(where: { $0.selection != .float })
     else {
       membershipPollingTask?.cancel()
       membershipPollingTask = nil
@@ -871,22 +820,57 @@ public final class Tiling {
     for layoutID: TilingLayoutID,
     previousLayoutsByID: [TilingLayoutID: TilingLayoutState]
   ) -> TilingLayoutState {
-    let inheritedState =
+    var state =
       previousLayoutsByID
       .filter { $0.key.spaceID == layoutID.spaceID }
       .min { $0.key.displayID < $1.key.displayID }?
-      .value
+      .value ?? defaultState
+    state.tree = nil
+    state.omittedWindowIDs = []
+    state.focusedWindowID = nil
+    return state
+  }
 
-    return TilingLayoutState(
-      selection: inheritedState?.selection ?? defaultSelection,
-      masterRatio: inheritedState?.masterRatio ?? defaultMasterRatio,
-      masterPlacement: inheritedState?.masterPlacement ?? defaultMasterPlacement,
-      preserveSplitDirections: inheritedState?.preserveSplitDirections
-        ?? defaultPreserveSplitDirections,
-      tree: nil,
-      omittedWindowIDs: [],
-      focusedWindowID: nil
-    )
+  /// Update every layout on a Space, then reflow it when it uses the selected kind.
+  @discardableResult
+  private func updateLayouts(
+    for spaceID: UInt64,
+    reflowing selection: LayoutSelection?,
+    _ update: (inout TilingLayoutState) -> Void
+  ) -> Bool {
+    let layoutIDs = layoutIDs(for: spaceID)
+    guard !layoutIDs.isEmpty else { return false }
+
+    for layoutID in layoutIDs {
+      guard var state = layoutsByID[layoutID] else { continue }
+      update(&state)
+      layoutsByID[layoutID] = state
+    }
+    if let selection {
+      applyPlans(for: layoutIDs, matching: selection)
+    }
+    return true
+  }
+
+  /// Update the defaults and every layout, then reflow visible layouts using the selected kind.
+  private func updateAllLayouts(
+    reflowing selection: LayoutSelection?,
+    _ update: (inout TilingLayoutState) -> Void
+  ) {
+    update(&defaultState)
+    layoutsByID = layoutsByID.mapValues { currentState in
+      var state = currentState
+      update(&state)
+      return state
+    }
+    if let selection {
+      reflowVisibleLayouts(matching: selection)
+    }
+  }
+
+  /// Return the first stable layout's state for a Space.
+  private func firstLayoutState(for spaceID: UInt64) -> TilingLayoutState? {
+    layoutIDs(for: spaceID).first.flatMap { layoutsByID[$0] }
   }
 
   /// Return stable layout IDs for a Space.
