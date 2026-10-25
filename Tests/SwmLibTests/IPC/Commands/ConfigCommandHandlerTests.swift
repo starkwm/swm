@@ -174,6 +174,8 @@ struct ConfigCommandHandlerTests {
       ("layout", ["master", "dwindle"], "invalid config layout arguments"),
       ("layout", ["columns"], "invalid config layout: columns"),
       ("master-ratio", ["wide"], "invalid config master-ratio value: wide"),
+      ("master-ratio", ["5"], "master-ratio must be between 0.1 and 0.9"),
+      ("master-ratio", ["0.05"], "master-ratio must be between 0.1 and 0.9"),
       ("master-placement", ["center"], "invalid config master-placement: center"),
       ("preserve-split", ["maybe"], "invalid config preserve-split value: maybe"),
       ("focus-follows-mouse", ["maybe"], "invalid config focus-follows-mouse value: maybe"),
