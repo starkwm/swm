@@ -22,4 +22,12 @@ struct TilingLayoutState {
 
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
+
+  /// Retain dwindle split directions, or clear those already retained.
+  mutating func setPreserveSplitDirections(_ enabled: Bool) {
+    preserveSplitDirections = enabled
+    if !enabled {
+      tree = tree?.clearingSplitDirections()
+    }
+  }
 }
