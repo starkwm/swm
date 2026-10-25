@@ -42,12 +42,7 @@ struct WindowCommand: ParsableCommand {
     )
     static let command = "--warp"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Option(
       name: .shortAndLong,
@@ -55,10 +50,10 @@ struct WindowCommand: ParsableCommand {
     )
     var direction: CardinalDirectionName?
 
-    var arguments: [String] { [window, direction?.rawValue].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [direction?.rawValue].compactMap { $0 } }
 
     func validate() throws {
-      if window != nil, direction != nil {
+      if selector.window != nil, direction != nil {
         throw ValidationError("Specify either --window or --direction, not both.")
       }
     }
@@ -68,91 +63,61 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Minimize a window.")
     static let command = "--minimize"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
 
   struct Unminimize: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Restore a minimized window.")
     static let command = "--unminimize"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
 
   struct Move: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Move a window.")
     static let command = "--move"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "Position in the form abs|rel:<x>:<y>.")
     var position: String
 
-    var arguments: [String] { [window, position].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [position] }
   }
 
   struct Resize: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Resize a window.")
     static let command = "--resize"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "Size in the form abs|rel:<width>:<height>.")
     var size: String
 
-    var arguments: [String] { [window, size].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [size] }
   }
 
   struct Grid: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Place a window on a grid.")
     static let command = "--grid"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "Grid in the form columns:rows:x:y:width:height.")
     var grid: String
 
-    var arguments: [String] { [window, grid].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [grid] }
   }
 
   struct Display: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Move a window to another display.")
     static let command = "--display"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(
       help: "One-based display index, next, or prev.",
@@ -160,41 +125,31 @@ struct WindowCommand: ParsableCommand {
     )
     var display: String
 
-    var arguments: [String] { [window, display].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [display] }
   }
 
   struct Space: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Move a window to another Space.")
     static let command = "--space"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "Zero-based Space index, next, or prev.", completion: .list(["next", "prev"]))
     var space: String
 
-    var arguments: [String] { [window, space].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [space] }
   }
 
   struct Layout: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Change a window tiling state.")
     static let command = "--layout"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "New tiling state.")
     var layout: WindowLayoutName
 
-    var arguments: [String] { [window, layout.rawValue].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [layout.rawValue] }
   }
 
   struct Cycle: WindowIPCCommand {
@@ -211,17 +166,12 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Swap a window in a direction.")
     static let command = "--swap"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
     var direction: CardinalDirectionName
 
-    var arguments: [String] { [window, direction.rawValue].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [direction.rawValue] }
   }
 
   struct SwapCycle: WindowIPCCommand {
@@ -238,74 +188,62 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Promote a window to master.")
     static let command = "--swap-with-master"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
 
   struct FocusMaster: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Focus the master window.")
     static let command = "--focus-master"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
 
   struct SplitRatio: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Change a dwindle split ratio.")
     static let command = "--split-ratio"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
     @Argument(help: "Change in the form abs:<ratio> or rel:<ratio>.")
     var change: String
 
-    var arguments: [String] { [window, change].compactMap { $0 } }
+    var arguments: [String] { selector.arguments + [change] }
   }
 
   struct ToggleSplit: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Toggle a dwindle split direction.")
     static let command = "--toggle-split"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
 
   struct SwapSplit: WindowIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Exchange dwindle split subtrees.")
     static let command = "--swap-split"
 
-    @Option(
-      name: .shortAndLong,
-      help: "Window ID or recent; defaults to focused.",
-      completion: .list(["recent"])
-    )
-    var window: String?
+    @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { window.map { [$0] } ?? [] }
+    var arguments: [String] { selector.arguments }
   }
+}
+
+/// Optional window selector for commands that default to the focused window.
+struct WindowSelector: ParsableArguments {
+  @Option(
+    name: .shortAndLong,
+    help: "Window ID or recent; defaults to focused.",
+    completion: .list(["recent"])
+  )
+  var window: String?
+
+  /// IPC arguments selecting the window, or none for the focused window.
+  var arguments: [String] { window.map { [$0] } ?? [] }
 }
 
 enum WindowLayoutName: String, CaseIterable, ExpressibleByArgument {

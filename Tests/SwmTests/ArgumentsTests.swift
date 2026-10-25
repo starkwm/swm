@@ -117,7 +117,7 @@ struct ArgumentsTests {
     )
 
     #expect(command.arguments == [direction])
-    #expect(command.window == nil)
+    #expect(command.selector.window == nil)
   }
 
   @Test("parseAsRoot: rejects conflicting warp targets and invalid directions")
