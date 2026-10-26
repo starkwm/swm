@@ -64,7 +64,7 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("animation-duration must be between 0 and 1 seconds")
     }
     tiling.setAnimationDuration(duration)
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Select how pointer movement focuses managed windows.
@@ -93,7 +93,7 @@ struct ConfigCommandHandler {
       throw IPCCommandError.invalidRequest("master-ratio must be between 0.1 and 0.9")
     }
     tiling.setMasterRatioForAllSpaces(ratio)
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set the master pane edge for every current and future Space.
@@ -146,7 +146,7 @@ struct ConfigCommandHandler {
     }
     tiling.reflowVisibleSpaces()
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set padding sides for every known space.
@@ -170,6 +170,6 @@ struct ConfigCommandHandler {
     }
     tiling.reflowVisibleSpaces()
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 }

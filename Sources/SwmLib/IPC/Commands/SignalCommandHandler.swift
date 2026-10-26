@@ -21,7 +21,7 @@ struct SignalCommandHandler {
     let signal = try Signal.parseAdd(arguments: request.args)
     try Signals.shared.add(signal)
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Remove an existing signal by one-based index or label.
@@ -29,7 +29,7 @@ struct SignalCommandHandler {
     let selector = try IPCArguments(request.args, context: "signal remove").requiredValue()
     try Signals.shared.remove(selector: selector)
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Return registered signals as sorted-key JSON.

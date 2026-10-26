@@ -22,7 +22,7 @@ struct RuleCommandHandler {
       default:
         throw IPCCommandError.unsupportedCommand("unsupported rule command: \(request.command)")
       }
-      return .success(id: request.id, message: "ok")
+      return .acknowledged(id: request.id)
     }
   }
 }

@@ -29,8 +29,9 @@ extension IPCCommand {
   ) throws {
     let result = send(Self.domain, commandArguments)
 
-    let stream = result.ok ? output : errors
-    fputs("\(result.outputMessage)\n", stream)
+    if !result.outputMessage.isEmpty {
+      fputs("\(result.outputMessage)\n", result.ok ? output : errors)
+    }
 
     if !result.ok {
       throw ExitCode.failure

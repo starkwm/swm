@@ -19,7 +19,7 @@ struct ClientTests {
       return (result.ok, result.outputMessage)
     }
     #expect(!output.0)
-    #expect(output.1 == "error: IPC response did not match its request")
+    #expect(output.1 == "Error: IPC response did not match its request")
   }
 
   @Test("send: reports a missing daemon at the socket boundary")
@@ -33,7 +33,7 @@ struct ClientTests {
       return (result.ok, result.outputMessage)
     }
     #expect(!output.0)
-    #expect(output.1 == "error: daemon is not running")
+    #expect(output.1 == "Error: daemon is not running")
   }
 
   @Test("send: reports a connection closed during dispatch")
@@ -55,6 +55,6 @@ struct ClientTests {
       return (result.ok, result.outputMessage)
     }
     #expect(!output.0)
-    #expect(output.1 == "error: Connection closed or timed out.")
+    #expect(output.1 == "Error: Connection closed or timed out.")
   }
 }

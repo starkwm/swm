@@ -12,7 +12,8 @@ struct IPCCommandTests {
     "run: formats daemon responses, routes output, and preserves failure exit status",
     arguments: [
       (true, #"{"id":1}"#, #"{"id":1}"#),
-      (false, "window not found", "error: window not found"),
+      (true, "", ""),
+      (false, "window not found", "Error: window not found"),
       (false, "error: window not found", "error: window not found"),
     ]
   )
@@ -45,8 +46,9 @@ struct IPCCommandTests {
         try command.run(send: send, output: output, errors: errors)
       }
     }
-    #expect(read(output) == (ok ? expected + "\n" : ""))
-    #expect(read(errors) == (ok ? "" : expected + "\n"))
+    let printed = expected.isEmpty ? "" : expected + "\n"
+    #expect(read(output) == (ok ? printed : ""))
+    #expect(read(errors) == (ok ? "" : printed))
   }
 
   private func read(_ stream: UnsafeMutablePointer<FILE>) -> String {

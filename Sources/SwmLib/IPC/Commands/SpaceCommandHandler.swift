@@ -30,7 +30,7 @@ struct SpaceCommandHandler {
           throw IPCCommandError.invalidRequest("invalid space index: \(argument)")
         }
         try await activateSpace(index)
-        return .success(id: request.id, message: "ok")
+        return .acknowledged(id: request.id)
       }
 
       let operation: (IPCRequest, UInt64) throws -> IPCResponse
@@ -71,7 +71,7 @@ struct SpaceCommandHandler {
     guard tiling.changeMasterRatio(change, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set or cycle the master pane edge for the selected Space.
@@ -151,7 +151,7 @@ struct SpaceCommandHandler {
     spaces.setPadding(padding, for: spaceID)
     tiling.reflow(spaceID: spaceID)
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set or adjust the window gap for the selected space.
@@ -174,7 +174,7 @@ struct SpaceCommandHandler {
 
     tiling.reflow(spaceID: spaceID)
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Return the currently active space ID.
