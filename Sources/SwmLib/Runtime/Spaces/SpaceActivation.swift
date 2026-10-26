@@ -25,6 +25,8 @@ final class SpaceActivation {
     self.wait = wait
   }
 
+  /// Activate the Space at a one-based index from `swm query spaces`.
+  ///
   /// A timeout or cancellation after submission does not imply that nothing changed.
   func activate(index: Int) async throws -> SpaceSnapshot {
     try Task.checkCancellation()
@@ -35,10 +37,10 @@ final class SpaceActivation {
       )
     }
     let spaceIDs = before.allSpaceIDs
-    guard spaceIDs.indices.contains(index) else {
+    guard index > 0, spaceIDs.indices.contains(index - 1) else {
       throw IPCCommandError.invalidRequest("space index out of range: \(index)")
     }
-    let targetID = spaceIDs[index]
+    let targetID = spaceIDs[index - 1]
     guard let display = before.displays.first(where: { $0.spaces.contains { $0.id == targetID } }),
       display.spaces.allSatisfy({ $0.type == .desktop })
     else {

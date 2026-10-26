@@ -367,7 +367,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidValue(
         "window space",
         selection.value,
-        expected: "a zero-based Space index, next, or prev"
+        expected: "a one-based Space index, next, or prev"
       )
     }
 

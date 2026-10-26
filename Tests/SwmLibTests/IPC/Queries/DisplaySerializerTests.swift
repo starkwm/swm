@@ -20,7 +20,7 @@ struct DisplaySerializerTests {
     let displays = DisplaySerializer.all(snapshot: snapshot)
 
     #expect(displays.map(\.index) == [1, 2])
-    #expect(displays.allSatisfy { $0.spaces == [0, 1, 2, 3, 4] })
+    #expect(displays.allSatisfy { $0.spaces == [1, 2, 3, 4, 5] })
     #expect(displays.allSatisfy { $0.hasFocus })
   }
 
@@ -46,7 +46,7 @@ struct DisplaySerializerTests {
     let resolvedDisplays = DisplaySerializer.all(snapshot: snapshot)
 
     #expect(resolvedDisplays.map(\.index) == [1, 2])
-    #expect(resolvedDisplays.allSatisfy { $0.spaces == [0] })
+    #expect(resolvedDisplays.allSatisfy { $0.spaces == [1] })
     #expect(resolvedDisplays.allSatisfy { $0.hasFocus })
   }
 

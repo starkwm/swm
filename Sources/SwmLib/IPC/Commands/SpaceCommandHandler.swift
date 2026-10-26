@@ -26,7 +26,7 @@ struct SpaceCommandHandler {
     await IPCCommandError.catching(id: request.id) {
       if request.command == "--activate" {
         let argument = try IPCArguments(request.args, context: "space activate").requiredValue()
-        guard let index = Int(argument), index >= 0 else {
+        guard let index = Int(argument), index > 0 else {
           throw IPCCommandError.invalidRequest("invalid space index: \(argument)")
         }
         try await activateSpace(index)
@@ -183,18 +183,18 @@ struct SpaceCommandHandler {
     return id
   }
 
-  /// Resolve an optional zero-based space selector and remove it from command arguments.
+  /// Resolve an optional one-based space selector and remove it from command arguments.
   private func targetedRequest(_ request: IPCRequest) throws -> (IPCRequest, UInt64) {
     guard request.args.first == "--space" else {
       return (request, try currentSpaceID())
     }
 
-    guard request.args.count >= 2, let index = Int(request.args[1]), index >= 0 else {
+    guard request.args.count >= 2, let index = Int(request.args[1]), index > 0 else {
       throw IPCCommandError.invalidRequest("invalid space index")
     }
 
     let spaceIDs = spaceIDProvider()
-    guard spaceIDs.indices.contains(index) else {
+    guard spaceIDs.indices.contains(index - 1) else {
       throw IPCCommandError.invalidRequest("space index out of range: \(index)")
     }
 
@@ -206,7 +206,7 @@ struct SpaceCommandHandler {
         command: request.command,
         args: Array(request.args.dropFirst(2))
       ),
-      spaceIDs[index]
+      spaceIDs[index - 1]
     )
   }
 

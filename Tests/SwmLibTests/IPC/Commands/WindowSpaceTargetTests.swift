@@ -4,10 +4,10 @@ import Testing
 
 @Suite("WindowSpaceTarget")
 struct WindowSpaceTargetTests {
-  @Test("init: accepts zero-based indexes and desktop cycling")
-  func initAcceptsZeroBasedIndexesAndDesktopCycling() {
-    #expect(WindowSpaceTarget(argument: "0") == .index(0))
-    #expect(WindowSpaceTarget(argument: "2") == .index(2))
+  @Test("init: accepts one-based indexes and desktop cycling")
+  func initAcceptsOneBasedIndexesAndDesktopCycling() {
+    #expect(WindowSpaceTarget(argument: "1") == .index(1))
+    #expect(WindowSpaceTarget(argument: "3") == .index(3))
 
     #expect(WindowSpaceTarget(argument: "next") == .next)
     #expect(WindowSpaceTarget(argument: "prev") == .previous)
@@ -16,7 +16,7 @@ struct WindowSpaceTargetTests {
 
   @Test(
     "init: rejects invalid indexes",
-    arguments: ["", "-1", "1.5", "sideways", "999999999999999999999"]
+    arguments: ["", "0", "-1", "1.5", "sideways", "999999999999999999999"]
   )
   func initRejectsInvalidIndexes(argument: String) {
     #expect(WindowSpaceTarget(argument: argument) == nil)
@@ -24,11 +24,11 @@ struct WindowSpaceTargetTests {
 
   @Test("space: numeric indexes include fullscreen Spaces in query order")
   func spaceNumericIndexesIncludeFullscreenSpacesInQueryOrder() {
-    #expect(WindowSpaceTarget.index(0).space(from: 11, spaces: spaces)?.id == 11)
-    #expect(WindowSpaceTarget.index(1).space(from: 11, spaces: spaces)?.id == 22)
+    #expect(WindowSpaceTarget.index(1).space(from: 11, spaces: spaces)?.id == 11)
+    #expect(WindowSpaceTarget.index(2).space(from: 11, spaces: spaces)?.id == 22)
 
-    #expect(WindowSpaceTarget.index(3).space(from: 11, spaces: spaces) == nil)
-    #expect(WindowSpaceTarget.index(-1).space(from: 11, spaces: spaces) == nil)
+    #expect(WindowSpaceTarget.index(4).space(from: 11, spaces: spaces) == nil)
+    #expect(WindowSpaceTarget.index(0).space(from: 11, spaces: spaces) == nil)
   }
 
   @Test("space: cycling skips fullscreen Spaces and wraps")

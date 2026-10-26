@@ -150,7 +150,7 @@ struct WindowCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
     #expect(
       response.message
-        == "invalid window space value: sideways; expected a zero-based Space index, next, or prev"
+        == "invalid window space value: sideways; expected a one-based Space index, next, or prev"
     )
   }
 
@@ -159,7 +159,7 @@ struct WindowCommandHandlerTests {
     let handler = handler()
 
     let invalid = await handler.dispatch(request(command: "--space", args: ["nope", "next"]))
-    let missing = await handler.dispatch(request(command: "--space", args: ["42", "0"]))
+    let missing = await handler.dispatch(request(command: "--space", args: ["42", "1"]))
 
     #expect(invalid.message == "invalid window selector: nope")
     #expect(missing.message == "window not found: 42")

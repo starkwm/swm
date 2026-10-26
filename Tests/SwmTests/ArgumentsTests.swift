@@ -236,8 +236,8 @@ struct ArgumentsTests {
     #expect(command.arguments == ["--space", "2", "abs:10"])
   }
 
-  @Test("parseAsRoot: translates zero based Space activation indexes")
-  func parseAsRootTranslatesZeroBasedSpaceActivationIndexes() throws {
+  @Test("parseAsRoot: translates one based Space activation indexes")
+  func parseAsRootTranslatesOneBasedSpaceActivationIndexes() throws {
     let command = try #require(
       Arguments.parseAsRoot(["space", "activate", "2"]) as? SpaceCommand.Activate
     )
@@ -248,7 +248,7 @@ struct ArgumentsTests {
 
   @Test("parseAsRoot: rejects missing and invalid Space activation indexes")
   func parseAsRootRejectsMissingAndInvalidSpaceActivationIndexes() {
-    for args in [[], ["-1"], ["next"], ["0", "1"]] {
+    for args in [[], ["0"], ["-1"], ["next"], ["1", "2"]] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(["space", "activate"] + args)
       }

@@ -74,9 +74,7 @@ struct IPCRequestTests {
       (["--windows", "--display", "--space"], "only one query selector is allowed"),
       (["--windows", "--display", "1", "2"], "query selector accepts at most one value"),
       (["--windows", "--display", "0"], "query display selector value must be a positive integer"),
-      (
-        ["--windows", "--space", "-1"], "query space selector value must be a non-negative integer"
-      ),
+      (["--windows", "--space", "0"], "query space selector value must be a positive integer"),
       (["--windows", "--window", "abc"], "query window selector value must be a window id"),
     ]
   )

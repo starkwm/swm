@@ -53,4 +53,6 @@ Actions run asynchronously through `/usr/bin/env sh -c`. Depending on the event,
 - `SWM_RECENT_DISPLAY_ID`
 - `SWM_EVENT_DISPLAY_ID`
 
+`SWM_SPACE_INDEX` and `SWM_RECENT_SPACE_INDEX` are one-based and match `swm query spaces`.
+
 Signal registrations exist only for the current daemon run, so put persistent registrations in [`swmrc`](configuration.md#configuration-file).

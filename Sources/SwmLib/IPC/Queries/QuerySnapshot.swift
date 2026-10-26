@@ -42,7 +42,7 @@ final class QuerySnapshot {
   )
 
   lazy var spaceIndexByID = Dictionary(
-    uniqueKeysWithValues: spaces.enumerated().map { ($0.element.id, $0.offset) }
+    uniqueKeysWithValues: spaces.enumerated().map { ($0.element.id, $0.offset + 1) }
   )
 
   lazy var windowInfoByID: [CGWindowID: [String: Any]] = {

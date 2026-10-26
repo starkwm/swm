@@ -45,7 +45,7 @@ struct SpaceSerializerTests {
     snapshot.activeSpaceID = 43
     snapshot.currentSpaceByScreenID = ["": 42]
     let spaces = SpaceSerializer.all(snapshot: snapshot)
-    #expect(spaces.map(\.index) == [0, 1])
+    #expect(spaces.map(\.index) == [1, 2])
     #expect(spaces.map(\.windows) == [[1, 2], []])
     #expect(spaces.map(\.isVisible) == [true, false])
     #expect(spaces.map(\.hasFocus) == [false, true])

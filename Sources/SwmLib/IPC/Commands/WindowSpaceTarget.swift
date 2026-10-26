@@ -9,19 +9,19 @@ enum WindowSpaceTarget: Equatable {
     case "next": self = .next
     case "prev", "previous": self = .previous
     default:
-      guard let index = Int(argument), index >= 0 else { return nil }
+      guard let index = Int(argument), index > 0 else { return nil }
 
       self = .index(index)
     }
   }
 
-  /// Cycle through normal desktops, preserving global query indexes for numeric targets.
+  /// Cycle through normal desktops, or select a one-based query index for numeric targets.
   func space(from sourceID: UInt64, spaces: [Space]) -> Space? {
     switch self {
     case .index(let index):
-      guard spaces.indices.contains(index) else { return nil }
+      guard index > 0, spaces.indices.contains(index - 1) else { return nil }
 
-      return spaces[index]
+      return spaces[index - 1]
 
     case .next, .previous:
       let desktops = spaces.filter { $0.type == .normal }

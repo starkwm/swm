@@ -20,7 +20,7 @@ struct DisplaySerializer: Encodable, Equatable {
     )
     let indexedSpaces = snapshot.spaces
       .enumerated()
-      .map { (index: $0.offset, id: $0.element.id) }
+      .map { (index: $0.offset + 1, id: $0.element.id) }
 
     return snapshot.arrangedScreens.enumerated().map { index, screen in
       // Without separate Spaces, every screen belongs to WindowServer's Main group.
@@ -50,7 +50,7 @@ struct DisplaySerializer: Encodable, Equatable {
   /// Display frame in global screen coordinates.
   let frame: FrameSerializer
 
-  /// Zero-based indexes of spaces on this display.
+  /// One-based indexes of Spaces on this display.
   let spaces: [Int]
 
   /// Whether this display owns the active space.

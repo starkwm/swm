@@ -55,7 +55,7 @@ Display indexes are one-based. `next` and `prev` wrap around the arranged displa
 swm window space [--window <window|recent>] <space-index|next|prev>
 ```
 
-Space indexes are zero-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. `previous` is also accepted. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
+Space indexes are one-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. `previous` is also accepted. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
 
 Only windows belonging to one normal desktop Space can move. Fullscreen windows and windows assigned to multiple Spaces are rejected. A move to the window's current Space does not submit a bridge operation.
 
