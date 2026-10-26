@@ -108,12 +108,12 @@ public final class Spaces {
   }
 
   /// Apply a global configuration change to defaults and existing overrides.
-  func updateAllSettings(_ transform: (inout SpaceSettings) -> Void) {
-    transform(&defaultSettings)
+  func updateAllSettings(_ transform: (inout SpaceSettings) throws -> Void) rethrows {
+    try transform(&defaultSettings)
 
-    settingsBySpaceID = settingsBySpaceID.mapValues { currentSettings in
+    settingsBySpaceID = try settingsBySpaceID.mapValues { currentSettings in
       var settings = currentSettings
-      transform(&settings)
+      try transform(&settings)
       return settings
     }
   }
@@ -128,20 +128,6 @@ public final class Spaces {
   func setPadding(_ padding: SpacePadding, for spaceID: UInt64) -> SpaceSettings {
     update(spaceID) { settings in
       settings.padding = padding.clamped()
-    }
-  }
-
-  /// Adjust padding for a space, clamping each side to zero or greater.
-  @discardableResult
-  func adjustPadding(_ padding: SpacePadding, for spaceID: UInt64) throws -> SpaceSettings {
-    try update(spaceID) { settings in
-      settings.padding = SpacePadding(
-        top: try Self.add(settings.padding.top, padding.top, setting: "padding"),
-        bottom: try Self.add(settings.padding.bottom, padding.bottom, setting: "padding"),
-        left: try Self.add(settings.padding.left, padding.left, setting: "padding"),
-        right: try Self.add(settings.padding.right, padding.right, setting: "padding")
-      )
-      .clamped()
     }
   }
 

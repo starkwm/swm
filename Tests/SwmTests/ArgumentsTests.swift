@@ -59,12 +59,16 @@ struct ArgumentsTests {
         UnknownSubcommandError(name: "focs", path: "swm window", suggestion: "focus")
       ),
       (
-        ["config", "gap", "6"],
-        UnknownSubcommandError(name: "gap", path: "swm config", suggestion: "window-gap")
+        ["config", "window-gap", "6"],
+        UnknownSubcommandError(name: "window-gap", path: "swm config", suggestion: "gap")
       ),
       (
-        ["config", "padding", "6"],
-        UnknownSubcommandError(name: "padding", path: "swm config", suggestion: nil)
+        ["config", "top-padding", "6"],
+        UnknownSubcommandError(name: "top-padding", path: "swm config", suggestion: "padding")
+      ),
+      (
+        ["config", "bogus"],
+        UnknownSubcommandError(name: "bogus", path: "swm config", suggestion: nil)
       ),
       (["version"], UnknownSubcommandError(name: "version", path: "swm", suggestion: nil)),
     ]
@@ -229,7 +233,7 @@ struct ArgumentsTests {
   func parseAsRootTranslatesSpaceSettingsSelectors() throws {
     let command = try #require(
       Arguments.parseAsRoot([
-        "space", "gap", "--space", "2", "abs:10",
+        "space", "gap", "--space", "2", "10",
       ]) as? SpaceCommand.Gap
     )
 
@@ -292,18 +296,45 @@ struct ArgumentsTests {
     #expect(command.arguments == ["autofocus"])
   }
 
-  @Test("parseAsRoot: preserves integer config values")
-  func parseAsRootPreservesIntegerConfigValues() throws {
-    let commandNames = [
-      "window-gap", "top-padding", "right-padding", "bottom-padding", "left-padding",
+  @Test(
+    "parseAsRoot: sets plain values and adjusts signed ones",
+    arguments: [
+      (["space", "gap", "6"], ["abs:6"]),
+      (["space", "gap", "+2"], ["rel:2"]),
+      (["space", "gap", "-2"], ["rel:-2"]),
+      (["space", "gap", "-2", "--space", "3"], ["--space", "3", "rel:-2"]),
+      (["space", "gap", "rel:4"], ["rel:4"]),
+      (["space", "master-ratio", "0.6"], ["abs:0.6"]),
+      (["space", "master-ratio", "-0.05"], ["rel:-0.05"]),
+      (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
+      (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
+      (["config", "padding", "--bottom", "6"], ["bottom=abs:6"]),
+      (["config", "gap", "6"], ["6"]),
     ]
+  )
+  func parseAsRootSetsPlainValuesAndAdjustsSignedOnes(
+    arguments: [String],
+    expected: [String]
+  ) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(Arguments.resolve(arguments)) as? any IPCCommand
+    )
 
-    for commandName in commandNames {
-      let command = try #require(
-        Arguments.parseAsRoot(["config", commandName, "6"]) as? any ConfigIPCCommand
-      )
+    #expect(command.arguments == expected)
+  }
 
-      #expect(command.arguments == ["6"])
+  @Test(
+    "parseAsRoot: rejects out-of-range ratios, empty padding, and signed global padding",
+    arguments: [
+      ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
+      ["space", "gap", "wide"], ["space", "padding"], ["config", "padding", "--top", "+2"],
+    ]
+  )
+  func parseAsRootRejectsOutOfRangeRatiosEmptyPaddingAndSignedGlobalPadding(
+    arguments: [String]
+  ) {
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(Arguments.resolve(arguments))
     }
   }
 

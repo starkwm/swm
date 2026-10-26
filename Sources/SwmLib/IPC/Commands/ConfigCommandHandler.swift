@@ -30,16 +30,10 @@ struct ConfigCommandHandler {
         return try masterPlacement(request)
       case "preserve-split":
         return try preserveSplitDirections(request)
-      case "window-gap":
-        return try windowGap(request)
-      case "top-padding":
-        return try padding(request, side: .top)
-      case "bottom-padding":
-        return try padding(request, side: .bottom)
-      case "left-padding":
-        return try padding(request, side: .left)
-      case "right-padding":
-        return try padding(request, side: .right)
+      case "gap":
+        return try gap(request)
+      case "padding":
+        return try padding(request)
       default:
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
@@ -141,10 +135,10 @@ struct ConfigCommandHandler {
   }
 
   /// Set the window gap for every known space.
-  private func windowGap(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "config window-gap").requiredValue()
+  private func gap(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(request.args, context: "config gap").requiredValue()
     guard let gap = Int(argument) else {
-      throw IPCCommandError.invalidRequest("invalid config window-gap value: \(argument)")
+      throw IPCCommandError.invalidRequest("invalid config gap value: \(argument)")
     }
 
     spaces.updateAllSettings { settings in
@@ -155,40 +149,27 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: "ok")
   }
 
-  /// Set one padding side for every known space.
-  private func padding(_ request: IPCRequest, side: PaddingSide) throws -> IPCResponse {
-    let argument = try IPCArguments(
-      request.args,
-      context: "config \(request.command)"
-    ).requiredValue()
-    guard let value = Int(argument) else {
-      throw IPCCommandError.invalidRequest(
-        "invalid config \(request.command) value: \(argument)"
-      )
+  /// Set padding sides for every known space.
+  private func padding(_ request: IPCRequest) throws -> IPCResponse {
+    guard !request.args.isEmpty else {
+      throw IPCCommandError.invalidRequest("invalid config padding arguments")
+    }
+    let changes = try request.args.map { argument in
+      guard let change = PaddingSideChange(argument: argument), change.mode == .absolute else {
+        throw IPCCommandError.invalidValue(
+          "config padding",
+          argument,
+          expected: "<side>=abs:<points>, such as top=abs:8"
+        )
+      }
+      return change
     }
 
-    spaces.updateAllSettings { settings in
-      switch side {
-      case .top:
-        settings.padding.top = max(0, value)
-      case .bottom:
-        settings.padding.bottom = max(0, value)
-      case .left:
-        settings.padding.left = max(0, value)
-      case .right:
-        settings.padding.right = max(0, value)
-      }
+    try spaces.updateAllSettings { settings in
+      settings.padding = try PaddingSideChange.applying(changes, to: settings.padding)
     }
     tiling.reflowVisibleSpaces()
 
     return .success(id: request.id, message: "ok")
   }
-}
-
-/// Single side of a space padding setting.
-private enum PaddingSide {
-  case top
-  case bottom
-  case left
-  case right
 }

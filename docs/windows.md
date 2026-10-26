@@ -84,7 +84,7 @@ swm window swap-cycle --direction <next|prev>
 swm window swap [--window <window|recent>] --direction <left|right|up|down>
 swm window swap-with-master [--window <window|recent>]
 swm window focus-master [--window <window|recent>]
-swm window split-ratio [--window <window|recent>] <abs|rel>:<ratio>
+swm window split-ratio [--window <window|recent>] <ratio>
 swm window toggle-split [--window <window|recent>]
 swm window swap-split [--window <window|recent>]
 ```
@@ -95,7 +95,7 @@ swm window swap-split [--window <window|recent>]
 - `swap` swaps tiled positions, or complete frames in a floating layout.
 - `swap-with-master` promotes a window in a master layout.
 - `focus-master` focuses the master window for the selected window's layout.
-- `split-ratio` changes the nearest dwindle split; ratios are clamped to `0.1...0.9`.
+- `split-ratio` sets the nearest dwindle split to a ratio from `0.1` through `0.9`, or adjusts it by a signed change such as `+0.05`; adjustments are clamped to that range.
 - `toggle-split` switches the nearest retained dwindle split between columns and rows.
 - `swap-split` exchanges the two subtrees at the nearest dwindle split.
 

@@ -14,11 +14,8 @@ The file can be any executable script. A shell script is the simplest option:
 swm config layout dwindle
 swm config focus-follows-mouse autofocus
 swm config animation-duration 0.18
-swm config window-gap 8
-swm config top-padding 8
-swm config bottom-padding 8
-swm config left-padding 8
-swm config right-padding 8
+swm config gap 8
+swm config padding --top 8 --bottom 8 --left 8 --right 8
 ```
 
 ## Global defaults
@@ -33,11 +30,8 @@ swm config master-placement <left|right|top|bottom>
 swm config preserve-split <on|off>
 swm config animation-duration <seconds>
 swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
-swm config window-gap <points>
-swm config top-padding <points>
-swm config bottom-padding <points>
-swm config left-padding <points>
-swm config right-padding <points>
+swm config gap <points>
+swm config padding [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
 ```
 
 Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. The master ratio must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.

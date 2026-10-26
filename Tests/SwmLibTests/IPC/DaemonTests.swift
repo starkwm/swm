@@ -46,7 +46,7 @@ struct DaemonTests {
     try daemon.run()
     defer { daemon.shutdown() }
     let result = try await runBlocking {
-      let response = Client.send(domain: .config, args: ["window-gap", "17"]) {
+      let response = Client.send(domain: .config, args: ["gap", "17"]) {
         try Client.exchange($0, path: endpoint.path)
       }
       return (response.ok, response.outputMessage)

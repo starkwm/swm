@@ -62,23 +62,27 @@ struct SpaceCommand: ParsableCommand {
     var arguments: [String] { target.arguments + [layout.rawValue] }
   }
 
-  struct MasterRatio: SpaceIPCCommand {
+  struct MasterRatio: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
       abstract: "Set or adjust a Space master ratio.",
       discussion: """
         Examples:
-          swm space master-ratio abs:0.6
-          swm space master-ratio rel:-0.05
+          swm space master-ratio 0.6
+          swm space master-ratio -0.05
         """
     )
     static let command = "--master-ratio"
 
     @OptionGroup var target: TargetOptions
 
-    @Argument(help: "Change in the form abs:<ratio> or rel:<ratio>.")
-    var change: String
+    @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as +0.05.")
+    var ratio: SettingChange<Double>
 
-    var arguments: [String] { target.arguments + [change] }
+    var arguments: [String] { target.arguments + [ratio.ipcValue] }
+
+    func validate() throws {
+      try ratio.validate(0.1...0.9, name: "Master ratio")
+    }
   }
 
   struct MasterPlacement: SpaceIPCCommand {
@@ -109,44 +113,73 @@ struct SpaceCommand: ParsableCommand {
     var arguments: [String] { target.arguments + [state.rawValue] }
   }
 
-  struct Padding: SpaceIPCCommand {
+  struct Padding: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
       abstract: "Set or adjust padding around a Space.",
       discussion: """
-        Values are top, bottom, left, and right, in points.
+        Each side takes points to set, or a signed change. Sides left out keep their \
+        padding.
 
         Examples:
-          swm space padding abs:8:8:8:8
-          swm space padding rel:4:0:0:0
+          swm space padding --top 8 --bottom 8 --left 8 --right 8
+          swm space padding --top +4
         """
     )
     static let command = "--padding"
 
     @OptionGroup var target: TargetOptions
+    @OptionGroup var sides: PaddingSideOptions
 
-    @Argument(help: "Change in the form abs|rel:<top>:<bottom>:<left>:<right>.")
-    var change: String
-
-    var arguments: [String] { target.arguments + [change] }
+    var arguments: [String] { target.arguments + sides.arguments }
   }
 
-  struct Gap: SpaceIPCCommand {
+  struct Gap: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
       abstract: "Set or adjust a Space window gap.",
       discussion: """
         Examples:
-          swm space gap abs:6
-          swm space gap rel:2
+          swm space gap 6
+          swm space gap +2
         """
     )
     static let command = "--gap"
 
     @OptionGroup var target: TargetOptions
 
-    @Argument(help: "Change in the form abs:<points> or rel:<points>.")
-    var change: String
+    @Argument(help: "Points to set, or a signed change such as +2 or -2.")
+    var points: SettingChange<Int>
 
-    var arguments: [String] { target.arguments + [change] }
+    var arguments: [String] { target.arguments + [points.ipcValue] }
+  }
+}
+
+/// Padding sides shared by the Space and global padding commands.
+struct PaddingSideOptions: ParsableArguments {
+  @Option(help: ArgumentHelp("Top padding.", valueName: "points"))
+  var top: SettingChange<Int>?
+
+  @Option(help: ArgumentHelp("Bottom padding.", valueName: "points"))
+  var bottom: SettingChange<Int>?
+
+  @Option(help: ArgumentHelp("Left padding.", valueName: "points"))
+  var left: SettingChange<Int>?
+
+  @Option(help: ArgumentHelp("Right padding.", valueName: "points"))
+  var right: SettingChange<Int>?
+
+  /// Sides given on the command line, in IPC order.
+  var changes: [(side: String, change: SettingChange<Int>)] {
+    [("top", top), ("bottom", bottom), ("left", left), ("right", right)]
+      .compactMap { side, change in change.map { (side, $0) } }
+  }
+
+  /// IPC arguments in `side=abs:<points>` or `side=rel:<points>` form.
+  var arguments: [String] { changes.map { "\($0.side)=\($0.change.ipcValue)" } }
+
+  func validate() throws {
+    guard !changes.isEmpty else {
+      throw ValidationError("Provide at least one of --top, --bottom, --left, or --right.")
+    }
   }
 }
 
