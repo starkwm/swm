@@ -32,5 +32,11 @@ struct RuleCommandHandlerTests {
     #expect(!send("--unknown").ok)
     #expect(send("--remove", ["test"]).ok)
     #expect(tiling.rules.isEmpty)
+    #expect(send("--add", ["label=a", "manage=off"]).ok)
+    #expect(send("--add", ["label=b", "manage=off"]).ok)
+    #expect(!send("--clear", ["extra"]).ok)
+    #expect(send("--clear").ok)
+    #expect(tiling.rules.isEmpty)
+    #expect(send("--add", ["label=a", "manage=off"]).ok)
   }
 }

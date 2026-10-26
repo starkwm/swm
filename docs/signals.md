@@ -9,6 +9,7 @@ swm signal add event=window-focused action='echo "$SWM_WINDOW_ID"'
 swm signal add event=window-created app='^Safari$' label=safari-created action='echo "$SWM_WINDOW_ID"'
 swm signal list
 swm signal remove <index|label>
+swm signal clear
 ```
 
 `add` requires `event` and `action`. It also accepts:

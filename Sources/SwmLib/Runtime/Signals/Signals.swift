@@ -48,6 +48,11 @@ public final class Signals {
     }
   }
 
+  /// Remove every signal.
+  func removeAll() {
+    lock.withLock { signals.removeAll() }
+  }
+
   /// Return registered signals with their one-based indexes.
   func list() -> [IndexedSignal] {
     lock.withLock {

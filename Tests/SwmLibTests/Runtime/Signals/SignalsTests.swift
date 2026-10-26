@@ -35,6 +35,19 @@ struct SignalsTests {
     #expect(signals.list().isEmpty)
   }
 
+  @Test("removeAll: drops every registration so labels can be registered again")
+  func removeAllDropsEveryRegistrationSoLabelsCanBeRegisteredAgain() throws {
+    let signals = Signals()
+    let signal = try Signal.parseAdd(arguments: ["event=window-moved", "action=true", "label=a"])
+    try signals.add(signal)
+    signals.removeAll()
+
+    #expect(signals.list().isEmpty)
+    #expect(!signals.hasSubscribers(for: .windowMoved))
+    try signals.add(signal)
+    #expect(signals.list().count == 1)
+  }
+
   @Test("hasSubscribers: follows indexed and labeled removal")
   func hasSubscribersFollowsIndexedAndLabeledRemoval() throws {
     let signals = Signals()

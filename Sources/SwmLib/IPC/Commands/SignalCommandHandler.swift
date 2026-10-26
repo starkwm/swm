@@ -1,4 +1,4 @@
-/// Handles IPC commands that register, remove, and list runtime signals.
+/// Handles IPC commands that register, remove, clear, and list runtime signals.
 struct SignalCommandHandler {
   /// Dispatch a signal IPC request.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
@@ -8,6 +8,10 @@ struct SignalCommandHandler {
         return try add(request)
       case "--remove":
         return try remove(request)
+      case "--clear":
+        try IPCArguments(request.args, context: "signal clear").requireEmpty()
+        Signals.shared.removeAll()
+        return .acknowledged(id: request.id)
       case "--list":
         return try list(request)
       default:
