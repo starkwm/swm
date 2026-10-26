@@ -7,6 +7,11 @@ struct IPCResponse: Codable, Equatable, Sendable {
     IPCResponse(id: id, ok: true, message: message, errorCode: nil)
   }
 
+  /// Create a successful response with nothing to print.
+  static func acknowledged(id: String) -> IPCResponse {
+    .success(id: id, message: "")
+  }
+
   /// Create a failed response.
   static func failure(id: String, message: String, errorCode: IPCErrorCode) -> IPCResponse {
     IPCResponse(id: id, ok: false, message: message, errorCode: errorCode)
@@ -32,12 +37,12 @@ struct IPCResponse: Codable, Equatable, Sendable {
   /// Machine-readable error code for failed responses.
   let errorCode: IPCErrorCode?
 
-  /// Message formatted for command-line output.
+  /// Message formatted for command-line output, prefixed like argument parser errors.
   var outputMessage: String {
-    if ok || message.hasPrefix("error: ") {
+    if ok || message.lowercased().hasPrefix("error: ") {
       return message
     }
 
-    return "error: \(message)"
+    return "Error: \(message)"
   }
 }

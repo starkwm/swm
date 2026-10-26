@@ -52,7 +52,7 @@ struct DaemonTests {
       return (response.ok, response.outputMessage)
     }
     #expect(result.0)
-    #expect(result.1 == "ok")
+    #expect(result.1.isEmpty)
     #expect(spaces.settings(for: 42).gap == 17)
   }
 

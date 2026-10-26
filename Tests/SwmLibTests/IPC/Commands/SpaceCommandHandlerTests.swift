@@ -18,7 +18,7 @@ struct SpaceCommandHandlerTests {
 
     let response = await handler.dispatch(request(command: "--activate", args: ["2"]))
 
-    #expect(response.ok && response.message == "ok")
+    #expect(response.ok && response.message.isEmpty)
     #expect(response.id == "request-id")
     #expect(selectedIndex == 2)
   }
@@ -89,7 +89,7 @@ struct SpaceCommandHandlerTests {
     let handler = handler(spaces: spaces)
     #expect(await handler.dispatch(request(command: "--gap", args: ["abs:0"])).ok)
     let relative = await handler.dispatch(request(command: "--gap", args: ["rel:10"]))
-    #expect(relative.ok && relative.message == "ok")
+    #expect(relative.ok && relative.message.isEmpty)
     #expect(spaces.settings(for: 42).gap == 10)
     #expect(await handler.dispatch(request(command: "--gap", args: ["abs:-1"])).ok)
     #expect(spaces.settings(for: 42).gap == 0)

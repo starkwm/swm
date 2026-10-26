@@ -112,7 +112,7 @@ func runSwm(with arguments: StartCommand) {
 
 /// Print an error message and terminate with failure.
 func fail(_ message: String) -> Never {
-  fputs("error: \(message)\n", stderr)
+  fputs("Error: \(message)\n", stderr)
   exit(EXIT_FAILURE)
 }
 

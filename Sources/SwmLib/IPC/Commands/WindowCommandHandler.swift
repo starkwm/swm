@@ -102,7 +102,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.internalError("could not focus window: \(window.id)")
     }
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Move the cursor into a selected window without changing focus or stacking order.
@@ -140,7 +140,7 @@ struct WindowCommandHandler {
 
     try mouseWarp.warp(windowID: window.id, frame: window.frame())
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set the selected window's floating or tiled participation.
@@ -177,7 +177,7 @@ struct WindowCommandHandler {
     guard cycledWindow.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(cycledWindow.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Swap the selected window with its neighbour in a direction.
@@ -192,7 +192,7 @@ struct WindowCommandHandler {
         "window has no swappable neighbour in direction: \(direction.rawValue)"
       )
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Swap the focused tiled window with its neighbour in stable layout order.
@@ -207,7 +207,7 @@ struct WindowCommandHandler {
     guard tiling.swapWindowInOrder(window.id, in: direction) else {
       throw IPCCommandError.invalidRequest("window has no swap-cycle neighbour: \(window.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Swap the selected tiled window with the master pane.
@@ -217,7 +217,7 @@ struct WindowCommandHandler {
     guard tiling.swapWindowWithMaster(window.id) else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Focus the master window in the selected window's layout.
@@ -232,7 +232,7 @@ struct WindowCommandHandler {
     guard masterWindow.focus() else {
       throw IPCCommandError.internalError("could not focus window: \(masterWindow.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Set or adjust the selected window's nearest dwindle split ratio.
@@ -249,7 +249,7 @@ struct WindowCommandHandler {
     guard tiling.changeDwindleSplitRatio(change, for: window.id) != nil else {
       throw IPCCommandError.invalidRequest("window has no dwindle split: \(window.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Toggle and retain the selected window's nearest dwindle split direction.
@@ -261,7 +261,7 @@ struct WindowCommandHandler {
         "window has no retained dwindle split to toggle: \(window.id)"
       )
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Exchange the selected window's nearest dwindle sibling subtrees.
@@ -271,7 +271,7 @@ struct WindowCommandHandler {
     guard tiling.swapDwindleSplit(for: window.id) else {
       throw IPCCommandError.invalidRequest("window has no dwindle split to swap: \(window.id)")
     }
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Perform an action on a selected window.
@@ -288,7 +288,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Perform a two-axis geometry action on a selected window.
@@ -315,7 +315,7 @@ struct WindowCommandHandler {
       failureMessage: "could not \(action) window: \(window.id)"
     )
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Move the selected window to another display.
@@ -356,7 +356,7 @@ struct WindowCommandHandler {
       failureMessage: "could not move window to display: \(window.id)"
     )
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Move a window without switching the active Space or immediately restoring focus.
@@ -410,7 +410,7 @@ struct WindowCommandHandler {
       }
     }
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Move and resize the selected window into a grid cell span.
@@ -451,7 +451,7 @@ struct WindowCommandHandler {
       failureMessage: "could not grid window: \(window.id)"
     )
 
-    return .success(id: request.id, message: "ok")
+    return .acknowledged(id: request.id)
   }
 
   /// Move a window to the equivalent position on another screen without animation.
