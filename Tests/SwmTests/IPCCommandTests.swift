@@ -26,7 +26,7 @@ struct IPCCommandTests {
     let errors = try #require(tmpfile())
     defer { fclose(errors) }
     var command = try #require(
-      Arguments.parseAsRoot(["window", "focus", "--window", "42"]) as? WindowCommand.Focus
+      Arguments.parseAsRoot(["window", "focus", "42"]) as? WindowCommand.Focus
     )
     let send: (CommandDomain, [String]) -> Client.SendResult = { domain, args in
       Client.send(domain: domain, args: args) { request in

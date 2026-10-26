@@ -171,7 +171,7 @@ struct ArgumentsTests {
 
     #expect(
       Arguments.helpMessage(for: WindowCommand.Warp.self).contains(
-        "USAGE: swm window warp [--window <window>]"
+        "USAGE: swm window warp [--window <window>] [<direction>]"
       )
     )
     #expect(throws: (any Error).self) {
@@ -185,7 +185,7 @@ struct ArgumentsTests {
   )
   func parseAsRootPreservesDirectionalWarpArguments(direction: String) throws {
     let command = try #require(
-      Arguments.parseAsRoot(["window", "warp", "--direction", direction]) as? WindowCommand.Warp
+      Arguments.parseAsRoot(["window", "warp", direction]) as? WindowCommand.Warp
     )
 
     #expect(command.arguments == [direction])
@@ -195,22 +195,34 @@ struct ArgumentsTests {
   @Test("parseAsRoot: rejects conflicting warp targets and invalid directions")
   func parseAsRootRejectsConflictingWarpTargetsAndInvalidDirections() {
     #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", "warp", "--window", "recent", "--direction", "left"])
+      try Arguments.parseAsRoot(["window", "warp", "--window", "recent", "left"])
     }
     #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", "warp", "--direction", "sideways"])
+      try Arguments.parseAsRoot(["window", "warp", "sideways"])
     }
   }
 
-  @Test("parseAsRoot: translates directional focus to IPC arguments")
-  func parseAsRootTranslatesDirectionalFocusToIPCArguments() throws {
-    let command = try #require(
-      Arguments.parseAsRoot([
-        "window", "focus", "--direction", "left",
-      ]) as? WindowCommand.Focus
-    )
+  @Test(
+    "parseAsRoot: maps focus and swap targets to daemon commands",
+    arguments: [
+      (["window", "focus", "left"], ["--focus", "left"]),
+      (["window", "focus", "next"], ["--cycle", "next"]),
+      (["window", "focus", "recent"], ["--focus", "recent"]),
+      (["window", "focus", "42"], ["--focus", "42"]),
+      (["window", "focus", "master"], ["--focus-master"]),
+      (["window", "swap", "up"], ["--swap", "up"]),
+      (["window", "swap", "--window", "42", "up"], ["--swap", "42", "up"]),
+      (["window", "swap", "prev"], ["--swap-cycle", "prev"]),
+      (["window", "swap", "--window", "recent", "master"], ["--swap-with-master", "recent"]),
+    ]
+  )
+  func parseAsRootMapsFocusAndSwapTargetsToDaemonCommands(
+    arguments: [String],
+    expected: [String]
+  ) throws {
+    let command = try #require(Arguments.parseAsRoot(arguments) as? any IPCCommand)
 
-    #expect(command.arguments == ["left"])
+    #expect(command.commandArguments == expected)
   }
 
   @Test("parseAsRoot: translates window Space selectors and destinations")
@@ -276,12 +288,16 @@ struct ArgumentsTests {
     #expect(try Arguments.parseAsRoot(["rule", "list"]) is RuleCommand.List)
   }
 
-  @Test("parseAsRoot: rejects conflicting focus targets")
-  func parseAsRootRejectsConflictingFocusTargets() {
+  @Test(
+    "parseAsRoot: rejects missing, unknown, and conflicting focus and swap targets",
+    arguments: [
+      ["window", "focus"], ["window", "focus", "sideways"], ["window", "swap", "recent"],
+      ["window", "swap", "--window", "42", "next"],
+    ]
+  )
+  func parseAsRootRejectsMissingUnknownAndConflictingFocusAndSwapTargets(arguments: [String]) {
     #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot([
-        "window", "focus", "--window", "recent", "--direction", "left",
-      ])
+      try Arguments.parseAsRoot(arguments)
     }
   }
 
