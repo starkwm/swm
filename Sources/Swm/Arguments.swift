@@ -8,7 +8,7 @@ struct Arguments: ParsableCommand {
     commandName: "swm",
     abstract: "Stark Window Manager for macOS.",
     groupedSubcommands: [
-      CommandGroup(name: "DAEMON", subcommands: [StartCommand.self]),
+      CommandGroup(name: "DAEMON", subcommands: [StartCommand.self, ReloadCommand.self]),
       CommandGroup(name: "CONTROL", subcommands: [WindowCommand.self, SpaceCommand.self]),
       CommandGroup(
         name: "CONFIGURE",
@@ -92,6 +92,52 @@ struct Arguments: ParsableCommand {
   func run() throws {
     guard version else { throw CleanExit.helpRequest(self) }
     print("swm version \(Version.current.value)")
+  }
+}
+
+/// Run the configuration file again in the running daemon.
+struct ReloadCommand: ParsableCommand {
+  static let configuration = CommandConfiguration(
+    commandName: "reload",
+    abstract: "Run the configuration file again in the running daemon.",
+    discussion: """
+      Removes every rule and signal first, because the file registers them again. Settings \
+      the file no longer sets keep their current values.
+      """
+  )
+
+  /// Path to the configuration file, defaulting to the one `start` uses.
+  @Option(
+    name: .shortAndLong,
+    help: ArgumentHelp("Path to the configuration file.", valueName: "path"),
+    completion: .file()
+  )
+  var config: String?
+
+  mutating func run() throws {
+    try run(send: Client.send, execute: { try Config.exec(path: $0) }, errors: stderr)
+  }
+
+  /// Clear rules and signals, then execute the configuration file.
+  func run(
+    send: (CommandDomain, [String]) -> Client.SendResult,
+    execute: (String) throws -> Void,
+    errors: UnsafeMutablePointer<FILE>
+  ) throws {
+    for domain in [CommandDomain.rule, .signal] {
+      let result = send(domain, ["--clear"])
+      guard result.ok else {
+        fputs("\(result.outputMessage)\n", errors)
+        throw ExitCode.failure
+      }
+    }
+
+    do {
+      try execute(config ?? StartCommand.defaultConfigPath)
+    } catch {
+      fputs("Error: \(error)\n", errors)
+      throw ExitCode.failure
+    }
   }
 }
 

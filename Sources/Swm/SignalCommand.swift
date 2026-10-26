@@ -6,7 +6,7 @@ struct SignalCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "signal",
     abstract: "Manage event signals.",
-    subcommands: [Add.self, List.self, Remove.self]
+    subcommands: [Add.self, List.self, Remove.self, Clear.self]
   )
 
   struct Add: SignalIPCCommand {
@@ -32,6 +32,11 @@ struct SignalCommand: ParsableCommand {
   struct List: SignalIPCCommand {
     static let configuration = CommandConfiguration(abstract: "List registered signals.")
     static let command = "--list"
+  }
+
+  struct Clear: SignalIPCCommand {
+    static let configuration = CommandConfiguration(abstract: "Remove every registered signal.")
+    static let command = "--clear"
   }
 
   struct Remove: SignalIPCCommand {

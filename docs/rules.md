@@ -20,6 +20,7 @@ swm rule add label=finder app='^Finder$' manage=off
 swm rule list
 swm rule remove finder
 swm rule remove 1
+swm rule clear
 ```
 
 `list` returns a JSON array. Each entry has a one-based `index` and a `rule` object

@@ -11,6 +11,9 @@ struct RuleCommandHandler {
       case "--remove":
         let selector = try IPCArguments(request.args, context: "rule remove").requiredValue()
         try tiling.removeRule(selector: selector)
+      case "--clear":
+        try IPCArguments(request.args, context: "rule clear").requireEmpty()
+        tiling.removeAllRules()
       case "--list":
         try IPCArguments(request.args, context: "rule list").requireEmpty()
         return try .json(

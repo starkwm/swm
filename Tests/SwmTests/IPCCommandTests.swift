@@ -73,6 +73,44 @@ struct IPCCommandTests {
     #expect(command.formatted("null", forTerminal: true) == "null")
   }
 
+  @Test("reload: clears rules and signals before running the configuration file")
+  func reloadClearsRulesAndSignalsBeforeRunningTheConfigurationFile() throws {
+    let errors = try #require(tmpfile())
+    defer { fclose(errors) }
+    let command = try #require(
+      Arguments.parseAsRoot(["reload", "--config", "/tmp/swmrc"]) as? ReloadCommand
+    )
+    var calls = [String]()
+
+    try command.run(
+      send: { domain, args in
+        calls.append("\(domain.rawValue) \(args.joined(separator: " "))")
+        return Client.SendResult(ok: true, outputMessage: "")
+      },
+      execute: { calls.append("exec \($0)") },
+      errors: errors
+    )
+
+    #expect(calls == ["rule --clear", "signal --clear", "exec /tmp/swmrc"])
+  }
+
+  @Test("reload: stops before running the configuration file when clearing fails")
+  func reloadStopsBeforeRunningTheConfigurationFileWhenClearingFails() throws {
+    let errors = try #require(tmpfile())
+    defer { fclose(errors) }
+    let command = try #require(Arguments.parseAsRoot(["reload"]) as? ReloadCommand)
+
+    #expect(throws: ExitCode.failure) {
+      try command.run(
+        send: { _, _ in Client.SendResult(ok: false, outputMessage: "Error: daemon is not running")
+        },
+        execute: { _ in Issue.record("unexpected execution") },
+        errors: errors
+      )
+    }
+    #expect(read(errors) == "Error: daemon is not running\n")
+  }
+
   private func read(_ stream: UnsafeMutablePointer<FILE>) -> String {
     fflush(stream)
     rewind(stream)

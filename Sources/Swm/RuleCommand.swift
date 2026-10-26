@@ -28,6 +28,11 @@ struct RuleCommand: ParsableCommand {
     static let command = "--list"
   }
 
+  struct Clear: RuleIPCCommand {
+    static let configuration = CommandConfiguration(abstract: "Remove every registered rule.")
+    static let command = "--clear"
+  }
+
   struct Remove: RuleIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Remove a registered rule.")
     static let command = "--remove"
@@ -40,6 +45,6 @@ struct RuleCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "rule",
     abstract: "Manage window rules.",
-    subcommands: [Add.self, List.self, Remove.self]
+    subcommands: [Add.self, List.self, Remove.self, Clear.self]
   )
 }

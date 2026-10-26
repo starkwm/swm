@@ -19,6 +19,16 @@ Daemon startup options, accepted by `swm` and `swm start`:
 
 See [configuration files](configuration.md#configuration-file) for startup scripts and custom paths.
 
+## Reload the configuration
+
+Run the configuration file again without restarting the daemon:
+
+```sh
+swm reload [--config <path>]
+```
+
+`reload` removes every rule and signal before running the file, because the file registers them again. Settings the file no longer sets keep their current values. Without `--config`, it runs `~/.config/swm/swmrc`; pass the same path the daemon was started with if it uses another file.
+
 ## Send commands
 
 Send commands to the running daemon through command-specific subcommands:

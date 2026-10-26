@@ -350,6 +350,12 @@ public final class Tiling {
     reconcileAndReflowVisibleSpaces()
   }
 
+  /// Remove every rule.
+  func removeAllRules() {
+    rules.removeAll()
+    reconcileAndReflowVisibleSpaces()
+  }
+
   /// Select floating or an automatic layout for a known normal Space.
   @discardableResult
   func setLayout(_ selection: LayoutSelection, for spaceID: UInt64) -> Bool {
