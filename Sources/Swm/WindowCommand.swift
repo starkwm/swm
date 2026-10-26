@@ -10,28 +10,35 @@ struct WindowCommand: ParsableCommand {
       Focus.self, Warp.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self,
       Display.self,
       Space.self,
-      Layout.self, Cycle.self, Swap.self, SwapCycle.self, SwapWithMaster.self, FocusMaster.self,
-      SplitRatio.self, ToggleSplit.self, SwapSplit.self,
+      Layout.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
     ]
   )
 
   struct Focus: WindowIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Focus a window or the nearest window in a direction."
+      abstract: "Focus a neighbouring, recent, master, or specific window.",
+      discussion: """
+        Examples:
+          swm window focus left
+          swm window focus next
+          swm window focus recent
+          swm window focus master
+        """
     )
     static let command = "--focus"
 
-    @Option(name: .shortAndLong, help: "Window ID or recent.", completion: .list(["recent"]))
-    var window: String?
+    @Argument(
+      help: "left, right, up, down, next, prev, recent, master, or a window ID.",
+      completion: .list(["left", "right", "up", "down", "next", "prev", "recent", "master"])
+    )
+    var target: FocusTarget
 
-    @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
-    var direction: CardinalDirectionName?
-
-    var arguments: [String] { [window, direction?.rawValue].compactMap { $0 } }
-
-    func validate() throws {
-      if window != nil, direction != nil {
-        throw ValidationError("Specify either --window or --direction, not both.")
+    var commandArguments: [String] {
+      switch target {
+      case .direction(let direction): ["--focus", direction.rawValue]
+      case .order(let direction): ["--cycle", direction.rawValue]
+      case .master: ["--focus-master"]
+      case .window(let selector): ["--focus", selector]
       }
     }
   }
@@ -44,17 +51,14 @@ struct WindowCommand: ParsableCommand {
 
     @OptionGroup var selector: WindowSelector
 
-    @Option(
-      name: .shortAndLong,
-      help: "Direction from the window under the cursor, or focused window."
-    )
+    @Argument(help: "Direction from the window under the cursor, or focused window.")
     var direction: CardinalDirectionName?
 
     var arguments: [String] { selector.arguments + [direction?.rawValue].compactMap { $0 } }
 
     func validate() throws {
       if selector.window != nil, direction != nil {
-        throw ValidationError("Specify either --window or --direction, not both.")
+        throw ValidationError("Specify either --window or a direction, not both.")
       }
     }
   }
@@ -180,54 +184,39 @@ struct WindowCommand: ParsableCommand {
     var arguments: [String] { selector.arguments + [layout.rawValue] }
   }
 
-  struct Cycle: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Focus a window in layout order.")
-    static let command = "--cycle"
-
-    @Option(name: .shortAndLong, help: "Cycle direction.")
-    var direction: CycleDirectionName
-
-    var arguments: [String] { [direction.rawValue] }
-  }
-
   struct Swap: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Swap a window in a direction.")
+    static let configuration = CommandConfiguration(
+      abstract: "Swap a window with a neighbour or the master window.",
+      discussion: """
+        Examples:
+          swm window swap left
+          swm window swap next
+          swm window swap master
+        """
+    )
     static let command = "--swap"
 
     @OptionGroup var selector: WindowSelector
 
-    @Option(name: .shortAndLong, help: "Direction of the neighbouring window.")
-    var direction: CardinalDirectionName
+    @Argument(
+      help: "left, right, up, down, next, prev, or master.",
+      completion: .list(["left", "right", "up", "down", "next", "prev", "master"])
+    )
+    var target: SwapTarget
 
-    var arguments: [String] { selector.arguments + [direction.rawValue] }
-  }
+    var commandArguments: [String] {
+      switch target {
+      case .direction(let direction): ["--swap"] + selector.arguments + [direction.rawValue]
+      case .order(let direction): ["--swap-cycle", direction.rawValue]
+      case .master: ["--swap-with-master"] + selector.arguments
+      }
+    }
 
-  struct SwapCycle: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Swap a window in layout order.")
-    static let command = "--swap-cycle"
-
-    @Option(name: .shortAndLong, help: "Cycle direction.")
-    var direction: CycleDirectionName
-
-    var arguments: [String] { [direction.rawValue] }
-  }
-
-  struct SwapWithMaster: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Promote a window to master.")
-    static let command = "--swap-with-master"
-
-    @OptionGroup var selector: WindowSelector
-
-    var arguments: [String] { selector.arguments }
-  }
-
-  struct FocusMaster: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Focus the master window.")
-    static let command = "--focus-master"
-
-    @OptionGroup var selector: WindowSelector
-
-    var arguments: [String] { selector.arguments }
+    func validate() throws {
+      if case .order = target, selector.window != nil {
+        throw ValidationError("next and prev swap the focused window; omit --window.")
+      }
+    }
   }
 
   struct SplitRatio: WindowIPCCommand, SettingChangeCommand {
@@ -283,6 +272,44 @@ struct WindowSelector: ParsableArguments {
 
   /// IPC arguments selecting the window, or none for the focused window.
   var arguments: [String] { window.map { [$0] } ?? [] }
+}
+
+/// Window to focus, relative to the focused window or by identity.
+enum FocusTarget: Equatable, ExpressibleByArgument {
+  case direction(CardinalDirectionName)
+  case order(CycleDirectionName)
+  case master
+  case window(String)
+
+  init?(argument: String) {
+    if let direction = CardinalDirectionName(rawValue: argument) {
+      self = .direction(direction)
+    } else if let direction = CycleDirectionName(rawValue: argument) {
+      self = .order(direction)
+    } else if argument == "master" {
+      self = .master
+    } else if argument == "recent" || UInt32(argument) != nil {
+      self = .window(argument)
+    } else {
+      return nil
+    }
+  }
+}
+
+/// Window to swap the selected window with.
+enum SwapTarget: Equatable, ExpressibleByArgument {
+  case direction(CardinalDirectionName)
+  case order(CycleDirectionName)
+  case master
+
+  init?(argument: String) {
+    switch FocusTarget(argument: argument) {
+    case .direction(let direction): self = .direction(direction)
+    case .order(let direction): self = .order(direction)
+    case .master: self = .master
+    case .window, nil: return nil
+    }
+  }
 }
 
 enum WindowLayoutName: String, CaseIterable, ExpressibleByArgument {

@@ -8,10 +8,15 @@ protocol IPCCommand: ParsableCommand {
   static var command: String { get }
 
   var arguments: [String] { get }
+
+  /// The daemon command and its arguments.
+  var commandArguments: [String] { get }
 }
 
 extension IPCCommand {
   var arguments: [String] { [] }
+
+  var commandArguments: [String] { [Self.command] + arguments }
 
   mutating func run() throws {
     try run(send: Client.send, output: stdout, errors: stderr)
@@ -22,7 +27,7 @@ extension IPCCommand {
     output: UnsafeMutablePointer<FILE>,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
-    let result = send(Self.domain, [Self.command] + arguments)
+    let result = send(Self.domain, commandArguments)
 
     let stream = result.ok ? output : errors
     fputs("\(result.outputMessage)\n", stream)

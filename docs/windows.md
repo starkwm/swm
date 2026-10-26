@@ -2,22 +2,25 @@
 
 [Documentation index](index.md)
 
-The `--window` option accepts a numeric window ID, or `recent` for the previously focused window. Commands that accept `--window` use the focused window when it and any alternative target, such as `--direction`, are omitted.
+The `--window` option accepts a numeric window ID, or `recent` for the previously focused window. Commands that accept `--window` use the focused window when it is omitted.
 
 ## Focus and minimize
 
 ```sh
-swm window focus [--window <window|recent> | --direction <left|right|up|down>]
+swm window focus <left|right|up|down|next|prev|recent|master|window-id>
 swm window minimize [--window <window|recent>]
 swm window unminimize [--window <window|recent>]
 ```
 
-Directional focus chooses the nearest non-minimized window on the currently visible spaces.
+- `left`, `right`, `up`, and `down` focus the nearest non-minimized window on the currently visible Spaces.
+- `next` and `prev` focus the next or previous window in stable layout order.
+- `recent` focuses the previously focused window, and a window ID focuses that window.
+- `master` focuses the master window for the focused window's layout.
 
 ## Move the mouse cursor
 
 ```sh
-swm window warp [--window <window|recent> | --direction <left|right|up|down>]
+swm window warp [--window <window|recent> | <left|right|up|down>]
 ```
 
 `warp` moves the mouse cursor to the selected window's center without focusing or raising it,
@@ -30,7 +33,7 @@ direction from the managed window under the cursor. If the cursor is not over an
 managed window, it starts from the focused window. Each command checks the window under the
 cursor again, so repeated warps navigate between windows without changing focus. If another
 window covers the destination, the next warp starts from that covering window.
-`--window` and `--direction` cannot be combined.
+`--window` and a direction cannot be combined.
 
 ## Move, resize, and place
 
@@ -79,22 +82,16 @@ swm window space --window <window-id> 0
 
 ```sh
 swm window layout [--window <window|recent>] <float|tile|toggle>
-swm window cycle --direction <next|prev>
-swm window swap-cycle --direction <next|prev>
-swm window swap [--window <window|recent>] --direction <left|right|up|down>
-swm window swap-with-master [--window <window|recent>]
-swm window focus-master [--window <window|recent>]
+swm window swap [--window <window|recent>] <left|right|up|down|next|prev|master>
 swm window split-ratio [--window <window|recent>] <ratio>
 swm window toggle-split [--window <window|recent>]
 swm window swap-split [--window <window|recent>]
 ```
 
 - `layout` floats a window, returns it to tiling, or toggles its state.
-- `cycle` focuses the next or previous window in stable layout order.
-- `swap-cycle` swaps the focused tiled window with its ordered neighbour.
-- `swap` swaps tiled positions, or complete frames in a floating layout.
-- `swap-with-master` promotes a window in a master layout.
-- `focus-master` focuses the master window for the selected window's layout.
+- `swap left|right|up|down` swaps tiled positions with the neighbour in that direction, or complete frames in a floating layout.
+- `swap next|prev` swaps the focused tiled window with its neighbour in stable layout order, and does not accept `--window`.
+- `swap master` promotes a window in a master layout.
 - `split-ratio` sets the nearest dwindle split to a ratio from `0.1` through `0.9`, or adjusts it by a signed change such as `+0.05`; adjustments are clamped to that range.
 - `toggle-split` switches the nearest retained dwindle split between columns and rows.
 - `swap-split` exchanges the two subtrees at the nearest dwindle split.
