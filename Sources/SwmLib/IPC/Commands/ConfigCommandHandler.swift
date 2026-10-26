@@ -15,6 +15,10 @@ struct ConfigCommandHandler {
   /// Dispatch a config IPC request to the matching setting update.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
+      if request.args.isEmpty, let value = currentValue(of: request.command) {
+        return .success(id: request.id, message: value)
+      }
+
       switch request.command {
       case "animation-easing":
         return try animationEasing(request)
@@ -37,6 +41,27 @@ struct ConfigCommandHandler {
       default:
         throw IPCCommandError.unsupportedCommand("unsupported config command: \(request.command)")
       }
+    }
+  }
+
+  /// The current global value of a setting, in the form its command accepts.
+  private func currentValue(of setting: String) -> String? {
+    let state = tiling.defaultState
+    let settings = spaces.defaultSettings
+    switch setting {
+    case "animation-easing": return tiling.animationEasing.rawValue
+    case "animation-duration": return String(tiling.animationDuration)
+    case "layout": return state.selection.rawValue
+    case "focus-follows-mouse": return windows.focusFollowsMouseMode.rawValue
+    case "master-ratio": return String(Double(state.masterRatio))
+    case "master-placement": return state.masterPlacement.rawValue
+    case "preserve-split": return state.preserveSplitDirections ? "on" : "off"
+    case "gap": return String(settings.gap)
+    case "padding":
+      return PaddingSide.allCases
+        .map { "--\($0.rawValue) \(settings.padding[$0])" }
+        .joined(separator: " ")
+    default: return nil
     }
   }
 
@@ -151,9 +176,6 @@ struct ConfigCommandHandler {
 
   /// Set padding sides for every known space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
-    guard !request.args.isEmpty else {
-      throw IPCCommandError.invalidRequest("invalid config padding arguments")
-    }
     let changes = try request.args.map { argument in
       guard let change = PaddingSideChange(argument: argument), change.mode == .absolute else {
         throw IPCCommandError.invalidValue(

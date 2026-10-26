@@ -36,6 +36,13 @@ swm config padding [--top <points>] [--bottom <points>] [--left <points>] [--rig
 
 Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. The master ratio must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
 
+Run a config command without a value to print the current global value, in the form the command accepts:
+
+```sh
+swm config gap        # 8
+swm config padding    # --top 8 --bottom 8 --left 8 --right 8
+```
+
 ## Window animation
 
 Window animation is disabled by default. Run
