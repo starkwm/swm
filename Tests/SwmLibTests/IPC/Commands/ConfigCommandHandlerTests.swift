@@ -166,10 +166,8 @@ struct ConfigCommandHandlerTests {
   @Test(
     "dispatch: rejects malformed arguments with exact diagnostics",
     arguments: [
-      ("gap", [], "invalid config gap arguments"),
       ("gap", ["10", "20"], "invalid config gap arguments"),
       ("gap", ["wide"], "invalid config gap value: wide"),
-      ("padding", [], "invalid config padding arguments"),
       (
         "padding", ["top=rel:2"],
         "invalid config padding value: top=rel:2; expected <side>=abs:<points>, such as top=abs:8"
@@ -178,7 +176,6 @@ struct ConfigCommandHandlerTests {
         "padding", ["middle=abs:2"],
         "invalid config padding value: middle=abs:2; expected <side>=abs:<points>, such as top=abs:8"
       ),
-      ("layout", [], "invalid config layout arguments"),
       ("layout", ["master", "dwindle"], "invalid config layout arguments"),
       ("layout", ["columns"], "invalid config layout: columns"),
       ("master-ratio", ["wide"], "invalid config master-ratio value: wide"),
@@ -215,7 +212,7 @@ struct ConfigCommandHandlerTests {
       #expect(handler.dispatch(request(command: "animation-duration", args: [argument])).ok)
       #expect(reconciler.animationDuration == Double(argument))
     }
-    for args in [[], ["-1"], ["1.1"], ["nan"], ["inf"], ["fast"], ["0.1", "0.2"]] {
+    for args in [["-1"], ["1.1"], ["nan"], ["inf"], ["fast"], ["0.1", "0.2"]] {
       let response = handler.dispatch(request(command: "animation-duration", args: args))
       #expect(!response.ok)
       #expect(response.errorCode == .invalidRequest)
@@ -238,7 +235,7 @@ struct ConfigCommandHandlerTests {
       #expect(reconciler.animationEasing == easing)
     }
     let previous = reconciler.animationEasing
-    for args in [[], ["unknown"], ["linear", "ease-out-quad"]] {
+    for args in [["unknown"], ["linear", "ease-out-quad"]] {
       let response = handler.dispatch(request(command: "animation-easing", args: args))
       #expect(!response.ok)
       #expect(response.errorCode == .invalidRequest)
@@ -269,6 +266,28 @@ struct ConfigCommandHandlerTests {
 
   private func layoutID(_ spaceID: UInt64) -> TilingLayoutID {
     TilingLayoutID(spaceID: spaceID, displayID: "display")
+  }
+
+  @Test("dispatch: reports current values for settings given without a value")
+  func dispatchReportsCurrentValuesForSettingsGivenWithoutAValue() {
+    let handler = handler(spaces: Spaces(activeSpaceID: nil))
+    for (command, args) in [
+      ("gap", ["6"]), ("padding", ["top=abs:8"]), ("layout", ["dwindle"]),
+      ("master-ratio", ["0.6"]), ("preserve-split", ["on"]),
+    ] {
+      #expect(handler.dispatch(request(command: command, args: args)).ok)
+    }
+
+    let expected = [
+      "gap": "6", "padding": "--top 8 --bottom 0 --left 0 --right 0", "layout": "dwindle",
+      "master-ratio": "0.6", "preserve-split": "on", "master-placement": "left",
+      "focus-follows-mouse": "off", "animation-duration": "0.0",
+      "animation-easing": "ease-out-quad",
+    ]
+    for (command, value) in expected {
+      let response = handler.dispatch(request(command: command, args: []))
+      #expect(response.ok && response.message == value, "\(command)")
+    }
   }
 
   private func handler(spaces: Spaces) -> ConfigCommandHandler {

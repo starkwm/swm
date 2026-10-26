@@ -131,6 +131,12 @@ struct SpaceCommand: ParsableCommand {
     @OptionGroup var sides: PaddingSideOptions
 
     var arguments: [String] { target.arguments + sides.arguments }
+
+    func validate() throws {
+      guard !sides.changes.isEmpty else {
+        throw ValidationError("Provide at least one of --top, --bottom, --left, or --right.")
+      }
+    }
   }
 
   struct Gap: SpaceIPCCommand, SettingChangeCommand {
@@ -175,12 +181,6 @@ struct PaddingSideOptions: ParsableArguments {
 
   /// IPC arguments in `side=abs:<points>` or `side=rel:<points>` form.
   var arguments: [String] { changes.map { "\($0.side)=\($0.change.ipcValue)" } }
-
-  func validate() throws {
-    guard !changes.isEmpty else {
-      throw ValidationError("Provide at least one of --top, --bottom, --left, or --right.")
-    }
-  }
 }
 
 enum SpaceMasterPlacementName: String, CaseIterable, ExpressibleByArgument {

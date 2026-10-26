@@ -39,7 +39,7 @@ public final class Spaces {
   }
 
   private var activeSpace: TrackedState<UInt64>
-  private var defaultSettings = SpaceSettings.defaults
+  private(set) var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
   /// Create a Space service seeded from the active space.

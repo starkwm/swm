@@ -23,7 +23,7 @@ public final class Tiling {
   private let rulePlacement: RulePlacementHandler
   private var appliedRulePlacements = [CGWindowID: WindowRulePlacement]()
   private var currentTopology: SpaceTopology?
-  private var defaultState = TilingLayoutState(
+  private(set) var defaultState = TilingLayoutState(
     selection: .float,
     masterRatio: 0.5,
     masterPlacement: .left,
@@ -113,6 +113,12 @@ public final class Tiling {
   }
 
   /// Set the frame animation duration in seconds.
+  /// Seconds that window frame animations last, or zero when disabled.
+  var animationDuration: Double { frameReconciler?.animationDuration ?? 0 }
+
+  /// Curve used by window frame animations.
+  var animationEasing: AnimationEasing { frameReconciler?.animationEasing ?? .easeOutQuad }
+
   func setAnimationDuration(_ duration: Double) {
     frameReconciler?.animationDuration = duration
   }
