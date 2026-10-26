@@ -60,14 +60,25 @@ struct SpaceCommandHandlerTests {
   func dispatchAppliesAbsoluteAndRelativePaddingWithClamping() async {
     let spaces = Spaces(activeSpaceID: 42)
     let handler = handler(spaces: spaces)
-    #expect(await handler.dispatch(request(command: "--padding", args: ["abs:20:20:20:20"])).ok)
-    #expect(await handler.dispatch(request(command: "--padding", args: ["rel:10:0:-5:-5"])).ok)
+    let sides = ["top", "bottom", "left", "right"]
     #expect(
-      spaces.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 15)
+      await handler.dispatch(request(command: "--padding", args: sides.map { "\($0)=abs:20" })).ok
     )
-    #expect(await handler.dispatch(request(command: "--padding", args: ["abs:-1:1:-2:2"])).ok)
-    #expect(spaces.settings(for: 42).padding == SpacePadding(top: 0, bottom: 1, left: 0, right: 2))
-    #expect(await handler.dispatch(request(command: "--padding", args: ["rel:-10:-10:-10:-10"])).ok)
+    #expect(
+      await handler.dispatch(request(command: "--padding", args: ["top=rel:10", "left=rel:-5"])).ok
+    )
+    #expect(
+      spaces.settings(for: 42).padding == SpacePadding(top: 30, bottom: 20, left: 15, right: 20)
+    )
+    #expect(
+      await handler.dispatch(request(command: "--padding", args: ["top=abs:-1", "left=rel:2"])).ok
+    )
+    #expect(
+      spaces.settings(for: 42).padding == SpacePadding(top: 0, bottom: 20, left: 17, right: 20)
+    )
+    #expect(
+      await handler.dispatch(request(command: "--padding", args: sides.map { "\($0)=rel:-30" })).ok
+    )
     #expect(spaces.settings(for: 42).padding == .zero)
     #expect(spaces.settings(for: 43) == .defaults)
   }
@@ -192,8 +203,9 @@ struct SpaceCommandHandlerTests {
     let responses = [
       await handler.dispatch(request(command: "--layout", args: [])),
       await handler.dispatch(request(command: "--layout", args: ["unknown"])),
-      await handler.dispatch(request(command: "--padding", args: ["abs:1:2:3"])),
-      await handler.dispatch(request(command: "--padding", args: ["rel:1:2:x:4"])),
+      await handler.dispatch(request(command: "--padding", args: [])),
+      await handler.dispatch(request(command: "--padding", args: ["top=abs:x"])),
+      await handler.dispatch(request(command: "--padding", args: ["middle=abs:1"])),
       await handler.dispatch(request(command: "--gap", args: ["abs"])),
       await handler.dispatch(request(command: "--gap", args: ["rel:x"])),
       await handler.dispatch(request(command: "--master-ratio", args: ["0.6"])),
@@ -209,8 +221,8 @@ struct SpaceCommandHandlerTests {
     arguments: [
       ("--gap", "6", "space gap", "abs:<points> or rel:<points>, such as rel:4"),
       (
-        "--padding", "abs:1:2:3", "space padding",
-        "abs|rel:<top>:<bottom>:<left>:<right>, such as abs:8:8:8:8"
+        "--padding", "top=8", "space padding",
+        "<side>=abs:<points> or <side>=rel:<points>, such as top=abs:8"
       ),
       (
         "--master-ratio", "0.6", "space master-ratio",
@@ -248,16 +260,16 @@ struct SpaceCommandHandlerTests {
   @Test(
     "dispatch: rejects overflow without changing settings",
     arguments: [
-      ("--gap", "1", "gap", false), ("--gap", "1", "gap", true),
-      ("--padding", "1:-1:-1:-1", "padding", true),
-      ("--padding", "-1:1:-1:-1", "padding", true),
-      ("--padding", "-1:-1:1:-1", "padding", true),
-      ("--padding", "-1:-1:-1:1", "padding", true),
+      ("--gap", "rel:1", "gap", false), ("--gap", "rel:1", "gap", true),
+      ("--padding", "top=rel:1", "padding", true),
+      ("--padding", "bottom=rel:1", "padding", true),
+      ("--padding", "left=rel:1", "padding", true),
+      ("--padding", "right=rel:1", "padding", true),
     ]
   )
   func dispatchRejectsOverflowWithoutChangingSettings(
     command: String,
-    delta: String,
+    argument: String,
     setting: String,
     existingOverride: Bool
   ) async {
@@ -269,7 +281,7 @@ struct SpaceCommandHandlerTests {
     if existingOverride { spaces.setGap(Int.max, for: 42) }
     let handler = handler(spaces: spaces)
     let previous = spaces.settings(for: 42)
-    let response = await handler.dispatch(request(command: command, args: ["rel:\(delta)"]))
+    let response = await handler.dispatch(request(command: command, args: [argument]))
     #expect(!response.ok)
     #expect(response.errorCode == .invalidRequest)
     #expect(response.message == "space \(setting) adjustment overflows integer range")
@@ -283,12 +295,18 @@ struct SpaceCommandHandlerTests {
     let handler = handler(spaces: spaces)
     #expect(
       await handler.dispatch(
-        request(command: "--padding", args: ["abs:\(Int.max):\(Int.max):\(Int.max):\(Int.max)"])
+        request(
+          command: "--padding",
+          args: ["top", "bottom", "left", "right"].map { "\($0)=abs:\(Int.max)" }
+        )
       ).ok
     )
     #expect(
       await handler.dispatch(
-        request(command: "--padding", args: ["rel:\(Int.min):-1:0:\(-Int.max)"])
+        request(
+          command: "--padding",
+          args: ["top=rel:\(Int.min)", "bottom=rel:-1", "left=rel:0", "right=rel:\(-Int.max)"]
+        )
       ).ok
     )
     #expect(

@@ -128,24 +128,27 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: selection.rawValue)
   }
 
-  /// Set or adjust padding for the selected space.
+  /// Set or adjust padding sides for the selected space, keeping sides left out.
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "space padding").requiredValue()
-    guard let change = parsePaddingChange(argument) else {
-      throw IPCCommandError.invalidValue(
-        "space padding",
-        argument,
-        expected: "abs|rel:<top>:<bottom>:<left>:<right>, such as abs:8:8:8:8"
-      )
+    guard !request.args.isEmpty else {
+      throw IPCCommandError.invalidRequest("invalid space padding arguments")
+    }
+    let changes = try request.args.map { argument in
+      guard let change = PaddingSideChange(argument: argument) else {
+        throw IPCCommandError.invalidValue(
+          "space padding",
+          argument,
+          expected: PaddingSideChange.form
+        )
+      }
+      return change
     }
 
-    switch change.mode {
-    case .absolute:
-      spaces.setPadding(change.padding, for: spaceID)
-    case .relative:
-      try spaces.adjustPadding(change.padding, for: spaceID)
-    }
-
+    let padding = try PaddingSideChange.applying(
+      changes,
+      to: spaces.settings(for: spaceID).padding
+    )
+    spaces.setPadding(padding, for: spaceID)
     tiling.reflow(spaceID: spaceID)
 
     return .success(id: request.id, message: "ok")
@@ -210,32 +213,6 @@ struct SpaceCommandHandler {
     )
   }
 
-  /// Parse a padding change in `mode:top:bottom:left:right` format.
-  private func parsePaddingChange(_ argument: String) -> PaddingChange? {
-    let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-
-    guard
-      parts.count == 5,
-      let mode = NumericChangeMode(rawValue: parts[0])
-    else {
-      return nil
-    }
-
-    guard
-      let top = Int(parts[1]),
-      let bottom = Int(parts[2]),
-      let left = Int(parts[3]),
-      let right = Int(parts[4])
-    else {
-      return nil
-    }
-
-    return PaddingChange(
-      mode: mode,
-      padding: SpacePadding(top: top, bottom: bottom, left: left, right: right)
-    )
-  }
-
   /// Parse a gap change in `mode:value` format.
   private func parseGapChange(_ argument: String) -> GapChange? {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
@@ -256,10 +233,4 @@ struct SpaceCommandHandler {
 private struct GapChange {
   let mode: NumericChangeMode
   let value: Int
-}
-
-/// Parsed padding command argument.
-private struct PaddingChange {
-  let mode: NumericChangeMode
-  let padding: SpacePadding
 }

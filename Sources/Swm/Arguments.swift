@@ -22,6 +22,7 @@ struct Arguments: ParsableCommand {
   ///
   /// No arguments, or leading `start` options, start the daemon. Any other leading
   /// word must name a subcommand, so a typo is reported instead of reaching `start`.
+  /// Negative numbers are escaped for commands that accept signed adjustments.
   static func resolve(_ arguments: [String]) throws -> [String] {
     guard let first = arguments.first else { return [StartCommand._commandName] }
     if StartCommand.isOption(first) {
@@ -30,6 +31,7 @@ struct Arguments: ParsableCommand {
 
     var subcommands = configuration.subcommands
     var path = [_commandName]
+    var command: ParsableCommand.Type?
     for argument in arguments.drop(while: { $0 == "help" }) {
       guard !argument.hasPrefix("-"), !subcommands.isEmpty else { break }
       let names = subcommands.map { $0._commandName }
@@ -40,16 +42,22 @@ struct Arguments: ParsableCommand {
           suggestion: closestName(to: argument, in: names)
         )
       }
+      command = subcommands[index]
       subcommands = subcommands[index].configuration.subcommands
       path.append(argument)
+    }
+    if let command = command as? any SettingChangeCommand.Type {
+      return command.escapingNegativeNumbers(arguments)
     }
     return arguments
   }
 
-  /// The only candidate `name` prefixes or names a word of, else one within two edits.
+  /// The only candidate that shares a word with `name` or that `name` prefixes, else one
+  /// within two edits.
   static func closestName(to name: String, in candidates: [String]) -> String? {
+    let words = Set(name.split(separator: "-"))
     let partial = candidates.filter {
-      $0.hasPrefix(name) || $0.split(separator: "-").contains(Substring(name))
+      $0.hasPrefix(name) || !words.isDisjoint(with: $0.split(separator: "-"))
     }
     if partial.count == 1 { return partial[0] }
 

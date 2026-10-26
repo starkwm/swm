@@ -82,9 +82,9 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { [state.rawValue] }
   }
 
-  struct WindowGap: ConfigIPCCommand {
+  struct Gap: ConfigIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Set the window gap.")
-    static let command = "window-gap"
+    static let command = "gap"
 
     @Argument(help: "Gap in points.")
     var points: Int
@@ -92,44 +92,27 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { [String(points)] }
   }
 
-  struct TopPadding: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set top padding.")
-    static let command = "top-padding"
+  struct Padding: ConfigIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Set padding around every Space.",
+      discussion: """
+        Sides left out keep their padding.
 
-    @Argument(help: "Padding in points.")
-    var points: Int
+        Example:
+          swm config padding --top 6 --bottom 6 --left 6 --right 6
+        """
+    )
+    static let command = "padding"
 
-    var arguments: [String] { [String(points)] }
-  }
+    @OptionGroup var sides: PaddingSideOptions
 
-  struct BottomPadding: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set bottom padding.")
-    static let command = "bottom-padding"
+    var arguments: [String] { sides.arguments }
 
-    @Argument(help: "Padding in points.")
-    var points: Int
-
-    var arguments: [String] { [String(points)] }
-  }
-
-  struct LeftPadding: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set left padding.")
-    static let command = "left-padding"
-
-    @Argument(help: "Padding in points.")
-    var points: Int
-
-    var arguments: [String] { [String(points)] }
-  }
-
-  struct RightPadding: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set right padding.")
-    static let command = "right-padding"
-
-    @Argument(help: "Padding in points.")
-    var points: Int
-
-    var arguments: [String] { [String(points)] }
+    func validate() throws {
+      guard sides.changes.allSatisfy({ !$0.change.isRelative }) else {
+        throw ValidationError("Global padding takes points, not signed changes.")
+      }
+    }
   }
 
   static let configuration = CommandConfiguration(
@@ -138,7 +121,7 @@ struct ConfigCommand: ParsableCommand {
     subcommands: [
       Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
       PreserveSplit.self, AnimationDuration.self, AnimationEasingCommand.self,
-      WindowGap.self, TopPadding.self, BottomPadding.self, LeftPadding.self, RightPadding.self,
+      Gap.self, Padding.self,
     ]
   )
 }

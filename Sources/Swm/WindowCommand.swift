@@ -230,23 +230,27 @@ struct WindowCommand: ParsableCommand {
     var arguments: [String] { selector.arguments }
   }
 
-  struct SplitRatio: WindowIPCCommand {
+  struct SplitRatio: WindowIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
       abstract: "Change a dwindle split ratio.",
       discussion: """
         Examples:
-          swm window split-ratio abs:0.5
-          swm window split-ratio rel:0.05
+          swm window split-ratio 0.5
+          swm window split-ratio +0.05
         """
     )
     static let command = "--split-ratio"
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Change in the form abs:<ratio> or rel:<ratio>.")
-    var change: String
+    @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as -0.05.")
+    var ratio: SettingChange<Double>
 
-    var arguments: [String] { selector.arguments + [change] }
+    var arguments: [String] { selector.arguments + [ratio.ipcValue] }
+
+    func validate() throws {
+      try ratio.validate(0.1...0.9, name: "Split ratio")
+    }
   }
 
   struct ToggleSplit: WindowIPCCommand {

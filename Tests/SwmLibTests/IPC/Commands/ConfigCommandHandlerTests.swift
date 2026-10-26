@@ -43,13 +43,13 @@ struct ConfigCommandHandlerTests {
     }
   }
 
-  @Test("dispatch: window gap updates defaults and overrides")
-  func dispatchWindowGapUpdatesDefaultsAndOverrides() {
+  @Test("dispatch: gap updates defaults and overrides")
+  func dispatchGapUpdatesDefaultsAndOverrides() {
     let spaces = Spaces(activeSpaceID: nil)
     spaces.setGap(5, for: 1)
     let handler = handler(spaces: spaces)
 
-    let response = handler.dispatch(request(command: "window-gap", args: ["12"]))
+    let response = handler.dispatch(request(command: "gap", args: ["12"]))
 
     #expect(response.ok)
     #expect(spaces.settings(for: 1).gap == 12)
@@ -154,22 +154,30 @@ struct ConfigCommandHandlerTests {
     )
     let handler = handler(spaces: spaces)
 
-    let response = handler.dispatch(request(command: "top-padding", args: ["10"]))
+    let response = handler.dispatch(
+      request(command: "padding", args: ["top=abs:10", "right=abs:-5"])
+    )
 
     #expect(response.ok)
-    #expect(spaces.settings(for: 1).padding == SpacePadding(top: 10, bottom: 2, left: 3, right: 4))
+    #expect(spaces.settings(for: 1).padding == SpacePadding(top: 10, bottom: 2, left: 3, right: 0))
     #expect(spaces.settings(for: 2).padding == SpacePadding(top: 10, bottom: 0, left: 0, right: 0))
   }
 
   @Test(
     "dispatch: rejects malformed arguments with exact diagnostics",
     arguments: [
-      ("window-gap", [], "invalid config window-gap arguments"),
-      ("window-gap", ["10", "20"], "invalid config window-gap arguments"),
-      ("window-gap", ["wide"], "invalid config window-gap value: wide"),
-      ("top-padding", [], "invalid config top-padding arguments"),
-      ("top-padding", ["10", "20"], "invalid config top-padding arguments"),
-      ("right-padding", ["wide"], "invalid config right-padding value: wide"),
+      ("gap", [], "invalid config gap arguments"),
+      ("gap", ["10", "20"], "invalid config gap arguments"),
+      ("gap", ["wide"], "invalid config gap value: wide"),
+      ("padding", [], "invalid config padding arguments"),
+      (
+        "padding", ["top=rel:2"],
+        "invalid config padding value: top=rel:2; expected <side>=abs:<points>, such as top=abs:8"
+      ),
+      (
+        "padding", ["middle=abs:2"],
+        "invalid config padding value: middle=abs:2; expected <side>=abs:<points>, such as top=abs:8"
+      ),
       ("layout", [], "invalid config layout arguments"),
       ("layout", ["master", "dwindle"], "invalid config layout arguments"),
       ("layout", ["columns"], "invalid config layout: columns"),
