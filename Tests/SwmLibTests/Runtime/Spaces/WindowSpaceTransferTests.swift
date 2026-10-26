@@ -78,7 +78,7 @@ struct WindowSpaceTransferTests {
       wait: { Issue.record("unexpected wait") }
     )
 
-    let destinationID = try await transfer.move(windowID: 42, to: .index(0))
+    let destinationID = try await transfer.move(windowID: 42, to: .index(1))
 
     #expect(destinationID == 11)
   }
@@ -94,7 +94,7 @@ struct WindowSpaceTransferTests {
     await #expect(
       throws: IPCCommandError.invalidRequest("destination must be a normal desktop Space")
     ) {
-      try await transfer.move(windowID: 42, to: .index(1))
+      try await transfer.move(windowID: 42, to: .index(2))
     }
 
     await #expect(throws: IPCCommandError.invalidRequest("destination Space not found")) {

@@ -32,7 +32,7 @@ struct SpaceCommandHandlerTests {
       activateSpace: { _ in throw SpaceActivationBridgeError.unavailable }
     )
 
-    let response = await handler.dispatch(request(command: "--activate", args: ["0"]))
+    let response = await handler.dispatch(request(command: "--activate", args: ["1"]))
     #expect(!response.ok)
     #expect(response.errorCode == .internalError)
     #expect(response.message == SpaceActivationBridgeError.unavailable.description)
@@ -40,7 +40,9 @@ struct SpaceCommandHandlerTests {
 
   @Test(
     "dispatch: activation rejects missing, extra, and invalid indexes",
-    arguments: [[], ["0", "1"], ["-1"], ["next"], ["18446744073709551615"], ["--space", "1"]]
+    arguments: [
+      [], ["1", "2"], ["0"], ["-1"], ["next"], ["18446744073709551615"], ["--space", "1"],
+    ]
   )
   func dispatchActivationRejectsMissingExtraAndInvalidIndexes(args: [String]) async {
     let spaces = Spaces(activeSpaceID: 42)
@@ -311,7 +313,7 @@ struct SpaceCommandHandlerTests {
     )
 
     let response = await handler.dispatch(
-      request(command: "--gap", args: ["--space", "1", "abs:10"])
+      request(command: "--gap", args: ["--space", "2", "abs:10"])
     )
 
     #expect(response.ok)
@@ -330,16 +332,16 @@ struct SpaceCommandHandlerTests {
 
     let missing = await handler.dispatch(request(command: "--gap", args: ["--space"]))
     let negative = await handler.dispatch(
-      request(command: "--gap", args: ["--space", "-1", "abs:10"])
+      request(command: "--gap", args: ["--space", "0", "abs:10"])
     )
     let outOfRange = await handler.dispatch(
-      request(command: "--gap", args: ["--space", "2", "abs:10"])
+      request(command: "--gap", args: ["--space", "3", "abs:10"])
     )
 
     #expect(missing.errorCode == .invalidRequest)
     #expect(negative.errorCode == .invalidRequest)
     #expect(outOfRange.errorCode == .invalidRequest)
-    #expect(outOfRange.message == "space index out of range: 2")
+    #expect(outOfRange.message == "space index out of range: 3")
   }
 
   @Test("dispatch: rejects active-space mutation without active space")

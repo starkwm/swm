@@ -14,7 +14,7 @@ Add at most one selector to filter the result:
 
 ```sh
 swm query windows --display 1
-swm query windows --space 0
+swm query windows --space 1
 swm query windows --window 12345
 ```
 
@@ -26,7 +26,7 @@ swm query space [space-index]
 swm query window [window-id]
 ```
 
-Display indexes are one-based and follow the physical display arrangement. Space indexes are zero-based. A filtered query returns one JSON object when the selector identifies the same type as the query; otherwise it returns an array of related objects.
+Display and Space indexes are one-based. Display indexes follow the physical display arrangement. A filtered query returns one JSON object when the selector identifies the same type as the query; otherwise it returns an array of related objects.
 
 Window `has-focus` compares each ID with the focused window of the frontmost application. It is `null` when focus cannot be determined; a singular window query then returns `null`.
 

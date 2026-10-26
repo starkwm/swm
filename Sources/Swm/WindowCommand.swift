@@ -162,7 +162,7 @@ struct WindowCommand: ParsableCommand {
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Zero-based Space index, next, or prev.", completion: .list(["next", "prev"]))
+    @Argument(help: "One-based Space index, next, or prev.", completion: .list(["next", "prev"]))
     var space: String
 
     var arguments: [String] { selector.arguments + [space] }

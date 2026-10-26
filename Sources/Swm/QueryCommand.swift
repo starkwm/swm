@@ -61,14 +61,14 @@ struct QueryCommand: ParsableCommand {
     )
     static let command = "--space"
 
-    @Argument(help: "Zero-based Space index.")
+    @Argument(help: "One-based Space index.")
     var index: Int?
 
     var arguments: [String] { index.map { [String($0)] } ?? [] }
 
     func validate() throws {
-      if let index, index < 0 {
-        throw ValidationError("Space index must not be negative.")
+      if let index, index < 1 {
+        throw ValidationError("Space index must be positive.")
       }
     }
   }
@@ -89,7 +89,7 @@ struct QueryCommand: ParsableCommand {
 /// An optional selector shared by plural query commands.
 struct QuerySelectorOptions: ParsableArguments {
   @Option(help: "Filter by one-based display index.") var display: Int?
-  @Option(help: "Filter by zero-based Space index.") var space: Int?
+  @Option(help: "Filter by one-based Space index.") var space: Int?
   @Option(help: "Filter by window ID.") var window: UInt32?
 
   var arguments: [String] {
@@ -107,8 +107,8 @@ struct QuerySelectorOptions: ParsableArguments {
     if let display, display < 1 {
       throw ValidationError("Display index must be positive.")
     }
-    if let space, space < 0 {
-      throw ValidationError("Space index must not be negative.")
+    if let space, space < 1 {
+      throw ValidationError("Space index must be positive.")
     }
   }
 }

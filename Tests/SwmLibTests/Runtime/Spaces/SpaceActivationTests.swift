@@ -23,7 +23,7 @@ struct SpaceActivationTests {
       }
     )
 
-    let result = try await activation.activate(index: 1)
+    let result = try await activation.activate(index: 2)
 
     #expect(waits == 2)
     #expect(result.displays[0].currentSpaceID?.rawValue == 33)
@@ -40,10 +40,10 @@ struct SpaceActivationTests {
       wait: { Issue.record("unexpected wait") }
     )
 
-    #expect(try await activation.activate(index: 0) == before)
+    #expect(try await activation.activate(index: 1) == before)
   }
 
-  @Test("activate: rejects out-of-range indexes", arguments: [-1, 4, Int.max])
+  @Test("activate: rejects out-of-range indexes", arguments: [0, 5, Int.max])
   func activateRejectsOutOfRangeIndexes(index: Int) async {
     let activation = SpaceActivation(
       snapshotProvider: { snapshot() },
@@ -63,7 +63,7 @@ struct SpaceActivationTests {
         submitActivation: { _, _, _ in Issue.record("unexpected submission") }
       )
 
-      for index in [0, 1] {
+      for index in [1, 2] {
         await #expect(
           throws: IPCCommandError.invalidRequest(
             "Space activation requires a display containing only normal desktop Spaces"
@@ -87,7 +87,7 @@ struct SpaceActivationTests {
         "Space topology is incomplete; try again after the transition"
       )
     ) {
-      try await activation.activate(index: 1)
+      try await activation.activate(index: 2)
     }
   }
 
@@ -105,7 +105,7 @@ struct SpaceActivationTests {
         "timed out activating Space 33; activation was requested but not confirmed"
       )
     ) {
-      try await activation.activate(index: 1)
+      try await activation.activate(index: 2)
     }
     #expect(waits == 40)
   }
@@ -119,7 +119,7 @@ struct SpaceActivationTests {
       wait: { waits += 1 }
     )
 
-    let result = try await activation.activate(index: 1)
+    let result = try await activation.activate(index: 2)
     #expect(waits == 40)
     #expect(result.displays[0].currentSpaceID?.rawValue == 33)
   }
@@ -153,7 +153,7 @@ struct SpaceActivationTests {
         "Space activation was requested, but the target Space or display disappeared"
       )
     ) {
-      try await activation.activate(index: 1)
+      try await activation.activate(index: 2)
     }
   }
 
@@ -169,7 +169,7 @@ struct SpaceActivationTests {
     )
 
     do {
-      _ = try await activation.activate(index: 1)
+      _ = try await activation.activate(index: 2)
       Issue.record("expected confirmation query failure")
     } catch let error as IPCCommandError {
       #expect(error.errorCode == .internalError)
@@ -189,7 +189,7 @@ struct SpaceActivationTests {
     )
 
     await #expect(throws: SpaceActivationBridgeError.unavailable) {
-      try await activation.activate(index: 1)
+      try await activation.activate(index: 2)
     }
   }
 
@@ -210,15 +210,15 @@ struct SpaceActivationTests {
             "Space activation is already in progress on this display"
           )
         ) {
-          try await activation.activate(index: 0)
+          try await activation.activate(index: 1)
         }
-        let otherResult = try await activation.activate(index: 3)
+        let otherResult = try await activation.activate(index: 4)
         #expect(otherResult.displays[1].currentSpaceID?.rawValue == 66)
         observed = snapshot(current: 33, otherCurrent: 66)
       }
     )
 
-    _ = try await activation.activate(index: 1)
+    _ = try await activation.activate(index: 2)
   }
 
   @Test("activate: cancellation releases the display for a subsequent request")
@@ -238,9 +238,9 @@ struct SpaceActivationTests {
     )
 
     await #expect(throws: CancellationError.self) {
-      try await activation.activate(index: 1)
+      try await activation.activate(index: 2)
     }
-    _ = try await activation.activate(index: 1)
+    _ = try await activation.activate(index: 2)
   }
 
   private func snapshot(

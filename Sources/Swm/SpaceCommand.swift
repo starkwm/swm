@@ -7,7 +7,7 @@ struct SpaceCommand: ParsableCommand {
     @Option(
       name: .long,
       help: ArgumentHelp(
-        "Zero-based Space index; defaults to active.",
+        "One-based Space index; defaults to active.",
         valueName: "space-index"
       )
     )
@@ -18,8 +18,8 @@ struct SpaceCommand: ParsableCommand {
     }
 
     func validate() throws {
-      if let space, space < 0 {
-        throw ValidationError("Space index must not be negative.")
+      if let space, space < 1 {
+        throw ValidationError("Space index must be positive.")
       }
     }
   }
@@ -38,14 +38,14 @@ struct SpaceCommand: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")
     static let command = "--activate"
 
-    @Argument(help: "Zero-based Space index from swm query spaces.")
+    @Argument(help: "One-based Space index from swm query spaces.")
     var index: Int
 
     var arguments: [String] { [String(index)] }
 
     func validate() throws {
-      guard index >= 0 else {
-        throw ValidationError("Space index must not be negative.")
+      guard index >= 1 else {
+        throw ValidationError("Space index must be positive.")
       }
     }
   }

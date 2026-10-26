@@ -117,11 +117,11 @@ enum QuerySelection: Equatable {
     return index
   }
 
-  /// Parse a non-negative space index.
+  /// Parse a positive one-based Space index.
   private static func parseSpaceIndex(_ value: String) throws -> Int {
-    guard let index = Int(value), index >= 0 else {
+    guard let index = Int(value), index > 0 else {
       throw IPCCommandError.invalidRequest(
-        "query space selector value must be a non-negative integer"
+        "query space selector value must be a positive integer"
       )
     }
 

@@ -66,7 +66,7 @@ struct WindowSerializer: Encodable, Equatable {
   /// Core Graphics display ID for the display containing most of the window.
   let display: UInt32?
 
-  /// Zero-based space index containing the window.
+  /// One-based Space index containing the window.
   let space: Int?
 
   /// Core Graphics window layer when available.

@@ -50,7 +50,7 @@ struct SpaceSerializer: Encodable, Equatable {
 
       return SpaceSerializer(
         id: space.id,
-        index: index,
+        index: index + 1,
         type: space.type.description,
         displays: resolvedScreens.compactMap(\.id),
         windows: windowIDsBySpaceID[space.id] ?? [],
@@ -66,7 +66,7 @@ struct SpaceSerializer: Encodable, Equatable {
   /// WindowServer space ID.
   let id: UInt64
 
-  /// Zero-based space index in the current space order.
+  /// One-based Space index in the current Space order.
   let index: Int
 
   /// Human-readable space type.
