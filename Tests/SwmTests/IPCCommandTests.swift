@@ -51,6 +51,28 @@ struct IPCCommandTests {
     #expect(read(errors) == (ok ? "" : printed))
   }
 
+  @Test("formatted: indents query JSON for terminals and keeps it compact for pipes")
+  func formattedIndentsQueryJSONForTerminalsAndKeepsItCompactForPipes() throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["query", "display"]) as? QueryCommand.Display
+    )
+    let json = #"{"index":1,"spaces":[1,2]}"#
+
+    #expect(command.formatted(json, forTerminal: false) == json)
+    #expect(
+      command.formatted(json, forTerminal: true) == """
+        {
+          "index" : 1,
+          "spaces" : [
+            1,
+            2
+          ]
+        }
+        """
+    )
+    #expect(command.formatted("null", forTerminal: true) == "null")
+  }
+
   private func read(_ stream: UnsafeMutablePointer<FILE>) -> String {
     fflush(stream)
     rewind(stream)
