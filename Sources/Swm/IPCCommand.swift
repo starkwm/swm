@@ -1,5 +1,6 @@
 import ArgumentParser
 import Darwin
+import Foundation
 import SwmLib
 
 /// A typed command translated to the existing daemon IPC protocol.
@@ -11,12 +12,17 @@ protocol IPCCommand: ParsableCommand {
 
   /// The daemon command and its arguments.
   var commandArguments: [String] { get }
+
+  /// Format a successful response for output to a terminal or a pipe.
+  func formatted(_ message: String, forTerminal: Bool) -> String
 }
 
 extension IPCCommand {
   var arguments: [String] { [] }
 
   var commandArguments: [String] { [Self.command] + arguments }
+
+  func formatted(_ message: String, forTerminal: Bool) -> String { message }
 
   mutating func run() throws {
     try run(send: Client.send, output: stdout, errors: stderr)
@@ -28,9 +34,13 @@ extension IPCCommand {
     errors: UnsafeMutablePointer<FILE>
   ) throws {
     let result = send(Self.domain, commandArguments)
+    let message =
+      result.ok
+      ? formatted(result.outputMessage, forTerminal: isatty(fileno(output)) != 0)
+      : result.outputMessage
 
-    if !result.outputMessage.isEmpty {
-      fputs("\(result.outputMessage)\n", result.ok ? output : errors)
+    if !message.isEmpty {
+      fputs("\(message)\n", result.ok ? output : errors)
     }
 
     if !result.ok {
@@ -49,6 +59,24 @@ protocol QueryIPCCommand: IPCCommand {}
 
 extension QueryIPCCommand {
   static var domain: CommandDomain { .query }
+
+  /// Indent JSON for a terminal, and keep it on one line for pipes.
+  func formatted(_ message: String, forTerminal: Bool) -> String {
+    guard
+      forTerminal,
+      let object = try? JSONSerialization.jsonObject(
+        with: Data(message.utf8),
+        options: .fragmentsAllowed
+      ),
+      let data = try? JSONSerialization.data(
+        withJSONObject: object,
+        options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]
+      )
+    else {
+      return message
+    }
+    return String(decoding: data, as: UTF8.self)
+  }
 }
 
 protocol SignalIPCCommand: IPCCommand {}

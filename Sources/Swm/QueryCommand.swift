@@ -6,7 +6,7 @@ struct QueryCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "query",
     abstract: "Query displays, Spaces, and windows.",
-    discussion: "Query results are written as JSON.",
+    discussion: "Results are JSON, indented for a terminal and on one line for pipes.",
     subcommands: [Displays.self, Spaces.self, Windows.self, Display.self, Space.self, Window.self]
   )
 

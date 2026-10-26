@@ -2,7 +2,7 @@
 
 [Documentation index](index.md)
 
-Queries return JSON. Query all tracked objects of one type:
+Queries return JSON, indented when written to a terminal and on one line when piped to another command. Query all tracked objects of one type:
 
 ```sh
 swm query displays
