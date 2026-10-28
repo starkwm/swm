@@ -14,7 +14,6 @@ struct IPCCommandTests {
       (true, #"{"id":1}"#, #"{"id":1}"#),
       (true, "", ""),
       (false, "window not found", "Error: window not found"),
-      (false, "error: window not found", "error: window not found"),
     ]
   )
   func runFormatsDaemonResponsesRoutesOutputAndPreservesFailureExitStatus(

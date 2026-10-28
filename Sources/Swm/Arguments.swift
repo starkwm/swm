@@ -52,12 +52,10 @@ struct Arguments: ParsableCommand {
     return arguments
   }
 
-  /// The only candidate that shares a word with `name` or that `name` prefixes, else one
-  /// within two edits.
+  /// The only candidate `name` prefixes or names a word of, else one within two edits.
   static func closestName(to name: String, in candidates: [String]) -> String? {
-    let words = Set(name.split(separator: "-"))
     let partial = candidates.filter {
-      $0.hasPrefix(name) || !words.isDisjoint(with: $0.split(separator: "-"))
+      $0.hasPrefix(name) || $0.split(separator: "-").contains(Substring(name))
     }
     if partial.count == 1 { return partial[0] }
 

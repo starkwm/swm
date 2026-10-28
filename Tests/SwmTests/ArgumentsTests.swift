@@ -40,6 +40,8 @@ struct ArgumentsTests {
       (["window", "space", "next"], ["window", "space", "next"]),
       (["help", "window", "focus"], ["help", "window", "focus"]),
       (["space", "activate", "--", "-1"], ["space", "activate", "--", "-1"]),
+      (["space", "gap", "-2", "--space", "3"], ["space", "gap", "--space", "3", "--", "-2"]),
+      (["space", "padding", "--top", "-4"], ["space", "padding", "--top", "-4"]),
     ]
   )
   func resolveStartsTheDaemonWithoutASubcommand(arguments: [String], expected: [String]) throws {
@@ -59,12 +61,8 @@ struct ArgumentsTests {
         UnknownSubcommandError(name: "focs", path: "swm window", suggestion: "focus")
       ),
       (
-        ["config", "window-gap", "6"],
-        UnknownSubcommandError(name: "window-gap", path: "swm config", suggestion: "gap")
-      ),
-      (
-        ["config", "top-padding", "6"],
-        UnknownSubcommandError(name: "top-padding", path: "swm config", suggestion: "padding")
+        ["config", "ga", "6"],
+        UnknownSubcommandError(name: "ga", path: "swm config", suggestion: "gap")
       ),
       (
         ["config", "bogus"],
@@ -319,7 +317,6 @@ struct ArgumentsTests {
       (["space", "gap", "+2"], ["rel:2"]),
       (["space", "gap", "-2"], ["rel:-2"]),
       (["space", "gap", "-2", "--space", "3"], ["--space", "3", "rel:-2"]),
-      (["space", "gap", "rel:4"], ["rel:4"]),
       (["space", "master-ratio", "0.6"], ["abs:0.6"]),
       (["space", "master-ratio", "-0.05"], ["rel:-0.05"]),
       (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
@@ -343,7 +340,8 @@ struct ArgumentsTests {
     "parseAsRoot: rejects out-of-range ratios, empty padding, and signed global padding",
     arguments: [
       ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
-      ["space", "gap", "wide"], ["space", "padding"], ["config", "padding", "--top", "+2"],
+      ["space", "gap", "wide"], ["space", "gap", "rel:4"], ["space", "gap", "abs:6"],
+      ["space", "padding"], ["config", "padding", "--top", "+2"],
     ]
   )
   func parseAsRootRejectsOutOfRangeRatiosEmptyPaddingAndSignedGlobalPadding(
