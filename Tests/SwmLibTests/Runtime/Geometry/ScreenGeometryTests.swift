@@ -48,4 +48,39 @@ struct ScreenGeometryTests {
     )
     #expect(ScreenGeometry.accessibilityFrame(visible, primaryFrame: primary) == expectedVisible)
   }
+
+  @Test(
+    "visibleFrame: gives an automatically hidden Dock's edge back and keeps the menu bar",
+    arguments: [
+      (DockEdge?.none, CGRect(x: 0, y: 53, width: 1710, height: 1021)),
+      (DockEdge.bottom, CGRect(x: 0, y: 0, width: 1710, height: 1074)),
+      (DockEdge.left, CGRect(x: 0, y: 53, width: 1710, height: 1021)),
+    ]
+  )
+  func visibleFrameGivesAnAutomaticallyHiddenDocksEdgeBack(edge: DockEdge?, expected: CGRect) {
+    let frame = CGRect(x: 0, y: 0, width: 1710, height: 1112)
+    let withDock = CGRect(x: 0, y: 53, width: 1710, height: 1021)
+
+    #expect(ScreenGeometry.visibleFrame(withDock, in: frame, hiddenDockEdge: edge) == expected)
+  }
+
+  @Test("visibleFrame: restores side Docks on screens away from the origin")
+  func visibleFrameRestoresSideDocksOnScreensAwayFromTheOrigin() {
+    let frame = CGRect(x: 1710, y: -200, width: 1920, height: 1080)
+
+    #expect(
+      ScreenGeometry.visibleFrame(
+        CGRect(x: 1790, y: -200, width: 1840, height: 1055),
+        in: frame,
+        hiddenDockEdge: .left
+      ) == CGRect(x: 1710, y: -200, width: 1920, height: 1055)
+    )
+    #expect(
+      ScreenGeometry.visibleFrame(
+        CGRect(x: 1710, y: -200, width: 1840, height: 1055),
+        in: frame,
+        hiddenDockEdge: .right
+      ) == CGRect(x: 1710, y: -200, width: 1920, height: 1055)
+    )
+  }
 }

@@ -45,8 +45,17 @@ extension NSScreen {
   }
 
   /// Visible frame converted to the coordinate space used by accessibility APIs.
+  ///
+  /// An automatically hidden Dock does not reduce the visible frame, so layouts stay the
+  /// same whether or not the Dock is showing when they are made.
   var axVisibleFrame: CGRect {
-    accessibilityFrame(for: visibleFrame)
+    accessibilityFrame(
+      for: ScreenGeometry.visibleFrame(
+        visibleFrame,
+        in: frame,
+        hiddenDockEdge: DockPreferences.hiddenDockEdge()
+      )
+    )
   }
 
   /// Convert an AppKit screen frame to the coordinate space used by accessibility APIs.
