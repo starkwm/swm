@@ -161,16 +161,16 @@ struct SpaceCommand: ParsableCommand {
 
 /// Padding sides shared by the Space and global padding commands.
 struct PaddingSideOptions: ParsableArguments {
-  @Option(help: ArgumentHelp("Top padding.", valueName: "points"))
+  @Option(parsing: .unconditional, help: ArgumentHelp("Top padding.", valueName: "points"))
   var top: SettingChange<Int>?
 
-  @Option(help: ArgumentHelp("Bottom padding.", valueName: "points"))
+  @Option(parsing: .unconditional, help: ArgumentHelp("Bottom padding.", valueName: "points"))
   var bottom: SettingChange<Int>?
 
-  @Option(help: ArgumentHelp("Left padding.", valueName: "points"))
+  @Option(parsing: .unconditional, help: ArgumentHelp("Left padding.", valueName: "points"))
   var left: SettingChange<Int>?
 
-  @Option(help: ArgumentHelp("Right padding.", valueName: "points"))
+  @Option(parsing: .unconditional, help: ArgumentHelp("Right padding.", valueName: "points"))
   var right: SettingChange<Int>?
 
   /// Sides given on the command line, in IPC order.

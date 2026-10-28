@@ -39,10 +39,6 @@ struct IPCResponse: Codable, Equatable, Sendable {
 
   /// Message formatted for command-line output, prefixed like argument parser errors.
   var outputMessage: String {
-    if ok || message.lowercased().hasPrefix("error: ") {
-      return message
-    }
-
-    return "Error: \(message)"
+    ok ? message : "Error: \(message)"
   }
 }
