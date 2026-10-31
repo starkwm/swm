@@ -43,7 +43,7 @@ Top-level options:
 
 ```text
 -h, --help                 Show help
-    --version              Show the version
+-v, --version              Show the version
 ```
 
 Command references cover [queries](query.md), [windows](windows.md), [spaces](spaces.md), [global defaults](configuration.md#global-defaults), [rules](rules.md), and [signals](signals.md).
