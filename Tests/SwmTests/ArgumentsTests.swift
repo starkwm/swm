@@ -37,6 +37,7 @@ struct ArgumentsTests {
       (["-c", "swmrc"], ["start", "-c", "swmrc"]),
       (["--log-level=debug"], ["start", "--log-level=debug"]),
       (["--version"], ["--version"]),
+      (["-v"], ["-v"]),
       (["window", "space", "next"], ["window", "space", "next"]),
       (["help", "window", "focus"], ["help", "window", "focus"]),
       (["space", "activate", "--", "-1"], ["space", "activate", "--", "-1"]),

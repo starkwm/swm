@@ -83,7 +83,7 @@ struct Arguments: ParsableCommand {
   }
 
   /// Show version information.
-  @Flag(name: .long, help: "Show the version.")
+  @Flag(name: .shortAndLong, help: "Show the version.")
   var version = false
 
   /// Print the version, or the root help when no subcommand was given.
