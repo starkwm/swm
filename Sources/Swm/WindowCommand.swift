@@ -264,7 +264,7 @@ struct WindowCommand: ParsableCommand {
 /// Optional window selector for commands that default to the focused window.
 struct WindowSelector: ParsableArguments {
   @Option(
-    name: .shortAndLong,
+    name: .long,
     help: "Window ID or recent; defaults to focused.",
     completion: .list(["recent"])
   )
