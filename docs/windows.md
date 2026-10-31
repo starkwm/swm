@@ -50,6 +50,8 @@ swm window display [--window <window|recent>] <next|prev|display-index>
 swm window grid 2:1:1:0:1:1
 ```
 
+`move`, `resize`, and `grid` only apply to windows outside automatic layout geometry: windows on a Space with the `float` layout, windows floated with `swm window layout float`, and windows on more than one Space. A tiled window is rejected with `window is tiled`, because the next layout reflow would put it back.
+
 Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 
 ## Move between Spaces

@@ -87,6 +87,8 @@ struct WindowCommand: ParsableCommand {
       discussion: """
         abs sets the top-left corner; rel moves by an offset in points.
 
+        Tiled windows are rejected; float them with `swm window layout float` first.
+
         Examples:
           swm window move abs:0:25
           swm window move rel:-20:0
@@ -108,6 +110,8 @@ struct WindowCommand: ParsableCommand {
       discussion: """
         abs sets the size; rel changes it by an offset in points.
 
+        Tiled windows are rejected; float them with `swm window layout float` first.
+
         Examples:
           swm window resize abs:1200:800
           swm window resize rel:40:0
@@ -128,6 +132,8 @@ struct WindowCommand: ParsableCommand {
       abstract: "Place a window on a grid.",
       discussion: """
         x, y, width, and height are measured in grid cells from the top left.
+
+        Tiled windows are rejected; float them with `swm window layout float` first.
 
         Examples:
           swm window grid 2:1:0:0:1:1   # left half
