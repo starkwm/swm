@@ -489,6 +489,14 @@ public final class Tiling {
     return state.tree?.removing(unavailableWindowIDs)?.windowIDs.first
   }
 
+  /// Return whether an automatic layout currently owns a window's geometry.
+  func isWindowTiled(_ windowID: CGWindowID) -> Bool {
+    guard let layoutID = layoutIDByWindowID[windowID] else { return false }
+    guard let state = layoutsByID[layoutID], state.selection != .float else { return false }
+    return !floatingOverrideWindowIDs.contains(windowID)
+      && !state.omittedWindowIDs.contains(windowID)
+  }
+
   /// Set a window's explicit floating or tiled participation.
   @discardableResult
   func setWindowLayout(_ selection: WindowLayoutSelection, for windowID: CGWindowID) -> Bool {

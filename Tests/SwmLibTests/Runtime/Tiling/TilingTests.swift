@@ -1137,6 +1137,26 @@ struct TilingTests {
     #expect(tiling.masterWindowID(inLayoutContaining: 3) == nil)
   }
 
+  @Test("isWindowTiled: only windows placed by an automatic layout are tiled")
+  func isWindowTiledOnlyWindowsPlacedByAnAutomaticLayoutAreTiled() {
+    let tiling = makeTiling(
+      windows: [window(id: 1, isMinimized: true), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]]
+    )
+    tiling.initialize()
+
+    #expect(!tiling.isWindowTiled(2))
+
+    tiling.setLayout(.master, for: 10)
+    #expect(tiling.isWindowTiled(2))
+    #expect(!tiling.isWindowTiled(1))
+    #expect(!tiling.isWindowTiled(99))
+
+    #expect(tiling.setWindowLayout(.float, for: 2))
+    #expect(!tiling.isWindowTiled(2))
+    #expect(tiling.isWindowTiled(3))
+  }
+
   @Test("setWindowLayout: retains manual overrides through rule edits until window closure")
   func setWindowLayoutRetainsManualOverridesThroughRuleEditsUntilWindowClosure() throws {
     var candidates = [window(id: 1), window(id: 2)]

@@ -305,6 +305,7 @@ struct WindowCommandHandler {
     }
 
     let window = try selectedWindow(selector: selection.selector)
+    try requireUntiledWindow(window)
 
     guard let destination = tiling.destinationFrame(for: window.id) ?? window.frame() else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
@@ -426,6 +427,7 @@ struct WindowCommandHandler {
     }
 
     let window = try selectedWindow(selector: selection.selector)
+    try requireUntiledWindow(window)
 
     guard let frame = window.frame() else {
       throw IPCCommandError.internalError("could not grid window: \(window.id)")
@@ -468,6 +470,13 @@ struct WindowCommandHandler {
       targetFrame: targetScreen.axVisibleFrame
     ).targetWindowFrame()
     try applyFrame(targetFrame, window: window, failureMessage: failureMessage, animated: false)
+  }
+
+  /// Reject direct geometry changes that an automatic layout would overwrite.
+  private func requireUntiledWindow(_ window: Window) throws {
+    guard !tiling.isWindowTiled(window.id) else {
+      throw IPCCommandError.invalidRequest("window is tiled: \(window.id)")
+    }
   }
 
   /// Apply a multi-part frame change and report unrecoverable partial state.
