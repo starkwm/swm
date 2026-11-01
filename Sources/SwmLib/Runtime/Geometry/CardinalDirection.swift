@@ -1,6 +1,6 @@
 import CoreGraphics
 
-/// Cardinal direction used to select a neighbouring window by frame geometry.
+/// Cardinal direction used to select a neighbouring window or display by frame geometry.
 enum CardinalDirection: String, Equatable {
   case left
   case right
@@ -20,18 +20,18 @@ enum CardinalDirection: String, Equatable {
     }
   }
 
-  /// Return the closest directionally aligned window from a set of frames.
-  func neighbor(
-    of windowID: CGWindowID,
-    in framesByWindowID: [CGWindowID: CGRect]
-  ) -> CGWindowID? {
-    guard let sourceFrame = framesByWindowID[windowID] else { return nil }
+  /// Return the closest directionally aligned item from a set of frames.
+  func neighbor<ID: Comparable & Hashable>(
+    of id: ID,
+    in framesByID: [ID: CGRect]
+  ) -> ID? {
+    guard let sourceFrame = framesByID[id] else { return nil }
     let vector = vector
 
     return
-      framesByWindowID
-      .compactMap { candidateWindowID, candidateFrame -> DirectionalWindowCandidate? in
-        guard candidateWindowID != windowID else { return nil }
+      framesByID
+      .compactMap { candidateID, candidateFrame -> DirectionalCandidate<ID>? in
+        guard candidateID != id else { return nil }
         let offset = CGVector(
           dx: candidateFrame.midX - sourceFrame.midX,
           dy: candidateFrame.midY - sourceFrame.midY
@@ -44,8 +44,8 @@ enum CardinalDirection: String, Equatable {
           vector.dx == 0
           ? overlap(sourceFrame.minX...sourceFrame.maxX, candidateFrame.minX...candidateFrame.maxX)
           : overlap(sourceFrame.minY...sourceFrame.maxY, candidateFrame.minY...candidateFrame.maxY)
-        return DirectionalWindowCandidate(
-          windowID: candidateWindowID,
+        return DirectionalCandidate(
+          id: candidateID,
           isAligned: perpendicularOverlap > 0,
           primaryDistance: primaryDistance,
           perpendicularDistance: perpendicularDistance
@@ -61,9 +61,9 @@ enum CardinalDirection: String, Equatable {
         if first.perpendicularDistance != second.perpendicularDistance {
           return first.perpendicularDistance < second.perpendicularDistance
         }
-        return first.windowID < second.windowID
+        return first.id < second.id
       }?
-      .windowID
+      .id
   }
 
   /// Return the positive overlap between two one-dimensional ranges.
@@ -72,9 +72,9 @@ enum CardinalDirection: String, Equatable {
   }
 }
 
-/// Ranking facts for one window in a requested direction.
-private struct DirectionalWindowCandidate {
-  let windowID: CGWindowID
+/// Ranking facts for one window or display in a requested direction.
+private struct DirectionalCandidate<ID> {
+  let id: ID
   let isAligned: Bool
   let primaryDistance: CGFloat
   let perpendicularDistance: CGFloat

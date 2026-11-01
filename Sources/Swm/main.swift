@@ -64,6 +64,7 @@ func runSwm(with arguments: StartCommand) {
   let daemon = Daemon(
     windows: windows,
     spaces: spaces,
+    displays: displays,
     tiling: tiling
   )
 

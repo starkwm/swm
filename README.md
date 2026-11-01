@@ -30,5 +30,6 @@ The [documentation index](docs/index.md) links to all guides and command referen
 - [Query state](docs/query.md)
 - [Manage windows](docs/windows.md)
 - [Configure spaces](docs/spaces.md)
+- [Manage displays](docs/displays.md)
 - [Signals](docs/signals.md)
 - [Keyboard shortcuts](docs/keyboard-shortcuts.md)

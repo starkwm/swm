@@ -270,6 +270,24 @@ struct ArgumentsTests {
     }
   }
 
+  @Test("parseAsRoot: translates display focus targets", arguments: ["2", "next", "recent", "up"])
+  func parseAsRootTranslatesDisplayFocusTargets(target: String) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["display", "focus", target]) as? DisplayCommand.Focus
+    )
+    #expect(command.commandArguments == ["--focus", target])
+    #expect(DisplayCommand.Focus.domain == .display)
+  }
+
+  @Test("parseAsRoot: rejects missing and invalid display focus targets")
+  func parseAsRootRejectsMissingAndInvalidDisplayFocusTargets() {
+    for args in [[], ["0"], ["-1"], ["north"], ["1", "2"]] {
+      #expect(throws: (any Error).self) {
+        try Arguments.parseAsRoot(["display", "focus"] + args)
+      }
+    }
+  }
+
   @Test("parseAsRoot: preserves rule registration and removal arguments")
   func parseAsRootPreservesRuleRegistrationAndRemovalArguments() throws {
     let command = try #require(

@@ -40,6 +40,7 @@ struct DaemonTests {
     let dispatcher = IPCCommandDispatcher(
       windows: Windows(workspace: Workspace()),
       spaces: spaces,
+      displays: Displays(),
       tiling: makeTestTiling(spaces: spaces)
     )
     let daemon = Daemon(path: endpoint.path, dispatch: dispatcher.dispatch)

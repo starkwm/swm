@@ -30,28 +30,36 @@ final class WindowServerClient {
 
   /// Return the frontmost window at a global pointer location.
   func frontmostWindowID(at point: CGPoint) -> CGWindowID? {
-    var screenPoint = point
-    var windowPoint = CGPoint.zero
-    var windowID = CGWindowID()
-    var windowConnectionID = Int32()
+    frontmostWindowAndOwner(at: point)?.windowID
+  }
 
+  /// Focus the frontmost window at a point, such as Finder's desktop on an empty display.
+  ///
+  /// Making that window key moves the active display without needing a managed window.
+  func focusFrontmostWindow(at point: CGPoint) -> Bool {
+    guard let (windowID, connectionID) = frontmostWindowAndOwner(at: point) else { return false }
+
+    var processSerialNumber = ProcessSerialNumber()
+    guard SLSGetConnectionPSN(connectionID, &processSerialNumber) == .success else { return false }
+
+    return focusWindowWithoutRaise(
+      processSerialNumber: processSerialNumber,
+      windowID: windowID,
+      currentProcessSerialNumber: nil,
+      currentWindowID: nil
+    )
+  }
+
+  /// Return on-screen window IDs ordered from front to back.
+  func onScreenWindowIDs() -> [CGWindowID] {
+    let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
     guard
-      SLSFindWindowAndOwner(
-        mainConnectionID(),
-        0,
-        1,
-        0,
-        &screenPoint,
-        &windowPoint,
-        &windowID,
-        &windowConnectionID
-      ) == noErr,
-      windowID != 0
+      let windows = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]]
     else {
-      return nil
+      return []
     }
 
-    return windowID
+    return windows.compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
   }
 
   /// Focus a window without changing its stacking order.
@@ -202,6 +210,34 @@ final class WindowServerClient {
     }
 
     return windowIDs
+  }
+
+  /// Return the frontmost window and its owning connection at a global point.
+  private func frontmostWindowAndOwner(at point: CGPoint) -> (
+    windowID: CGWindowID, connectionID: Int32
+  )? {
+    var screenPoint = point
+    var windowPoint = CGPoint.zero
+    var windowID = CGWindowID()
+    var windowConnectionID = Int32()
+
+    guard
+      SLSFindWindowAndOwner(
+        mainConnectionID(),
+        0,
+        1,
+        0,
+        &screenPoint,
+        &windowPoint,
+        &windowID,
+        &windowConnectionID
+      ) == noErr,
+      windowID != 0
+    else {
+      return nil
+    }
+
+    return (windowID, windowConnectionID)
   }
 
   /// Preserve the existing unavailable-value conventions at the package boundary.

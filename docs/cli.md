@@ -37,7 +37,7 @@ Send commands to the running daemon through command-specific subcommands:
 swm <domain> <command> [arguments]
 ```
 
-The available domains are `window`, `space`, `config`, `rule`, `signal`, and `query`. Commands that change state print nothing when they succeed; queries and commands that report a value, such as `swm space master-placement next`, print it to standard output. Errors go to standard error with an `Error:` prefix. Invalid arguments exit with status 64, and failures reported by the daemon exit with status 1. Run `swm --help`, `swm <domain> --help`, or `swm help <domain> <command>` for progressively more specific help.
+The available domains are `window`, `space`, `display`, `config`, `rule`, `signal`, and `query`. Commands that change state print nothing when they succeed; queries and commands that report a value, such as `swm space master-placement next`, print it to standard output. Errors go to standard error with an `Error:` prefix. Invalid arguments exit with status 64, and failures reported by the daemon exit with status 1. Run `swm --help`, `swm <domain> --help`, or `swm help <domain> <command>` for progressively more specific help.
 
 Top-level options:
 
@@ -46,7 +46,7 @@ Top-level options:
 -v, --version              Show the version
 ```
 
-Command references cover [queries](query.md), [windows](windows.md), [spaces](spaces.md), [global defaults](configuration.md#global-defaults), [rules](rules.md), and [signals](signals.md).
+Command references cover [queries](query.md), [windows](windows.md), [spaces](spaces.md), [displays](displays.md), [global defaults](configuration.md#global-defaults), [rules](rules.md), and [signals](signals.md).
 
 ## Shell completions
 
