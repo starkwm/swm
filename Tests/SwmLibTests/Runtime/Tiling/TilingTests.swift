@@ -1370,15 +1370,20 @@ struct TilingTests {
     )
   }
 
-  @Test("toggleDwindleSplit: toggle and retain the nearest dynamic split")
-  func toggleDwindleSplitToggleAndRetainTheNearestDynamicSplit() {
+  @Test("toggleDwindleSplit: toggle the nearest preserved split")
+  func toggleDwindleSplitToggleTheNearestPreservedSplit() {
     let tiling = makeTiling(
       windows: [window(id: 1), window(id: 2), window(id: 3)],
       memberships: [1: [10], 2: [10], 3: [10]]
     )
     tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
+    let dynamicPlan = tiling.layoutPlan(for: layoutID(10))
 
+    #expect(tiling.toggleDwindleSplit(for: 2) == false)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == dynamicPlan)
+
+    #expect(tiling.setSplitDirectionPreservation(true, for: 10))
     #expect(tiling.toggleDwindleSplit(for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))

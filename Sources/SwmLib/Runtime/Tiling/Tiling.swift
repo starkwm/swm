@@ -563,12 +563,13 @@ public final class Tiling {
     return ratio
   }
 
-  /// Toggle and retain the selected window's nearest dwindle split direction.
+  /// Toggle the selected window's nearest dwindle split direction when directions are preserved.
   @discardableResult
   func toggleDwindleSplit(for windowID: CGWindowID) -> Bool {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
-    guard layoutsByID[layoutID]?.selection == .dwindle else { return false }
+    guard let state = layoutsByID[layoutID], state.selection == .dwindle else { return false }
+    guard state.preserveSplitDirections else { return false }
     guard case .layout = layoutPlan(for: layoutID) else { return false }
     guard let display = currentTopology?.displaysByID[layoutID.displayID] else { return false }
     return mutateTree(containing: windowID, requiring: .dwindle) { tree in

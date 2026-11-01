@@ -39,7 +39,7 @@ The layouts are:
 - `monocle`: overlap every tiled window across the available bounds.
 - `dwindle`: recursively split the available bounds around the focused window.
 
-In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `swm space preserve-split on` retains each branch's chosen direction so it can be changed with `swm window toggle-split`.
+In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `swm space preserve-split on` keeps each split's direction once chosen, and is required by `swm window toggle-split`. Turning it off returns every split to following the longest edge.
 
 Each physical display has an independent tiling layout, including when macOS's **Displays have separate Spaces** setting is disabled. Moving a tiled window between displays moves it into the destination layout. Manually moving or resizing a tiled window causes it to snap back into place.
 
