@@ -38,6 +38,9 @@ public final class Tiling {
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
+  private var observedSizes = [CGWindowID: CGSize]()
+  private var dwindleAttempts = [TilingLayoutID: DwindleAttempt]()
+  private var verifiedDwindle = [TilingLayoutID: DwindleArrangement]()
   private var pendingFocusedWindowID: CGWindowID?
   private var membershipPollingTask: Task<Void, Never>?
 
@@ -92,7 +95,9 @@ public final class Tiling {
       windowSpaceMembership ?? { snapshot().topology?.spaceIDsByWindowID ?? [:] }
     if let windows {
       frameReconciler?.onInteractionEnded = { [weak self] in
-        self?.reconcileAndReflowVisibleSpaces()
+        guard let self else { return }
+        self.retryDwindle(Array(self.layoutsByID.keys))
+        self.reconcileAndReflowVisibleSpaces()
       }
       frameReconciler?.monitorInteractions { point in
         guard let id = WindowServerClient.shared.frontmostWindowID(at: point),
@@ -158,6 +163,7 @@ public final class Tiling {
   /// Invalidate destinations immediately when a topology event arrives.
   func cancelAnimations() {
     frameReconciler?.cancelAnimations()
+    dwindleAttempts.removeAll()
   }
 
   /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
@@ -169,6 +175,7 @@ public final class Tiling {
     }
     var windows = snapshot.windows.sorted { $0.id < $1.id }
     var liveIDs = Set(windows.map(\.id))
+    observedSizes = observedSizes.filter { liveIDs.contains($0.key) }
     let previousFloatingIDs = floatingOverrideWindowIDs
     manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
     let actions = Dictionary(
@@ -322,6 +329,15 @@ public final class Tiling {
       if liveIDs.contains(windowID) {
         windowDidFocus(windowID)
       }
+    }
+    verifiedDwindle = verifiedDwindle.filter { id, arrangement in
+      guard let context = dwindleContext(id) else { return false }
+      return context.bounds == arrangement.context.bounds
+        && Set(context.tree?.windowIDs ?? []) == Set(arrangement.frames.keys)
+    }
+    for (id, attempt) in dwindleAttempts where dwindleContext(id) != attempt.context {
+      frameReconciler?.cancelAnimations(for: attempt.context.tree?.windowIDs ?? [])
+      dwindleAttempts.removeValue(forKey: id)
     }
     updateMembershipPolling()
   }
@@ -644,7 +660,9 @@ public final class Tiling {
       return
     }
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }
-
+    if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.succeeded == true {
+      dwindleAttempts.removeValue(forKey: id)
+    }
     reconcileAndReflowVisibleSpaces()
   }
 
@@ -705,7 +723,8 @@ public final class Tiling {
         dwindleLayout.layout(
           tree: activeTree,
           in: display.visibleFrame,
-          settings: spaceSettings
+          settings: spaceSettings,
+          minimumSizes: observedSizes
         )
       )
     }
@@ -800,6 +819,7 @@ public final class Tiling {
   private func suspendTopology() {
     frameReconciler?.cancelAnimations()
     currentTopology = nil
+    dwindleAttempts.removeAll()
     updateMembershipPolling()
   }
 
@@ -841,6 +861,7 @@ public final class Tiling {
     if let selection, state.selection != selection { return false }
     guard var tree = state.tree, mutation(&tree) else { return false }
 
+    retryDwindle([layoutID])
     state.tree = tree
     if focus { state.focusedWindowID = windowID }
     layoutsByID[layoutID] = state
@@ -851,8 +872,103 @@ public final class Tiling {
   /// Apply actionable plans for a stable sequence of layouts.
   private func applyPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     for layoutID in layoutIDs {
-      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else { continue }
-      frameReconciler?.apply(frames)
+      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else {
+        if let context = dwindleContext(layoutID), dwindleAttempts[layoutID]?.context != context {
+          frameReconciler?.cancelAnimations(for: context.tree?.windowIDs ?? [])
+          dwindleAttempts[layoutID] = DwindleAttempt(context: context)
+          log("dwindle layout unsatisfied space=\(layoutID.spaceID)", level: .warn)
+        }
+        continue
+      }
+      if layoutsByID[layoutID]?.selection == .dwindle {
+        applyDwindle(layoutID, frames: frames)
+      } else {
+        frameReconciler?.apply(frames)
+      }
+    }
+  }
+
+  private func dwindleContext(_ id: TilingLayoutID) -> DwindleContext? {
+    guard let state = layoutsByID[id], state.selection == .dwindle,
+      let topology = currentTopology, topology.visibleLayoutIDs.contains(id),
+      let display = topology.displaysByID[id.displayID]
+    else { return nil }
+    return DwindleContext(
+      tree: state.tree?.removing(state.omittedWindowIDs.union(floatingOverrideWindowIDs)),
+      bounds: display.visibleFrame,
+      settings: spaces.settings(for: id.spaceID)
+    )
+  }
+
+  /// One generation covers a whole Space/display, including its corrective passes.
+  private func applyDwindle(_ id: TilingLayoutID, frames: [CGWindowID: CGRect]) {
+    guard let context = dwindleContext(id), !frames.isEmpty else { return }
+    if dwindleAttempts[id]?.context == context { return }
+    let attempt = DwindleAttempt(context: context)
+    dwindleAttempts[id] = attempt
+    deliverDwindle(id, frames: frames, attempt: attempt)
+  }
+
+  private func deliverDwindle(
+    _ id: TilingLayoutID,
+    frames: [CGWindowID: CGRect],
+    attempt: DwindleAttempt
+  ) {
+    frameReconciler?.apply(frames) { [weak self] results in
+      guard let self, self.dwindleAttempts[id] === attempt,
+        self.dwindleContext(id) == attempt.context
+      else { return }
+      var learned = false
+      for (windowID, result) in results {
+        if let size = result.refusedSize {
+          let previous = self.observedSizes[windowID] ?? CGSize(width: 1, height: 1)
+          self.observedSizes[windowID] = CGSize(
+            width: max(previous.width, size.width),
+            height: max(previous.height, size.height)
+          )
+          learned = true
+        } else if result.outcome == .verified, let frame = result.frame,
+          let previous = self.observedSizes[windowID]
+        {
+          self.observedSizes[windowID] = CGSize(
+            width: min(previous.width, frame.width),
+            height: min(previous.height, frame.height)
+          )
+        }
+      }
+      if results.values.allSatisfy({ $0.outcome == .verified }) {
+        attempt.succeeded = !attempt.restoring
+        self.verifiedDwindle[id] = DwindleArrangement(context: attempt.context, frames: frames)
+        return
+      }
+      if !attempt.restoring, learned, attempt.passes < 2,
+        case .layout(.frames(let corrected)) = self.layoutPlan(for: id), corrected != frames
+      {
+        attempt.passes += 1
+        self.deliverDwindle(id, frames: corrected, attempt: attempt)
+        return
+      }
+      if !attempt.restoring, let previous = self.verifiedDwindle[id],
+        previous.context.bounds == attempt.context.bounds,
+        previous.context.settings == attempt.context.settings,
+        Set(previous.frames.keys) == Set(frames.keys)
+      {
+        attempt.restoring = true
+        self.deliverDwindle(id, frames: previous.frames, attempt: attempt)
+      } else {
+        log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
+      }
+    }
+  }
+
+  /// Explicit layout adjustments permit one fresh probe of observed refusals.
+  private func retryDwindle(_ ids: some Sequence<TilingLayoutID>) {
+    for id in ids {
+      dwindleAttempts.removeValue(forKey: id)
+      frameReconciler?.cancelAnimations(for: layoutsByID[id]?.tree?.windowIDs ?? [])
+      for windowID in layoutsByID[id]?.tree?.windowIDs ?? [] {
+        observedSizes.removeValue(forKey: windowID)
+      }
     }
   }
 
@@ -882,6 +998,7 @@ public final class Tiling {
     let layoutIDs = layoutIDs(for: spaceID)
     guard !layoutIDs.isEmpty else { return false }
 
+    retryDwindle(layoutIDs)
     for layoutID in layoutIDs {
       guard var state = layoutsByID[layoutID] else { continue }
       update(&state)
@@ -898,6 +1015,7 @@ public final class Tiling {
     reflowing selection: LayoutSelection?,
     _ update: (inout TilingLayoutState) -> Void
   ) {
+    retryDwindle(Array(layoutsByID.keys))
     update(&defaultState)
     layoutsByID = layoutsByID.mapValues { currentState in
       var state = currentState
@@ -986,4 +1104,24 @@ enum TilingLayoutPlan: Equatable {
 
   /// Pure engine result for the Space's active retained leaves.
   case layout(TilingLayoutResult)
+}
+
+private struct DwindleContext: Equatable {
+  let tree: TilingTree?
+  let bounds: CGRect
+  let settings: SpaceSettings
+}
+
+private struct DwindleArrangement {
+  let context: DwindleContext
+  let frames: [CGWindowID: CGRect]
+}
+
+private final class DwindleAttempt {
+  let context: DwindleContext
+  var passes = 0
+  var restoring = false
+  var succeeded = false
+
+  init(context: DwindleContext) { self.context = context }
 }

@@ -9,12 +9,27 @@ struct DwindleLayout {
   func layout(
     tree: TilingTree?,
     in bounds: CGRect,
-    settings: SpaceSettings
+    settings: SpaceSettings,
+    minimumSizes: [CGWindowID: CGSize] = [:]
   ) -> TilingLayoutResult {
     guard let tree else { return .frames([:]) }
 
     let usableBounds = settings.tilingBounds(in: bounds)
     guard usableBounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
+      return .insufficientSpace(.usableBounds)
+    }
+
+    if !minimumSizes.isEmpty {
+      var budget = 50_000
+      if let frames = constrainedLayout(
+        tree,
+        bounds: usableBounds,
+        gap: settings.tilingGap,
+        minima: minimumSizes,
+        budget: &budget
+      ) {
+        return .frames(frames)
+      }
       return .insufficientSpace(.usableBounds)
     }
 
@@ -43,6 +58,92 @@ struct DwindleLayout {
       bounds: settings.tilingBounds(in: bounds),
       gap: settings.tilingGap
     )
+  }
+
+  /// Search point-aligned allocations nearest the requested ratio. Dynamic directions
+  /// are evaluated from each candidate region, never retained between attempts.
+  /// The shared budget bounds work even for deeply nested trees.
+  private func constrainedLayout(
+    _ tree: TilingTree,
+    bounds: CGRect,
+    gap: CGFloat,
+    minima: [CGWindowID: CGSize],
+    budget: inout Int
+  ) -> [CGWindowID: CGRect]? {
+    guard budget > 0 else { return nil }
+    budget -= 1
+    let required = minimumSize(tree, gap: gap, minima: minima)
+    guard bounds.width >= required.width, bounds.height >= required.height else { return nil }
+    switch tree {
+    case .leaf(let id):
+      return [id: bounds]
+    case .branch(let first, let second, let split):
+      let vertical = (split.direction ?? direction(for: bounds)) == .vertical
+      let available = (vertical ? bounds.width : bounds.height) - gap
+      let firstMinimum = minimumSize(first, gap: gap, minima: minima)
+      let secondMinimum = minimumSize(second, gap: gap, minima: minima)
+      let lower = ceil(vertical ? firstMinimum.width : firstMinimum.height)
+      let upper = floor(available - (vertical ? secondMinimum.width : secondMinimum.height))
+      guard lower <= upper else { return nil }
+      let preferred = min(upper, max(lower, (available * split.ratio).rounded()))
+      var distance: CGFloat = 0
+      while budget > 0, preferred - distance >= lower || preferred + distance <= upper {
+        let candidates = distance == 0 ? [preferred] : [preferred - distance, preferred + distance]
+        for allocation in candidates where allocation >= lower && allocation <= upper {
+          var a = bounds
+          var b = bounds
+          if vertical {
+            a.size.width = allocation
+            b.origin.x += allocation + gap
+            b.size.width = available - allocation
+          } else {
+            a.size.height = allocation
+            b.origin.y += allocation + gap
+            b.size.height = available - allocation
+          }
+          if let leading = constrainedLayout(
+            first,
+            bounds: a,
+            gap: gap,
+            minima: minima,
+            budget: &budget
+          ),
+            let trailing = constrainedLayout(
+              second,
+              bounds: b,
+              gap: gap,
+              minima: minima,
+              budget: &budget
+            )
+          {
+            return leading.merging(trailing) { _, new in new }
+          }
+        }
+        distance += 1
+      }
+      return nil
+    }
+  }
+
+  /// Fixed branches add descendant requirements and gaps. Dynamic branches use
+  /// a conservative lower bound until their actual candidate bounds are known.
+  private func minimumSize(
+    _ tree: TilingTree,
+    gap: CGFloat,
+    minima: [CGWindowID: CGSize]
+  ) -> CGSize {
+    switch tree {
+    case .leaf(let id):
+      let size = minima[id] ?? Self.minimumWindowSize
+      return CGSize(width: max(1, size.width), height: max(1, size.height))
+    case .branch(let first, let second, let split):
+      let a = minimumSize(first, gap: gap, minima: minima)
+      let b = minimumSize(second, gap: gap, minima: minima)
+      return CGSize(
+        width: split.direction == .vertical ? a.width + gap + b.width : max(a.width, b.width),
+        height: split.direction == .horizontal ? a.height + gap + b.height : max(a.height, b.height)
+      )
+    }
   }
 
   /// Recursively calculate leaf frames from the retained binary tree.

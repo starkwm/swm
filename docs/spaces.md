@@ -51,6 +51,12 @@ In a dwindle layout, new windows split the focused tiled window and removing a w
 
 A dwindle split ratio is the share of a region given to its left or upper side. `swm space split-ratio 0.6` sets that ratio for new splits on the Space and rebalances every existing split to it; a signed change such as `+0.05` adjusts the Space's ratio and rebalances the same way. Use `swm window split-ratio` to change one split afterwards.
 
+The split ratio remains the requested ratio. If an application repeatedly settles larger than requested, dwindle temporarily records the refused dimensions and chooses the closest feasible point-aligned allocation. Effective allocations can therefore differ from the requested ratio. Dynamic splits still follow each region's longest edge; preserved directions remain fixed.
+
+Recovery waits for the whole Space/display batch to settle, then allows at most two corrective layout passes. If recovery fails, SWM attempts one restoration of the last fully verified arrangement only when its window membership, display bounds, and padding/gap settings still match. Otherwise it logs an unsatisfied layout and stops retrying that arrangement. It does not float windows or enable split preservation. A bounded geometry search can also report an unsatisfied layout when it exhausts its search budget.
+
+Observed constraints last only for the current window lifetime. Explicit layout adjustments and completed pointer resize interactions permit a fresh attempt, allowing applications to accept smaller sizes later. Background reflows reuse observations and do not repeatedly probe a known refusal. Restoration itself can fail if an application has changed its size requirements; an arrangement that cannot physically fit is not guaranteed to recover.
+
 Each physical display has an independent tiling layout, including when macOS's **Displays have separate Spaces** setting is disabled. Moving a tiled window between displays moves it into the destination layout. Manually moving or resizing a tiled window causes it to snap back into place.
 
 Use [global defaults](configuration.md#global-defaults) to set the default layout, padding, and gaps. [Window tiling commands](windows.md#control-tiling) control individual windows within a layout.

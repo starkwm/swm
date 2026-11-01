@@ -24,8 +24,9 @@ final class WindowFrameReconciler {
         _,
         new in new
       }
-      cancelAnimations()
-      deliver(targets, animated: false, at: .now)
+      animations.removeAll()
+      for (id, target) in targets { submitFrame(target, for: id, final: true) }
+      updateScheduler()
     }
   }
 
@@ -79,9 +80,16 @@ final class WindowFrameReconciler {
   /// Animate a batch using the same clock, or deliver final frames when disabled.
   func apply(
     _ targetFrames: [CGWindowID: CGRect],
-    at now: ContinuousClock.Instant = .now
+    at now: ContinuousClock.Instant = .now,
+    completion: (([CGWindowID: AnimationFrameCompletion]) -> Void)? = nil
   ) {
-    deliver(targetFrames, animated: animationEnabled, at: now)
+    if let completion {
+      cancelAnimations(for: targetFrames.keys)
+      let batch = FrameDeliveryBatch(ids: Set(targetFrames.keys), completion: completion)
+      deliver(targetFrames, animated: animationEnabled, at: now, batch: batch)
+    } else {
+      deliver(targetFrames, animated: animationEnabled, at: now)
+    }
   }
 
   /// Drop queued work. An AX operation already started may still settle.
@@ -241,7 +249,8 @@ final class WindowFrameReconciler {
   private func deliver(
     _ targets: [CGWindowID: CGRect],
     animated: Bool,
-    at now: ContinuousClock.Instant
+    at now: ContinuousClock.Instant,
+    batch: FrameDeliveryBatch? = nil
   ) {
     for (id, target) in targets {
       guard !interactingWindows.contains(id) else { continue }
@@ -251,7 +260,7 @@ final class WindowFrameReconciler {
         continue
       }
       cancelAnimations(for: [id])
-      let state = FrameDeliveryState(target: target)
+      let state = FrameDeliveryState(target: target, batch: batch)
       deliveries[id] = state
       if animated {
         let duration = animationDuration
@@ -266,10 +275,14 @@ final class WindowFrameReconciler {
           guard let self, self.deliveries[id] === state, state.generation.isValid else { return }
           guard let frame = result.frame, result.outcome == .read else {
             self.deliveryFailed(id)
+            state.batch?.receive(result)
             return
           }
           if frame == target {
             self.deliveries.removeValue(forKey: id)
+            state.batch?.receive(
+              AnimationFrameCompletion(request: result.request, frame: frame, outcome: .verified)
+            )
             return
           }
           self.animations[id] = FrameAnimation(
@@ -308,6 +321,7 @@ final class WindowFrameReconciler {
       else { return }
       if result.outcome == .failed {
         self.deliveryFailed(id)
+        state.batch?.receive(result)
       } else if result.outcome == .verified {
         self.deliveries.removeValue(forKey: id)
         self.pendingMutations[id] = ExpectedFrameMutation(
@@ -315,6 +329,7 @@ final class WindowFrameReconciler {
           expiresAt: .now.advanced(by: Self.expectationLifetime),
           reachedTarget: true
         )
+        state.batch?.receive(result)
       }
     }
   }
@@ -383,9 +398,34 @@ private struct FrameAnimation {
 @MainActor
 private final class FrameDeliveryState {
   let target: CGRect
+  let batch: FrameDeliveryBatch?
   let generation = AnimationGeneration()
   var sequence: UInt64 = 0
   var isFinal = false
 
-  init(target: CGRect) { self.target = target }
+  init(target: CGRect, batch: FrameDeliveryBatch?) {
+    self.target = target
+    self.batch = batch
+  }
+}
+
+/// Completes only when every member has a terminal settlement in the same batch.
+@MainActor
+private final class FrameDeliveryBatch {
+  private var remaining: Set<CGWindowID>
+  private var results = [CGWindowID: AnimationFrameCompletion]()
+  private let completion: ([CGWindowID: AnimationFrameCompletion]) -> Void
+
+  init(ids: Set<CGWindowID>, completion: @escaping ([CGWindowID: AnimationFrameCompletion]) -> Void)
+  {
+    remaining = ids
+    self.completion = completion
+  }
+
+  func receive(_ result: AnimationFrameCompletion) {
+    let id = result.request.windowID
+    guard remaining.remove(id) != nil else { return }
+    results[id] = result
+    if remaining.isEmpty { completion(results) }
+  }
 }

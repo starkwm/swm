@@ -46,6 +46,7 @@ func makeTiling(
   windows: @escaping () -> [TilingWindowSnapshot],
   memberships: @escaping () -> [CGWindowID: Set<UInt64>],
   visibleSpaceID: UInt64 = 10,
+  displayBounds: @escaping () -> CGRect = { CGRect(x: 0, y: 0, width: 1_000, height: 800) },
   frameReconciler: WindowFrameReconciler? = nil,
   rulePlacement: Tiling.RulePlacementHandler? = nil
 ) -> Tiling {
@@ -64,7 +65,7 @@ func makeTiling(
           spaceIDsByWindowID: memberships(),
           displaysByID: [
             "display": SpaceTopologyDisplay(
-              visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+              visibleFrame: displayBounds()
             )
           ]
         )
