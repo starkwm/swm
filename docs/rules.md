@@ -45,7 +45,7 @@ A rule can use these filters:
 - `bundle-id=<identifier>` matches an exact, case-sensitive application identifier.
 - `app=<regex>` matches the application name, which can vary with the system language.
 - `title=<regex>` matches the window title.
-- `app!=<regex>` or `title!=<regex>` requires the text not to match.
+- `bundle-id!=<identifier>`, `app!=<regex>`, or `title!=<regex>` requires the value not to match.
 
 All filters must match. If a window's value is missing, that filter fails even
 when inverted. A rule without filters matches every window.

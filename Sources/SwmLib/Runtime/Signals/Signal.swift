@@ -12,7 +12,12 @@ struct Signal: Equatable, Sendable {
     var active: Bool?
 
     for argument in arguments {
-      let item = try SignalArgument(argument)
+      guard let item = KeyValueArgument(argument) else {
+        throw IPCCommandError.invalidRequest("invalid signal argument: \(argument)")
+      }
+      guard !item.inverted || item.key == "app" || item.key == "title" else {
+        throw IPCCommandError.invalidRequest("unsupported signal argument: \(item.rawKey)")
+      }
 
       switch item.key {
       case "event":
@@ -40,9 +45,6 @@ struct Signal: Equatable, Sendable {
         titleFilter = try SignalTextFilter(pattern: item.value, inverted: item.inverted)
 
       case "active":
-        guard !item.inverted else {
-          throw IPCCommandError.invalidRequest("invalid signal active argument")
-        }
         switch item.value {
         case "yes":
           active = true
@@ -156,29 +158,5 @@ struct SignalTextFilter: Equatable, @unchecked Sendable {
     let matched = regex.firstMatch(in: value, range: range) != nil
 
     return inverted ? !matched : matched
-  }
-}
-
-/// Parsed `key=value` or `key!=value` signal argument.
-private struct SignalArgument {
-  let rawKey: String
-  let key: String
-  let value: String
-  let inverted: Bool
-
-  init(_ argument: String) throws {
-    guard let separator = argument.firstIndex(of: "=") else {
-      throw IPCCommandError.invalidRequest("invalid signal argument: \(argument)")
-    }
-    rawKey = String(argument[..<separator])
-    inverted = rawKey.hasSuffix("!")
-    key = inverted ? String(rawKey.dropLast()) : rawKey
-    value = String(argument[argument.index(after: separator)...])
-    guard !key.isEmpty, !value.isEmpty else {
-      throw IPCCommandError.invalidRequest("invalid signal argument: \(argument)")
-    }
-    guard !inverted || key == "app" || key == "title" else {
-      throw IPCCommandError.invalidRequest("unsupported signal argument: \(rawKey)")
-    }
   }
 }
