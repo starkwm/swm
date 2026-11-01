@@ -97,6 +97,12 @@ extension SpaceIPCCommand {
   static var domain: CommandDomain { .space }
 }
 
+protocol DisplayIPCCommand: IPCCommand {}
+
+extension DisplayIPCCommand {
+  static var domain: CommandDomain { .display }
+}
+
 protocol WindowIPCCommand: IPCCommand {}
 
 extension WindowIPCCommand {

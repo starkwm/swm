@@ -10,8 +10,13 @@ public final class Daemon {
   private var runID: UUID?
   private var requests = [UUID: Task<IPCResponse, Never>]()
 
-  public convenience init(windows: Windows, spaces: Spaces, tiling: Tiling) {
-    let dispatcher = IPCCommandDispatcher(windows: windows, spaces: spaces, tiling: tiling)
+  public convenience init(windows: Windows, spaces: Spaces, displays: Displays, tiling: Tiling) {
+    let dispatcher = IPCCommandDispatcher(
+      windows: windows,
+      spaces: spaces,
+      displays: displays,
+      tiling: tiling
+    )
     self.init(path: UnixSocket.filePath(), dispatch: dispatcher.dispatch)
   }
 

@@ -3,16 +3,19 @@
 struct IPCCommandDispatcher {
   private let windows: Windows
   private let spaces: Spaces
+  private let displays: Displays
   private let tiling: Tiling
 
-  /// Create a dispatcher backed by explicit window and Space services.
+  /// Create a dispatcher backed by explicit window, Space, and display services.
   init(
     windows: Windows,
     spaces: Spaces,
+    displays: Displays,
     tiling: Tiling
   ) {
     self.windows = windows
     self.spaces = spaces
+    self.displays = displays
     self.tiling = tiling
   }
 
@@ -37,7 +40,7 @@ struct IPCCommandDispatcher {
       ).dispatch(request)
 
     case .display:
-      return DisplayCommandHandler().dispatch(request)
+      return DisplayCommandHandler(windows: windows, displays: displays).dispatch(request)
 
     case .window:
       return await WindowCommandHandler(

@@ -37,6 +37,11 @@ func SLSGetConnectionIDForPSN(
   _ processConnnectionID: inout Int32
 ) -> CGError
 
+/// Return the process serial number that owns a connection.
+// swift-format-ignore: AlwaysUseLowerCamelCase
+@_silgen_name("SLSGetConnectionPSN") @discardableResult
+func SLSGetConnectionPSN(_ connectionID: Int32, _ psn: inout ProcessSerialNumber) -> CGError
+
 /// Return the main connection ID.
 // swift-format-ignore: AlwaysUseLowerCamelCase
 @_silgen_name("SLSMainConnectionID") @discardableResult
