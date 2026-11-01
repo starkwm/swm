@@ -322,8 +322,10 @@ struct ArgumentsTests {
       (["space", "master-ratio", "-0.05"], ["rel:-0.05"]),
       (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
       (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
-      (["config", "padding", "--bottom", "6"], ["bottom=abs:6"]),
-      (["config", "gap", "6"], ["6"]),
+      (["config", "padding", "--bottom", "6", "--top", "-2"], ["top=rel:-2", "bottom=abs:6"]),
+      (["config", "gap", "6"], ["abs:6"]),
+      (["config", "gap", "-2"], ["rel:-2"]),
+      (["config", "master-ratio", "+0.05"], ["rel:0.05"]),
     ]
   )
   func parseAsRootSetsPlainValuesAndAdjustsSignedOnes(
@@ -353,14 +355,14 @@ struct ArgumentsTests {
   }
 
   @Test(
-    "parseAsRoot: rejects out-of-range ratios and signed global padding",
+    "parseAsRoot: rejects out-of-range ratios and malformed values",
     arguments: [
       ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
-      ["space", "gap", "wide"], ["space", "gap", "rel:4"], ["space", "gap", "abs:6"],
-      ["config", "padding", "--top", "+2"],
+      ["config", "master-ratio", "0.05"], ["space", "gap", "wide"], ["space", "gap", "rel:4"],
+      ["space", "gap", "abs:6"], ["config", "gap", "rel:4"],
     ]
   )
-  func parseAsRootRejectsOutOfRangeRatiosAndSignedGlobalPadding(
+  func parseAsRootRejectsOutOfRangeRatiosAndMalformedValues(
     arguments: [String]
   ) {
     #expect(throws: (any Error).self) {

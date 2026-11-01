@@ -105,16 +105,20 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: mode.rawValue)
   }
 
-  /// Set the master pane ratio for every current and future Space.
+  /// Set or adjust the global master pane ratio, and apply it to every current and future Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "config master-ratio").requiredValue()
-    guard let ratio = CommandValueParser.ratio(from: argument) else {
-      throw IPCCommandError.invalidRequest("invalid config master-ratio value: \(argument)")
+    guard let change = CommandValueParser.ratioChange(from: argument) else {
+      throw IPCCommandError.invalidValue(
+        "config master-ratio",
+        argument,
+        expected: CommandValueParser.ratioChangeForm
+      )
     }
-    guard (0.1...0.9).contains(ratio) else {
+    if case .absolute(let ratio) = change, !(0.1...0.9).contains(ratio) {
       throw IPCCommandError.invalidRequest("master-ratio must be between 0.1 and 0.9")
     }
-    tiling.setMasterRatioForAllSpaces(ratio)
+    tiling.changeMasterRatioForAllSpaces(change)
     return .acknowledged(id: request.id)
   }
 
@@ -156,11 +160,24 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: selection.rawValue)
   }
 
-  /// Set the window gap for every known space.
+  /// Set or adjust the global window gap, and apply it to every known space.
   private func gap(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "config gap").requiredValue()
-    guard let gap = Int(argument) else {
-      throw IPCCommandError.invalidRequest("invalid config gap value: \(argument)")
+    guard let change = CommandValueParser.pointsChange(from: argument) else {
+      throw IPCCommandError.invalidValue(
+        "config gap",
+        argument,
+        expected: CommandValueParser.pointsChangeForm
+      )
+    }
+
+    var gap = change.value
+    if change.mode == .relative {
+      let (sum, overflow) = spaces.defaultSettings.gap.addingReportingOverflow(change.value)
+      guard !overflow else {
+        throw IPCCommandError.invalidRequest("config gap adjustment overflows integer range")
+      }
+      gap = sum
     }
 
     spaces.updateAllSettings { settings in
@@ -171,21 +188,28 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set padding sides for every known space.
+  /// Set or adjust global padding sides, and apply the changed sides to every known space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
     let changes = try request.args.map { argument in
-      guard let change = PaddingSideChange(argument: argument), change.mode == .absolute else {
+      guard let change = PaddingSideChange(argument: argument) else {
         throw IPCCommandError.invalidValue(
           "config padding",
           argument,
-          expected: "<side>=abs:<points>, such as top=abs:8"
+          expected: PaddingSideChange.form
         )
       }
       return change
     }
 
-    try spaces.updateAllSettings { settings in
-      settings.padding = try PaddingSideChange.applying(changes, to: settings.padding)
+    let padding = try PaddingSideChange.applying(
+      changes,
+      to: spaces.defaultSettings.padding,
+      context: "config padding"
+    )
+    spaces.updateAllSettings { settings in
+      for change in changes {
+        settings.padding[change.side] = padding[change.side]
+      }
     }
     tiling.reflowVisibleSpaces()
 
