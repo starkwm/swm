@@ -53,7 +53,35 @@ struct SpaceCommandHandler {
       }
 
       let (targetedRequest, spaceID) = try targetedRequest(request)
+      if targetedRequest.args.isEmpty {
+        return .success(
+          id: request.id,
+          message: try currentValue(of: request.command, for: spaceID)
+        )
+      }
       return try operation(targetedRequest, spaceID)
+    }
+  }
+
+  /// The selected Space's current value of a setting, in the form its command accepts.
+  private func currentValue(of command: String, for spaceID: UInt64) throws -> String {
+    let settings = spaces.settings(for: spaceID)
+    switch command {
+    case "--gap": return String(settings.gap)
+    case "--padding": return settings.padding.commandOptions
+    default: break
+    }
+
+    guard let state = tiling.layoutState(for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
+    }
+    switch command {
+    case "--layout": return state.selection.rawValue
+    case "--master-ratio": return String(Double(state.masterRatio))
+    case "--master-placement": return state.masterPlacement.rawValue
+    case "--preserve-split": return state.preserveSplitDirections ? "on" : "off"
+    default:
+      throw IPCCommandError.unsupportedCommand("unsupported space command: \(command)")
     }
   }
 
@@ -130,9 +158,6 @@ struct SpaceCommandHandler {
 
   /// Set or adjust padding sides for the selected space, keeping sides left out.
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    guard !request.args.isEmpty else {
-      throw IPCCommandError.invalidRequest("invalid space padding arguments")
-    }
     let changes = try request.args.map { argument in
       guard let change = PaddingSideChange(argument: argument) else {
         throw IPCCommandError.invalidValue(

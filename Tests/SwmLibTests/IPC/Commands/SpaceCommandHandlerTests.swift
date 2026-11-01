@@ -196,14 +196,42 @@ struct SpaceCommandHandlerTests {
     )
   }
 
+  @Test("dispatch: reports the selected Space's values for settings given without a value")
+  func dispatchReportsTheSelectedSpacesValuesForSettingsGivenWithoutAValue() async {
+    let spaces = Spaces(activeSpaceID: 10)
+    let tiling = makeTiling()
+    tiling.initialize()
+    let handler = SpaceCommandHandler(
+      spaces: spaces,
+      tiling: tiling,
+      spaceIDProvider: { [10, 11] }
+    )
+    for (command, args) in [
+      ("--gap", ["abs:6"]), ("--padding", ["top=abs:8"]), ("--layout", ["dwindle"]),
+      ("--master-ratio", ["abs:0.6"]), ("--master-placement", ["top"]),
+      ("--preserve-split", ["on"]),
+    ] {
+      #expect(await handler.dispatch(request(command: command, args: args)).ok)
+    }
+
+    let expected = [
+      "--gap": "6", "--padding": "--top 8 --bottom 0 --left 0 --right 0", "--layout": "dwindle",
+      "--master-ratio": "0.6", "--master-placement": "top", "--preserve-split": "on",
+    ]
+    for (command, value) in expected {
+      let response = await handler.dispatch(request(command: command, args: []))
+      #expect(response.ok && response.message == value, "\(command)")
+    }
+    let other = await handler.dispatch(request(command: "--gap", args: ["--space", "2"]))
+    #expect(other.ok && other.message == "0")
+  }
+
   @Test("dispatch: rejects malformed arguments")
   func dispatchRejectsMalformedArguments() async {
     let handler = handler(spaces: Spaces(activeSpaceID: 42))
 
     let responses = [
-      await handler.dispatch(request(command: "--layout", args: [])),
       await handler.dispatch(request(command: "--layout", args: ["unknown"])),
-      await handler.dispatch(request(command: "--padding", args: [])),
       await handler.dispatch(request(command: "--padding", args: ["top=abs:x"])),
       await handler.dispatch(request(command: "--padding", args: ["middle=abs:1"])),
       await handler.dispatch(request(command: "--gap", args: ["abs"])),

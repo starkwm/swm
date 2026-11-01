@@ -62,6 +62,11 @@ enum PaddingSide: String, CaseIterable {
 }
 
 extension SpacePadding {
+  /// The sides in the `--top <points> --bottom <points> ...` form the padding commands accept.
+  var commandOptions: String {
+    PaddingSide.allCases.map { "--\($0.rawValue) \(self[$0])" }.joined(separator: " ")
+  }
+
   /// The padding on one edge.
   subscript(side: PaddingSide) -> Int {
     get {

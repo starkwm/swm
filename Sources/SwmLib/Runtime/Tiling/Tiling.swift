@@ -432,6 +432,11 @@ public final class Tiling {
     updateAllLayouts(reflowing: .dwindle) { $0.setPreserveSplitDirections(enabled) }
   }
 
+  /// Return the layout state of one Space, or nil when it has no automatic tiling.
+  func layoutState(for spaceID: UInt64) -> TilingLayoutState? {
+    firstLayoutState(for: spaceID)
+  }
+
   /// Swap a window with its closest neighbour in a direction.
   @discardableResult
   func swapWindow(_ windowID: CGWindowID, in direction: CardinalDirection) -> Bool {

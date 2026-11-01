@@ -20,12 +20,19 @@ Activation is implemented in Swift using private SkyLight operations. Entry poin
 Space commands affect the active space by default. Use `--space <space-index>` to select another space by its one-based index from `swm query spaces`. Indexes follow the current Space ordering and may change when Spaces are reordered:
 
 ```sh
-swm space layout [--space <space-index>] <float|master|monocle|dwindle>
-swm space master-ratio [--space <space-index>] <ratio>
-swm space master-placement [--space <space-index>] <left|right|top|bottom|next|prev>
-swm space preserve-split [--space <space-index>] <on|off>
+swm space layout [--space <space-index>] [float|master|monocle|dwindle]
+swm space master-ratio [--space <space-index>] [<ratio>]
+swm space master-placement [--space <space-index>] [left|right|top|bottom|next|prev]
+swm space preserve-split [--space <space-index>] [on|off]
 swm space padding [--space <space-index>] [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
-swm space gap [--space <space-index>] <points>
+swm space gap [--space <space-index>] [<points>]
+```
+
+Run a setting without a value to print the Space's current value, in the form the command accepts:
+
+```sh
+swm space gap                # 8
+swm space padding --space 2  # --top 8 --bottom 8 --left 8 --right 8
 ```
 
 A plain number sets a value, and a signed number adjusts it: `swm space gap 6` sets the gap, and `swm space gap +2` or `swm space gap -2` changes it. Padding sides left out keep their current value. Master ratios must be between `0.1` and `0.9`; adjustments, padding, and gaps are clamped to valid values. Space settings apply to every display showing that space.
