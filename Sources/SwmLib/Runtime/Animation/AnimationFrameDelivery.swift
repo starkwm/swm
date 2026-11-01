@@ -64,7 +64,8 @@ final class AnimationFrameDelivery {
             backend: missing
           ),
           frame: nil,
-          outcome: .failed
+          outcome: .failed,
+          failure: .missingWindow
         )
       )
       return
@@ -140,9 +141,18 @@ struct AnimationFrameCompletion: Sendable {
     case failed
   }
 
+  enum Failure: Sendable {
+    case missingWindow
+    case unreadableFrame
+    case mutationFailed
+    case frameMismatch
+  }
+
   let request: AnimationFrameRequest
   let frame: CGRect?
   let outcome: Outcome
+  var failure: Failure? = nil
+  var refusedSize: CGSize? = nil
 }
 
 private final class AnimationAppLane: @unchecked Sendable {
@@ -156,6 +166,7 @@ private final class AnimationAppLane: @unchecked Sendable {
     let request: AnimationFrameRequest
     let completion: AnimationFrameDelivery.Completion
     var phase = Phase.write
+    var beforeCorrection: CGRect?
   }
 
   private struct Settlement {
@@ -251,10 +262,11 @@ private final class AnimationAppLane: @unchecked Sendable {
   }
 
   /// Schedule readback without holding the app's AX lane or its enhanced-UI workaround open.
-  private func settle(_ item: Pending, phase: Pending.Phase) {
+  private func settle(_ item: Pending, phase: Pending.Phase, observed: CGRect? = nil) {
     let token = UUID()
     var verification = item
     verification.phase = phase
+    verification.beforeCorrection = observed
     let next = verification
     let work = DispatchWorkItem { [weak self] in
       guard let self else { return }
@@ -293,22 +305,47 @@ private final class AnimationAppLane: @unchecked Sendable {
     func read() -> CGRect? {
       diagnostics.measure("read", processID: backend.processID, backend.read)
     }
-    func result(_ frame: CGRect?, _ outcome: AnimationFrameCompletion.Outcome)
+    func result(
+      _ frame: CGRect?,
+      _ outcome: AnimationFrameCompletion.Outcome,
+      failure: AnimationFrameCompletion.Failure? = nil
+    )
       -> AnimationFrameCompletion
     {
-      AnimationFrameCompletion(request: request, frame: frame, outcome: outcome)
+      AnimationFrameCompletion(
+        request: request,
+        frame: frame,
+        outcome: outcome,
+        failure: outcome == .failed ? (failure ?? .unreadableFrame) : nil
+      )
     }
     if item.phase != .write {
       guard let target = request.target, let actual = read(), isCurrent(request) else {
         return result(nil, .failed)
       }
       if actual.matches(target, tolerance: 1) { return result(actual, .verified) }
-      guard item.phase == .verify else { return result(actual, .failed) }
+      guard item.phase == .verify else {
+        var completion = result(actual, .failed, failure: .frameMismatch)
+        if let previous = item.beforeCorrection {
+          let width = actual.width > target.width + 1 && abs(previous.width - actual.width) <= 1
+          let height =
+            actual.height > target.height + 1 && abs(previous.height - actual.height) <= 1
+          if width || height {
+            completion.refusedSize = CGSize(
+              width: width ? actual.width : 1,
+              height: height ? actual.height : 1
+            )
+          }
+        }
+        return completion
+      }
       let correction = diagnostics.measure("mutation", processID: backend.processID) {
         backend.write(target, actual, request.generation)
       }
-      guard correction == .success, isCurrent(request) else { return result(nil, .failed) }
-      settle(item, phase: .verifyCorrection)
+      guard correction == .success, isCurrent(request) else {
+        return result(nil, .failed, failure: .mutationFailed)
+      }
+      settle(item, phase: .verifyCorrection, observed: actual)
       return nil
     }
     let cached = request.generation.acceptedFrame
@@ -330,7 +367,7 @@ private final class AnimationAppLane: @unchecked Sendable {
     }
     guard mutation == .success, request.generation.isValid else {
       request.generation.acceptedFrame = nil
-      return result(nil, .failed)
+      return result(nil, .failed, failure: .mutationFailed)
     }
     if !request.final {
       request.generation.acceptedFrame = target

@@ -5,6 +5,69 @@ import Testing
 
 @Suite("DwindleLayout")
 struct DwindleLayoutTests {
+  @Test(
+    "observed constraints fit the three-window refusal with dynamic and retained directions",
+    arguments: [false, true]
+  )
+  func observedConstraints(preserved: Bool) throws {
+    let split = TilingSplit(ratio: 0.8, direction: preserved ? .vertical : nil)
+    let tree = TilingTree.branch(.branch(.leaf(1), .leaf(2), split: split), .leaf(3), split: split)
+    let bounds = CGRect(x: 6, y: 44, width: 1698, height: 1062)
+    var settings = SpaceSettings.defaults
+    settings.gap = 6
+    let result = DwindleLayout().layout(
+      tree: tree,
+      in: bounds,
+      settings: settings,
+      minimumSizes: [2: CGSize(width: 600, height: 300), 3: CGSize(width: 840, height: 400)]
+    )
+    guard case .frames(let frames) = result else {
+      Issue.record("Expected a feasible allocation")
+      return
+    }
+    #expect(frames.count == 3)
+    #expect(frames[2]!.width >= 600)
+    #expect(frames[2]!.height >= 300)
+    #expect(frames[3]!.width >= 840)
+    for (id, frame) in frames {
+      #expect(bounds.contains(frame))
+      for (other, otherFrame) in frames where other != id {
+        #expect(!frame.intersects(otherFrame))
+      }
+    }
+    #expect(tree == .branch(.branch(.leaf(1), .leaf(2), split: split), .leaf(3), split: split))
+  }
+
+  @Test("height requirements and impossible allocations")
+  func heightRequirements() {
+    let tree = TilingTree.branch(
+      .leaf(1),
+      .leaf(2),
+      split: TilingSplit(ratio: 0.8, direction: .horizontal)
+    )
+    let bounds = CGRect(x: 0, y: 0, width: 400, height: 800)
+    #expect(
+      DwindleLayout().layout(
+        tree: tree,
+        in: bounds,
+        settings: .defaults,
+        minimumSizes: [2: CGSize(width: 1, height: 300)]
+      )
+        == .frames([
+          1: CGRect(x: 0, y: 0, width: 400, height: 500),
+          2: CGRect(x: 0, y: 500, width: 400, height: 300),
+        ])
+    )
+    #expect(
+      DwindleLayout().layout(
+        tree: tree,
+        in: bounds,
+        settings: .defaults,
+        minimumSizes: [2: CGSize(width: 401, height: 300)]
+      ) == .insufficientSpace(.usableBounds)
+    )
+  }
+
   @Test("layout: recursively bisects the longest remaining edge")
   func layoutRecursivelyBisectsTheLongestRemainingEdge() {
     var settings = SpaceSettings.defaults

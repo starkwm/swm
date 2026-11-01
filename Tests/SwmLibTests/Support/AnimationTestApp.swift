@@ -14,6 +14,10 @@ final class AnimationTestApp: @unchecked Sendable {
     get { lock.withLock { clamp } }
     set { lock.withLock { clamp = newValue } }
   }
+  var minimumSizes: [CGWindowID: CGSize] {
+    get { lock.withLock { minima } }
+    set { lock.withLock { minima = newValue } }
+  }
   var readCount: Int { lock.withLock { reads } }
   var writeCount: Int { lock.withLock { writes } }
   var beginCount: Int { lock.withLock { begins } }
@@ -32,6 +36,7 @@ final class AnimationTestApp: @unchecked Sendable {
   private var ends = 0
   private var shouldBlock = false
   private var clamp = false
+  private var minima = [CGWindowID: CGSize]()
 
   init(
     processID: pid_t,
@@ -65,6 +70,11 @@ final class AnimationTestApp: @unchecked Sendable {
           if self.ignoredWrites > 0 {
             self.ignoredWrites -= 1
           } else if !self.clamp {
+            var target = target
+            if let minimum = self.minima[windowID] {
+              target.size.width = max(target.width, minimum.width)
+              target.size.height = max(target.height, minimum.height)
+            }
             if self.settlementDelay > 0 {
               self.pendingFrames[windowID] = (
                 target, .now.advanced(by: .seconds(self.settlementDelay))

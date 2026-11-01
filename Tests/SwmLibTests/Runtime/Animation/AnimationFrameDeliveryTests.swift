@@ -6,6 +6,38 @@ import Testing
 @MainActor
 @Suite("AnimationFrameDelivery")
 struct AnimationFrameDeliveryTests {
+  @Test("final feedback distinguishes stable size refusal from a position mismatch")
+  func refusalFeedback() async throws {
+    let app = AnimationTestApp(processID: 1)
+    app.minimumSizes = [1: CGSize(width: 600, height: 300)]
+    let delivery = AnimationFrameDelivery { _ in app.backend }
+    var completion: AnimationFrameCompletion?
+    delivery.submit(
+      windowID: 1,
+      generation: AnimationGeneration(),
+      sequence: 1,
+      target: CGRect(x: 20, y: 30, width: 200, height: 100),
+      final: true
+    ) { completion = $0 }
+    try await waitForAnimation { completion != nil }
+    #expect(completion?.refusedSize == CGSize(width: 600, height: 300))
+    #expect(completion?.frame == CGRect(x: 20, y: 30, width: 600, height: 300))
+    #expect(app.writeCount == 2)
+    app.minimumSizes = [:]
+    app.clampWrites = true
+    completion = nil
+    delivery.submit(
+      windowID: 1,
+      generation: AnimationGeneration(),
+      sequence: 2,
+      target: CGRect(x: 100, y: 100, width: 600, height: 300),
+      final: true
+    ) { completion = $0 }
+    try await waitForAnimation { completion != nil }
+    #expect(completion?.outcome == .failed)
+    #expect(completion?.refusedSize == nil)
+  }
+
   @Test("submit: isolates apps and coalesces pending targets while preserving final writes")
   func submitIsolatesAppsAndCoalescesPendingTargetsWhilePreservingFinalWrites() async throws {
     let slow = AnimationTestApp(processID: 1)
