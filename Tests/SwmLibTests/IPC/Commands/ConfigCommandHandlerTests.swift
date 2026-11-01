@@ -218,6 +218,7 @@ struct ConfigCommandHandlerTests {
       ("master-ratio", ["abs:5"], "master-ratio must be between 0.1 and 0.9"),
       ("master-ratio", ["abs:0.05"], "master-ratio must be between 0.1 and 0.9"),
       ("master-placement", ["center"], "invalid config master-placement: center"),
+      ("split-ratio", ["abs:0.95"], "split-ratio must be between 0.1 and 0.9"),
       ("preserve-split", ["maybe"], "invalid config preserve-split value: maybe"),
       ("focus-follows-mouse", ["maybe"], "invalid config focus-follows-mouse value: maybe"),
     ]
@@ -309,14 +310,15 @@ struct ConfigCommandHandlerTests {
     let handler = handler(spaces: Spaces(activeSpaceID: nil))
     for (command, args) in [
       ("gap", ["abs:6"]), ("padding", ["top=abs:8"]), ("layout", ["dwindle"]),
-      ("master-ratio", ["abs:0.6"]), ("preserve-split", ["on"]),
+      ("master-ratio", ["abs:0.6"]), ("split-ratio", ["abs:0.4"]), ("preserve-split", ["on"]),
     ] {
       #expect(handler.dispatch(request(command: command, args: args)).ok)
     }
 
     let expected = [
       "gap": "6", "padding": "--top 8 --bottom 0 --left 0 --right 0", "layout": "dwindle",
-      "master-ratio": "0.6", "preserve-split": "on", "master-placement": "left",
+      "master-ratio": "0.6", "split-ratio": "0.4", "preserve-split": "on",
+      "master-placement": "left",
       "focus-follows-mouse": "off", "animation-duration": "0.0",
       "animation-easing": "ease-out-quad",
     ]

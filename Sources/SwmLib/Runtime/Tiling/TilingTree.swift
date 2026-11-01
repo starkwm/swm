@@ -19,14 +19,21 @@ indirect enum TilingTree: Equatable {
   }
 
   /// Insert a new sibling beside the focused leaf, or the final leaf as fallback.
-  mutating func insert(_ windowID: CGWindowID, beside focusedWindowID: CGWindowID?) {
+  ///
+  /// The new branch assigns `ratio` of its region to the existing leaf.
+  mutating func insert(
+    _ windowID: CGWindowID,
+    beside focusedWindowID: CGWindowID?,
+    ratio: CGFloat = TilingSplit.equal.ratio
+  ) {
     guard windowID != 0, !windowIDs.contains(windowID) else { return }
 
     let anchor =
       focusedWindowID.flatMap { windowIDs.contains($0) ? $0 : nil }
       ?? windowIDs.last
     guard let anchor else { return }
-    _ = replaceLeaf(anchor, with: .branch(.leaf(anchor), .leaf(windowID)))
+    let split = TilingSplit(ratio: ratio, direction: nil)
+    _ = replaceLeaf(anchor, with: .branch(.leaf(anchor), .leaf(windowID), split: split))
   }
 
   /// Return a copy with omitted leaves removed and unary branches collapsed.
@@ -166,6 +173,21 @@ indirect enum TilingTree: Equatable {
       return .branch(
         first.clearingSplitDirections(),
         second.clearingSplitDirections(),
+        split: split
+      )
+    }
+  }
+
+  /// Return a copy with every branch ratio replaced, keeping retained split directions.
+  func settingSplitRatios(_ ratio: CGFloat) -> TilingTree {
+    switch self {
+    case .leaf:
+      return self
+    case .branch(let first, let second, var split):
+      split.ratio = ratio
+      return .branch(
+        first.settingSplitRatios(ratio),
+        second.settingSplitRatios(ratio),
         split: split
       )
     }

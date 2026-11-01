@@ -11,6 +11,9 @@ struct TilingLayoutState {
   /// Edge occupied by the master pane.
   var masterPlacement: MasterPlacement
 
+  /// Fraction of each dwindle branch assigned to its first subtree.
+  var splitRatio: CGFloat
+
   /// Whether dwindle branches retain their initially resolved split direction.
   var preserveSplitDirections: Bool
 
@@ -22,6 +25,12 @@ struct TilingLayoutState {
 
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
+
+  /// Use a dwindle split ratio for new branches and rebalance existing ones to it.
+  mutating func setSplitRatio(_ ratio: CGFloat) {
+    splitRatio = ratio
+    tree = tree?.settingSplitRatios(ratio)
+  }
 
   /// Retain dwindle split directions, or clear those already retained.
   mutating func setPreserveSplitDirections(_ enabled: Bool) {

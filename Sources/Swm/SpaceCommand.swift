@@ -29,9 +29,8 @@ struct SpaceCommand: ParsableCommand {
     abstract: "Activate or configure a Space.",
     discussion: "Run a setting without a value to print the Space's current value.",
     subcommands: [
-      Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, PreserveSplit.self,
-      Padding.self,
-      Gap.self,
+      Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, SplitRatio.self,
+      PreserveSplit.self, Padding.self, Gap.self,
     ]
   )
 
@@ -98,6 +97,32 @@ struct SpaceCommand: ParsableCommand {
     var placement: MasterPlacementName?
 
     var arguments: [String] { target.arguments + [placement?.rawValue].compactMap { $0 } }
+  }
+
+  struct SplitRatio: SpaceIPCCommand, SettingChangeCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Show, set, or adjust a Space dwindle split ratio.",
+      discussion: """
+        Sets the ratio used by new dwindle splits and rebalances every existing split on \
+        the Space to it.
+
+        Examples:
+          swm space split-ratio 0.6
+          swm space split-ratio +0.05
+        """
+    )
+    static let command = "--split-ratio"
+
+    @OptionGroup var target: TargetOptions
+
+    @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as +0.05.")
+    var ratio: SettingChange<Double>?
+
+    var arguments: [String] { target.arguments + [ratio?.ipcValue].compactMap { $0 } }
+
+    func validate() throws {
+      try ratio?.validate(0.1...0.9, name: "Split ratio")
+    }
   }
 
   struct PreserveSplit: SpaceIPCCommand {

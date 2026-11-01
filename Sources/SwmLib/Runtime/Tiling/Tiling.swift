@@ -27,6 +27,7 @@ public final class Tiling {
     selection: .float,
     masterRatio: 0.5,
     masterPlacement: .left,
+    splitRatio: 0.5,
     preserveSplitDirections: false,
     tree: nil,
     omittedWindowIDs: [],
@@ -282,7 +283,7 @@ public final class Tiling {
       var insertionAnchor = state.focusedWindowID
       for windowID in desiredWindowIDs.sorted() where !retainedWindowIDs.contains(windowID) {
         if var tree = state.tree {
-          tree.insert(windowID, beside: insertionAnchor)
+          tree.insert(windowID, beside: insertionAnchor, ratio: state.splitRatio)
           state.tree = tree
         } else {
           state.tree = .leaf(windowID)
@@ -417,6 +418,21 @@ public final class Tiling {
   /// Set the master placement for all current and future Spaces.
   func setMasterPlacementForAllSpaces(_ placement: MasterPlacement) {
     updateAllLayouts(reflowing: .master) { $0.masterPlacement = placement }
+  }
+
+  /// Set or adjust the dwindle split ratio for one Space, rebalancing its existing splits.
+  @discardableResult
+  func changeSplitRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
+    guard let state = firstLayoutState(for: spaceID) else { return false }
+    let ratio = change.applying(to: state.splitRatio)
+    return updateLayouts(for: spaceID, reflowing: .dwindle) { $0.setSplitRatio(ratio) }
+  }
+
+  /// Set or adjust the default dwindle split ratio, and apply it to all current and future
+  /// Spaces, rebalancing their existing splits.
+  func changeSplitRatioForAllSpaces(_ change: LayoutRatioChange) {
+    let ratio = change.applying(to: defaultState.splitRatio)
+    updateAllLayouts(reflowing: .dwindle) { $0.setSplitRatio(ratio) }
   }
 
   /// Enable or disable retained dwindle split directions for one Space.
