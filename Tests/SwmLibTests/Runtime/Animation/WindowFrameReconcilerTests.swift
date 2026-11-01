@@ -7,6 +7,34 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
+  @Test("apply: batch feedback retains requested and settled frames", arguments: [false, true])
+  func batchSettlementFrames(animated: Bool) async throws {
+    let app = AnimationTestApp(processID: 1)
+    let unchanged = animationFrame(0)
+    let requested = CGRect(x: 100, y: 0, width: 200, height: 100)
+    app.minimumSizes = [2: CGSize(width: 400, height: 100)]
+    let reconciler = makeTestReconciler(app)
+    reconciler.animationDuration = animated ? 1 : 0
+    var settlements: [CGWindowID: WindowFrameSettlement]?
+    reconciler.apply([1: unchanged, 2: requested]) { settlements = $0 }
+    if animated {
+      try await waitForAnimation { reconciler.isAnimating(2) }
+      #expect(settlements == nil)
+      reconciler.advanceAnimations(finishImmediately: true)
+    }
+    try await waitForAnimation { settlements != nil }
+    let results = try #require(settlements)
+    #expect(results.count == 2)
+    #expect(results[1]?.isVerified == true)
+    #expect(results[1]?.requestedFrame == unchanged)
+    #expect(results[1]?.frame == unchanged)
+    #expect(results[2]?.isVerified == false)
+    #expect(results[2]?.requestedFrame == requested)
+    #expect(results[2]?.frame == CGRect(x: 100, y: 0, width: 400, height: 100))
+    #expect(results[2]?.refusedSize == CGSize(width: 400, height: 1))
+    #expect(reconciler.isIdle)
+  }
+
   @Test(
     "nextAnimationDeadline: preserves cadence and skips missed intervals",
     arguments: [(0, 1), (5, 1), (15, 1), (40, 3)]

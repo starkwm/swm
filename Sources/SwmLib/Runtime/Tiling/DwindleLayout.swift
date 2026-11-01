@@ -90,17 +90,12 @@ struct DwindleLayout {
       while budget > 0, preferred - distance >= lower || preferred + distance <= upper {
         let candidates = distance == 0 ? [preferred] : [preferred - distance, preferred + distance]
         for allocation in candidates where allocation >= lower && allocation <= upper {
-          var a = bounds
-          var b = bounds
-          if vertical {
-            a.size.width = allocation
-            b.origin.x += allocation + gap
-            b.size.width = available - allocation
-          } else {
-            a.size.height = allocation
-            b.origin.y += allocation + gap
-            b.size.height = available - allocation
-          }
+          let (a, b) = dividedBounds(
+            bounds,
+            gap: gap,
+            vertical: vertical,
+            allocation: allocation
+          )
           if let leading = constrainedLayout(
             first,
             bounds: a,
@@ -210,80 +205,44 @@ struct DwindleLayout {
     gap: CGFloat,
     split: TilingSplit
   ) -> SplitResult {
-    switch split.direction ?? direction(for: bounds) {
-    case .vertical:
-      return splitVertically(bounds, gap: gap, ratio: split.ratio)
-    case .horizontal:
-      return splitHorizontally(bounds, gap: gap, ratio: split.ratio)
+    let vertical = (split.direction ?? direction(for: bounds)) == .vertical
+    let available = (vertical ? bounds.width : bounds.height) - gap
+    guard available >= 0 else {
+      return .insufficientSpace(vertical ? .horizontalGap : .verticalGap)
     }
+    let allocation = (available * min(max(split.ratio, 0.1), 0.9)).rounded()
+    let minimum = vertical ? Self.minimumWindowSize.width : Self.minimumWindowSize.height
+    guard allocation >= minimum, available - allocation >= minimum else {
+      return .insufficientSpace(vertical ? .tileWidth : .tileHeight)
+    }
+    let (first, second) = dividedBounds(
+      bounds,
+      gap: gap,
+      vertical: vertical,
+      allocation: allocation
+    )
+    return .frames(first, second)
   }
 
-  /// Split a landscape region into leading and remaining columns.
-  private func splitVertically(
+  /// Construct sibling rectangles after the caller chooses a feasible allocation.
+  private func dividedBounds(
     _ bounds: CGRect,
     gap: CGFloat,
-    ratio: CGFloat
-  ) -> SplitResult {
-    let availableWidth = bounds.width - gap
-    guard availableWidth >= 0 else { return .insufficientSpace(.horizontalGap) }
-
-    let leadingWidth = (availableWidth * min(max(ratio, 0.1), 0.9)).rounded()
-    let trailingWidth = availableWidth - leadingWidth
-    guard
-      leadingWidth >= Self.minimumWindowSize.width,
-      trailingWidth >= Self.minimumWindowSize.width
-    else {
-      return .insufficientSpace(.tileWidth)
+    vertical: Bool,
+    allocation: CGFloat
+  ) -> (CGRect, CGRect) {
+    var first = bounds
+    var second = bounds
+    if vertical {
+      first.size.width = allocation
+      second.origin.x += allocation + gap
+      second.size.width = bounds.width - gap - allocation
+    } else {
+      first.size.height = allocation
+      second.origin.y += allocation + gap
+      second.size.height = bounds.height - gap - allocation
     }
-
-    return .frames(
-      CGRect(
-        x: bounds.minX,
-        y: bounds.minY,
-        width: leadingWidth,
-        height: bounds.height
-      ),
-      CGRect(
-        x: bounds.minX + leadingWidth + gap,
-        y: bounds.minY,
-        width: trailingWidth,
-        height: bounds.height
-      )
-    )
-  }
-
-  /// Split a portrait region into leading and remaining rows.
-  private func splitHorizontally(
-    _ bounds: CGRect,
-    gap: CGFloat,
-    ratio: CGFloat
-  ) -> SplitResult {
-    let availableHeight = bounds.height - gap
-    guard availableHeight >= 0 else { return .insufficientSpace(.verticalGap) }
-
-    let leadingHeight = (availableHeight * min(max(ratio, 0.1), 0.9)).rounded()
-    let trailingHeight = availableHeight - leadingHeight
-    guard
-      leadingHeight >= Self.minimumWindowSize.height,
-      trailingHeight >= Self.minimumWindowSize.height
-    else {
-      return .insufficientSpace(.tileHeight)
-    }
-
-    return .frames(
-      CGRect(
-        x: bounds.minX,
-        y: bounds.minY,
-        width: bounds.width,
-        height: leadingHeight
-      ),
-      CGRect(
-        x: bounds.minX,
-        y: bounds.minY + leadingHeight + gap,
-        width: bounds.width,
-        height: trailingHeight
-      )
-    )
+    return (first, second)
   }
 }
 
