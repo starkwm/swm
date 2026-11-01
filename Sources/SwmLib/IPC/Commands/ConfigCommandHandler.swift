@@ -57,10 +57,7 @@ struct ConfigCommandHandler {
     case "master-placement": return state.masterPlacement.rawValue
     case "preserve-split": return state.preserveSplitDirections ? "on" : "off"
     case "gap": return String(settings.gap)
-    case "padding":
-      return PaddingSide.allCases
-        .map { "--\($0.rawValue) \(settings.padding[$0])" }
-        .joined(separator: " ")
+    case "padding": return settings.padding.commandOptions
     default: return nil
     }
   }

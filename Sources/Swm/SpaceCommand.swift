@@ -27,6 +27,7 @@ struct SpaceCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "space",
     abstract: "Activate or configure a Space.",
+    discussion: "Run a setting without a value to print the Space's current value.",
     subcommands: [
       Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, PreserveSplit.self,
       Padding.self,
@@ -51,20 +52,20 @@ struct SpaceCommand: ParsableCommand {
   }
 
   struct Layout: SpaceIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Set a Space layout.")
+    static let configuration = CommandConfiguration(abstract: "Show or set a Space layout.")
     static let command = "--layout"
 
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Layout used by the selected Space.")
-    var layout: LayoutName
+    var layout: LayoutName?
 
-    var arguments: [String] { target.arguments + [layout.rawValue] }
+    var arguments: [String] { target.arguments + [layout?.rawValue].compactMap { $0 } }
   }
 
   struct MasterRatio: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust a Space master ratio.",
+      abstract: "Show, set, or adjust a Space master ratio.",
       discussion: """
         Examples:
           swm space master-ratio 0.6
@@ -76,49 +77,49 @@ struct SpaceCommand: ParsableCommand {
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as +0.05.")
-    var ratio: SettingChange<Double>
+    var ratio: SettingChange<Double>?
 
-    var arguments: [String] { target.arguments + [ratio.ipcValue] }
+    var arguments: [String] { target.arguments + [ratio?.ipcValue].compactMap { $0 } }
 
     func validate() throws {
-      try ratio.validate(0.1...0.9, name: "Master ratio")
+      try ratio?.validate(0.1...0.9, name: "Master ratio")
     }
   }
 
   struct MasterPlacement: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or cycle a Space master edge."
+      abstract: "Show, set, or cycle a Space master edge."
     )
     static let command = "--master-placement"
 
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Master edge or next/prev.")
-    var placement: SpaceMasterPlacementName
+    var placement: SpaceMasterPlacementName?
 
-    var arguments: [String] { target.arguments + [placement.rawValue] }
+    var arguments: [String] { target.arguments + [placement?.rawValue].compactMap { $0 } }
   }
 
   struct PreserveSplit: SpaceIPCCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set whether dwindle split directions are retained."
+      abstract: "Show or set whether dwindle split directions are retained."
     )
     static let command = "--preserve-split"
 
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Enable or disable split preservation.")
-    var state: ToggleState
+    var state: ToggleState?
 
-    var arguments: [String] { target.arguments + [state.rawValue] }
+    var arguments: [String] { target.arguments + [state?.rawValue].compactMap { $0 } }
   }
 
   struct Padding: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust padding around a Space.",
+      abstract: "Show, set, or adjust padding around a Space.",
       discussion: """
         Each side takes points to set, or a signed change. Sides left out keep their \
-        padding.
+        padding. Without sides, prints the current padding.
 
         Examples:
           swm space padding --top 8 --bottom 8 --left 8 --right 8
@@ -131,17 +132,11 @@ struct SpaceCommand: ParsableCommand {
     @OptionGroup var sides: PaddingSideOptions
 
     var arguments: [String] { target.arguments + sides.arguments }
-
-    func validate() throws {
-      guard !sides.changes.isEmpty else {
-        throw ValidationError("Provide at least one of --top, --bottom, --left, or --right.")
-      }
-    }
   }
 
   struct Gap: SpaceIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Set or adjust a Space window gap.",
+      abstract: "Show, set, or adjust a Space window gap.",
       discussion: """
         Examples:
           swm space gap 6
@@ -153,9 +148,9 @@ struct SpaceCommand: ParsableCommand {
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Points to set, or a signed change such as +2 or -2.")
-    var points: SettingChange<Int>
+    var points: SettingChange<Int>?
 
-    var arguments: [String] { target.arguments + [points.ipcValue] }
+    var arguments: [String] { target.arguments + [points?.ipcValue].compactMap { $0 } }
   }
 }
 

@@ -338,14 +338,29 @@ struct ArgumentsTests {
   }
 
   @Test(
-    "parseAsRoot: rejects out-of-range ratios, empty padding, and signed global padding",
+    "parseAsRoot: sends only the target for Space settings given without a value",
+    arguments: [
+      ["layout"], ["master-ratio"], ["master-placement"], ["preserve-split"], ["gap"],
+      ["padding"],
+    ]
+  )
+  func parseAsRootSendsOnlyTheTargetForSpaceSettingsGivenWithoutAValue(setting: [String]) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(["space"] + setting + ["--space", "2"]) as? any IPCCommand
+    )
+
+    #expect(command.arguments == ["--space", "2"])
+  }
+
+  @Test(
+    "parseAsRoot: rejects out-of-range ratios and signed global padding",
     arguments: [
       ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
       ["space", "gap", "wide"], ["space", "gap", "rel:4"], ["space", "gap", "abs:6"],
-      ["space", "padding"], ["config", "padding", "--top", "+2"],
+      ["config", "padding", "--top", "+2"],
     ]
   )
-  func parseAsRootRejectsOutOfRangeRatiosEmptyPaddingAndSignedGlobalPadding(
+  func parseAsRootRejectsOutOfRangeRatiosAndSignedGlobalPadding(
     arguments: [String]
   ) {
     #expect(throws: (any Error).self) {
