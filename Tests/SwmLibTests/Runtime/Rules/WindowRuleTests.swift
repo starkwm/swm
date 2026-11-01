@@ -11,6 +11,7 @@ struct WindowRuleTests {
     arguments: [
       [], ["manage=yes"], ["manage!=off"], ["manage=off", "app=["],
       ["manage=off", "app="], ["manage=off", "app=A", "app!=B"],
+      ["manage=off", "bundle-id!=a", "bundle-id=b"], ["manage=off", "label!=a"],
       ["manage=off", "unknown=value"], ["manage=off", "label=1"],
       ["manage=off", "manage=on"], ["manage"],
     ]
@@ -27,7 +28,7 @@ struct WindowRuleTests {
     #expect(
       error?.message
         == "invalid rule argument: application=Finder; expected key=value with one of label, app,"
-        + " app!, title, title!, bundle-id, manage, grid, display"
+        + " app!, title, title!, bundle-id, bundle-id!, manage, grid, display"
     )
   }
 
@@ -61,5 +62,11 @@ struct WindowRuleTests {
     #expect(inverted.matches(candidate))
     candidate.app = nil
     #expect(!inverted.matches(candidate))
+    let otherApps = try WindowRule.parse(arguments: ["bundle-id!=com.apple.finder", "manage=off"])
+    #expect(otherApps.matches(candidate))
+    candidate.bundleID = "com.apple.finder"
+    #expect(!otherApps.matches(candidate))
+    candidate.bundleID = nil
+    #expect(!otherApps.matches(candidate))
   }
 }

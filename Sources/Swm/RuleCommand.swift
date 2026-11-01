@@ -8,7 +8,8 @@ struct RuleCommand: ParsableCommand {
       abstract: "Register a window management rule.",
       discussion: """
         Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, or \
-        display=index|uuid. Optional filters are app, title, and bundle-id; label names the rule.
+        display=index|uuid. Optional filters are app, title, and bundle-id; write key!=value to \
+        require no match, as in bundle-id!=com.apple.finder. label names the rule.
 
         Examples:
           swm rule add label=finder bundle-id=com.apple.finder manage=off
