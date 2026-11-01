@@ -74,7 +74,7 @@ struct SignalsTests {
     try signals.add(
       Signal.parseAdd(arguments: [
         "label=focus", "event=window-focused", "action=echo $SWM_WINDOW_ID",
-        "app=^Safari$", "title!=Private", "active=yes",
+        "app=^Safari$", "title!=Private", "active=on",
       ])
     )
     let matching = SignalPayload(

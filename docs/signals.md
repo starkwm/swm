@@ -17,7 +17,7 @@ swm signal clear
 - `label=<text>`: unique non-integer name used by `remove`. Numeric selectors remove by one-based index. Rename any existing numeric labels before registering them.
 - `app=<regex>` and `title=<regex>`: require a regular-expression match.
 - `app!=<regex>` and `title!=<regex>`: require the value not to match.
-- `active=yes|no`: filter application and window events by active or focused state.
+- `active=on|off`: filter application and window events by active or focused state.
 
 ## Events
 

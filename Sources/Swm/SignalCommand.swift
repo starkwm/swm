@@ -14,7 +14,7 @@ struct SignalCommand: ParsableCommand {
       abstract: "Register a command for a matching event.",
       discussion: """
         Requires event=<name> and action=<shell command>. Optional filters are label, app, \
-        title, and active.
+        title, and active=on|off.
 
         Examples:
           swm signal add event=window-focused action='echo "$SWM_WINDOW_ID"'
