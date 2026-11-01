@@ -936,7 +936,7 @@ struct TilingTests {
     tiling.initialize()
 
     tiling.setLayoutForSpaces(.master)
-    tiling.setMasterRatioForAllSpaces(0.65)
+    tiling.changeMasterRatioForAllSpaces(.absolute(0.65))
     tiling.setMasterPlacementForAllSpaces(.bottom)
     tiling.setSplitDirectionPreservationForAllSpaces(true)
 

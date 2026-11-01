@@ -390,9 +390,9 @@ public final class Tiling {
     return updateLayouts(for: spaceID, reflowing: .master) { $0.masterRatio = ratio }
   }
 
-  /// Set the default master ratio for all current and future Spaces.
-  func setMasterRatioForAllSpaces(_ ratio: CGFloat) {
-    let ratio = LayoutRatioChange.absolute(ratio).applying(to: defaultState.masterRatio)
+  /// Set or adjust the default master ratio, and apply it to all current and future Spaces.
+  func changeMasterRatioForAllSpaces(_ change: LayoutRatioChange) {
+    let ratio = change.applying(to: defaultState.masterRatio)
     updateAllLayouts(reflowing: .master) { $0.masterRatio = ratio }
   }
 

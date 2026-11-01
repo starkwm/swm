@@ -171,7 +171,8 @@ struct SpaceCommandHandler {
 
     let padding = try PaddingSideChange.applying(
       changes,
-      to: spaces.settings(for: spaceID).padding
+      to: spaces.settings(for: spaceID).padding,
+      context: "space padding"
     )
     spaces.setPadding(padding, for: spaceID)
     tiling.reflow(spaceID: spaceID)
@@ -182,11 +183,11 @@ struct SpaceCommandHandler {
   /// Set or adjust the window gap for the selected space.
   private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "space gap").requiredValue()
-    guard let change = parseGapChange(argument) else {
+    guard let change = CommandValueParser.pointsChange(from: argument) else {
       throw IPCCommandError.invalidValue(
         "space gap",
         argument,
-        expected: "abs:<points> or rel:<points>, such as rel:4"
+        expected: CommandValueParser.pointsChangeForm
       )
     }
 
@@ -237,25 +238,4 @@ struct SpaceCommandHandler {
       spaceIDs[index - 1]
     )
   }
-
-  /// Parse a gap change in `mode:value` format.
-  private func parseGapChange(_ argument: String) -> GapChange? {
-    let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-
-    guard
-      parts.count == 2,
-      let mode = NumericChangeMode(rawValue: parts[0]),
-      let value = Int(parts[1])
-    else {
-      return nil
-    }
-
-    return GapChange(mode: mode, value: value)
-  }
-}
-
-/// Parsed gap command argument.
-private struct GapChange {
-  let mode: NumericChangeMode
-  let value: Int
 }

@@ -49,11 +49,36 @@ struct ConfigCommandHandlerTests {
     spaces.setGap(5, for: 1)
     let handler = handler(spaces: spaces)
 
-    let response = handler.dispatch(request(command: "gap", args: ["12"]))
+    let response = handler.dispatch(request(command: "gap", args: ["abs:12"]))
 
     #expect(response.ok)
     #expect(spaces.settings(for: 1).gap == 12)
     #expect(spaces.settings(for: 2).gap == 12)
+  }
+
+  @Test("dispatch: adjusts global gap, padding, and master ratio and applies them to every Space")
+  func dispatchAdjustsGlobalGapPaddingAndMasterRatioAndAppliesThemToEverySpace() {
+    let spaces = Spaces(activeSpaceID: nil)
+    let handler = handler(spaces: spaces)
+    #expect(handler.dispatch(request(command: "gap", args: ["abs:6"])).ok)
+    #expect(handler.dispatch(request(command: "padding", args: ["top=abs:8", "left=abs:4"])).ok)
+    spaces.setGap(20, for: 1)
+    spaces.setPadding(SpacePadding(top: 30, bottom: 2, left: 30, right: 4), for: 1)
+
+    #expect(handler.dispatch(request(command: "gap", args: ["rel:2"])).ok)
+    #expect(handler.dispatch(request(command: "padding", args: ["top=rel:-10"])).ok)
+    #expect(handler.dispatch(request(command: "master-ratio", args: ["rel:0.1"])).ok)
+
+    #expect(spaces.settings(for: 1).gap == 8)
+    #expect(spaces.settings(for: 1).padding == SpacePadding(top: 0, bottom: 2, left: 30, right: 4))
+    #expect(spaces.settings(for: 2).padding == SpacePadding(top: 0, bottom: 0, left: 4, right: 0))
+    #expect(handler.dispatch(request(command: "gap", args: [])).message == "8")
+    #expect(handler.dispatch(request(command: "master-ratio", args: [])).message == "0.6")
+
+    #expect(handler.dispatch(request(command: "gap", args: ["abs:\(Int.max)"])).ok)
+    let overflow = handler.dispatch(request(command: "gap", args: ["rel:1"]))
+    #expect(overflow.message == "config gap adjustment overflows integer range")
+    #expect(spaces.settings(for: 1).gap == Int.max)
   }
 
   @Test("dispatch: applies master controls and split preservation to geometry")
@@ -85,7 +110,7 @@ struct ConfigCommandHandlerTests {
       tiling: tiling
     )
     #expect(handler.dispatch(request(command: "layout", args: ["master"])).ok)
-    #expect(handler.dispatch(request(command: "master-ratio", args: ["0.65"])).ok)
+    #expect(handler.dispatch(request(command: "master-ratio", args: ["abs:0.65"])).ok)
     #expect(handler.dispatch(request(command: "master-placement", args: ["top"])).ok)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
@@ -167,20 +192,29 @@ struct ConfigCommandHandlerTests {
     "dispatch: rejects malformed arguments with exact diagnostics",
     arguments: [
       ("gap", ["10", "20"], "invalid config gap arguments"),
-      ("gap", ["wide"], "invalid config gap value: wide"),
       (
-        "padding", ["top=rel:2"],
-        "invalid config padding value: top=rel:2; expected <side>=abs:<points>, such as top=abs:8"
+        "gap", ["6"],
+        "invalid config gap value: 6; expected abs:<points> or rel:<points>, such as rel:4"
+      ),
+      (
+        "padding", ["top=8"],
+        "invalid config padding value: top=8; expected <side>=abs:<points> or "
+          + "<side>=rel:<points>, such as top=abs:8"
       ),
       (
         "padding", ["middle=abs:2"],
-        "invalid config padding value: middle=abs:2; expected <side>=abs:<points>, such as top=abs:8"
+        "invalid config padding value: middle=abs:2; expected <side>=abs:<points> or "
+          + "<side>=rel:<points>, such as top=abs:8"
       ),
       ("layout", ["master", "dwindle"], "invalid config layout arguments"),
       ("layout", ["columns"], "invalid config layout: columns"),
-      ("master-ratio", ["wide"], "invalid config master-ratio value: wide"),
-      ("master-ratio", ["5"], "master-ratio must be between 0.1 and 0.9"),
-      ("master-ratio", ["0.05"], "master-ratio must be between 0.1 and 0.9"),
+      (
+        "master-ratio", ["0.6"],
+        "invalid config master-ratio value: 0.6; expected abs:<ratio> or rel:<ratio>, "
+          + "such as rel:0.05"
+      ),
+      ("master-ratio", ["abs:5"], "master-ratio must be between 0.1 and 0.9"),
+      ("master-ratio", ["abs:0.05"], "master-ratio must be between 0.1 and 0.9"),
       ("master-placement", ["center"], "invalid config master-placement: center"),
       ("preserve-split", ["maybe"], "invalid config preserve-split value: maybe"),
       ("focus-follows-mouse", ["maybe"], "invalid config focus-follows-mouse value: maybe"),
@@ -272,8 +306,8 @@ struct ConfigCommandHandlerTests {
   func dispatchReportsCurrentValuesForSettingsGivenWithoutAValue() {
     let handler = handler(spaces: Spaces(activeSpaceID: nil))
     for (command, args) in [
-      ("gap", ["6"]), ("padding", ["top=abs:8"]), ("layout", ["dwindle"]),
-      ("master-ratio", ["0.6"]), ("preserve-split", ["on"]),
+      ("gap", ["abs:6"]), ("padding", ["top=abs:8"]), ("layout", ["dwindle"]),
+      ("master-ratio", ["abs:0.6"]), ("preserve-split", ["on"]),
     ] {
       #expect(handler.dispatch(request(command: command, args: args)).ok)
     }

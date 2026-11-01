@@ -4,7 +4,13 @@ struct PaddingSideChange: Equatable {
   static let form = "<side>=abs:<points> or <side>=rel:<points>, such as top=abs:8"
 
   /// Apply side changes to padding, keeping sides without a change.
-  static func applying(_ changes: [Self], to padding: SpacePadding) throws -> SpacePadding {
+  ///
+  /// `context` names the command in the error thrown when an adjustment overflows.
+  static func applying(
+    _ changes: [Self],
+    to padding: SpacePadding,
+    context: String
+  ) throws -> SpacePadding {
     var padding = padding
     for change in changes {
       let current = padding[change.side]
@@ -14,7 +20,7 @@ struct PaddingSideChange: Equatable {
       case .relative:
         let (value, overflow) = current.addingReportingOverflow(change.value)
         guard !overflow else {
-          throw IPCCommandError.invalidRequest("space padding adjustment overflows integer range")
+          throw IPCCommandError.invalidRequest("\(context) adjustment overflows integer range")
         }
         padding[change.side] = value
       }

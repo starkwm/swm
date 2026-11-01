@@ -50,14 +50,27 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { mode.map { [$0.rawValue] } ?? [] }
   }
 
-  struct MasterRatio: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Show or set the master-area ratio.")
+  struct MasterRatio: ConfigIPCCommand, SettingChangeCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Show, set, or adjust the master-area ratio.",
+      discussion: """
+        A signed change adjusts the global ratio and applies the result to every Space.
+
+        Examples:
+          swm config master-ratio 0.6
+          swm config master-ratio -0.05
+        """
+    )
     static let command = "master-ratio"
 
-    @Argument(help: "Ratio from 0.1 through 0.9.")
-    var ratio: Double?
+    @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as +0.05.")
+    var ratio: SettingChange<Double>?
 
-    var arguments: [String] { ratio.map { [String($0)] } ?? [] }
+    var arguments: [String] { ratio.map { [$0.ipcValue] } ?? [] }
+
+    func validate() throws {
+      try ratio?.validate(0.1...0.9, name: "Master ratio")
+    }
   }
 
   struct MasterPlacement: ConfigIPCCommand {
@@ -82,24 +95,36 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { state.map { [$0.rawValue] } ?? [] }
   }
 
-  struct Gap: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Show or set the window gap.")
+  struct Gap: ConfigIPCCommand, SettingChangeCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Show, set, or adjust the window gap.",
+      discussion: """
+        A signed change adjusts the global gap and applies the result to every Space.
+
+        Examples:
+          swm config gap 6
+          swm config gap +2
+        """
+    )
     static let command = "gap"
 
-    @Argument(help: "Gap in points.")
-    var points: Int?
+    @Argument(help: "Points to set, or a signed change such as +2 or -2.")
+    var points: SettingChange<Int>?
 
-    var arguments: [String] { points.map { [String($0)] } ?? [] }
+    var arguments: [String] { points.map { [$0.ipcValue] } ?? [] }
   }
 
-  struct Padding: ConfigIPCCommand {
+  struct Padding: ConfigIPCCommand, SettingChangeCommand {
     static let configuration = CommandConfiguration(
-      abstract: "Show or set padding around every Space.",
+      abstract: "Show, set, or adjust padding around every Space.",
       discussion: """
-        Sides left out keep their padding. Without sides, prints the current padding.
+        Each side takes points to set, or a signed change to the global padding. Changed \
+        sides apply to every Space; sides left out keep their padding. Without sides, \
+        prints the current padding.
 
-        Example:
+        Examples:
           swm config padding --top 6 --bottom 6 --left 6 --right 6
+          swm config padding --top +4
         """
     )
     static let command = "padding"
@@ -107,12 +132,6 @@ struct ConfigCommand: ParsableCommand {
     @OptionGroup var sides: PaddingSideOptions
 
     var arguments: [String] { sides.arguments }
-
-    func validate() throws {
-      guard sides.changes.allSatisfy({ !$0.change.isRelative }) else {
-        throw ValidationError("Global padding takes points, not signed changes.")
-      }
-    }
   }
 
   static let configuration = CommandConfiguration(
