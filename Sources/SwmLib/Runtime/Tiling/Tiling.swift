@@ -660,7 +660,7 @@ public final class Tiling {
       return
     }
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }
-    if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.succeeded == true {
+    if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.phase == .verified {
       dwindleAttempts.removeValue(forKey: id)
     }
     reconcileAndReflowVisibleSpaces()
@@ -875,7 +875,9 @@ public final class Tiling {
       guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else {
         if let context = dwindleContext(layoutID), dwindleAttempts[layoutID]?.context != context {
           frameReconciler?.cancelAnimations(for: context.tree?.windowIDs ?? [])
-          dwindleAttempts[layoutID] = DwindleAttempt(context: context)
+          let attempt = DwindleAttempt(context: context)
+          attempt.phase = .failed
+          dwindleAttempts[layoutID] = attempt
           log("dwindle layout unsatisfied space=\(layoutID.spaceID)", level: .warn)
         }
         continue
@@ -918,47 +920,65 @@ public final class Tiling {
       guard let self, self.dwindleAttempts[id] === attempt,
         self.dwindleContext(id) == attempt.context
       else { return }
-      var learned = false
-      for (windowID, result) in results {
-        if let size = result.refusedSize {
-          let previous = self.observedSizes[windowID] ?? CGSize(width: 1, height: 1)
-          self.observedSizes[windowID] = CGSize(
-            width: max(previous.width, size.width),
-            height: max(previous.height, size.height)
-          )
-          learned = true
-        } else if result.outcome == .verified, let frame = result.frame,
-          let previous = self.observedSizes[windowID]
-        {
-          self.observedSizes[windowID] = CGSize(
-            width: min(previous.width, frame.width),
-            height: min(previous.height, frame.height)
-          )
-        }
-      }
-      if results.values.allSatisfy({ $0.outcome == .verified }) {
-        attempt.succeeded = !attempt.restoring
+      let learned = self.updateObservedSizes(from: results)
+      if results.values.allSatisfy(\.isVerified) {
+        // A verified restoration still caches the requested layout's failure.
+        attempt.phase = attempt.phase == .restoring ? .failed : .verified
         self.verifiedDwindle[id] = DwindleArrangement(context: attempt.context, frames: frames)
         return
       }
-      if !attempt.restoring, learned, attempt.passes < 2,
-        case .layout(.frames(let corrected)) = self.layoutPlan(for: id), corrected != frames
-      {
-        attempt.passes += 1
-        self.deliverDwindle(id, frames: corrected, attempt: attempt)
-        return
+      if case .applying(let pass) = attempt.phase {
+        if learned, pass < 2,
+          case .layout(.frames(let corrected)) = self.layoutPlan(for: id), corrected != frames
+        {
+          attempt.phase = .applying(pass: pass + 1)
+          self.deliverDwindle(id, frames: corrected, attempt: attempt)
+          return
+        }
+        if let previous = self.fallbackFrames(for: id, context: attempt.context) {
+          attempt.phase = .restoring
+          self.deliverDwindle(id, frames: previous, attempt: attempt)
+          return
+        }
       }
-      if !attempt.restoring, let previous = self.verifiedDwindle[id],
-        previous.context.bounds == attempt.context.bounds,
-        previous.context.settings == attempt.context.settings,
-        Set(previous.frames.keys) == Set(frames.keys)
+      attempt.phase = .failed
+      log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
+    }
+  }
+
+  /// Learn refused dimensions and lower observations after verified smaller frames.
+  private func updateObservedSizes(from results: [CGWindowID: WindowFrameSettlement]) -> Bool {
+    var learned = false
+    for (windowID, result) in results {
+      if let size = result.refusedSize {
+        let previous = observedSizes[windowID] ?? CGSize(width: 1, height: 1)
+        observedSizes[windowID] = CGSize(
+          width: max(previous.width, size.width),
+          height: max(previous.height, size.height)
+        )
+        learned = true
+      } else if result.isVerified, let frame = result.frame,
+        let previous = observedSizes[windowID]
       {
-        attempt.restoring = true
-        self.deliverDwindle(id, frames: previous.frames, attempt: attempt)
-      } else {
-        log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
+        observedSizes[windowID] = CGSize(
+          width: min(previous.width, frame.width),
+          height: min(previous.height, frame.height)
+        )
       }
     }
+    return learned
+  }
+
+  private func fallbackFrames(
+    for id: TilingLayoutID,
+    context: DwindleContext
+  ) -> [CGWindowID: CGRect]? {
+    guard let previous = verifiedDwindle[id],
+      previous.context.bounds == context.bounds,
+      previous.context.settings == context.settings,
+      Set(previous.frames.keys) == Set(context.tree?.windowIDs ?? [])
+    else { return nil }
+    return previous.frames
   }
 
   /// Explicit layout adjustments permit one fresh probe of observed refusals.
@@ -1118,10 +1138,15 @@ private struct DwindleArrangement {
 }
 
 private final class DwindleAttempt {
+  enum Phase: Equatable {
+    case applying(pass: Int)
+    case restoring
+    case verified
+    case failed
+  }
+
   let context: DwindleContext
-  var passes = 0
-  var restoring = false
-  var succeeded = false
+  var phase = Phase.applying(pass: 0)
 
   init(context: DwindleContext) { self.context = context }
 }

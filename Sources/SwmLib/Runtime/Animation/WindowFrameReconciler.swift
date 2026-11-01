@@ -81,7 +81,7 @@ final class WindowFrameReconciler {
   func apply(
     _ targetFrames: [CGWindowID: CGRect],
     at now: ContinuousClock.Instant = .now,
-    completion: (([CGWindowID: AnimationFrameCompletion]) -> Void)? = nil
+    completion: (([CGWindowID: WindowFrameSettlement]) -> Void)? = nil
   ) {
     if let completion {
       cancelAnimations(for: targetFrames.keys)
@@ -275,13 +275,14 @@ final class WindowFrameReconciler {
           guard let self, self.deliveries[id] === state, state.generation.isValid else { return }
           guard let frame = result.frame, result.outcome == .read else {
             self.deliveryFailed(id)
-            state.batch?.receive(result)
+            state.batch?.receive(result, requestedFrame: state.target)
             return
           }
           if frame == target {
             self.deliveries.removeValue(forKey: id)
             state.batch?.receive(
-              AnimationFrameCompletion(request: result.request, frame: frame, outcome: .verified)
+              AnimationFrameCompletion(request: result.request, frame: frame, outcome: .verified),
+              requestedFrame: state.target
             )
             return
           }
@@ -321,7 +322,7 @@ final class WindowFrameReconciler {
       else { return }
       if result.outcome == .failed {
         self.deliveryFailed(id)
-        state.batch?.receive(result)
+        state.batch?.receive(result, requestedFrame: state.target)
       } else if result.outcome == .verified {
         self.deliveries.removeValue(forKey: id)
         self.pendingMutations[id] = ExpectedFrameMutation(
@@ -329,7 +330,7 @@ final class WindowFrameReconciler {
           expiresAt: .now.advanced(by: Self.expectationLifetime),
           reachedTarget: true
         )
-        state.batch?.receive(result)
+        state.batch?.receive(result, requestedFrame: state.target)
       }
     }
   }
@@ -360,6 +361,28 @@ final class WindowFrameReconciler {
     pendingMutations = pendingMutations.filter { $0.value.expiresAt > now }
   }
 
+}
+
+/// Terminal delivery feedback without AX handles or worker request state.
+struct WindowFrameSettlement {
+  enum Result {
+    case verified
+    case failed(reason: AnimationFrameCompletion.Failure?, refusedSize: CGSize?)
+  }
+
+  let requestedFrame: CGRect
+  let frame: CGRect?
+  let result: Result
+
+  var isVerified: Bool {
+    if case .verified = result { return true }
+    return false
+  }
+
+  var refusedSize: CGSize? {
+    if case .failed(_, let size) = result { return size }
+    return nil
+  }
 }
 
 /// Expected frame notification registered before an Accessibility mutation.
@@ -413,19 +436,23 @@ private final class FrameDeliveryState {
 @MainActor
 private final class FrameDeliveryBatch {
   private var remaining: Set<CGWindowID>
-  private var results = [CGWindowID: AnimationFrameCompletion]()
-  private let completion: ([CGWindowID: AnimationFrameCompletion]) -> Void
+  private var results = [CGWindowID: WindowFrameSettlement]()
+  private let completion: ([CGWindowID: WindowFrameSettlement]) -> Void
 
-  init(ids: Set<CGWindowID>, completion: @escaping ([CGWindowID: AnimationFrameCompletion]) -> Void)
-  {
+  init(ids: Set<CGWindowID>, completion: @escaping ([CGWindowID: WindowFrameSettlement]) -> Void) {
     remaining = ids
     self.completion = completion
   }
 
-  func receive(_ result: AnimationFrameCompletion) {
+  func receive(_ result: AnimationFrameCompletion, requestedFrame: CGRect) {
     let id = result.request.windowID
     guard remaining.remove(id) != nil else { return }
-    results[id] = result
+    results[id] = WindowFrameSettlement(
+      requestedFrame: requestedFrame,
+      frame: result.frame,
+      result: result.outcome == .verified
+        ? .verified : .failed(reason: result.failure, refusedSize: result.refusedSize)
+    )
     if remaining.isEmpty { completion(results) }
   }
 }
