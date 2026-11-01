@@ -258,7 +258,7 @@ struct WindowCommandHandler {
     let window = try selectedWindow(selector: selector)
     guard tiling.toggleDwindleSplit(for: window.id) else {
       throw IPCCommandError.invalidRequest(
-        "window has no retained dwindle split to toggle: \(window.id)"
+        "window has no dwindle split to toggle, or preserve-split is off: \(window.id)"
       )
     }
     return .acknowledged(id: request.id)

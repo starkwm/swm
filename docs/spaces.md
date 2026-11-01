@@ -47,7 +47,7 @@ The layouts are:
 - `monocle`: overlap every tiled window across the available bounds.
 - `dwindle`: recursively split the available bounds around the focused window.
 
-In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `swm space preserve-split on` retains each branch's chosen direction so it can be changed with `swm window toggle-split`.
+In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `swm space preserve-split on` keeps each split's direction once chosen, and is required by `swm window toggle-split`. Turning it off returns every split to following the longest edge.
 
 A dwindle split ratio is the share of a region given to its left or upper side. `swm space split-ratio 0.6` sets that ratio for new splits on the Space and rebalances every existing split to it; a signed change such as `+0.05` adjusts the Space's ratio and rebalances the same way. Use `swm window split-ratio` to change one split afterwards.
 
