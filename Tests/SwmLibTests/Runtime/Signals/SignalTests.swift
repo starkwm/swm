@@ -59,9 +59,25 @@ struct SignalTests {
       message: "invalid signal regex: ["
     )
     expectInvalid(
-      arguments: ["event=space-changed", "action=echo", "active=yes"],
+      arguments: ["event=space-changed", "action=echo", "active=on"],
       message: "signal event does not support active filter: space-changed"
     )
+  }
+
+  @Test("parseAdd: filters by active state with on and off")
+  func parseAddFiltersByActiveStateWithOnAndOff() throws {
+    for (value, active) in [("on", true), ("off", false)] {
+      let signal = try Signal.parseAdd(arguments: [
+        "event=window-focused", "action=echo", "active=\(value)",
+      ])
+      #expect(signal.active == active)
+    }
+    for value in ["yes", "no"] {
+      expectInvalid(
+        arguments: ["event=window-focused", "action=echo", "active=\(value)"],
+        message: "invalid signal active value: \(value)"
+      )
+    }
   }
 
   @Test("parseAdd: rejects active filter for display events")
@@ -76,7 +92,7 @@ struct SignalTests {
 
     for event in events {
       expectInvalid(
-        arguments: ["event=\(event.rawValue)", "action=echo", "active=yes"],
+        arguments: ["event=\(event.rawValue)", "action=echo", "active=on"],
         message: "signal event does not support active filter: \(event.rawValue)"
       )
     }

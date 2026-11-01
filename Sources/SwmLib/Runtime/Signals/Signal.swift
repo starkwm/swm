@@ -46,9 +46,9 @@ struct Signal: Equatable, Sendable {
 
       case "active":
         switch item.value {
-        case "yes":
+        case "on":
           active = true
-        case "no":
+        case "off":
           active = false
         default:
           throw IPCCommandError.invalidRequest("invalid signal active value: \(item.value)")

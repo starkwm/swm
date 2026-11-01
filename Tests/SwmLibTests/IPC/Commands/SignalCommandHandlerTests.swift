@@ -16,7 +16,7 @@ struct SignalCommandHandlerTests {
     let args =
       [
         "event=window-focused", "action=echo $SWM_WINDOW_ID", "label=\(label)",
-      ] + (filtered ? ["app=Safari", "title!=Private", "active=yes"] : [])
+      ] + (filtered ? ["app=Safari", "title!=Private", "active=on"] : [])
     #expect(handler.dispatch(request(command: "--add", args: args)).ok)
     let duplicate = handler.dispatch(request(command: "--add", args: args))
     #expect(duplicate.errorCode == .invalidRequest)
