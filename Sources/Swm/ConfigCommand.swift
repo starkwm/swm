@@ -74,10 +74,13 @@ struct ConfigCommand: ParsableCommand {
   }
 
   struct MasterPlacement: ConfigIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Show or set the master-area edge.")
+    static let configuration = CommandConfiguration(
+      abstract: "Show, set, or cycle the master-area edge.",
+      discussion: "next and prev cycle from the global edge and apply the result to every Space."
+    )
     static let command = "master-placement"
 
-    @Argument(help: "Edge used by the master layout.")
+    @Argument(help: "Master edge or next/prev.")
     var placement: MasterPlacementName?
 
     var arguments: [String] { placement.map { [$0.rawValue] } ?? [] }
@@ -147,10 +150,6 @@ struct ConfigCommand: ParsableCommand {
 }
 
 extension AnimationEasing: ExpressibleByArgument {}
-
-enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
-  case left, right, top, bottom
-}
 
 enum FocusFollowsMouseName: String, CaseIterable, ExpressibleByArgument {
   case off, autofocus, autoraise

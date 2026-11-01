@@ -122,13 +122,18 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set the master pane edge for every current and future Space.
+  /// Set or cycle the global master pane edge, and apply it to every current and future Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(
       request.args,
       context: "config master-placement"
     ).requiredValue()
-    guard let placement = MasterPlacement(rawValue: argument) else {
+    let placement: MasterPlacement
+    if let selectedPlacement = MasterPlacement(rawValue: argument) {
+      placement = selectedPlacement
+    } else if let direction = CycleDirection(rawValue: argument) {
+      placement = tiling.defaultState.masterPlacement.cycled(in: direction)
+    } else {
       throw IPCCommandError.invalidRequest("invalid config master-placement: \(argument)")
     }
     tiling.setMasterPlacementForAllSpaces(placement)

@@ -95,7 +95,7 @@ struct SpaceCommand: ParsableCommand {
     @OptionGroup var target: TargetOptions
 
     @Argument(help: "Master edge or next/prev.")
-    var placement: SpaceMasterPlacementName?
+    var placement: MasterPlacementName?
 
     var arguments: [String] { target.arguments + [placement?.rawValue].compactMap { $0 } }
   }
@@ -176,8 +176,4 @@ struct PaddingSideOptions: ParsableArguments {
 
   /// IPC arguments in `side=abs:<points>` or `side=rel:<points>` form.
   var arguments: [String] { changes.map { "\($0.side)=\($0.change.ipcValue)" } }
-}
-
-enum SpaceMasterPlacementName: String, CaseIterable, ExpressibleByArgument {
-  case left, right, top, bottom, next, prev
 }
