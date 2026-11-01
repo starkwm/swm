@@ -111,7 +111,9 @@ struct ConfigCommandHandlerTests {
     )
     #expect(handler.dispatch(request(command: "layout", args: ["master"])).ok)
     #expect(handler.dispatch(request(command: "master-ratio", args: ["abs:0.65"])).ok)
-    #expect(handler.dispatch(request(command: "master-placement", args: ["top"])).ok)
+    #expect(handler.dispatch(request(command: "master-placement", args: ["right"])).ok)
+    let cycled = handler.dispatch(request(command: "master-placement", args: ["prev"]))
+    #expect(cycled.ok && cycled.message == "top")
     #expect(
       tiling.layoutPlan(for: layoutID(10))
         == .layout(

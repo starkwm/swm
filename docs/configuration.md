@@ -26,7 +26,7 @@ Config commands change settings in the running daemon. Layout, padding, and gap 
 swm config layout <float|master|monocle|dwindle>
 swm config focus-follows-mouse <off|autofocus|autoraise>
 swm config master-ratio <ratio>
-swm config master-placement <left|right|top|bottom>
+swm config master-placement <left|right|top|bottom|next|prev>
 swm config preserve-split <on|off>
 swm config animation-duration <seconds>
 swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
