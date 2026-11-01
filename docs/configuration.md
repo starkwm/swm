@@ -27,6 +27,7 @@ swm config layout <float|master|monocle|dwindle>
 swm config focus-follows-mouse <off|autofocus|autoraise>
 swm config master-ratio <ratio>
 swm config master-placement <left|right|top|bottom|next|prev>
+swm config split-ratio <ratio>
 swm config preserve-split <on|off>
 swm config animation-duration <seconds>
 swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
@@ -34,9 +35,9 @@ swm config gap <points>
 swm config padding [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
 ```
 
-Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, split preservation off, animation disabled, and zero padding and gaps. The master ratio must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
+Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, `0.5` split ratio, split preservation off, animation disabled, and zero padding and gaps. Master and split ratios must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
 
-As with [space settings](spaces.md#configure-a-space), a plain number sets the master ratio, gap, or a padding side, and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap. Padding changes apply only to the sides given.
+As with [space settings](spaces.md#configure-a-space), a plain number sets the master ratio, split ratio, gap, or a padding side, and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap. Padding changes apply only to the sides given.
 
 Run a config command without a value to print the current global value, in the form the command accepts:
 

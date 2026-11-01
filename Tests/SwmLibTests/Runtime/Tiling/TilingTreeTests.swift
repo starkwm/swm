@@ -42,4 +42,22 @@ struct TilingTreeTests {
         ])
     )
   }
+
+  @Test("settingSplitRatios: replaces every ratio and keeps retained directions")
+  func settingSplitRatiosReplacesEveryRatioAndKeepsRetainedDirections() {
+    let tree = TilingTree.branch(
+      .leaf(1),
+      .branch(.leaf(2), .leaf(3), split: TilingSplit(ratio: 0.3, direction: nil)),
+      split: TilingSplit(ratio: 0.8, direction: .horizontal)
+    )
+
+    #expect(
+      tree.settingSplitRatios(0.6)
+        == .branch(
+          .leaf(1),
+          .branch(.leaf(2), .leaf(3), split: TilingSplit(ratio: 0.6, direction: nil)),
+          split: TilingSplit(ratio: 0.6, direction: .horizontal)
+        )
+    )
+  }
 }

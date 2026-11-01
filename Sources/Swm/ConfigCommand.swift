@@ -86,6 +86,30 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { placement.map { [$0.rawValue] } ?? [] }
   }
 
+  struct SplitRatio: ConfigIPCCommand, SettingChangeCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Show, set, or adjust the dwindle split ratio.",
+      discussion: """
+        Sets the ratio used by new dwindle splits and rebalances every existing split to it. \
+        A signed change adjusts the global ratio and applies the result to every Space.
+
+        Examples:
+          swm config split-ratio 0.6
+          swm config split-ratio -0.05
+        """
+    )
+    static let command = "split-ratio"
+
+    @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as +0.05.")
+    var ratio: SettingChange<Double>?
+
+    var arguments: [String] { ratio.map { [$0.ipcValue] } ?? [] }
+
+    func validate() throws {
+      try ratio?.validate(0.1...0.9, name: "Split ratio")
+    }
+  }
+
   struct PreserveSplit: ConfigIPCCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show or set whether dwindle split directions are retained."
@@ -143,7 +167,7 @@ struct ConfigCommand: ParsableCommand {
     discussion: "Run a setting without a value to print its current value.",
     subcommands: [
       Layout.self, FocusFollowsMouse.self, MasterRatio.self, MasterPlacement.self,
-      PreserveSplit.self, AnimationDuration.self, AnimationEasingCommand.self,
+      SplitRatio.self, PreserveSplit.self, AnimationDuration.self, AnimationEasingCommand.self,
       Gap.self, Padding.self,
     ]
   )

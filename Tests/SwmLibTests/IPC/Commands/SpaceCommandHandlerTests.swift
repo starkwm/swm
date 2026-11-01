@@ -196,6 +196,69 @@ struct SpaceCommandHandlerTests {
     )
   }
 
+  @Test("dispatch: rebalances dwindle splits and uses the ratio for new splits")
+  func dispatchRebalancesDwindleSplitsAndUsesTheRatioForNewSplits() async {
+    let spaces = Spaces(activeSpaceID: 42)
+    var windowIDs: [CGWindowID] = [1, 2]
+    let tiling = Tiling(
+      snapshot: {
+        TilingReconciliationSnapshot(
+          windows: windowIDs.map {
+            TilingWindowSnapshot(
+              id: $0,
+              displayID: "display",
+              subrole: "AXStandardWindow",
+              isMinimized: false,
+              isMovable: true,
+              isResizable: true
+            )
+          },
+          topology: SpaceTopology(
+            spacesByID: [
+              42: SpaceTopologyDescriptor(id: 42, displayID: "display", type: .normal)
+            ],
+            visibleSpaceIDByDisplayID: ["display": 42],
+            spaceIDsByWindowID: Dictionary(uniqueKeysWithValues: windowIDs.map { ($0, [42]) }),
+            displaysByID: [
+              "display": SpaceTopologyDisplay(
+                visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800)
+              )
+            ]
+          )
+        )
+      },
+      spaces: spaces
+    )
+    tiling.initialize()
+    let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
+    #expect((await handler.dispatch(request(command: "--layout", args: ["dwindle"]))).ok)
+
+    #expect((await handler.dispatch(request(command: "--split-ratio", args: ["abs:0.6"]))).ok)
+    #expect(
+      tiling.layoutPlan(for: layoutID(42))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 600, height: 800),
+            2: CGRect(x: 600, y: 0, width: 400, height: 800),
+          ])
+        )
+    )
+
+    #expect((await handler.dispatch(request(command: "--split-ratio", args: ["rel:-0.2"]))).ok)
+    windowIDs.append(3)
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(42))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 400, height: 800),
+            2: CGRect(x: 400, y: 0, width: 600, height: 320),
+            3: CGRect(x: 400, y: 320, width: 600, height: 480),
+          ])
+        )
+    )
+  }
+
   @Test("dispatch: reports the selected Space's values for settings given without a value")
   func dispatchReportsTheSelectedSpacesValuesForSettingsGivenWithoutAValue() async {
     let spaces = Spaces(activeSpaceID: 10)
@@ -209,14 +272,15 @@ struct SpaceCommandHandlerTests {
     for (command, args) in [
       ("--gap", ["abs:6"]), ("--padding", ["top=abs:8"]), ("--layout", ["dwindle"]),
       ("--master-ratio", ["abs:0.6"]), ("--master-placement", ["top"]),
-      ("--preserve-split", ["on"]),
+      ("--split-ratio", ["abs:0.4"]), ("--preserve-split", ["on"]),
     ] {
       #expect(await handler.dispatch(request(command: command, args: args)).ok)
     }
 
     let expected = [
       "--gap": "6", "--padding": "--top 8 --bottom 0 --left 0 --right 0", "--layout": "dwindle",
-      "--master-ratio": "0.6", "--master-placement": "top", "--preserve-split": "on",
+      "--master-ratio": "0.6", "--master-placement": "top", "--split-ratio": "0.4",
+      "--preserve-split": "on",
     ]
     for (command, value) in expected {
       let response = await handler.dispatch(request(command: command, args: []))
@@ -237,6 +301,7 @@ struct SpaceCommandHandlerTests {
       await handler.dispatch(request(command: "--gap", args: ["abs"])),
       await handler.dispatch(request(command: "--gap", args: ["rel:x"])),
       await handler.dispatch(request(command: "--master-ratio", args: ["0.6"])),
+      await handler.dispatch(request(command: "--split-ratio", args: ["0.6"])),
       await handler.dispatch(request(command: "--master-placement", args: ["center"])),
       await handler.dispatch(request(command: "--preserve-split", args: ["maybe"])),
     ]
@@ -254,6 +319,10 @@ struct SpaceCommandHandlerTests {
       ),
       (
         "--master-ratio", "0.6", "space master-ratio",
+        "abs:<ratio> or rel:<ratio>, such as rel:0.05"
+      ),
+      (
+        "--split-ratio", "0.6", "space split-ratio",
         "abs:<ratio> or rel:<ratio>, such as rel:0.05"
       ),
     ]

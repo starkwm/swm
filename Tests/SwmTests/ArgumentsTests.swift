@@ -321,6 +321,8 @@ struct ArgumentsTests {
       (["space", "master-ratio", "0.6"], ["abs:0.6"]),
       (["space", "master-ratio", "-0.05"], ["rel:-0.05"]),
       (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
+      (["space", "split-ratio", "0.6", "--space", "2"], ["--space", "2", "abs:0.6"]),
+      (["config", "split-ratio", "-0.05"], ["rel:-0.05"]),
       (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
       (["config", "padding", "--bottom", "6", "--top", "-2"], ["top=rel:-2", "bottom=abs:6"]),
       (["config", "gap", "6"], ["abs:6"]),
@@ -342,7 +344,8 @@ struct ArgumentsTests {
   @Test(
     "parseAsRoot: sends only the target for Space settings given without a value",
     arguments: [
-      ["layout"], ["master-ratio"], ["master-placement"], ["preserve-split"], ["gap"],
+      ["layout"], ["master-ratio"], ["master-placement"], ["split-ratio"], ["preserve-split"],
+      ["gap"],
       ["padding"],
     ]
   )
@@ -358,7 +361,8 @@ struct ArgumentsTests {
     "parseAsRoot: rejects out-of-range ratios and malformed values",
     arguments: [
       ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
-      ["config", "master-ratio", "0.05"], ["space", "gap", "wide"], ["space", "gap", "rel:4"],
+      ["space", "split-ratio", "0.95"], ["config", "master-ratio", "0.05"],
+      ["space", "gap", "wide"], ["space", "gap", "rel:4"],
       ["space", "gap", "abs:6"], ["config", "gap", "rel:4"],
     ]
   )

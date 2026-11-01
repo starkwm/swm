@@ -23,6 +23,7 @@ Space commands affect the active space by default. Use `--space <space-index>` t
 swm space layout [--space <space-index>] [float|master|monocle|dwindle]
 swm space master-ratio [--space <space-index>] [<ratio>]
 swm space master-placement [--space <space-index>] [left|right|top|bottom|next|prev]
+swm space split-ratio [--space <space-index>] [<ratio>]
 swm space preserve-split [--space <space-index>] [on|off]
 swm space padding [--space <space-index>] [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
 swm space gap [--space <space-index>] [<points>]
@@ -35,7 +36,7 @@ swm space gap                # 8
 swm space padding --space 2  # --top 8 --bottom 8 --left 8 --right 8
 ```
 
-A plain number sets a value, and a signed number adjusts it: `swm space gap 6` sets the gap, and `swm space gap +2` or `swm space gap -2` changes it. Padding sides left out keep their current value. Master ratios must be between `0.1` and `0.9`; adjustments, padding, and gaps are clamped to valid values. Space settings apply to every display showing that space.
+A plain number sets a value, and a signed number adjusts it: `swm space gap 6` sets the gap, and `swm space gap +2` or `swm space gap -2` changes it. Padding sides left out keep their current value. Master and split ratios must be between `0.1` and `0.9`; adjustments, padding, and gaps are clamped to valid values. Space settings apply to every display showing that space.
 
 ## Layouts
 
@@ -47,6 +48,8 @@ The layouts are:
 - `dwindle`: recursively split the available bounds around the focused window.
 
 In a dwindle layout, new windows split the focused tiled window and removing a window collapses its sibling branch. Splits normally follow the longest available edge. `swm space preserve-split on` retains each branch's chosen direction so it can be changed with `swm window toggle-split`.
+
+A dwindle split ratio is the share of a region given to its left or upper side. `swm space split-ratio 0.6` sets that ratio for new splits on the Space and rebalances every existing split to it; a signed change such as `+0.05` adjusts the Space's ratio and rebalances the same way. Use `swm window split-ratio` to change one split afterwards.
 
 Each physical display has an independent tiling layout, including when macOS's **Displays have separate Spaces** setting is disabled. Moving a tiled window between displays moves it into the destination layout. Manually moving or resizing a tiled window causes it to snap back into place.
 

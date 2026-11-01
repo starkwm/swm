@@ -32,6 +32,8 @@ struct ConfigCommandHandler {
         return try masterRatio(request)
       case "master-placement":
         return try masterPlacement(request)
+      case "split-ratio":
+        return try splitRatio(request)
       case "preserve-split":
         return try preserveSplitDirections(request)
       case "gap":
@@ -55,6 +57,7 @@ struct ConfigCommandHandler {
     case "focus-follows-mouse": return windows.focusFollowsMouseMode.rawValue
     case "master-ratio": return String(Double(state.masterRatio))
     case "master-placement": return state.masterPlacement.rawValue
+    case "split-ratio": return String(Double(state.splitRatio))
     case "preserve-split": return state.preserveSplitDirections ? "on" : "off"
     case "gap": return String(settings.gap)
     case "padding": return settings.padding.commandOptions
@@ -138,6 +141,23 @@ struct ConfigCommandHandler {
     }
     tiling.setMasterPlacementForAllSpaces(placement)
     return .success(id: request.id, message: placement.rawValue)
+  }
+
+  /// Set or adjust the global dwindle split ratio, and apply it to every current and future Space.
+  private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
+    let argument = try IPCArguments(request.args, context: "config split-ratio").requiredValue()
+    guard let change = CommandValueParser.ratioChange(from: argument) else {
+      throw IPCCommandError.invalidValue(
+        "config split-ratio",
+        argument,
+        expected: CommandValueParser.ratioChangeForm
+      )
+    }
+    if case .absolute(let ratio) = change, !(0.1...0.9).contains(ratio) {
+      throw IPCCommandError.invalidRequest("split-ratio must be between 0.1 and 0.9")
+    }
+    tiling.changeSplitRatioForAllSpaces(change)
+    return .acknowledged(id: request.id)
   }
 
   /// Set retained dwindle split directions for every current and future Space.

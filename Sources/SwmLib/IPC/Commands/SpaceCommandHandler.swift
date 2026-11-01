@@ -42,6 +42,8 @@ struct SpaceCommandHandler {
         operation = masterRatio
       case "--master-placement":
         operation = masterPlacement
+      case "--split-ratio":
+        operation = splitRatio
       case "--preserve-split":
         operation = preserveSplitDirections
       case "--padding":
@@ -79,6 +81,7 @@ struct SpaceCommandHandler {
     case "--layout": return state.selection.rawValue
     case "--master-ratio": return String(Double(state.masterRatio))
     case "--master-placement": return state.masterPlacement.rawValue
+    case "--split-ratio": return String(Double(state.splitRatio))
     case "--preserve-split": return state.preserveSplitDirections ? "on" : "off"
     default:
       throw IPCCommandError.unsupportedCommand("unsupported space command: \(command)")
@@ -97,6 +100,23 @@ struct SpaceCommandHandler {
     }
 
     guard tiling.changeMasterRatio(change, for: spaceID) else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
+    }
+    return .acknowledged(id: request.id)
+  }
+
+  /// Set or adjust the dwindle split ratio for the selected Space, rebalancing its splits.
+  private func splitRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
+    let argument = try IPCArguments(request.args, context: "space split-ratio").requiredValue()
+    guard let change = CommandValueParser.ratioChange(from: argument) else {
+      throw IPCCommandError.invalidValue(
+        "space split-ratio",
+        argument,
+        expected: CommandValueParser.ratioChangeForm
+      )
+    }
+
+    guard tiling.changeSplitRatio(change, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
     return .acknowledged(id: request.id)
