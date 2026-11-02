@@ -39,7 +39,7 @@ struct TilingWindowSnapshot: Equatable {
   let id: CGWindowID
 
   /// Physical display containing most of the window frame, when known.
-  let displayID: String?
+  var displayID: String?
 
   /// Accessibility window subrole.
   let subrole: String?

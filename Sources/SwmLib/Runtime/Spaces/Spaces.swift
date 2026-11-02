@@ -73,7 +73,7 @@ public final class Spaces {
     displays: () -> [String: SpaceTopologyDisplay] = {
       Dictionary(
         uniqueKeysWithValues: NSScreen.screens.map {
-          ($0.uuid, SpaceTopologyDisplay(visibleFrame: $0.axVisibleFrame))
+          ($0.uuid, SpaceTopologyDisplay(visibleFrame: $0.axVisibleFrame, frame: $0.axFrame))
         }
       )
     }

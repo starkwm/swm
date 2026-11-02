@@ -23,12 +23,14 @@ swm config padding --top 8 --bottom 8 --left 8 --right 8
 Config commands change settings in the running daemon. Layout, padding, and gap settings also apply to spaces discovered later:
 
 ```sh
-swm config layout <float|master|monocle|dwindle>
+swm config layout <float|master|monocle|dwindle|scrolling>
 swm config focus-follows-mouse <off|autofocus|autoraise>
 swm config master-ratio <ratio>
 swm config master-placement <left|right|top|bottom|next|prev>
 swm config split-ratio <ratio>
 swm config preserve-split <on|off>
+swm config scrolling-column-width <fraction>
+swm config scrolling-focus-fit <fit|center>
 swm config animation-duration <seconds>
 swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
 swm config gap <points>
@@ -46,6 +48,8 @@ swm config gap        # 8
 swm config padding    # --top 8 --bottom 8 --left 8 --right 8
 ```
 
+Scrolling defaults to half-width columns and `fit` focus behavior. `scrolling-column-width` accepts fractions from `0.1` through `1` and affects new columns only. Set it before enabling scrolling to size the initial columns. `scrolling-focus-fit fit` moves the strip just enough to reveal the focused column; `center` centers it on every focus change. See [scrolling layout](spaces.md#scrolling-layout).
+
 ## Window animation
 
 Window animation is disabled by default. Run
@@ -55,6 +59,8 @@ The accepted range is 0 through 1 second. macOS Reduce Motion overrides this set
 Repeated relative moves and resizes accumulate against the pending destination.
 Display transfers remain instant. With animation enabled, geometry commands return
 once the movement is queued.
+Scrolling parking and reveal also remain instant. Scrolling movements animate only
+when both the current and target frames fit completely within their display.
 
 Use `swm config animation-easing ease-out-circ` for a circular ease-out curve like
 yabai's default. Available curves are `linear`, `ease-out-quad` (the default),

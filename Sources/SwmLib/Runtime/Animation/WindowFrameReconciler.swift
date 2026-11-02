@@ -37,6 +37,8 @@ final class WindowFrameReconciler {
   var isIdle: Bool { animations.isEmpty && deliveries.isEmpty }
 
   var onInteractionEnded: () -> Void = {}
+  var onInteractionBegan: (CGWindowID) -> Void = { _ in }
+  var onFrameDeliveryFailed: (CGWindowID, CGRect?, CGRect?) -> Void = { _, _, _ in }
 
   private let automaticallySchedule: Bool
   private let delivery: AnimationFrameDelivery
@@ -80,15 +82,16 @@ final class WindowFrameReconciler {
   /// Animate a batch using the same clock, or deliver final frames when disabled.
   func apply(
     _ targetFrames: [CGWindowID: CGRect],
+    animated: Bool = true,
     at now: ContinuousClock.Instant = .now,
     completion: (([CGWindowID: WindowFrameSettlement]) -> Void)? = nil
   ) {
     if let completion {
       cancelAnimations(for: targetFrames.keys)
       let batch = FrameDeliveryBatch(ids: Set(targetFrames.keys), completion: completion)
-      deliver(targetFrames, animated: animationEnabled, at: now, batch: batch)
+      deliver(targetFrames, animated: animated && animationEnabled, at: now, batch: batch)
     } else {
-      deliver(targetFrames, animated: animationEnabled, at: now)
+      deliver(targetFrames, animated: animated && animationEnabled, at: now)
     }
   }
 
@@ -117,6 +120,18 @@ final class WindowFrameReconciler {
   func isAnimating(_ windowID: CGWindowID) -> Bool { animations[windowID] != nil }
 
   func isInteracting(_ windowID: CGWindowID) -> Bool { interactingWindows.contains(windowID) }
+
+  /// Read the current frame without consulting animation destinations.
+  func observedFrame(for windowID: CGWindowID) -> CGRect? {
+    currentFrame(windowID)
+  }
+
+  /// Restore windows before daemon exit, after all started asynchronous writes settle.
+  func restore(_ frames: [CGWindowID: CGRect]) {
+    for windowID in frames.keys { prepareForSynchronousMutation(for: windowID) }
+    deliver(frames, animated: false, at: .now)
+    for windowID in frames.keys { delivery.waitForPendingOperations(for: windowID) }
+  }
 
   func retainWindows(_ liveIDs: Set<CGWindowID>) {
     cancelAnimations(for: Set(animations.keys).union(deliveries.keys).subtracting(liveIDs))
@@ -189,6 +204,7 @@ final class WindowFrameReconciler {
   func beginInteraction(for windowID: CGWindowID) {
     interactingWindows.insert(windowID)
     cancelAnimations(for: [windowID])
+    onInteractionBegan(windowID)
   }
 
   func pointerDown(on windowID: CGWindowID?) {
@@ -347,6 +363,7 @@ final class WindowFrameReconciler {
       )
     }
     terminalFailure(id)
+    onFrameDeliveryFailed(id, target, currentFrame(id))
   }
 
   private func stopSchedulerIfIdle() {

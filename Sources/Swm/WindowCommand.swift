@@ -11,6 +11,7 @@ struct WindowCommand: ParsableCommand {
       Display.self,
       Space.self,
       Layout.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
+      ColumnWidth.self, ColumnCenter.self,
     ]
   )
 
@@ -265,6 +266,48 @@ struct WindowCommand: ParsableCommand {
 
     var arguments: [String] { selector.arguments }
   }
+
+  struct ColumnWidth: WindowIPCCommand, SettingChangeCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Resize or cycle a scrolling column width.",
+      discussion: """
+        Widths are fractions of the display. next and prev cycle through 1/3, 1/2, 2/3, and 1.
+
+        Examples:
+          swm window column-width 0.5
+          swm window column-width +0.1
+          swm window column-width next
+        """
+    )
+    static let command = "--column-width"
+
+    @OptionGroup var selector: WindowSelector
+
+    @Argument(
+      help: "Width from 0.1 through 1, a signed change such as -0.1, next, or prev.",
+      completion: .list(["next", "prev"])
+    )
+    var width: ColumnWidthChangeName
+
+    var arguments: [String] { selector.arguments + [width.ipcValue] }
+
+    func validate() throws {
+      if case .setting(let change) = width {
+        try change.validate(0.1...1, name: "Column width")
+      }
+    }
+  }
+
+  struct ColumnCenter: WindowIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Center a scrolling column in its display."
+    )
+    static let command = "--column-center"
+
+    @OptionGroup var selector: WindowSelector
+
+    var arguments: [String] { selector.arguments }
+  }
 }
 
 /// Optional window selector for commands that default to the focused window.
@@ -314,6 +357,30 @@ enum SwapTarget: Equatable, ExpressibleByArgument {
     case .order(let direction): self = .order(direction)
     case .master: self = .master
     case .window, nil: return nil
+    }
+  }
+}
+
+/// Scrolling column width to set, adjust by, or cycle to.
+enum ColumnWidthChangeName: Equatable, ExpressibleByArgument {
+  case setting(SettingChange<Double>)
+  case order(CycleDirectionName)
+
+  init?(argument: String) {
+    if let direction = CycleDirectionName(rawValue: argument) {
+      self = .order(direction)
+    } else if let change = SettingChange<Double>(argument: argument) {
+      self = .setting(change)
+    } else {
+      return nil
+    }
+  }
+
+  /// The daemon's `abs:<width>`, `rel:<width>`, `next`, or `prev` form.
+  var ipcValue: String {
+    switch self {
+    case .setting(let change): change.ipcValue
+    case .order(let direction): direction.rawValue
     }
   }
 }

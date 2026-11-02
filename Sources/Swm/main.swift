@@ -80,6 +80,7 @@ func runSwm(with arguments: StartCommand) {
       let signalName = signalNumber == SIGINT ? "SIGINT" : "SIGTERM"
       fputs("received \(signalName) - terminating...\n", stderr)
       daemon.shutdown()
+      tiling.shutdown()
       exit(EXIT_SUCCESS)
     }
     source.resume()
@@ -99,6 +100,7 @@ func runSwm(with arguments: StartCommand) {
       } catch {
         DispatchQueue.main.async {
           daemon.shutdown()
+          tiling.shutdown()
           fail("could not execute the configuration file - \(error)")
         }
       }
@@ -109,6 +111,8 @@ func runSwm(with arguments: StartCommand) {
   withExtendedLifetime(terminationSignalSources) {
     application.run()
   }
+  daemon.shutdown()
+  tiling.shutdown()
 }
 
 /// Print an error message and terminate with failure.

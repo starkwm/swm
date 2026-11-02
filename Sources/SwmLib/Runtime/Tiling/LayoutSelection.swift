@@ -11,4 +11,7 @@ enum LayoutSelection: String, Equatable {
 
   /// Recursively bisect the longest edge of the remaining region.
   case dwindle
+
+  /// Arrange stable-width columns on a horizontally scrolling strip.
+  case scrolling
 }
