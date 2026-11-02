@@ -3,7 +3,7 @@
 [Documentation index](index.md)
 
 Add rules to `~/.config/swm/swmrc` to keep selected windows floating or place them
-on a display. For example, leave Settings and Finder out of tiling layouts:
+on a display or Space. For example, leave Settings and Finder out of tiling layouts:
 
 ```sh
 swm rule add label=settings bundle-id=com.apple.systempreferences manage=off
@@ -34,6 +34,8 @@ non-integer `label` to remove a rule by name.
   Indexes start at 1 and use the same order as `swm window display`. Use a UUID from
   `swm query displays` to identify a monitor regardless of its index. Rules accept
   neither `next` nor `prev`.
+- `space=<index>` moves the window to a Space without switching to it. Indexes
+  start at 1 and match `swm query spaces`. A rule sets `display` or `space`, not both.
 - `grid=<columns>:<rows>:<x>:<y>:<width>:<height>` places a floating window within
   the display's visible bounds. It uses the destination Space's padding and gaps,
   with the same cell sizes, gaps, and coordinate clamping as `swm window grid`.
@@ -56,7 +58,8 @@ rejects invalid regexes, unknown properties, empty values, and duplicate propert
 without adding the rule.
 
 The last matching value for each action wins. A rule that only sets `grid` leaves
-an earlier `manage` or `display` value in place. Put broad rules before exceptions:
+an earlier `manage` or `display` value in place. `display` and `space` both choose
+a destination, so the later of the two replaces the other. Put broad rules before exceptions:
 
 ```sh
 swm rule add label=finder app='^Finder$' manage=off
@@ -81,7 +84,7 @@ window until it closes or the daemon restarts. Rule edits preserve those choices
 Rules do not change the Space's layout. A Space using `float` keeps its usual
 floating-window commands and cycling.
 
-## Display and grid placement
+## Display, Space, and grid placement
 
 ```sh
 # Place Finder in the right half of display 2.
@@ -101,12 +104,26 @@ manual moves and resizes leave that action unchanged, so it does not run again.
 A new display value also reapplies the matching grid on that display. Changing
 only the grid does not repeat a completed display move.
 
+```sh
+# Open Slack on the third Space.
+swm rule add label=slack app='^Slack$' space=3
+```
+
+A Space move uses the same bridge as `swm window space`, so it has the same
+limits: only windows on one normal desktop Space can move, and the destination
+must be a normal desktop Space. A Space on another display fits the window to
+that display. The window stays out of its source layout while it moves, then
+joins the destination layout. A grid applies after the move, once the
+destination Space is visible. Space indexes follow the current Space order, so
+a rule targets a different Space after Spaces are reordered.
+
 Placement waits for minimized windows, windows on inactive or fullscreen Spaces,
-and unavailable destination displays. swm tries again during later window or
+and unavailable destination displays or Spaces, including an index that names a
+fullscreen Space. swm tries again during later window or
 display updates. It does not switch Spaces to place a window or apply a grid on a
 substitute monitor.
 
 Removing a placement rule leaves the current frame and display in place unless
 an earlier matching value takes over. swm forgets completed actions when a window
-closes or stops matching them. If an Accessibility move or resize fails, swm logs
-the failure and stops retrying that action. Remove and add the rule to retry.
+closes or stops matching them. If an Accessibility move or resize, or a Space
+move, fails, swm logs the failure and stops retrying that action. Remove and add the rule to retry.

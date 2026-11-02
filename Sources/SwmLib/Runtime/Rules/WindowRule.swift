@@ -3,7 +3,7 @@ import Foundation
 /// Window filters and optional management and placement actions.
 struct WindowRule: Encodable {
   /// Keys accepted by rule registration.
-  static let keys = ["label", "app", "title", "bundle-id", "manage", "grid", "display"]
+  static let keys = ["label", "app", "title", "bundle-id", "manage", "grid", "display", "space"]
 
   /// Filter keys that also accept `key!=value`, requiring the value not to match.
   static let invertibleKeys: Set = ["app", "title", "bundle-id"]
@@ -30,8 +30,11 @@ struct WindowRule: Encodable {
     if let manage = values["manage"], !["on", "off"].contains(manage) {
       throw IPCCommandError.invalidRequest("invalid rule manage value: \(manage)")
     }
-    guard values["manage"] != nil || values["grid"] != nil || values["display"] != nil else {
-      throw IPCCommandError.invalidRequest("rule requires manage, grid, or display")
+    guard ["manage", "grid", "display", "space"].contains(where: { values[$0] != nil }) else {
+      throw IPCCommandError.invalidRequest("rule requires manage, grid, display, or space")
+    }
+    guard values["display"] == nil || values["space"] == nil else {
+      throw IPCCommandError.invalidRequest("rule accepts display or space, not both")
     }
     if let label = values["label"], Int(label) != nil {
       throw IPCCommandError.invalidRequest("rule label must not be an integer")
@@ -43,6 +46,8 @@ struct WindowRule: Encodable {
   let manage: Bool?
   let grid: WindowGrid?
   let display: RuleDisplayTarget?
+  /// One-based Space index, matching `swm query spaces`.
+  let space: Int?
   private let values: [String: String]
   private let bundleID: String?
   private let app: NSRegularExpression?
@@ -67,6 +72,14 @@ struct WindowRule: Encodable {
       self.display = display
     } else {
       display = nil
+    }
+    if let value = values["space"] {
+      guard let space = Int(value), space > 0 else {
+        throw IPCCommandError.invalidRequest("invalid rule space: \(value)")
+      }
+      self.space = space
+    } else {
+      space = nil
     }
     self.bundleID = values["bundle-id"] ?? values["bundle-id!"]
     do {

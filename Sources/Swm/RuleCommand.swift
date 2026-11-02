@@ -7,13 +7,14 @@ struct RuleCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a window management rule.",
       discussion: """
-        Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, or \
-        display=index|uuid. Optional filters are app, title, and bundle-id; write key!=value to \
+        Requires at least one of manage=on|off, grid=columns:rows:x:y:width:height, \
+        display=index|uuid, or space=index. A rule sets display or space, not both. Optional filters are app, title, and bundle-id; write key!=value to \
         require no match, as in bundle-id!=com.apple.finder. label names the rule.
 
         Examples:
           swm rule add label=finder bundle-id=com.apple.finder manage=off
           swm rule add app='^Safari$' grid=2:1:1:0:1:1 display=2
+          swm rule add app='^Slack$' space=3
         """
     )
     static let command = "--add"

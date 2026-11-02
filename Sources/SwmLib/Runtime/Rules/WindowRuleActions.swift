@@ -5,7 +5,15 @@ struct WindowRuleActions: Equatable {
     for rule in rules where rule.matches(window) {
       if let manage = rule.manage { result.manage = manage }
       if let grid = rule.grid { result.placement.grid = grid }
-      if let display = rule.display { result.placement.display = display }
+      // Space and display both choose the destination, so the later one replaces the other.
+      if let display = rule.display {
+        result.placement.display = display
+        result.placement.space = nil
+      }
+      if let space = rule.space {
+        result.placement.space = space
+        result.placement.display = nil
+      }
     }
     return result
   }
@@ -18,8 +26,9 @@ struct WindowRuleActions: Equatable {
 struct WindowRulePlacement: Equatable {
   var grid: WindowGrid?
   var display: RuleDisplayTarget?
+  var space: Int?
 
-  var isEmpty: Bool { grid == nil && display == nil }
+  var isEmpty: Bool { grid == nil && display == nil && space == nil }
 }
 
 /// Deferred placements can retry when display or window facts become available.

@@ -840,6 +840,75 @@ struct TilingTests {
     #expect(calls == 1)
   }
 
+  @Test("reconcile: moves matching windows to a rule's Space once, outside the source layout")
+  func reconcileMovesMatchingWindowsToARulesSpaceOnceOutsideTheSourceLayout() async throws {
+    var mover = window(id: 2)
+    mover.app = "Mover"
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
+    var moves = [(CGWindowID, Int)]()
+    let tiling = makeSpaceRuleTiling(
+      windows: [window(id: 1), mover],
+      memberships: { memberships },
+      move: { id, index in
+        moves.append((id, index))
+        memberships[id] = [11]
+      }
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    tiling.setLayout(.master, for: 11)
+    #expect(tiling.isWindowTiled(2))
+    try tiling.addRule(WindowRule.parse(arguments: ["app=^Mover$", "space=2"]))
+    #expect(!tiling.isWindowTiled(2))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+    await tiling.waitForRuleSpaceMoves()
+    #expect(moves.map(\.0) == [2])
+    #expect(moves.map(\.1) == [2])
+    #expect(tiling.isWindowTiled(2))
+    // Moving the window back by hand must not replay the rule.
+    memberships[2] = [10]
+    tiling.reconcileAndReflowVisibleSpaces()
+    await tiling.waitForRuleSpaceMoves()
+    #expect(moves.count == 1)
+    #expect(tiling.isWindowTiled(2))
+  }
+
+  @Test("reconcile: skips, defers, and stops retrying rule Space moves")
+  func reconcileSkipsDefersAndStopsRetryingRuleSpaceMoves() async throws {
+    var spaceIDs: [UInt64] = [10, 11, 12]
+    var moves = 0
+    let tiling = makeSpaceRuleTiling(
+      windows: [window(id: 1)],
+      memberships: { [1: [10]] },
+      spaceIDs: { spaceIDs },
+      move: { _, _ in
+        moves += 1
+        throw IPCCommandError.internalError("move failed")
+      }
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    // The current Space completes the action without a move.
+    try tiling.addRule(WindowRule.parse(arguments: ["label=current", "space=1"]))
+    #expect(moves == 0)
+    #expect(tiling.isWindowTiled(1))
+    // Fullscreen and missing Spaces wait for a usable destination.
+    try tiling.addRule(WindowRule.parse(arguments: ["label=fullscreen", "space=3"]))
+    try tiling.addRule(WindowRule.parse(arguments: ["label=missing", "space=4"]))
+    #expect(moves == 0)
+    spaceIDs.append(11)
+    tiling.reconcile()
+    await tiling.waitForRuleSpaceMoves()
+    #expect(moves == 1)
+    #expect(tiling.isWindowTiled(1))
+    tiling.reconcile()
+    await tiling.waitForRuleSpaceMoves()
+    #expect(moves == 1)
+  }
+
   @Test("reconcile: refreshes transfer membership and grids floating destinations")
   func reconcileRefreshesTransferMembershipAndGridsFloatingDestinations() throws {
     var currentDisplay = "left"
@@ -1811,4 +1880,40 @@ struct TilingTests {
     )
     #expect(app.frame(for: 3) == CGRect(x: 500, y: 0, width: 500, height: 800))
   }
+}
+
+@MainActor
+private func makeSpaceRuleTiling(
+  windows: [TilingWindowSnapshot],
+  memberships: @escaping () -> [CGWindowID: Set<UInt64>],
+  spaceIDs: @escaping () -> [UInt64] = { [10, 11, 12] },
+  move: @escaping Tiling.RuleSpaceMoveHandler
+) -> Tiling {
+  Tiling(
+    snapshot: {
+      TilingReconciliationSnapshot(
+        windows: windows,
+        topology: SpaceTopology(
+          spacesByID: [
+            10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal),
+            11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal),
+            12: SpaceTopologyDescriptor(id: 12, displayID: "display", type: .fullscreen),
+          ],
+          visibleSpaceIDByDisplayID: ["display": 10],
+          spaceIDsByWindowID: memberships(),
+          displaysByID: [
+            "display": SpaceTopologyDisplay(
+              visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+            )
+          ]
+        )
+      )
+    },
+    spaces: Spaces(activeSpaceID: nil),
+    windowSpaceMembership: memberships,
+    rulePlacement: { _, _, _ in .applied },
+    ruleDisplayIDs: { ["display"] },
+    ruleSpaceIDs: spaceIDs,
+    ruleSpaceMove: move
+  )
 }
