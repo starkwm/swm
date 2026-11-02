@@ -5,6 +5,7 @@ import CoreGraphics
 public final class Tiling {
   typealias RulePlacementHandler = (WindowRulePlacement, CGWindowID, TilingLayoutID) ->
     WindowRulePlacementResult
+  typealias RuleSpaceMoveHandler = (CGWindowID, Int) async throws -> Void
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
 
@@ -21,7 +22,10 @@ public final class Tiling {
   private let windowSpaceMembership: WindowSpaceMembershipProvider
   private let ruleDisplayIDs: () -> [String]
   private let rulePlacement: RulePlacementHandler
+  private let ruleSpaceIDs: () -> [UInt64]
+  private let ruleSpaceMove: RuleSpaceMoveHandler
   private var appliedRulePlacements = [CGWindowID: WindowRulePlacement]()
+  private var ruleSpaceMoveTasks = [CGWindowID: Task<Void, Never>]()
   private var currentTopology: SpaceTopology?
   private(set) var defaultState = TilingLayoutState(
     selection: .float,
@@ -75,9 +79,18 @@ public final class Tiling {
     frameReconciler: WindowFrameReconciler? = nil,
     windowSpaceMembership: WindowSpaceMembershipProvider? = nil,
     rulePlacement: RulePlacementHandler? = nil,
-    ruleDisplayIDs: @escaping () -> [String] = { WindowRulePlacementApplier.displayIDs() }
+    ruleDisplayIDs: @escaping () -> [String] = { WindowRulePlacementApplier.displayIDs() },
+    ruleSpaceIDs: @escaping () -> [UInt64] = { WindowServerClient.shared.allSpaceIDs() },
+    ruleSpaceMove: RuleSpaceMoveHandler? = nil
   ) {
     self.ruleDisplayIDs = ruleDisplayIDs
+    self.ruleSpaceIDs = ruleSpaceIDs
+    self.ruleSpaceMove =
+      ruleSpaceMove ?? { windowID, index in
+        guard let windows else { return }
+        try await WindowRulePlacementApplier(windows: windows, spaces: spaces)
+          .move(windowID, toSpace: index)
+      }
     self.rulePlacement =
       rulePlacement ?? { placement, windowID, destination in
         guard let windows else { return .deferred }
@@ -105,6 +118,7 @@ public final class Tiling {
 
   deinit {
     membershipPollingTask?.cancel()
+    for task in ruleSpaceMoveTasks.values { task.cancel() }
   }
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
@@ -220,6 +234,15 @@ public final class Tiling {
     fixedSizeLayoutIDByWindowID.removeAll(keepingCapacity: true)
 
     for window in windows {
+      if ruleSpaceMoveTasks[window.id] != nil {
+        // Keep a window bound for another Space out of its source layout until it arrives.
+        if let layoutID = layoutIDByWindowID[window.id], retainedLayoutIDs.contains(layoutID) {
+          retainedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
+          omittedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
+          newLayoutIDByWindowID[window.id] = layoutID
+        }
+        continue
+      }
       let disposition = WindowEligibilityPolicy.disposition(for: window, topology: topology)
       let placement: (layoutID: TilingLayoutID, isOmitted: Bool)
 
@@ -638,6 +661,13 @@ public final class Tiling {
     reflowVisibleSpaces()
   }
 
+  /// Wait for in-flight rule Space moves and the reconciliation that follows each one.
+  func waitForRuleSpaceMoves() async {
+    while let task = ruleSpaceMoveTasks.values.first {
+      await task.value
+    }
+  }
+
   /// Suppress expected frame feedback or reconcile an external move or resize.
   func windowFrameDidChange(_ windowID: CGWindowID) {
     if frameReconciler?.shouldSuppressNotification(for: windowID) == true {
@@ -728,10 +758,13 @@ public final class Tiling {
       var applied = appliedRulePlacements[window.id] ?? WindowRulePlacement()
       if desired.grid == nil { applied.grid = nil }
       if desired.display == nil { applied.display = nil }
+      if desired.space == nil { applied.space = nil }
       appliedRulePlacements[window.id] = applied
+      guard ruleSpaceMoveTasks[window.id] == nil else { continue }
       var placement = WindowRulePlacement(
         grid: desired.grid != applied.grid ? desired.grid : nil,
-        display: desired.display != applied.display ? desired.display : nil
+        display: desired.display != applied.display ? desired.display : nil,
+        space: desired.space != applied.space ? desired.space : nil
       )
       if placement.display != nil { placement.grid = desired.grid }
       guard !placement.isEmpty else { continue }
@@ -740,6 +773,23 @@ public final class Tiling {
         let layoutID = topology.layoutID(for: window.id, on: window.displayID),
         topology.visibleLayoutIDs.contains(layoutID)
       else { continue }
+      if let space = placement.space {
+        let spaceIDs = ruleSpaceIDs()
+        guard spaceIDs.indices.contains(space - 1),
+          topology.spacesByID[spaceIDs[space - 1]]?.type == .normal
+        else { continue }
+        applied.space = space
+        appliedRulePlacements[window.id] = applied
+        if spaceIDs[space - 1] != layoutID.spaceID {
+          // A grid from the old Space is not a completed placement on the new one.
+          applied.grid = nil
+          appliedRulePlacements[window.id] = applied
+          startRuleSpaceMove(window.id, to: space)
+          continue
+        }
+        placement.space = nil
+        guard !placement.isEmpty else { continue }
+      }
       let destinationLayoutID: TilingLayoutID
       if let display = placement.display {
         guard let displayID = display.resolve(in: ruleDisplayIDs()),
@@ -774,6 +824,23 @@ public final class Tiling {
       appliedRulePlacements[window.id] = applied
     }
     return changedWindowIDs
+  }
+
+  /// Move a window to a rule's Space in the background, then place it in the destination layout.
+  private func startRuleSpaceMove(_ windowID: CGWindowID, to index: Int) {
+    prepareForSynchronousMutation(for: windowID)
+    ruleSpaceMoveTasks[windowID] = Task { [weak self, ruleSpaceMove] in
+      do {
+        try await ruleSpaceMove(windowID, index)
+      } catch {
+        if !(error is CancellationError) {
+          log("rule space move failed for window \(windowID): \(error)", level: .warn)
+        }
+      }
+      guard let self else { return }
+      ruleSpaceMoveTasks.removeValue(forKey: windowID)
+      if !Task.isCancelled { reconcileAndReflowVisibleSpaces() }
+    }
   }
 
   /// Reflow when authoritative WindowServer membership changed without a lifecycle event.

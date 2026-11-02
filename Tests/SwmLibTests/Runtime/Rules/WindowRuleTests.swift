@@ -28,7 +28,7 @@ struct WindowRuleTests {
     #expect(
       error?.message
         == "invalid rule argument: application=Finder; expected key=value with one of label, app,"
-        + " app!, title, title!, bundle-id, bundle-id!, manage, grid, display"
+        + " app!, title, title!, bundle-id, bundle-id!, manage, grid, display, space"
     )
   }
 
@@ -38,6 +38,7 @@ struct WindowRuleTests {
       ["grid=0:1:0:0:1:1"], ["grid=1:2:3"], ["grid=1:1:a:0:1:1"],
       ["display=0"], ["display=-1"], ["display=next"], ["display=not-a-uuid"],
       ["display=1", "display=2"], ["grid!=1:1:0:0:1:1"], ["app=Finder"],
+      ["space=0"], ["space=next"], ["space=1", "display=1"],
     ]
   )
   func parseRejectsInvalidPlacementArguments(arguments: [String]) {
