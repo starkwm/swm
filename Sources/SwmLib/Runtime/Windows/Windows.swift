@@ -51,6 +51,7 @@ public final class Windows {
   private var lostFrontSwitchedProcessIDs = Set<pid_t>()
   private var lostFocusedWindowIDs = Set<CGWindowID>()
   private var remoteTokenCursors = [pid_t: WindowDiscoveryCursor]()
+  private var ignoredWindowIDsByPID = [pid_t: Set<CGWindowID>]()
 
   /// Create the window service for a workspace.
   public convenience init(workspace: Workspace) {
@@ -310,6 +311,7 @@ public final class Windows {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
     remoteTokenCursors.removeValue(forKey: application.processID)
+    ignoredWindowIDsByPID.removeValue(forKey: application.processID)
 
     applicationsByPID.removeValue(forKey: application.processID)
   }
@@ -319,7 +321,13 @@ public final class Windows {
   func addWindow(for application: Application, with element: AXUIElement) -> Window? {
     let window = Window(with: element, for: application)
 
-    guard window.subrole != nil else { return nil }
+    guard let subrole = window.subrole else { return nil }
+
+    // Accessory processes own menu bar strips and panels; keep only their real windows.
+    guard !application.isAccessory || subrole == "AXStandardWindow" else {
+      ignoredWindowIDsByPID[application.processID, default: []].insert(window.id)
+      return nil
+    }
 
     guard window.observe() else {
       window.unobserve()
@@ -435,7 +443,15 @@ public final class Windows {
       return false
     }
 
-    var unresolvedWindowIDs = globalWindowIDs.filter { windowsByID[$0] == nil }
+    // Forget ignored windows that no longer exist, and do not rescan the rest.
+    let ignoredWindowIDs = ignoredWindowIDsByPID[application.processID, default: []]
+      .intersection(globalWindowIDs)
+    ignoredWindowIDsByPID[application.processID] =
+      ignoredWindowIDs.isEmpty ? nil : ignoredWindowIDs
+
+    var unresolvedWindowIDs = globalWindowIDs.filter {
+      windowsByID[$0] == nil && !ignoredWindowIDs.contains($0)
+    }
 
     guard !unresolvedWindowIDs.isEmpty else {
       remoteTokenCursors.removeValue(forKey: application.processID)
@@ -492,7 +508,12 @@ public final class Windows {
       }
 
       guard let index = unresolvedWindowIDs.firstIndex(of: windowID) else { continue }
-      guard addWindow(for: application, with: element) != nil else { continue }
+      guard addWindow(for: application, with: element) != nil else {
+        if ignoredWindowIDsByPID[application.processID]?.contains(windowID) == true {
+          unresolvedWindowIDs.remove(at: index)
+        }
+        continue
+      }
 
       unresolvedWindowIDs.remove(at: index)
       log("resolved window \(windowID) for \(application)")
