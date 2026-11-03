@@ -73,7 +73,10 @@ public final class Workspace: NSObject {
     }
   }
 
-  /// Return whether a process is currently observable as a regular application.
+  /// Return whether a process is currently observable as an application.
+  ///
+  /// Accessory processes are included because some apps draw their windows
+  /// from accessory helpers, such as VMPal's per-VM machine process.
   func isObservable(_ process: Process) -> Bool {
     guard let application = process.application else {
       process.policy = .prohibited
@@ -82,7 +85,7 @@ public final class Workspace: NSObject {
 
     process.policy = application.activationPolicy
 
-    return process.policy == .regular
+    return process.policy == .regular || process.policy == .accessory
   }
 
   /// Observe a process until its activation policy changes.

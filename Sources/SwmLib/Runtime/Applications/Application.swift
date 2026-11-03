@@ -95,6 +95,9 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   /// Stable application identifier for rule matching.
   var bundleID: String? { application.bundleIdentifier }
 
+  /// Whether the application currently runs with the accessory activation policy.
+  var isAccessory: Bool { application.activationPolicy == .accessory }
+
   /// Process identifier for the running application.
   let processID: pid_t
 
