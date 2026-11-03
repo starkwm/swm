@@ -3,17 +3,6 @@ import SwmLib
 
 /// Focus, move, resize, arrange windows, and position the mouse cursor.
 struct WindowCommand: ParsableCommand {
-  static let configuration = CommandConfiguration(
-    commandName: "window",
-    abstract: "Focus, move, resize, and arrange windows.",
-    subcommands: [
-      Focus.self, Warp.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self,
-      Display.self,
-      Space.self,
-      Float.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
-    ]
-  )
-
   struct Focus: WindowIPCCommand {
     static let configuration = CommandConfiguration(
       abstract: "Focus a neighbouring, recent, master, or specific window.",
@@ -266,6 +255,17 @@ struct WindowCommand: ParsableCommand {
 
     var arguments: [String] { selector.arguments }
   }
+
+  static let configuration = CommandConfiguration(
+    commandName: "window",
+    abstract: "Focus, move, resize, and arrange windows.",
+    subcommands: [
+      Focus.self, Warp.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self,
+      Display.self,
+      Space.self,
+      Float.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
+    ]
+  )
 }
 
 /// Optional window selector for commands that default to the focused window.

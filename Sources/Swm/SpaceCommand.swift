@@ -24,16 +24,6 @@ struct SpaceCommand: ParsableCommand {
     }
   }
 
-  static let configuration = CommandConfiguration(
-    commandName: "space",
-    abstract: "Activate or configure a Space.",
-    discussion: "Run a setting without a value to print the Space's current value.",
-    subcommands: [
-      Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, SplitRatio.self,
-      PreserveSplit.self, Padding.self, Gap.self,
-    ]
-  )
-
   struct Activate: SpaceIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")
     static let command = "--activate"
@@ -180,6 +170,16 @@ struct SpaceCommand: ParsableCommand {
 
     var arguments: [String] { target.arguments + [points?.ipcValue].compactMap { $0 } }
   }
+
+  static let configuration = CommandConfiguration(
+    commandName: "space",
+    abstract: "Activate or configure a Space.",
+    discussion: "Run a setting without a value to print the Space's current value.",
+    subcommands: [
+      Activate.self, Layout.self, MasterRatio.self, MasterPlacement.self, SplitRatio.self,
+      PreserveSplit.self, Padding.self, Gap.self,
+    ]
+  )
 }
 
 /// Padding sides shared by the Space and global padding commands.
