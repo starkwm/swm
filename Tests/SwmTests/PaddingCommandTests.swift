@@ -6,8 +6,11 @@ import Testing
 @MainActor
 @Suite("Padding CLI behavior")
 struct PaddingCommandTests {
-  @Test("uniform and per-side values reach the selected settings", arguments: ["config", "space"])
-  func uniformAndPerSideValuesReachSelectedSettings(domain: String) async throws {
+  @Test(
+    "uniform and per-side values reach the selected settings",
+    arguments: ["global", "current", "2"]
+  )
+  func uniformAndPerSideValuesReachSelectedSettings(scope: String) async throws {
     let spaces = Spaces(activeSpaceID: 10)
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
     let tiling = Tiling(
@@ -25,25 +28,27 @@ struct PaddingCommandTests {
     spaces.setPadding(SpacePadding(top: 1, bottom: 2, left: 3, right: 4), for: 10)
 
     func send(_ values: [String]) async throws -> IPCResponse {
-      let selection = domain == "space" ? ["--space", "2"] : []
+      let selection = scope == "global" ? [] : ["--space", scope]
       let command = try #require(
-        Arguments.parseAsRoot(Arguments.resolve([domain, "padding"] + selection + values))
+        Arguments.parseAsRoot(Arguments.resolve(["config", "padding"] + selection + values))
           as? any IPCCommand
       )
       let request = IPCRequest(
         id: "padding",
-        domain: domain == "space" ? .space : .config,
-        command: domain == "space" ? "--padding" : "padding",
-        args: command.arguments
+        domain: command.requestDomain,
+        command: command.commandArguments[0],
+        args: Array(command.commandArguments.dropFirst())
       )
-      return domain == "space" ? await space.dispatch(request) : config.dispatch(request)
+      return scope != "global" ? await space.dispatch(request) : config.dispatch(request)
     }
 
     #expect(try await send(["+2", "--top", "8"]).ok)
-    let selected: UInt64 = domain == "space" ? 20 : 10
+    let selected: UInt64 = scope == "2" ? 20 : 10
     #expect(
       spaces.settings(for: selected).padding
-        == SpacePadding(top: 8, bottom: 22, left: 32, right: 42)
+        == (scope == "current"
+          ? SpacePadding(top: 8, bottom: 4, left: 5, right: 6)
+          : SpacePadding(top: 8, bottom: 22, left: 32, right: 42))
     )
     #expect(try await send(["--top", "-2", "8"]).ok)
     #expect(
@@ -60,9 +65,10 @@ struct PaddingCommandTests {
     #expect(spaces.settings(for: selected).padding == .zero)
     #expect(try await send(["--right", "9"]).ok)
     #expect(try await send([]).message == "--top 0 --bottom 0 --left 0 --right 9")
-    if domain == "space" {
+    if scope != "global" {
       #expect(
-        spaces.settings(for: 10).padding == SpacePadding(top: 1, bottom: 2, left: 3, right: 4)
+        spaces.settings(for: scope == "current" ? 20 : 10).padding
+          == (scope == "current" ? initial : SpacePadding(top: 1, bottom: 2, left: 3, right: 4))
       )
       #expect(spaces.settings(for: 30).padding == initial)
     } else {
@@ -70,11 +76,15 @@ struct PaddingCommandTests {
     }
   }
 
-  @Test("rejects malformed and extra positional values", arguments: ["config", "space"])
-  func rejectsMalformedAndExtraPositionalValues(domain: String) {
+  @Test("rejects malformed and extra positional values", arguments: ["global", "current", "2"])
+  func rejectsMalformedAndExtraPositionalValues(scope: String) {
     for values in [["wide"], ["8", "9"], ["rel:2"], ["8", "--top", "wide"]] {
       #expect(throws: (any Error).self) {
-        try Arguments.parseAsRoot(Arguments.resolve([domain, "padding"] + values))
+        try Arguments.parseAsRoot(
+          Arguments.resolve(
+            ["config", "padding"] + (scope == "global" ? [] : ["--space", scope]) + values
+          )
+        )
       }
     }
   }

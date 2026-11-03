@@ -8,6 +8,7 @@ protocol IPCCommand: ParsableCommand {
   static var domain: CommandDomain { get }
   static var command: String { get }
 
+  var requestDomain: CommandDomain { get }
   var arguments: [String] { get }
 
   /// The daemon command and its arguments.
@@ -18,6 +19,8 @@ protocol IPCCommand: ParsableCommand {
 }
 
 extension IPCCommand {
+  var requestDomain: CommandDomain { Self.domain }
+
   var arguments: [String] { [] }
 
   var commandArguments: [String] { [Self.command] + arguments }
@@ -33,7 +36,7 @@ extension IPCCommand {
     output: UnsafeMutablePointer<FILE>,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
-    let result = send(Self.domain, commandArguments)
+    let result = send(requestDomain, commandArguments)
     let message =
       result.ok
       ? formatted(result.outputMessage, forTerminal: isatty(fileno(output)) != 0)
@@ -53,6 +56,22 @@ protocol ConfigIPCCommand: IPCCommand {}
 
 extension ConfigIPCCommand {
   static var domain: CommandDomain { .config }
+}
+
+/// Shared settings retain global IPC semantics unless a Space is explicitly selected.
+protocol ScopedConfigIPCCommand: ConfigIPCCommand {
+  var scope: ConfigScopeOptions { get }
+  var settingArguments: [String] { get }
+}
+
+extension ScopedConfigIPCCommand {
+  var requestDomain: CommandDomain { scope.space == nil ? .config : .space }
+
+  var arguments: [String] { scope.arguments + settingArguments }
+
+  var commandArguments: [String] {
+    [scope.space == nil ? Self.command : "--" + Self.command] + arguments
+  }
 }
 
 protocol QueryIPCCommand: IPCCommand {}

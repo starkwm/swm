@@ -20,7 +20,7 @@ swm config padding 8
 
 ## Global defaults
 
-Config commands change settings in the running daemon. Layout, padding, and gap settings also apply to spaces discovered later:
+Config commands change settings in the running daemon. Without `--space`, layout, master-ratio, master-placement, split-ratio, preserve-split, padding, and gap update every current Space and the defaults for future Spaces:
 
 ```sh
 swm config layout <float|master|monocle|dwindle>
@@ -49,6 +49,25 @@ Run a config command without a value to print the current global value, in the f
 swm config gap        # 8
 swm config padding    # --top 8 --bottom 8 --left 8 --right 8
 ```
+
+## Select a Space
+
+The seven shared settings above accept `--space current` or `--space <positive-index>`.
+The index comes from `swm query spaces`. A selected Space changes independently of
+other Spaces and future defaults. Omitting a value queries the selected scope:
+
+```sh
+swm config gap --space current 8
+swm config gap --space 2 +2
+swm config gap --space current
+swm config padding --space 2 --top +4
+```
+
+Signed adjustments and `master-placement next` or `prev` use the selected Space's
+current value. Without `--space`, they use the global value and apply the result
+to all Spaces. Padding keeps per-side overrides and leaves omitted sides unchanged.
+Animation duration, animation easing, and focus-follows-mouse are global only and
+reject `--space`.
 
 ## Window animation
 
