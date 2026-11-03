@@ -94,7 +94,7 @@ swm window swap-split [--window <window|recent>]
 - `swap next|prev` swaps the focused tiled window with its neighbour in stable layout order, and does not accept `--window`.
 - `swap master` promotes a window in a master layout.
 - `split-ratio` sets the nearest dwindle split to a ratio from `0.1` through `0.9`, or adjusts it by a signed change such as `+0.05`; adjustments are clamped to that range.
-- `toggle-split` switches the nearest dwindle split between columns and rows. It requires `swm space preserve-split on`.
+- `toggle-split` switches the nearest dwindle split between columns and rows. It requires `swm config preserve-split --space current on`.
 - `swap-split` exchanges the two subtrees at the nearest dwindle split.
 
 See [space layouts](spaces.md#layouts) for master, monocle, and dwindle behavior, and [window animation](configuration.md#window-animation) for movement settings.

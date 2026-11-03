@@ -41,8 +41,11 @@ struct ArgumentsTests {
       (["window", "space", "next"], ["window", "space", "next"]),
       (["help", "window", "focus"], ["help", "window", "focus"]),
       (["space", "activate", "--", "-1"], ["space", "activate", "--", "-1"]),
-      (["space", "gap", "-2", "--space", "3"], ["space", "gap", "--space", "3", "--", "-2"]),
-      (["space", "padding", "--top", "-4"], ["space", "padding", "--top", "-4"]),
+      (["config", "gap", "-2", "--space", "3"], ["config", "gap", "--space", "3", "--", "-2"]),
+      (
+        ["config", "padding", "--space", "current", "--top", "-4"],
+        ["config", "padding", "--space", "current", "--top", "-4"]
+      ),
     ]
   )
   func resolveStartsTheDaemonWithoutASubcommand(arguments: [String], expected: [String]) throws {
@@ -262,8 +265,8 @@ struct ArgumentsTests {
   func parseAsRootTranslatesSpaceSettingsSelectors() throws {
     let command = try #require(
       Arguments.parseAsRoot([
-        "space", "gap", "--space", "2", "10",
-      ]) as? SpaceCommand.Gap
+        "config", "gap", "--space", "2", "10",
+      ]) as? ConfigCommand.Gap
     )
 
     #expect(command.arguments == ["--space", "2", "abs:10"])
@@ -350,19 +353,22 @@ struct ArgumentsTests {
   @Test(
     "parseAsRoot: sets plain values and adjusts signed ones",
     arguments: [
-      (["space", "gap", "6"], ["abs:6"]),
-      (["space", "gap", "+2"], ["rel:2"]),
-      (["space", "gap", "-2"], ["rel:-2"]),
-      (["space", "gap", "-2", "--space", "3"], ["--space", "3", "rel:-2"]),
-      (["space", "master-ratio", "0.6"], ["abs:0.6"]),
-      (["space", "master-ratio", "-0.05"], ["rel:-0.05"]),
+      (["config", "gap", "--space", "current", "6"], ["abs:6"]),
+      (["config", "gap", "--space", "current", "+2"], ["rel:2"]),
+      (["config", "gap", "--space", "current", "-2"], ["rel:-2"]),
+      (["config", "gap", "-2", "--space", "3"], ["--space", "3", "rel:-2"]),
+      (["config", "master-ratio", "--space", "current", "0.6"], ["abs:0.6"]),
+      (["config", "master-ratio", "--space", "current", "-0.05"], ["rel:-0.05"]),
       (["window", "split-ratio", "+0.05"], ["rel:0.05"]),
-      (["space", "split-ratio", "0.6", "--space", "2"], ["--space", "2", "abs:0.6"]),
+      (["config", "split-ratio", "0.6", "--space", "2"], ["--space", "2", "abs:0.6"]),
       (["config", "split-ratio", "-0.05"], ["rel:-0.05"]),
-      (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
+      (
+        ["config", "padding", "--space", "current", "--top", "8", "--left", "-4"],
+        ["top=abs:8", "left=rel:-4"]
+      ),
       (["config", "padding", "--bottom", "6", "--top", "-2"], ["top=rel:-2", "bottom=abs:6"]),
       (
-        ["space", "padding", "--space=2", "-2"],
+        ["config", "padding", "--space=2", "-2"],
         ["--space", "2", "top=rel:-2", "bottom=rel:-2", "left=rel:-2", "right=rel:-2"]
       ),
       (
@@ -395,7 +401,7 @@ struct ArgumentsTests {
   )
   func parseAsRootSendsOnlyTheTargetForSpaceSettingsGivenWithoutAValue(setting: [String]) throws {
     let command = try #require(
-      Arguments.parseAsRoot(["space"] + setting + ["--space", "2"]) as? any IPCCommand
+      Arguments.parseAsRoot(["config"] + setting + ["--space", "2"]) as? any IPCCommand
     )
 
     #expect(command.arguments == ["--space", "2"])
@@ -404,10 +410,11 @@ struct ArgumentsTests {
   @Test(
     "parseAsRoot: rejects out-of-range ratios and malformed values",
     arguments: [
-      ["space", "master-ratio", "5"], ["window", "split-ratio", "0.05"],
-      ["space", "split-ratio", "0.95"], ["config", "master-ratio", "0.05"],
-      ["space", "gap", "wide"], ["space", "gap", "rel:4"],
-      ["space", "gap", "abs:6"], ["config", "gap", "rel:4"],
+      ["config", "master-ratio", "--space", "current", "5"], ["window", "split-ratio", "0.05"],
+      ["config", "split-ratio", "--space", "current", "0.95"], ["config", "master-ratio", "0.05"],
+      ["config", "gap", "--space", "current", "wide"],
+      ["config", "gap", "--space", "current", "rel:4"],
+      ["config", "gap", "--space", "current", "abs:6"], ["config", "gap", "rel:4"],
     ]
   )
   func parseAsRootRejectsOutOfRangeRatiosAndMalformedValues(
