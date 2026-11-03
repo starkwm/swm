@@ -47,7 +47,8 @@ extension SettingChangeCommand {
     var kept = [String]()
     var values = [String]()
     for argument in arguments {
-      if isNegativeNumber(argument), kept.last?.hasPrefix("--") != true {
+      let followsOption = kept.last.map { $0.hasPrefix("--") && !$0.contains("=") } ?? false
+      if isNegativeNumber(argument), !followsOption {
         values.append(argument)
       } else {
         kept.append(argument)

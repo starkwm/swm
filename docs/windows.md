@@ -20,7 +20,7 @@ swm window unminimize [--window <window|recent>]
 ## Move the mouse cursor
 
 ```sh
-swm window warp [--window <window|recent> | <left|right|up|down>]
+swm window warp [<left|right|up|down|recent|window-id>]
 ```
 
 `warp` moves the mouse cursor to the selected window's center without focusing or raising it,
@@ -33,7 +33,7 @@ direction from the managed window under the cursor. If the cursor is not over an
 managed window, it starts from the focused window. Each command checks the window under the
 cursor again, so repeated warps navigate between windows without changing focus. If another
 window covers the destination, the next warp starts from that covering window.
-`--window` and a direction cannot be combined.
+The single optional target accepts a direction, `recent`, or a window ID.
 
 ## Move, resize, and place
 
@@ -50,7 +50,7 @@ swm window display [--window <window|recent>] <next|prev|display-index>
 swm window grid 2:1:1:0:1:1
 ```
 
-`move`, `resize`, and `grid` only apply to windows outside automatic layout geometry: windows on a Space with the `float` layout, windows floated with `swm window layout float`, and windows on more than one Space. A tiled window is rejected with `window is tiled`, because the next layout reflow would put it back.
+`move`, `resize`, and `grid` only apply to windows outside automatic layout geometry: windows on a Space with the `float` layout, windows floated with `swm window float on`, and windows on more than one Space. A tiled window is rejected with `window is tiled`, because the next layout reflow would put it back.
 
 Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 
@@ -83,14 +83,14 @@ swm window space --window <window-id> 0
 ## Control tiling
 
 ```sh
-swm window layout [--window <window|recent>] <float|tile|toggle>
+swm window float [--window <window|recent>] <on|off|toggle>
 swm window swap [--window <window|recent>] <left|right|up|down|next|prev|master>
 swm window split-ratio [--window <window|recent>] <ratio>
 swm window toggle-split [--window <window|recent>]
 swm window swap-split [--window <window|recent>]
 ```
 
-- `layout` floats a window, returns it to tiling, or toggles its state.
+- `float on` floats a window, `float off` returns it to tiling, and `float toggle` switches its current state. These commands override management rules until the window closes or the daemon restarts.
 - `swap left|right|up|down` swaps tiled positions with the neighbour in that direction, or complete frames in a floating layout.
 - `swap next|prev` swaps the focused tiled window with its neighbour in stable layout order, and does not accept `--window`.
 - `swap master` promotes a window in a master layout.

@@ -15,7 +15,7 @@ swm config layout dwindle
 swm config focus-follows-mouse autofocus
 swm config animation-duration 0.18
 swm config gap 8
-swm config padding --top 8 --bottom 8 --left 8 --right 8
+swm config padding 8
 ```
 
 ## Global defaults
@@ -32,12 +32,12 @@ swm config preserve-split <on|off>
 swm config animation-duration <seconds>
 swm config animation-easing <linear|ease-out-quad|ease-out-cubic|ease-out-circ|ease-in-out-quad>
 swm config gap <points>
-swm config padding [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
+swm config padding [<points>] [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
 ```
 
 Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, `0.5` split ratio, split preservation off, animation disabled, and zero padding and gaps. Master and split ratios must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
 
-As with [space settings](spaces.md#configure-a-space), a plain number sets the master ratio, split ratio, gap, or a padding side, and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap. Padding changes apply only to the sides given.
+As with [space settings](spaces.md#configure-a-space), a plain number sets the master ratio, split ratio, gap, or a padding side, and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap. A positional padding value applies to every side. `swm config padding 8` sets all sides to 8. Side flags override the positional value for their side, regardless of argument order. `swm config padding 8 --top +2` adjusts the current global top padding by 2 and sets the other sides to 8. Each adjustment uses that side's current global padding once. With side flags alone, omitted sides keep their padding.
 
 Run a config command without a value to print the current global value, in the form the command accepts:
 

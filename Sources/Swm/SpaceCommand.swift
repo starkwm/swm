@@ -143,11 +143,14 @@ struct SpaceCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust padding around a Space.",
       discussion: """
-        Each side takes points to set, or a signed change. Sides left out keep their \
-        padding. Without sides, prints the current padding.
+        A positional value sets or adjusts every side. Side flags override that value for \
+        their side, regardless of argument order; each adjustment uses the current padding. \
+        Without a positional value, sides left out keep their padding. Without values, \
+        prints the current padding.
 
         Examples:
-          swm space padding --top 8 --bottom 8 --left 8 --right 8
+          swm space padding 8
+          swm space padding +2 --top 12
           swm space padding --top +4
         """
     )
@@ -181,6 +184,9 @@ struct SpaceCommand: ParsableCommand {
 
 /// Padding sides shared by the Space and global padding commands.
 struct PaddingSideOptions: ParsableArguments {
+  @Argument(help: "Points for every side, or a signed change such as +2 or -2.")
+  var points: SettingChange<Int>?
+
   @Option(parsing: .unconditional, help: ArgumentHelp("Top padding.", valueName: "points"))
   var top: SettingChange<Int>?
 
@@ -193,10 +199,13 @@ struct PaddingSideOptions: ParsableArguments {
   @Option(parsing: .unconditional, help: ArgumentHelp("Right padding.", valueName: "points"))
   var right: SettingChange<Int>?
 
-  /// Sides given on the command line, in IPC order.
+  /// Effective side changes, with side flags taking precedence, in IPC order.
   var changes: [(side: String, change: SettingChange<Int>)] {
-    [("top", top), ("bottom", bottom), ("left", left), ("right", right)]
-      .compactMap { side, change in change.map { (side, $0) } }
+    [
+      ("top", top ?? points), ("bottom", bottom ?? points),
+      ("left", left ?? points), ("right", right ?? points),
+    ]
+    .compactMap { side, change in change.map { (side, $0) } }
   }
 
   /// IPC arguments in `side=abs:<points>` or `side=rel:<points>` form.

@@ -10,7 +10,7 @@ struct WindowCommand: ParsableCommand {
       Focus.self, Warp.self, Minimize.self, Unminimize.self, Move.self, Resize.self, Grid.self,
       Display.self,
       Space.self,
-      Layout.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
+      Float.self, Swap.self, SplitRatio.self, ToggleSplit.self, SwapSplit.self,
     ]
   )
 
@@ -49,18 +49,14 @@ struct WindowCommand: ParsableCommand {
     )
     static let command = "--warp"
 
-    @OptionGroup var selector: WindowSelector
+    @Argument(
+      help:
+        "left, right, up, down, recent, or a window ID; defaults to focused. Directions start from the window under the cursor, or focused window.",
+      completion: .list(["left", "right", "up", "down", "recent"])
+    )
+    var target: WarpTarget?
 
-    @Argument(help: "Direction from the window under the cursor, or focused window.")
-    var direction: CardinalDirectionName?
-
-    var arguments: [String] { selector.arguments + [direction?.rawValue].compactMap { $0 } }
-
-    func validate() throws {
-      if selector.window != nil, direction != nil {
-        throw ValidationError("Specify either --window or a direction, not both.")
-      }
-    }
+    var arguments: [String] { target.map { [$0.value] } ?? [] }
   }
 
   struct Minimize: WindowIPCCommand {
@@ -87,7 +83,7 @@ struct WindowCommand: ParsableCommand {
       discussion: """
         abs sets the top-left corner; rel moves by an offset in points.
 
-        Tiled windows are rejected; float them with `swm window layout float` first.
+        Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
           swm window move abs:0:25
@@ -110,7 +106,7 @@ struct WindowCommand: ParsableCommand {
       discussion: """
         abs sets the size; rel changes it by an offset in points.
 
-        Tiled windows are rejected; float them with `swm window layout float` first.
+        Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
           swm window resize abs:1200:800
@@ -133,7 +129,7 @@ struct WindowCommand: ParsableCommand {
       discussion: """
         x, y, width, and height are measured in grid cells from the top left.
 
-        Tiled windows are rejected; float them with `swm window layout float` first.
+        Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
           swm window grid 2:1:0:0:1:1   # left half
@@ -178,16 +174,21 @@ struct WindowCommand: ParsableCommand {
     var arguments: [String] { selector.arguments + [space] }
   }
 
-  struct Layout: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Change a window tiling state.")
+  struct Float: WindowIPCCommand {
+    static let configuration = CommandConfiguration(
+      abstract: "Enable, disable, or toggle a window floating override."
+    )
     static let command = "--layout"
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "New tiling state.")
-    var layout: WindowLayoutName
+    @Argument(
+      help:
+        "on floats the window; off tiles it; toggle switches its current state. Overrides management rules."
+    )
+    var state: WindowFloatState
 
-    var arguments: [String] { selector.arguments + [layout.rawValue] }
+    var arguments: [String] { selector.arguments + [state.layoutValue] }
   }
 
   struct Swap: WindowIPCCommand {
@@ -318,8 +319,29 @@ enum SwapTarget: Equatable, ExpressibleByArgument {
   }
 }
 
-enum WindowLayoutName: String, CaseIterable, ExpressibleByArgument {
-  case float, tile, toggle
+enum WindowFloatState: String, CaseIterable, ExpressibleByArgument {
+  case on, off, toggle
+
+  var layoutValue: String {
+    switch self {
+    case .on: "float"
+    case .off: "tile"
+    case .toggle: "toggle"
+    }
+  }
+}
+
+/// A cursor destination without focus-only navigation targets.
+struct WarpTarget: ExpressibleByArgument {
+  let value: String
+
+  init?(argument: String) {
+    guard
+      CardinalDirectionName(rawValue: argument) != nil
+        || argument == "recent" || UInt32(argument).map({ $0 > 0 }) == true
+    else { return nil }
+    value = argument
+  }
 }
 
 enum CycleDirectionName: String, CaseIterable, ExpressibleByArgument {

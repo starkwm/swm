@@ -25,7 +25,7 @@ swm space master-ratio [--space <space-index>] [<ratio>]
 swm space master-placement [--space <space-index>] [left|right|top|bottom|next|prev]
 swm space split-ratio [--space <space-index>] [<ratio>]
 swm space preserve-split [--space <space-index>] [on|off]
-swm space padding [--space <space-index>] [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
+swm space padding [--space <space-index>] [<points>] [--top <points>] [--bottom <points>] [--left <points>] [--right <points>]
 swm space gap [--space <space-index>] [<points>]
 ```
 
@@ -36,7 +36,7 @@ swm space gap                # 8
 swm space padding --space 2  # --top 8 --bottom 8 --left 8 --right 8
 ```
 
-A plain number sets a value, and a signed number adjusts it: `swm space gap 6` sets the gap, and `swm space gap +2` or `swm space gap -2` changes it. Padding sides left out keep their current value. Master and split ratios must be between `0.1` and `0.9`; adjustments, padding, and gaps are clamped to valid values. Space settings apply to every display showing that space.
+A plain number sets a value, and a signed number adjusts it: `swm space gap 6` sets the gap, and `swm space gap +2` or `swm space gap -2` changes it. A positional padding value applies to every side. For example, `swm space padding +2` adjusts each side by 2. Side flags override the positional value for their side, regardless of argument order. `swm space padding +2 --top 8` sets the top to 8 and adds 2 to the other sides. Each adjustment uses that side's current padding once. With side flags alone, omitted sides keep their current value. Master and split ratios must be between `0.1` and `0.9`; adjustments, padding, and gaps are clamped to valid values. Space settings apply to every display showing that space.
 
 ## Layouts
 

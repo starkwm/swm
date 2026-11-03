@@ -145,12 +145,15 @@ struct ConfigCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust padding around every Space.",
       discussion: """
-        Each side takes points to set, or a signed change to the global padding. Changed \
-        sides apply to every Space; sides left out keep their padding. Without sides, \
-        prints the current padding.
+        A positional value sets or adjusts every side of the global padding. Side flags \
+        override that value for their side, regardless of argument order. Each adjustment \
+        uses the current global padding. Changed sides apply to every Space. Without a \
+        positional value, sides left out keep their padding. Without values, prints the \
+        current padding.
 
         Examples:
-          swm config padding --top 6 --bottom 6 --left 6 --right 6
+          swm config padding 8
+          swm config padding 8 --top +4
           swm config padding --top +4
         """
     )
