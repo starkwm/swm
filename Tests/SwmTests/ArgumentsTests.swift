@@ -122,9 +122,9 @@ struct ArgumentsTests {
   func helpMessageDescribesLeafArguments() {
     let help = Arguments.helpMessage(for: WindowCommand.Move.self)
 
-    #expect(help.contains("USAGE: swm window move [--window <window>] <position>"))
-    #expect(help.contains("Position in the form abs|rel:<x>:<y>."))
-    #expect(help.contains("swm window move rel:-20:0"))
+    #expect(help.contains("USAGE: swm window move [--window <window>] [--absolute] <x> <y>"))
+    #expect(help.contains("Horizontal position or offset in points."))
+    #expect(help.contains("swm window move -20 0"))
   }
 
   @Test("completionScript: includes commands and typed values")
@@ -147,7 +147,7 @@ struct ArgumentsTests {
   func parseAsRootTranslatesWindowMovesToIPCArguments() throws {
     let command = try #require(
       Arguments.parseAsRoot([
-        "window", "move", "--window", "recent", "rel:10:20",
+        "window", "move", "--window", "recent", "10", "20",
       ]) as? WindowCommand.Move
     )
 

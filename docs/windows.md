@@ -37,13 +37,26 @@ window covers the destination, the next warp starts from that covering window.
 ## Move, resize, and place
 
 ```sh
-swm window move [--window <window|recent>] <abs|rel>:<x>:<y>
-swm window resize [--window <window|recent>] <abs|rel>:<width>:<height>
+swm window move [--window <window|recent>] [--absolute] <x> <y>
+swm window resize [--window <window|recent>] [--absolute] <width> <height>
 swm window grid [--window <window|recent>] <columns>:<rows>:<x>:<y>:<width>:<height>
 swm window display [--window <window|recent>] <next|prev|display-index>
 ```
 
-`abs` sets coordinates or dimensions; `rel` adds signed values to the current frame. Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
+`move` and `resize` take two integer values in points. By default, they add offsets to the current position or size. Use `--absolute` to set the top-left coordinates or dimensions instead. Negative values work in either position, including when mixed with options, without a `--` separator:
+
+```sh
+swm window move 20 0
+swm window resize 40 0
+swm window move --absolute 0 25
+swm window resize --absolute 1200 800
+swm window move -20 --window recent -10
+swm window resize -40 --window 42 0
+```
+
+The old encoded `abs:...` and `rel:...` CLI arguments are rejected.
+
+Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
 
 ```sh
 swm window grid 2:1:1:0:1:1

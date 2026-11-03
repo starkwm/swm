@@ -66,50 +66,64 @@ struct WindowCommand: ParsableCommand {
     var arguments: [String] { selector.arguments }
   }
 
-  struct Move: WindowIPCCommand {
+  struct Move: WindowGeometryCommand {
     static let configuration = CommandConfiguration(
       abstract: "Move a window.",
       discussion: """
-        abs sets the top-left corner; rel moves by an offset in points.
+        Moves by an offset in points by default. Use --absolute to set the top-left corner.
 
         Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
-          swm window move abs:0:25
-          swm window move rel:-20:0
+          swm window move --absolute 0 25
+          swm window move -20 0
         """
     )
     static let command = "--move"
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Position in the form abs|rel:<x>:<y>.")
-    var position: String
+    @Flag(help: "Set the top-left corner instead of moving by an offset.")
+    var absolute = false
 
-    var arguments: [String] { selector.arguments + [position] }
+    @Argument(help: "Horizontal position or offset in points.")
+    var x: Int
+
+    @Argument(help: "Vertical position or offset in points.")
+    var y: Int
+
+    var arguments: [String] { selector.arguments + ["\(absolute ? "abs" : "rel"):\(x):\(y)"] }
   }
 
-  struct Resize: WindowIPCCommand {
+  struct Resize: WindowGeometryCommand {
     static let configuration = CommandConfiguration(
       abstract: "Resize a window.",
       discussion: """
-        abs sets the size; rel changes it by an offset in points.
+        Changes the size by an offset in points by default. Use --absolute to set the size.
 
         Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
-          swm window resize abs:1200:800
-          swm window resize rel:40:0
+          swm window resize --absolute 1200 800
+          swm window resize 40 0
         """
     )
     static let command = "--resize"
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Size in the form abs|rel:<width>:<height>.")
-    var size: String
+    @Flag(help: "Set the size instead of changing it by an offset.")
+    var absolute = false
 
-    var arguments: [String] { selector.arguments + [size] }
+    @Argument(help: "Width or width offset in points.")
+    var width: Int
+
+    @Argument(help: "Height or height offset in points.")
+    var height: Int
+
+    var arguments: [String] {
+      selector.arguments + ["\(absolute ? "abs" : "rel"):\(width):\(height)"]
+    }
   }
 
   struct Grid: WindowIPCCommand {
