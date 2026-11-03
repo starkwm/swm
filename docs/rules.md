@@ -78,9 +78,10 @@ later window updates. Title changes trigger a check when the app supports title
 notifications. Removing a management rule restores the earlier matching value or
 the normal default.
 
-`swm window float on`, `off`, and `toggle` override management rules for that
-window until it closes or the daemon restarts. Rule edits preserve those choices.
-`toggle` reverses the window's float/tile setting.
+`swm window float on` floats a window and `swm window float off` returns it to
+tiling. `swm window float toggle` switches between the two. These choices override
+management rules until the window closes or the daemon restarts. Editing rules
+does not reset them.
 Rules do not change the Space's layout. A Space using `float` keeps its usual
 floating-window commands and cycling.
 

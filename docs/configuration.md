@@ -37,7 +37,11 @@ swm config padding [<points>] [--top <points>] [--bottom <points>] [--left <poin
 
 Built-in defaults are floating layout, focus-follows-mouse off, `0.5` master ratio, master on the left, `0.5` split ratio, split preservation off, animation disabled, and zero padding and gaps. Master and split ratios must be between `0.1` and `0.9`. Negative padding or gap values are clamped to zero.
 
-As with [space settings](spaces.md#configure-a-space), a plain number sets the master ratio, split ratio, gap, or a padding side, and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap. A positional padding value applies to every side. `swm config padding 8` sets all sides to 8. Side flags override the positional value for their side, regardless of argument order. `swm config padding 8 --top +2` adjusts the current global top padding by 2 and sets the other sides to 8. Each adjustment uses that side's current global padding once. With side flags alone, omitted sides keep their padding.
+As with [space settings](spaces.md#configure-a-space), a plain number sets a value and a signed number adjusts it. `swm config gap +2` adds 2 to the global gap and applies the result to every Space, replacing any Space's own gap.
+
+`swm config padding 8` sets all sides to 8. Side flags take precedence over the positional value, in either argument order. For example, `swm config padding 8 --top +2` adds 2 to the current global top padding and sets the other sides to 8.
+
+With side flags alone, omitted sides keep their padding. Changed sides apply to every Space, replacing its padding on those sides.
 
 Run a config command without a value to print the current global value, in the form the command accepts:
 
