@@ -162,7 +162,7 @@ struct ArgumentsTests {
 
     for selector in ["recent", "42"] {
       let selected = try #require(
-        Arguments.parseAsRoot(["window", "warp", "--window", selector]) as? WindowCommand.Warp
+        Arguments.parseAsRoot(["window", "warp", selector]) as? WindowCommand.Warp
       )
 
       #expect(selected.arguments == [selector])
@@ -170,11 +170,11 @@ struct ArgumentsTests {
 
     #expect(
       Arguments.helpMessage(for: WindowCommand.Warp.self).contains(
-        "USAGE: swm window warp [--window <window>] [<direction>]"
+        "USAGE: swm window warp [<target>]"
       )
     )
     #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", "warp", "42"])
+      try Arguments.parseAsRoot(["window", "warp", "--window", "42"])
     }
   }
 
@@ -188,16 +188,17 @@ struct ArgumentsTests {
     )
 
     #expect(command.arguments == [direction])
-    #expect(command.selector.window == nil)
   }
 
   @Test("parseAsRoot: rejects conflicting warp targets and invalid directions")
   func parseAsRootRejectsConflictingWarpTargetsAndInvalidDirections() {
-    #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", "warp", "--window", "recent", "left"])
-    }
-    #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", "warp", "sideways"])
+    for args in [
+      ["--window", "recent"], ["recent", "left"], ["sideways"], ["master"],
+      ["next"], ["prev"], ["0"], ["4294967296"],
+    ] {
+      #expect(throws: (any Error).self) {
+        try Arguments.parseAsRoot(["window", "warp"] + args)
+      }
     }
   }
 
@@ -222,6 +223,23 @@ struct ArgumentsTests {
     let command = try #require(Arguments.parseAsRoot(arguments) as? any IPCCommand)
 
     #expect(command.commandArguments == expected)
+  }
+
+  @Test("parseAsRoot: translates floating overrides and window selection")
+  func parseAsRootTranslatesFloatingOverridesAndWindowSelection() throws {
+    for (state, value) in [("on", "float"), ("off", "tile"), ("toggle", "toggle")] {
+      for selector in [[], ["--window", "recent"], ["--window", "42"]] {
+        let command = try #require(
+          Arguments.parseAsRoot(["window", "float", state] + selector) as? WindowCommand.Float
+        )
+        #expect(command.commandArguments == ["--layout"] + selector.suffix(1) + [value])
+      }
+    }
+    for args in [["layout", "float"], ["float"], ["float", "tile"], ["float", "float"]] {
+      #expect(throws: (any Error).self) {
+        try Arguments.parseAsRoot(Arguments.resolve(["window"] + args))
+      }
+    }
   }
 
   @Test("parseAsRoot: translates window Space selectors and destinations")
@@ -343,6 +361,14 @@ struct ArgumentsTests {
       (["config", "split-ratio", "-0.05"], ["rel:-0.05"]),
       (["space", "padding", "--top", "8", "--left", "-4"], ["top=abs:8", "left=rel:-4"]),
       (["config", "padding", "--bottom", "6", "--top", "-2"], ["top=rel:-2", "bottom=abs:6"]),
+      (
+        ["space", "padding", "--space=2", "-2"],
+        ["--space", "2", "top=rel:-2", "bottom=rel:-2", "left=rel:-2", "right=rel:-2"]
+      ),
+      (
+        ["config", "padding", "--top=6", "-2"],
+        ["top=abs:6", "bottom=rel:-2", "left=rel:-2", "right=rel:-2"]
+      ),
       (["config", "gap", "6"], ["abs:6"]),
       (["config", "gap", "-2"], ["rel:-2"]),
       (["config", "master-ratio", "+0.05"], ["rel:0.05"]),
