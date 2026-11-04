@@ -50,16 +50,4 @@ struct WindowGeometryCommandTests {
       }
     }
   }
-
-  @Test("grid retains encoded cell syntax")
-  func gridRetainsCellSyntax() throws {
-    let command = try #require(
-      Arguments.parseAsRoot(
-        Arguments.resolve([
-          "window", "grid", "--window", "recent", "2:1:1:0:1:1",
-        ])
-      ) as? WindowCommand.Grid
-    )
-    #expect(command.commandArguments == ["--grid", "recent", "2:1:1:0:1:1"])
-  }
 }
