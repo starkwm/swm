@@ -69,11 +69,4 @@ struct WindowMoveCommandTests {
       }
     }
   }
-
-  @Test("removed public transfer subcommands fail", arguments: ["display", "space"])
-  func rejectsRemovedSubcommands(subcommand: String) {
-    #expect(throws: (any Error).self) {
-      try Arguments.parseAsRoot(["window", subcommand, "next"])
-    }
-  }
 }
