@@ -6,11 +6,12 @@ import Testing
 @Suite("Window minimize CLI")
 struct WindowMinimizeCommandTests {
   @Test(
-    "omitted and explicit targets preserve daemon IPC selection",
+    "explicit targets, and minimize's omitted target, preserve daemon IPC selection",
     arguments: ["minimize", "unminimize"]
   )
   func translatesTargets(action: String) throws {
-    for target in [nil, "recent", "1", "123", "4294967295"] as [String?] {
+    let omitted: [String?] = action == "minimize" ? [nil] : []
+    for target in omitted + ["recent", "1", "123", "4294967295"] {
       let values = target.map { [$0] } ?? []
       let command = try #require(
         Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any IPCCommand
@@ -19,11 +20,18 @@ struct WindowMinimizeCommandTests {
         request in
         #expect(request.domain == .window)
         #expect(request.command == "--\(action)")
-        // No selector retains the daemon's focused-window default for both commands.
+        // No selector retains the daemon's focused-window default for minimize.
         #expect(request.args == values)
         return .acknowledged(id: request.id)
       }
       #expect(result.ok)
+    }
+  }
+
+  @Test("unminimize requires a target because a minimized window is never focused")
+  func unminimizeRequiresTarget() {
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(Arguments.resolve(["window", "unminimize"]))
     }
   }
 
