@@ -31,7 +31,7 @@ non-integer `label` to remove a rule by name.
 
 - `manage=on|off` allows or skips automatic tiling.
 - `display=<index|uuid>` moves the window to a display without following focus.
-  Indexes start at 1 and use the same order as `swm window display`. Use a UUID from
+  Indexes start at 1 and use the same order as `swm window move --display`. Use a UUID from
   `swm query displays` to identify a monitor regardless of its index. Rules accept
   neither `next` nor `prev`.
 - `space=<index>` moves the window to a Space without switching to it. Indexes
@@ -110,7 +110,7 @@ only the grid does not repeat a completed display move.
 swm rule add label=slack app='^Slack$' space=3
 ```
 
-A Space move uses the same bridge as `swm window space`, so it has the same
+A Space move uses the same bridge as `swm window move --space`, so it has the same
 limits: only windows on one normal desktop Space can move, and the destination
 must be a normal desktop Space. A Space on another display fits the window to
 that display. The window stays out of its source layout while it moves, then

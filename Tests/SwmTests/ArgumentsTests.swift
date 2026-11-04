@@ -38,7 +38,6 @@ struct ArgumentsTests {
       (["--log-level=debug"], ["start", "--log-level=debug"]),
       (["--version"], ["--version"]),
       (["-v"], ["-v"]),
-      (["window", "space", "next"], ["window", "space", "next"]),
       (["help", "window", "focus"], ["help", "window", "focus"]),
       (["space", "activate", "--", "-1"], ["space", "activate", "--", "-1"]),
       (["config", "gap", "-2", "--space", "3"], ["config", "gap", "--space", "3", "--", "-2"]),
@@ -122,7 +121,11 @@ struct ArgumentsTests {
   func helpMessageDescribesLeafArguments() {
     let help = Arguments.helpMessage(for: WindowCommand.Move.self)
 
-    #expect(help.contains("USAGE: swm window move [--window <window>] [--absolute] <x> <y>"))
+    #expect(
+      help.contains(
+        "USAGE: swm window move [--window <window>] [--absolute] [<x>] [<y>] [--display <display>] [--space <space>]"
+      )
+    )
     #expect(help.contains("Horizontal position or offset in points."))
     #expect(help.contains("swm window move -20 0"))
   }
@@ -151,7 +154,7 @@ struct ArgumentsTests {
       ]) as? WindowCommand.Move
     )
 
-    #expect(command.arguments == ["recent", "rel:10:20"])
+    #expect(command.commandArguments == ["--move", "recent", "rel:10:20"])
   }
 
   @Test("parseAsRoot: preserves warp selectors and focused defaults")
@@ -243,22 +246,6 @@ struct ArgumentsTests {
         try Arguments.parseAsRoot(Arguments.resolve(["window"] + args))
       }
     }
-  }
-
-  @Test("parseAsRoot: translates window Space selectors and destinations")
-  func parseAsRootTranslatesWindowSpaceSelectorsAndDestinations() throws {
-    let command = try #require(
-      Arguments.parseAsRoot(["window", "space", "--window", "recent", "0"]) as? WindowCommand.Space
-    )
-
-    #expect(command.arguments == ["recent", "0"])
-    #expect(WindowCommand.Space.command == "--space")
-
-    let focused = try #require(
-      Arguments.parseAsRoot(["window", "space", "next"]) as? WindowCommand.Space
-    )
-
-    #expect(focused.arguments == ["next"])
   }
 
   @Test("parseAsRoot: translates Space settings selectors")

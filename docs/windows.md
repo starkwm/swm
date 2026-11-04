@@ -49,10 +49,12 @@ window covers the destination, the next warp starts from that covering window.
 swm window move [--window <window|recent>] [--absolute] <x> <y>
 swm window resize [--window <window|recent>] [--absolute] <width> <height>
 swm window grid [--window <window|recent>] <columns>:<rows>:<x>:<y>:<width>:<height>
-swm window display [--window <window|recent>] <next|prev|display-index>
+swm window move [--window <window|recent>] --display <next|prev|previous|display-index>
 ```
 
-`move` and `resize` take two integer values in points. By default, they add offsets to the current position or size. Use `--absolute` to set the top-left coordinates or dimensions instead. Negative values work in either position, including when mixed with options, without a `--` separator:
+Choose exactly one `move` mode: a coordinate pair, `--display <target>`, or `--space <target>`. `--absolute` is valid only with coordinates. Transfers preserve the current active Space and use the existing display or Space movement behavior.
+
+Coordinate `move` and `resize` take two integer values in points. By default, they add offsets to the current position or size. Use `--absolute` to set the top-left coordinates or dimensions instead. Negative values work in either position, including when mixed with options, without a `--` separator:
 
 ```sh
 swm window move 20 0
@@ -71,14 +73,16 @@ Grid cells share the padded screen bounds, with the configured gap between adjac
 swm window grid 2:1:1:0:1:1
 ```
 
-`move`, `resize`, and `grid` work on windows floated with `swm window float on`, windows on a Space with the `float` layout, and windows on more than one Space. swm rejects tiled windows with `window is tiled`, because the next layout reflow would put them back.
+Coordinate `move`, `resize`, and `grid` work on windows floated with `swm window float on`, windows on a Space with the `float` layout, and windows on more than one Space. swm rejects tiled windows with `window is tiled`, because the next layout reflow would put them back.
+
+For example, move the focused window with `swm window move --display next`, or a specific window with `swm window move --window 123 --display 2`.
 
 Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 
 ## Move between Spaces
 
 ```sh
-swm window space [--window <window|recent>] <space-index|next|prev>
+swm window move [--window <window|recent>] --space <space-index|next|prev|previous>
 ```
 
 Space indexes are one-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. `previous` is also accepted. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
@@ -97,8 +101,8 @@ Then test from another terminal:
 
 ```sh
 swm query spaces
-swm window space next
-swm window space --window <window-id> 0
+swm window move --space next
+swm window move --window <window-id> --space 3
 ```
 
 ## Control tiling

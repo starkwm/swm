@@ -15,7 +15,7 @@ enum RuleDisplayTarget: Equatable {
     }
   }
 
-  /// Resolve against display UUIDs in the same order as window display commands.
+  /// Resolve against display UUIDs in the same order as window display transfers.
   func resolve(in displayIDs: [String]) -> String? {
     switch self {
     case .index(let index):
