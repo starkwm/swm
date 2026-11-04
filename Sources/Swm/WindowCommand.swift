@@ -69,6 +69,11 @@ struct WindowCommand: ParsableCommand {
   struct Move: WindowGeometryCommand {
     static let configuration = CommandConfiguration(
       abstract: "Move a window.",
+      usage: """
+        swm window move [--window <window>] [--absolute] <x> <y>
+        swm window move [--window <window>] --display <target>
+        swm window move [--window <window>] --space <target>
+        """,
       discussion: """
         Move by an offset in points, set the top-left corner with --absolute, or transfer
         to a display or Space. Choose exactly one mode: x y, --display, or --space.
@@ -85,6 +90,14 @@ struct WindowCommand: ParsableCommand {
         """
     )
     static let command = "--move"
+    static let valueOptions: Set<String> = ["--window", "--display", "--space"]
+
+    /// The single way a move was requested.
+    enum Mode {
+      case coordinates(x: Int, y: Int)
+      case display(WindowTransferTarget)
+      case space(WindowTransferTarget)
+    }
 
     @OptionGroup var selector: WindowSelector
 
@@ -98,33 +111,59 @@ struct WindowCommand: ParsableCommand {
     var y: Int?
 
     @Option(
-      help: "One-based display index, next, prev, or previous.",
-      completion: .list(["next", "prev", "previous"])
+      help: ArgumentHelp(
+        "One-based display index, next, prev, or previous.",
+        valueName: "target"
+      ),
+      completion: .list(WindowTransferTarget.keywords)
     )
     var display: WindowTransferTarget?
 
     @Option(
-      help: "One-based Space index, next, prev, or previous.",
-      completion: .list(["next", "prev", "previous"])
+      help: ArgumentHelp("One-based Space index, next, prev, or previous.", valueName: "target"),
+      completion: .list(WindowTransferTarget.keywords)
     )
     var space: WindowTransferTarget?
 
+    /// The requested mode, or nil when modes conflict or coordinates are incomplete.
+    var mode: Mode? {
+      switch (x, y, display, space) {
+      case (let x?, let y?, nil, nil): .coordinates(x: x, y: y)
+      case (nil, nil, let target?, nil): .display(target)
+      case (nil, nil, nil, let target?): .space(target)
+      default: nil
+      }
+    }
+
+    var arguments: [String] {
+      switch mode {
+      case .coordinates(let x, let y):
+        selector.arguments + ["\(absolute ? "abs" : "rel"):\(x):\(y)"]
+      case .display(let target), .space(let target):
+        selector.arguments + [target.value]
+      case nil:
+        preconditionFailure("validate() rejects moves without exactly one mode")
+      }
+    }
+
     var commandArguments: [String] {
-      if let display { return ["--display"] + selector.arguments + [display.value] }
-      if let space { return ["--space"] + selector.arguments + [space.value] }
-      guard let x, let y else { return [] }
-      return [Self.command] + selector.arguments + ["\(absolute ? "abs" : "rel"):\(x):\(y)"]
+      switch mode {
+      case .coordinates: [Self.command] + arguments
+      case .display: ["--display"] + arguments
+      case .space: ["--space"] + arguments
+      case nil: preconditionFailure("validate() rejects moves without exactly one mode")
+      }
     }
 
     func validate() throws {
-      guard (x == nil) == (y == nil) else {
-        throw ValidationError("Coordinate mode requires both x and y.")
-      }
       let modes = [x != nil, display != nil, space != nil].filter { $0 }.count
       guard modes == 1 else {
         throw ValidationError(
           "Choose exactly one mode: x y, --display <target>, or --space <target>."
         )
+      }
+      guard (x == nil) == (y == nil) else {
+        throw ValidationError("Coordinate mode requires both x and y.")
       }
       guard !absolute || x != nil else {
         throw ValidationError("--absolute is valid only with x y coordinates.")
@@ -146,6 +185,7 @@ struct WindowCommand: ParsableCommand {
         """
     )
     static let command = "--resize"
+    static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
 
@@ -376,11 +416,13 @@ enum CardinalDirectionName: String, CaseIterable, ExpressibleByArgument {
 
 /// Shared destination syntax for window transfers; resolution stays in the daemon.
 struct WindowTransferTarget: ExpressibleByArgument {
+  static let keywords = ["next", "prev", "previous"]
+
   let value: String
 
   init?(argument: String) {
     guard
-      ["next", "prev", "previous"].contains(argument)
+      Self.keywords.contains(argument)
         || Int(argument).map({ $0 > 0 }) == true
     else { return nil }
     value = argument
