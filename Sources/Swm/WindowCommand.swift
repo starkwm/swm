@@ -49,21 +49,43 @@ struct WindowCommand: ParsableCommand {
   }
 
   struct Minimize: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Minimize a window.")
+    static let configuration = CommandConfiguration(
+      abstract: "Minimize a window.",
+      discussion: """
+        Examples:
+          swm window minimize
+          swm window minimize recent
+        """
+    )
     static let command = "--minimize"
 
-    @OptionGroup var selector: WindowSelector
+    @Argument(
+      help: "recent or a positive window ID; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var target: WindowIdentityTarget?
 
-    var arguments: [String] { selector.arguments }
+    var arguments: [String] { target.map { [$0.value] } ?? [] }
   }
 
   struct Unminimize: WindowIPCCommand {
-    static let configuration = CommandConfiguration(abstract: "Restore a minimized window.")
+    static let configuration = CommandConfiguration(
+      abstract: "Restore a minimized window.",
+      discussion: """
+        Examples:
+          swm window unminimize
+          swm window unminimize 123
+        """
+    )
     static let command = "--unminimize"
 
-    @OptionGroup var selector: WindowSelector
+    @Argument(
+      help: "recent or a positive window ID; defaults to focused.",
+      completion: .list(["recent"])
+    )
+    var target: WindowIdentityTarget?
 
-    var arguments: [String] { selector.arguments }
+    var arguments: [String] { target.map { [$0.value] } ?? [] }
   }
 
   struct Move: WindowGeometryCommand {
@@ -293,6 +315,16 @@ struct WindowSelector: ParsableArguments {
 
   /// IPC arguments selecting the window, or none for the focused window.
   var arguments: [String] { window.map { [$0] } ?? [] }
+}
+
+/// A specific window or the previously focused window.
+struct WindowIdentityTarget: ExpressibleByArgument {
+  let value: String
+
+  init?(argument: String) {
+    guard argument == "recent" || UInt32(argument).map({ $0 > 0 }) == true else { return nil }
+    value = argument
+  }
 }
 
 /// Window to focus, relative to the focused window or by identity.
