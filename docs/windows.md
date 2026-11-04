@@ -9,7 +9,7 @@ The `--window` option accepts a numeric window ID, or `recent` for the previousl
 ```sh
 swm window focus <left|right|up|down|next|prev|recent|master|window-id>
 swm window minimize [<recent|window-id>]
-swm window unminimize [<recent|window-id>]
+swm window unminimize <recent|window-id>
 ```
 
 - `left`, `right`, `up`, and `down` focus the nearest non-minimized window on the currently visible Spaces.
@@ -17,11 +17,12 @@ swm window unminimize [<recent|window-id>]
 - `recent` focuses the previously focused window, and a window ID focuses that window.
 - `master` focuses the master window for the focused window's layout.
 
-`minimize` and `unminimize` accept `recent` for the previously focused window or a positive window ID. Omit the target to use the focused window for either command.
+`minimize` and `unminimize` accept `recent` for the previously focused window or a positive window ID. Omit the target to minimize the focused window. `unminimize` requires a target, because a minimized window is never the focused window; right after minimizing, `recent` selects the window that was minimized.
 
 ```sh
 swm window minimize
 swm window minimize recent
+swm window unminimize recent
 swm window unminimize 123
 ```
 

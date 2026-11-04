@@ -72,20 +72,22 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Restore a minimized window.",
       discussion: """
+        A minimized window cannot be the focused window, so a target is required.
+
         Examples:
-          swm window unminimize
+          swm window unminimize recent
           swm window unminimize 123
         """
     )
     static let command = "--unminimize"
 
     @Argument(
-      help: "recent or a positive window ID; defaults to focused.",
+      help: "recent or a positive window ID.",
       completion: .list(["recent"])
     )
-    var target: WindowIdentityTarget?
+    var target: WindowIdentityTarget
 
-    var arguments: [String] { target.map { [$0.value] } ?? [] }
+    var arguments: [String] { [target.value] }
   }
 
   struct Move: WindowGeometryCommand {
