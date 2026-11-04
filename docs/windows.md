@@ -69,7 +69,7 @@ swm window resize -40 --window 42 0
 
 The old encoded `abs:...` and `rel:...` CLI arguments are rejected.
 
-Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid takes six integers. Columns and rows must be positive. Coordinates start at `0 0` in the top-left and are clamped to the grid. The final width and height are cell spans, clamped to at least one cell and the remaining cells on each axis. For example, this places the focused window in the right half of a 2-by-1 grid:
+`grid` takes six integers: columns, rows, x, y, width, and height. Columns and rows must be at least 1. x and y count cells from 0 at the top left, and width and height count the cells to span. swm clamps out-of-range values into the grid, and each span covers at least one cell. Cells split the padded screen bounds with the configured gap between neighbors. A span includes the gaps inside it, and a span across a whole axis fills the padded axis. This places the focused window in the right half of a 2-by-1 grid:
 
 ```sh
 swm window grid 2 1 1 0 1 1

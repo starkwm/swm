@@ -233,9 +233,9 @@ struct WindowCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Place a window on a grid.",
       discussion: """
-        Columns and rows must be positive. x and y are zero-based cell coordinates
-        from the top left. Coordinates are clamped to the grid; width and height
-        are clamped to at least one cell and the remaining cells on each axis.
+        Columns and rows must be at least 1. x and y count cells from 0 at the top
+        left. swm clamps x and y into the grid, and clamps width and height to
+        between 1 and the cells left on that axis.
 
         Tiled windows are rejected; float them with `swm window float on` first.
 
@@ -250,22 +250,22 @@ struct WindowCommand: ParsableCommand {
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Grid column count.")
+    @Argument(help: "Number of columns.")
     var columns: Int
 
-    @Argument(help: "Grid row count.")
+    @Argument(help: "Number of rows.")
     var rows: Int
 
-    @Argument(help: "Horizontal grid coordinate.")
+    @Argument(help: "Column to start at, from 0.")
     var x: Int
 
-    @Argument(help: "Vertical grid coordinate.")
+    @Argument(help: "Row to start at, from 0.")
     var y: Int
 
-    @Argument(help: "Grid width in cells.")
+    @Argument(help: "Columns to span.")
     var width: Int
 
-    @Argument(help: "Grid height in cells.")
+    @Argument(help: "Rows to span.")
     var height: Int
 
     var arguments: [String] {
@@ -274,7 +274,7 @@ struct WindowCommand: ParsableCommand {
 
     func validate() throws {
       guard columns > 0, rows > 0 else {
-        throw ValidationError("Grid columns and rows must be positive.")
+        throw ValidationError("Grid columns and rows must be at least 1.")
       }
     }
   }
