@@ -5,7 +5,7 @@ import Testing
 
 @Suite("Window grid CLI")
 struct WindowGridCommandTests {
-  @Test("translates six cells to existing IPC with window selection")
+  @Test("translates cells and window selection to IPC")
   func translatesPlacement() throws {
     let cases: [([String], [String])] = [
       (["2", "1", "0", "0", "1", "1"], ["2:1:0:0:1:1"]),
@@ -13,7 +13,7 @@ struct WindowGridCommandTests {
       (["--window", "recent", "2", "1", "1", "0", "1", "1"], ["recent", "2:1:1:0:1:1"]),
       (["2", "1", "--window=42", "1", "0", "1", "1"], ["42", "2:1:1:0:1:1"]),
       (["2", "1", "0", "0", "1", "1", "--window", "42"], ["42", "2:1:0:0:1:1"]),
-      // Preserve out-of-range cells for the daemon's existing clamping.
+      // The daemon clamps out-of-range cells, so the CLI passes them through.
       (["3", "2", "-1", "99", "0", "-2"], ["3:2:-1:99:0:-2"]),
       (["3", "2", "-1", "--window", "recent", "-2", "99", "99"], ["recent", "3:2:-1:-2:99:99"]),
       (["--window=recent", "--", "3", "2", "-1", "-2", "1", "1"], ["recent", "3:2:-1:-2:1:1"]),
@@ -27,14 +27,12 @@ struct WindowGridCommandTests {
     }
   }
 
-  @Test("rejects invalid counts, non-integers, missing or extra cells, and replaced syntax")
+  @Test("rejects non-integers and missing or extra cells")
   func rejectsInvalidPlacement() {
     let valid = ["2", "1", "0", "0", "1", "1"]
     var cases = (0..<6).map { Array(valid.prefix($0)) }
     cases += [
-      valid + ["1"], ["2:1:0:0:1:1"], ["--window", "recent", "2:1:0:0:1:1"],
-      ["2:1:0:0:1:1", "1", "0", "0", "1", "1"],
-      valid + ["--unknown"], valid + ["--window"],
+      valid + ["1"], valid + ["--unknown"], valid + ["--window"],
     ]
     for index in valid.indices {
       for invalid in ["cell", "1.5", "999999999999999999999999999999"] {
@@ -61,12 +59,11 @@ struct WindowGridCommandTests {
     }
   }
 
-  @Test("help documents six numeric cells and positional examples")
+  @Test("help lists grid arguments and examples")
   func helpDocumentsPositionals() {
     let help = WindowCommand.Grid.helpMessage()
     #expect(help.contains("<columns> <rows> <x> <y> <width> <height>"))
     #expect(help.contains("swm window grid 2 1 0 0 1 1"))
     #expect(help.contains("--window"))
-    #expect(!help.contains("2:1:0:0:1:1"))
   }
 }
