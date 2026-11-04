@@ -18,6 +18,8 @@ struct WindowGeometryCommandTests {
       (["-20", "-10"], ["rel:-20:-10"]),
       (["-20", "--window", "42", "10"], ["42", "rel:-20:10"]),
       (["20", "--window=recent", "-10"], ["recent", "rel:20:-10"]),
+      (["--window=123", "-20", "-10"], ["123", "rel:-20:-10"]),
+      (["--window=recent", "--absolute", "-20", "-10"], ["recent", "abs:-20:-10"]),
       (["-20", "--absolute", "10"], ["abs:-20:10"]),
       (["20", "-10", "--absolute", "--window", "42"], ["42", "abs:20:-10"]),
       (["--absolute", "--window", "recent", "-20", "-10"], ["recent", "abs:-20:-10"]),

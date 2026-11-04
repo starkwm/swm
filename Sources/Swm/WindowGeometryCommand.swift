@@ -1,4 +1,4 @@
-/// A window command with two numeric positional values and an absolute flag.
+/// A window command accepting numeric positionals and options.
 protocol WindowGeometryCommand: WindowIPCCommand {}
 
 extension WindowGeometryCommand {
@@ -7,19 +7,19 @@ extension WindowGeometryCommand {
   static func escapingPositionals(_ arguments: [String]) -> [String] {
     var options = [String]()
     var values = [String]()
-    var expectsWindow = false
+    var expectsValue = false
     var afterTerminator = false
     for argument in arguments {
       if afterTerminator {
         values.append(argument)
-      } else if expectsWindow {
+      } else if expectsValue {
         options.append(argument)
-        expectsWindow = false
+        expectsValue = false
       } else if argument == "--" {
         afterTerminator = true
       } else if argument.hasPrefix("-"), Int(argument) == nil {
         options.append(argument)
-        expectsWindow = argument == "--window"
+        expectsValue = ["--window", "--display", "--space"].contains(argument)
       } else {
         values.append(argument)
       }

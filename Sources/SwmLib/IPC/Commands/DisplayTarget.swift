@@ -37,7 +37,7 @@ enum DisplayTarget: Equatable {
 
   /// Resolve the target display ID from displays in arrangement order.
   ///
-  /// `next` and `prev` wrap around, matching `window display`.
+  /// `next` and `prev` wrap around, matching `window move --display`.
   func displayID(
     from sourceID: String?,
     displays: [DisplayCandidate],
