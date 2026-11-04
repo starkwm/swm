@@ -112,10 +112,10 @@ struct WindowCommandHandlerTests {
 
     #expect(missing.ok == false)
     #expect(missing.errorCode == .invalidRequest)
-    #expect(missing.message == "invalid window display arguments")
+    #expect(missing.message == "invalid window move --display arguments")
     #expect(extra.ok == false)
     #expect(extra.errorCode == .invalidRequest)
-    #expect(extra.message == "invalid window display arguments")
+    #expect(extra.message == "invalid window move --display arguments")
   }
 
   @Test(
@@ -130,7 +130,7 @@ struct WindowCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
     #expect(
       response.message
-        == "invalid window display value: \(argument); expected a one-based display index, next, or prev"
+        == "invalid window move --display value: \(argument); expected a one-based display index, next, prev, or previous"
     )
   }
 
@@ -142,7 +142,7 @@ struct WindowCommandHandlerTests {
       let response = await handler.dispatch(request(command: "--space", args: args))
 
       #expect(response.errorCode == .invalidRequest)
-      #expect(response.message == "invalid window space arguments")
+      #expect(response.message == "invalid window move --space arguments")
     }
 
     let response = await handler.dispatch(request(command: "--space", args: ["42", "sideways"]))
@@ -150,7 +150,7 @@ struct WindowCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
     #expect(
       response.message
-        == "invalid window space value: sideways; expected a one-based Space index, next, or prev"
+        == "invalid window move --space value: sideways; expected a one-based Space index, next, prev, or previous"
     )
   }
 

@@ -1,5 +1,8 @@
 /// A window command accepting numeric positionals and options.
-protocol WindowGeometryCommand: WindowIPCCommand {}
+protocol WindowGeometryCommand: WindowIPCCommand {
+  /// Options that consume the following argument, so it is not escaped as a positional.
+  static var valueOptions: Set<String> { get }
+}
 
 extension WindowGeometryCommand {
   /// Keep options before `--` and both coordinates after it, preserving axis order.
@@ -19,7 +22,7 @@ extension WindowGeometryCommand {
         afterTerminator = true
       } else if argument.hasPrefix("-"), Int(argument) == nil {
         options.append(argument)
-        expectsValue = ["--window", "--display", "--space"].contains(argument)
+        expectsValue = valueOptions.contains(argument)
       } else {
         values.append(argument)
       }

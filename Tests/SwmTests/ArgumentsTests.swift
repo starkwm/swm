@@ -72,6 +72,14 @@ struct ArgumentsTests {
         UnknownSubcommandError(name: "bogus", path: "swm config", suggestion: nil)
       ),
       (["version"], UnknownSubcommandError(name: "version", path: "swm", suggestion: nil)),
+      (
+        ["window", "display", "next"],
+        UnknownSubcommandError(name: "display", path: "swm window", suggestion: "move --display")
+      ),
+      (
+        ["window", "space", "2"],
+        UnknownSubcommandError(name: "space", path: "swm window", suggestion: "move --space")
+      ),
     ]
   )
   func resolveReportsUnknownSubcommandsWithSuggestions(
@@ -121,11 +129,9 @@ struct ArgumentsTests {
   func helpMessageDescribesLeafArguments() {
     let help = Arguments.helpMessage(for: WindowCommand.Move.self)
 
-    #expect(
-      help.contains(
-        "USAGE: swm window move [--window <window>] [--absolute] [<x>] [<y>] [--display <display>] [--space <space>]"
-      )
-    )
+    #expect(help.contains("USAGE: swm window move [--window <window>] [--absolute] <x> <y>"))
+    #expect(help.contains("swm window move [--window <window>] --display <target>"))
+    #expect(help.contains("swm window move [--window <window>] --space <target>"))
     #expect(help.contains("Horizontal position or offset in points."))
     #expect(help.contains("swm window move -20 0"))
   }

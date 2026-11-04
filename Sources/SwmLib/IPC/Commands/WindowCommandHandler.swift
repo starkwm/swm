@@ -321,12 +321,12 @@ struct WindowCommandHandler {
 
   /// Move the selected window to another display.
   private func display(_ request: IPCRequest) throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: "display")
+    let selection = try parseValueSelection(request.args, action: "move --display")
     guard let target = WindowDisplayTarget(argument: selection.value) else {
       throw IPCCommandError.invalidValue(
-        "window display",
+        "window move --display",
         selection.value,
-        expected: "a one-based display index, next, or prev"
+        expected: "a one-based display index, next, prev, or previous"
       )
     }
 
@@ -343,9 +343,9 @@ struct WindowCommandHandler {
     guard let targetScreen = target.screen(from: sourceScreen, screens: NSScreen.arrangedScreens)
     else {
       throw IPCCommandError.invalidValue(
-        "window display",
+        "window move --display",
         selection.value,
-        expected: "a one-based display index, next, or prev"
+        expected: "a one-based display index, next, prev, or previous"
       )
     }
 
@@ -362,13 +362,13 @@ struct WindowCommandHandler {
 
   /// Move a window without switching the active Space or immediately restoring focus.
   private func space(_ request: IPCRequest) async throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: "space")
+    let selection = try parseValueSelection(request.args, action: "move --space")
 
     guard let target = WindowSpaceTarget(argument: selection.value) else {
       throw IPCCommandError.invalidValue(
-        "window space",
+        "window move --space",
         selection.value,
-        expected: "a one-based Space index, next, or prev"
+        expected: "a one-based Space index, next, prev, or previous"
       )
     }
 

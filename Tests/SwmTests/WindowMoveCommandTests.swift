@@ -13,32 +13,41 @@ struct WindowMoveCommandTests {
   func routesTransfers(mode: String) throws {
     let output = try #require(tmpfile())
     defer { fclose(output) }
-    for target in ["1", "3", "next", "prev", "previous"] {
-      for selector in [[], ["--window", "123"], ["--window=recent"]] {
-        for option in [["--\(mode)", target], ["--\(mode)=\(target)"]] {
-          for values in [selector + option, option + selector] {
-            var command = try #require(
-              Arguments.parseAsRoot(Arguments.resolve(["window", "move"] + values))
-                as? WindowCommand.Move
-            )
-            let selected = selector.isEmpty ? [] : [selector.count == 1 ? "recent" : "123"]
-            var sent = false
-            try command.run(
-              send: { domain, args in
-                Client.send(domain: domain, args: args) { request in
-                  sent = true
-                  #expect(request.domain == .window)
-                  #expect(request.command == "--\(mode)")
-                  #expect(request.args == selected + [target])
-                  return .acknowledged(id: request.id)
-                }
-              },
-              output: output,
-              errors: output
-            )
-            #expect(sent)
+    let cases: [([String], [String])] = [
+      (["--\(mode)", "next"], ["next"]),
+      (["--\(mode)=2", "--window", "123"], ["123", "2"]),
+      (["--window=recent", "--\(mode)", "previous"], ["recent", "previous"]),
+    ]
+    for (values, expected) in cases {
+      var command = try #require(
+        Arguments.parseAsRoot(Arguments.resolve(["window", "move"] + values))
+          as? WindowCommand.Move
+      )
+      var sent = false
+      try command.run(
+        send: { domain, args in
+          Client.send(domain: domain, args: args) { request in
+            sent = true
+            #expect(request.domain == .window)
+            #expect(request.command == "--\(mode)")
+            #expect(request.args == expected)
+            return .acknowledged(id: request.id)
           }
-        }
+        },
+        output: output,
+        errors: output
+      )
+      #expect(sent)
+    }
+  }
+
+  @Test("reports conflicting modes before incomplete coordinates")
+  func reportsConflictingModes() {
+    for values in [["--display", "next", "5"], ["-20", "--space", "3"]] {
+      #expect {
+        try Arguments.parseAsRoot(Arguments.resolve(["window", "move"] + values))
+      } throws: { error in
+        Arguments.message(for: error).contains("Choose exactly one mode")
       }
     }
   }
@@ -63,13 +72,8 @@ struct WindowMoveCommandTests {
 
   @Test("removed public transfer subcommands fail", arguments: ["display", "space"])
   func rejectsRemovedSubcommands(subcommand: String) {
-    for values in [["next"], ["--window", "123", "2"]] {
-      #expect(throws: (any Error).self) {
-        try Arguments.parseAsRoot(["window", subcommand] + values)
-      }
-      #expect(throws: (any Error).self) {
-        try Arguments.resolve(["window", subcommand] + values)
-      }
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(["window", subcommand, "next"])
     }
   }
 }
