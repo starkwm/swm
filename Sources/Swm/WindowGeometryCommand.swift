@@ -5,7 +5,7 @@ protocol WindowGeometryCommand: WindowIPCCommand {
 }
 
 extension WindowGeometryCommand {
-  /// Keep options before `--` and both coordinates after it, preserving axis order.
+  /// Keep options before `--` and numeric values after it, preserving axis order.
   /// ArgumentParser otherwise treats negative positional numbers as options.
   static func escapingPositionals(_ arguments: [String]) -> [String] {
     var options = [String]()

@@ -48,7 +48,7 @@ window covers the destination, the next warp starts from that covering window.
 ```sh
 swm window move [--window <window|recent>] [--absolute] <x> <y>
 swm window resize [--window <window|recent>] [--absolute] <width> <height>
-swm window grid [--window <window|recent>] <columns>:<rows>:<x>:<y>:<width>:<height>
+swm window grid [--window <window|recent>] <columns> <rows> <x> <y> <width> <height>
 swm window move [--window <window|recent>] --display <next|prev|previous|display-index>
 ```
 
@@ -69,10 +69,10 @@ swm window resize -40 --window 42 0
 
 The old encoded `abs:...` and `rel:...` CLI arguments are rejected.
 
-Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid coordinates start at `0:0` in the top-left. The final width and height are cell spans. For example, this places the focused window in the right half of a 2-by-1 grid:
+Grid cells share the padded screen bounds, with the configured gap between adjacent cells. A multi-cell span includes its internal gaps; a full-axis span uses the entire padded axis. Grid takes six integers. Columns and rows must be positive. Coordinates start at `0 0` in the top-left and are clamped to the grid. The final width and height are cell spans, clamped to at least one cell and the remaining cells on each axis. For example, this places the focused window in the right half of a 2-by-1 grid:
 
 ```sh
-swm window grid 2:1:1:0:1:1
+swm window grid 2 1 1 0 1 1
 ```
 
 Moving by coordinates, resizing, and grid placement work on windows floated with `swm window float on`, windows on a Space with the `float` layout, and windows on more than one Space. swm rejects tiled windows with `window is tiled`, because the next layout reflow would put them back.

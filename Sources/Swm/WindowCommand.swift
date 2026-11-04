@@ -229,28 +229,54 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct Grid: WindowIPCCommand {
+  struct Grid: WindowGeometryCommand {
     static let configuration = CommandConfiguration(
       abstract: "Place a window on a grid.",
       discussion: """
-        x, y, width, and height are measured in grid cells from the top left.
+        Columns and rows must be positive. x and y are zero-based cell coordinates
+        from the top left. Coordinates are clamped to the grid; width and height
+        are clamped to at least one cell and the remaining cells on each axis.
 
         Tiled windows are rejected; float them with `swm window float on` first.
 
         Examples:
-          swm window grid 2:1:0:0:1:1   # left half
-          swm window grid 2:1:1:0:1:1   # right half
-          swm window grid 1:1:0:0:1:1   # whole display
+          swm window grid 2 1 0 0 1 1   # left half
+          swm window grid 2 1 1 0 1 1   # right half
+          swm window grid 1 1 0 0 1 1   # whole display
         """
     )
     static let command = "--grid"
+    static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
 
-    @Argument(help: "Grid in the form columns:rows:x:y:width:height.")
-    var grid: String
+    @Argument(help: "Grid column count.")
+    var columns: Int
 
-    var arguments: [String] { selector.arguments + [grid] }
+    @Argument(help: "Grid row count.")
+    var rows: Int
+
+    @Argument(help: "Horizontal grid coordinate.")
+    var x: Int
+
+    @Argument(help: "Vertical grid coordinate.")
+    var y: Int
+
+    @Argument(help: "Grid width in cells.")
+    var width: Int
+
+    @Argument(help: "Grid height in cells.")
+    var height: Int
+
+    var arguments: [String] {
+      selector.arguments + ["\(columns):\(rows):\(x):\(y):\(width):\(height)"]
+    }
+
+    func validate() throws {
+      guard columns > 0, rows > 0 else {
+        throw ValidationError("Grid columns and rows must be positive.")
+      }
+    }
   }
 
   struct Float: WindowIPCCommand {

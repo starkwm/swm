@@ -5,6 +5,13 @@ import Testing
 
 @Suite("WindowGrid")
 struct WindowGridTests {
+  @Test("init: rejects non-positive dimensions")
+  func initRejectsNonPositiveDimensions() {
+    for (rows, columns) in [(0, 1), (-1, 1), (1, 0), (1, -1)] {
+      #expect(WindowGrid(rows: rows, columns: columns, x: 0, y: 0, width: 1, height: 1) == nil)
+    }
+  }
+
   @Test("frame: neighboring rows and columns share cells, gaps, and span boundaries")
   func frameNeighboringRowsAndColumnsShareCellsGapsAndSpanBoundaries() throws {
     let bounds = CGRect(x: -30, y: 10, width: 300, height: 300)
@@ -37,6 +44,15 @@ struct WindowGridTests {
     expect(
       grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: .defaults),
       equals: CGRect(x: 200, y: 60, width: 100, height: 60)
+    )
+  }
+
+  @Test("init: clamps negative coordinates and nonpositive spans")
+  func initClampsNegativeCoordinatesAndNonpositiveSpans() throws {
+    let grid = try #require(WindowGrid(argument: "3:2:-1:-2:0:-3"))
+    expect(
+      grid.frame(in: CGRect(x: 0, y: 0, width: 300, height: 120), settings: .defaults),
+      equals: CGRect(x: 0, y: 0, width: 100, height: 60)
     )
   }
 
