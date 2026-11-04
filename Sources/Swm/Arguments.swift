@@ -42,8 +42,7 @@ struct Arguments: ParsableCommand {
         throw UnknownSubcommandError(
           name: argument,
           path: path.joined(separator: " "),
-          suggestion: replacedSubcommands[path + [argument]]
-            ?? closestName(to: argument, in: names)
+          suggestion: closestName(to: argument, in: names)
         )
       }
       command = subcommands[index]
@@ -60,12 +59,6 @@ struct Arguments: ParsableCommand {
     }
     return arguments
   }
-
-  /// Removed subcommands and the syntax replacing them, keyed by their full command path.
-  static let replacedSubcommands: [[String]: String] = [
-    ["swm", "window", "display"]: "move --display",
-    ["swm", "window", "space"]: "move --space",
-  ]
 
   /// The only candidate `name` prefixes or names a word of, else one within two edits.
   static func closestName(to name: String, in candidates: [String]) -> String? {

@@ -72,14 +72,6 @@ struct ArgumentsTests {
         UnknownSubcommandError(name: "bogus", path: "swm config", suggestion: nil)
       ),
       (["version"], UnknownSubcommandError(name: "version", path: "swm", suggestion: nil)),
-      (
-        ["window", "display", "next"],
-        UnknownSubcommandError(name: "display", path: "swm window", suggestion: "move --display")
-      ),
-      (
-        ["window", "space", "2"],
-        UnknownSubcommandError(name: "space", path: "swm window", suggestion: "move --space")
-      ),
     ]
   )
   func resolveReportsUnknownSubcommandsWithSuggestions(
