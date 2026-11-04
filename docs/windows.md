@@ -43,9 +43,11 @@ swm window grid [--window <window|recent>] <columns>:<rows>:<x>:<y>:<width>:<hei
 swm window move [--window <window|recent>] --display <next|prev|previous|display-index>
 ```
 
-Choose exactly one `move` mode: a coordinate pair, `--display <target>`, or `--space <target>`. `--absolute` is valid only with coordinates. Transfers preserve the current active Space and use the existing display or Space movement behavior.
+Choose one `move` mode: `<x> <y>`, `--display <target>`, or `--space <target>`. Use `--absolute` only with coordinates. Moving to a display or Space keeps the current Space active.
 
-Coordinate `move` and `resize` take two integer values in points. By default, they add offsets to the current position or size. Use `--absolute` to set the top-left coordinates or dimensions instead. Negative values work in either position, including when mixed with options, without a `--` separator:
+`move <x> <y>` and `resize <width> <height>` take integer values in points. They add offsets to the current position or size by default. Use `--absolute` to set the top-left coordinates or dimensions.
+
+Negative values work in either position, even between options. No `--` separator is needed:
 
 ```sh
 swm window move 20 0
@@ -64,9 +66,14 @@ Grid cells share the padded screen bounds, with the configured gap between adjac
 swm window grid 2:1:1:0:1:1
 ```
 
-Coordinate `move`, `resize`, and `grid` work on windows floated with `swm window float on`, windows on a Space with the `float` layout, and windows on more than one Space. swm rejects tiled windows with `window is tiled`, because the next layout reflow would put them back.
+Moving by coordinates, resizing, and grid placement work on windows floated with `swm window float on`, windows on a Space with the `float` layout, and windows on more than one Space. swm rejects tiled windows with `window is tiled`, because the next layout reflow would put them back.
 
-For example, move the focused window with `swm window move --display next`, or a specific window with `swm window move --window 123 --display 2`.
+Move the focused window to the next display, or window 123 to display 2:
+
+```sh
+swm window move --display next
+swm window move --window 123 --display 2
+```
 
 Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
 

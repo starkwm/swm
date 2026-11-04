@@ -75,11 +75,13 @@ struct WindowCommand: ParsableCommand {
         swm window move [--window <window>] --space <target>
         """,
       discussion: """
-        Move by an offset in points, set the top-left corner with --absolute, or transfer
-        to a display or Space. Choose exactly one mode: x y, --display, or --space.
+        Choose one mode: x y, --display <target>, or --space <target>.
 
-        Coordinate moves reject tiled windows; float them with `swm window float on` first.
-        Transfers keep the current Space active.
+        Coordinates move the window by an offset in points. Use --absolute only with
+        coordinates to set the top-left corner. Float tiled windows with
+        `swm window float on` before moving them by coordinates.
+
+        Moving to a display or Space keeps the current Space active.
 
         Examples:
           swm window move --absolute 0 25
