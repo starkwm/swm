@@ -18,7 +18,7 @@ struct DisplayTargetTests {
       ("next", "centre", "above"),
       ("next", "above", "left"),
       ("prev", "left", "above"),
-      ("previous", "centre", "left"),
+      ("prev", "centre", "left"),
       ("first", "above", "left"),
       ("last", "left", "above"),
       ("2", "above", "centre"),
@@ -66,7 +66,10 @@ struct DisplayTargetTests {
     #expect(resolve(.mouse, from: "left", mouseLocation: CGPoint(x: 400, y: -10)) == "above")
   }
 
-  @Test("init: rejects unknown and non-positive targets", arguments: ["0", "-1", "north", ""])
+  @Test(
+    "init: rejects unknown and non-positive targets",
+    arguments: ["previous", "0", "-1", "north", ""]
+  )
   func initRejectsUnknownAndNonPositiveTargets(argument: String) {
     #expect(DisplayTarget(argument: argument) == nil)
   }

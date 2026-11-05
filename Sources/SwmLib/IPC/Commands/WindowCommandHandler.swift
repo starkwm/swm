@@ -326,7 +326,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidValue(
         "window move --display",
         selection.value,
-        expected: "a one-based display index, next, prev, or previous"
+        expected: "a one-based display index, next, or prev"
       )
     }
 
@@ -345,7 +345,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidValue(
         "window move --display",
         selection.value,
-        expected: "a one-based display index, next, prev, or previous"
+        expected: "a one-based display index, next, or prev"
       )
     }
 
@@ -368,7 +368,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.invalidValue(
         "window move --space",
         selection.value,
-        expected: "a one-based Space index, next, prev, or previous"
+        expected: "a one-based Space index, next, or prev"
       )
     }
 

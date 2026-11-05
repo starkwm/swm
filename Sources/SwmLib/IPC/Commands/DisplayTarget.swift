@@ -19,7 +19,7 @@ enum DisplayTarget: Equatable {
   init?(argument: String) {
     switch argument {
     case "next": self = .next
-    case "prev", "previous": self = .previous
+    case "prev": self = .previous
     case "first": self = .first
     case "last": self = .last
     case "recent": self = .recent

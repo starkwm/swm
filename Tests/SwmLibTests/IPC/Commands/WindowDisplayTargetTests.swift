@@ -20,12 +20,17 @@ struct WindowDisplayTargetTests {
     #expect(target.screen(from: first, screens: []) == nil)
   }
 
+  @Test("init: rejects the previous navigation alias")
+  func initRejectsPreviousAlias() {
+    #expect(WindowDisplayTarget(argument: "previous") == nil)
+  }
+
   @Test(
-    "screen: resolves relative aliases on a single display",
-    arguments: ["next", "prev", "previous"]
+    "screen: resolves relative targets on a single display",
+    arguments: ["next", "prev"]
   )
   @MainActor
-  func screenResolvesRelativeAliasesOnASingleDisplay(argument: String) throws {
+  func screenResolvesRelativeTargetsOnASingleDisplay(argument: String) throws {
     let screen = TargetTestScreen()
     let target = try #require(WindowDisplayTarget(argument: argument))
     #expect(target.screen(from: screen, screens: [screen]) === screen)
