@@ -130,8 +130,27 @@ struct WindowCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
     #expect(
       response.message
-        == "invalid window move --display value: \(argument); expected a one-based display index, next, prev, or previous"
+        == "invalid window move --display value: \(argument); expected a one-based display index, next, or prev"
     )
+  }
+
+  @Test(
+    "dispatch: transfers reject previous before resolving the window",
+    arguments: ["display", "space"]
+  )
+  func dispatchTransfersRejectPrevious(mode: String) async {
+    for selector in [[], ["recent"], ["42"]] {
+      let response = await handler().dispatch(
+        request(command: "--\(mode)", args: selector + ["previous"])
+      )
+      let index = mode == "display" ? "display" : "Space"
+      #expect(response.ok == false)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(
+        response.message
+          == "invalid window move --\(mode) value: previous; expected a one-based \(index) index, next, or prev"
+      )
+    }
   }
 
   @Test("dispatch: rejects malformed Space movement arguments and invalid targets")
@@ -150,7 +169,7 @@ struct WindowCommandHandlerTests {
     #expect(response.errorCode == .invalidRequest)
     #expect(
       response.message
-        == "invalid window move --space value: sideways; expected a one-based Space index, next, prev, or previous"
+        == "invalid window move --space value: sideways; expected a one-based Space index, next, or prev"
     )
   }
 

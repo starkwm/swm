@@ -7,7 +7,7 @@ enum WindowSpaceTarget: Equatable {
   init?(argument: String) {
     switch argument {
     case "next": self = .next
-    case "prev", "previous": self = .previous
+    case "prev": self = .previous
     default:
       guard let index = Int(argument), index > 0 else { return nil }
 

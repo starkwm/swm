@@ -138,7 +138,7 @@ struct WindowCommand: ParsableCommand {
 
     @Option(
       help: ArgumentHelp(
-        "One-based display index, next, prev, or previous.",
+        "One-based display index, next, or prev.",
         valueName: "target"
       ),
       completion: .list(WindowTransferTarget.keywords)
@@ -146,7 +146,7 @@ struct WindowCommand: ParsableCommand {
     var display: WindowTransferTarget?
 
     @Option(
-      help: ArgumentHelp("One-based Space index, next, prev, or previous.", valueName: "target"),
+      help: ArgumentHelp("One-based Space index, next, or prev.", valueName: "target"),
       completion: .list(WindowTransferTarget.keywords)
     )
     var space: WindowTransferTarget?
@@ -478,7 +478,7 @@ enum CardinalDirectionName: String, CaseIterable, ExpressibleByArgument {
 
 /// Shared destination syntax for window transfers; resolution stays in the daemon.
 struct WindowTransferTarget: ExpressibleByArgument {
-  static let keywords = ["next", "prev", "previous"]
+  static let keywords = ["next", "prev"]
 
   let value: String
 

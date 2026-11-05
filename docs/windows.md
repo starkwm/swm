@@ -49,7 +49,7 @@ window covers the destination, the next warp starts from that covering window.
 swm window move [--window <window|recent>] [--absolute] <x> <y>
 swm window resize [--window <window|recent>] [--absolute] <width> <height>
 swm window grid [--window <window|recent>] <columns> <rows> <x> <y> <width> <height>
-swm window move [--window <window|recent>] --display <next|prev|previous|display-index>
+swm window move [--window <window|recent>] --display <next|prev|display-index>
 ```
 
 Choose one `move` mode: `<x> <y>`, `--display <target>`, or `--space <target>`. Use `--absolute` only with coordinates. Moving to a display or Space keeps the current Space active.
@@ -84,15 +84,15 @@ swm window move --display next
 swm window move --window 123 --display 2
 ```
 
-Display indexes are one-based. `next` and `prev` wrap around the arranged display list; `previous` is also accepted.
+Display indexes are one-based. `next` and `prev` wrap around the arranged display list.
 
 ## Move between Spaces
 
 ```sh
-swm window move [--window <window|recent>] --space <space-index|next|prev|previous>
+swm window move [--window <window|recent>] --space <space-index|next|prev>
 ```
 
-Space indexes are one-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. `previous` is also accepted. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
+Space indexes are one-based and match `swm query spaces`. `next` and `prev` cycle through normal desktop Spaces in query order, skip fullscreen Spaces, and wrap at either end. The command defaults to the focused window and keeps the current Space active. Moves to a Space on another display fit the window within that display's visible bounds.
 
 Only windows belonging to one normal desktop Space can move. Fullscreen windows and windows assigned to multiple Spaces are rejected. A move to the window's current Space does not submit a bridge operation.
 

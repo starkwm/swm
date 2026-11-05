@@ -16,7 +16,7 @@ struct WindowMoveCommandTests {
     let cases: [([String], [String])] = [
       (["--\(mode)", "next"], ["next"]),
       (["--\(mode)=2", "--window", "123"], ["123", "2"]),
-      (["--window=recent", "--\(mode)", "previous"], ["recent", "previous"]),
+      (["--window=recent", "--\(mode)", "prev"], ["recent", "prev"]),
     ]
     for (values, expected) in cases {
       var command = try #require(

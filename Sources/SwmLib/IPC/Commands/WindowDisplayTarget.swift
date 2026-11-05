@@ -15,7 +15,7 @@ struct WindowDisplayTarget: Equatable {
     switch argument {
     case "next":
       value = .next
-    case "prev", "previous":
+    case "prev":
       value = .previous
     default:
       guard let index = Int(argument), index > 0 else { return nil }

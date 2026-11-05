@@ -11,14 +11,13 @@ struct WindowSpaceTargetTests {
 
     #expect(WindowSpaceTarget(argument: "next") == .next)
     #expect(WindowSpaceTarget(argument: "prev") == .previous)
-    #expect(WindowSpaceTarget(argument: "previous") == .previous)
   }
 
   @Test(
-    "init: rejects invalid indexes",
-    arguments: ["", "0", "-1", "1.5", "sideways", "999999999999999999999"]
+    "init: rejects invalid targets",
+    arguments: ["previous", "", "0", "-1", "1.5", "sideways", "999999999999999999999"]
   )
-  func initRejectsInvalidIndexes(argument: String) {
+  func initRejectsInvalidTargets(argument: String) {
     #expect(WindowSpaceTarget(argument: argument) == nil)
   }
 

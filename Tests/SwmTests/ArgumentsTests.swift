@@ -141,7 +141,31 @@ struct ArgumentsTests {
       #expect(script.contains("recent"))
       #expect(script.contains("next"))
       #expect(script.contains("prev"))
+      #expect(!script.contains("previous"))
     }
+  }
+
+  @Test(
+    "navigation accepts prev and rejects previous",
+    arguments: [
+      (["window", "move", "--display"], ["--display", "prev"]),
+      (["window", "move", "--space"], ["--space", "prev"]),
+      (["window", "focus"], ["--cycle", "prev"]),
+      (["window", "swap"], ["--swap-cycle", "prev"]),
+      (["display", "focus"], ["--focus", "prev"]),
+    ]
+  )
+  func navigationUsesPrev(path: [String], expected: [String]) throws {
+    let command = try #require(
+      Arguments.parseAsRoot(Arguments.resolve(path + ["prev"])) as? any IPCCommand
+    )
+    #expect(command.commandArguments == expected)
+    #expect(throws: (any Error).self) {
+      try Arguments.parseAsRoot(Arguments.resolve(path + ["previous"]))
+    }
+    let help = Arguments.helpMessage(for: type(of: command))
+    #expect(help.contains("prev"))
+    #expect(!help.contains("previous"))
   }
 
   @Test("parseAsRoot: translates window moves to IPC arguments")

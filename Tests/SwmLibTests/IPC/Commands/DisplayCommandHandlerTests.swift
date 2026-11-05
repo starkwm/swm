@@ -24,7 +24,7 @@ struct DisplayCommandHandlerTests {
     #expect(response.message == "invalid display focus arguments")
   }
 
-  @Test("dispatch: focus rejects unknown targets", arguments: ["0", "north", "nope"])
+  @Test("dispatch: focus rejects unknown targets", arguments: ["previous", "0", "north", "nope"])
   func dispatchFocusRejectsUnknownTargets(target: String) {
     let response = handler().dispatch(request(command: "--focus", args: [target]))
 
