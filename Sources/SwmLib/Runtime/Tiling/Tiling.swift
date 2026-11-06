@@ -406,7 +406,10 @@ public final class Tiling {
     guard updated else { return false }
 
     updateMembershipPolling()
-    if selection != .float {
+    if selection == .float {
+      // Floating releases layout geometry, so grids deferred while tiled can now apply.
+      reconcile()
+    } else {
       reflow(spaceID: spaceID)
     }
     return true
@@ -417,7 +420,10 @@ public final class Tiling {
     frameReconciler?.cancelAnimations()
     updateAllLayouts(reflowing: nil) { $0.selection = selection }
     updateMembershipPolling()
-    if selection != .float {
+    if selection == .float {
+      // Floating releases layout geometry, so grids deferred while tiled can now apply.
+      reconcile()
+    } else {
       reflowVisibleSpaces()
     }
   }
@@ -558,6 +564,10 @@ public final class Tiling {
     }
     if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
       layoutsByID[layoutID]?.focusedWindowID = nil
+    }
+    if shouldFloat {
+      // A grid deferred while the window was tiled can now apply.
+      reconcile()
     }
     applyPlans(for: [layoutID])
     return true

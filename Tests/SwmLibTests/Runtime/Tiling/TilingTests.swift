@@ -797,6 +797,35 @@ struct TilingTests {
     #expect(placements.last?.display == nil)
   }
 
+  @Test(
+    "reconcile: applies a deferred grid once when its window or layout becomes floating",
+    arguments: ["window", "space", "global"]
+  )
+  func reconcileAppliesADeferredGridOnceWhenItsWindowOrLayoutBecomesFloating(
+    transition: String
+  ) throws {
+    var placements = [WindowRulePlacement]()
+    let tiling = makeTiling(rulePlacement: { placement, _, _ in
+      placements.append(placement)
+      return .applied
+    })
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
+    #expect(placements.isEmpty)
+    switch transition {
+    case "window": #expect(tiling.setWindowLayout(.float, for: 1))
+    case "space": #expect(tiling.setLayout(.float, for: 10))
+    default: tiling.setLayoutForSpaces(.float)
+    }
+    #expect(placements.count == 1)
+    #expect(placements.last?.grid != nil)
+    // A manual move afterwards must not snap the window back to the grid.
+    tiling.windowFrameDidChange(1)
+    tiling.reconcile()
+    #expect(placements.count == 1)
+  }
+
   @Test("reconcile: retries deferred placement and stops after failure")
   func reconcileRetriesDeferredPlacementAndStopsAfterFailure() throws {
     var attempts = 0
