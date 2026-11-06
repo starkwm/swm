@@ -26,10 +26,19 @@ See [getting started](docs/getting-started.md) for requirements and source build
 
 The [documentation index](docs/index.md) links to all guides and command references.
 
-- [Command line](docs/cli.md)
-- [Query state](docs/query.md)
-- [Manage windows](docs/windows.md)
-- [Configure spaces](docs/spaces.md)
-- [Manage displays](docs/displays.md)
-- [Signals](docs/signals.md)
-- [Keyboard shortcuts](docs/keyboard-shortcuts.md)
+Guides:
+
+- [Getting started](docs/getting-started.md): requirements, installation, and source builds.
+- [Configuration](docs/configuration.md): startup scripts, global defaults, and window animation.
+- [Command line](docs/cli.md): daemon startup, command syntax, help, and shell completions.
+- [Keyboard shortcuts](docs/keyboard-shortcuts.md): invoke swm commands from a hotkey daemon.
+- [Testing](docs/testing.md): run focused suites and benchmark the edit-build-test cycle.
+
+Command reference:
+
+- [Query state](docs/query.md): inspect displays, spaces, and windows as JSON.
+- [Manage windows](docs/windows.md): focus, minimize, move, resize, and control tiling.
+- [Configure spaces](docs/spaces.md): activation, layouts, padding, gaps, and display behavior.
+- [Manage displays](docs/displays.md): focus displays by index, order, recency, or direction.
+- [Signals](docs/signals.md): register shell actions for runtime events.
+- [Window rules](docs/rules.md): keep windows floating or place them on a display.
