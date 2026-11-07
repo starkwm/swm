@@ -35,10 +35,7 @@ struct WindowGrid: Equatable {
 
   /// Calculate the target frame inside screen bounds using space padding and gap settings.
   func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect? {
-    guard bounds.origin.x.isFinite, bounds.origin.y.isFinite,
-      bounds.size.width.isFinite, bounds.size.height.isFinite,
-      bounds.size.width > 0, bounds.size.height > 0
-    else { return nil }
+    guard bounds.isFiniteAndNonEmpty else { return nil }
 
     let bounds = settings.tilingBounds(in: bounds)
     func axis(origin: CGFloat, length: CGFloat, count: Int, index: Int, span: Int) -> (
@@ -70,11 +67,7 @@ struct WindowGrid: Equatable {
       )
     else { return nil }
     let frame = CGRect(x: horizontal.0, y: vertical.0, width: horizontal.1, height: vertical.1)
-    guard frame.origin.x.isFinite, frame.origin.y.isFinite,
-      frame.size.width.isFinite, frame.size.height.isFinite,
-      frame.size.width > 0, frame.size.height > 0
-    else { return nil }
-    return frame
+    return frame.isFiniteAndNonEmpty ? frame : nil
   }
 }
 
