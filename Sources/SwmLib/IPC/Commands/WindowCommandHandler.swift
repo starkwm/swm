@@ -384,24 +384,15 @@ struct WindowCommandHandler {
       if !Task.isCancelled { tiling.reconcileAndReflowVisibleSpaces() }
     }
 
-    let destinationID = try await WindowSpaceTransfer.shared.move(windowID: windowID, to: target) {
+    try await WindowSpaceTransfer.shared.move(window, to: target) {
       window.id == windowID && windows.window(by: windowID) === window
-    }
-
-    if let targetScreen = NSScreen.screen(
-      for: WindowServerClient.shared.screenID(for: destinationID)
-    ),
-      let frame = window.frame(),
-      let sourceScreen = NSScreen.screen(containingLargestIntersectionWith: frame),
-      sourceScreen.uuid != targetScreen.uuid
-    {
-      try transfer(
-        window,
-        frame: frame,
-        from: sourceScreen,
-        to: targetScreen,
+    } fit: { _, targetFrame, destinationID in
+      try applyFrame(
+        targetFrame,
+        window: window,
         failureMessage:
-          "window moved to Space \(destinationID), but display placement failed: \(windowID)"
+          "window moved to Space \(destinationID), but display placement failed: \(windowID)",
+        animated: false
       )
 
       guard Set(WindowServerClient.shared.spaceIDs(containing: windowID)) == [destinationID] else {

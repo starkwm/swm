@@ -1,4 +1,4 @@
-import CoreGraphics
+import AppKit
 
 /// Validates and confirms asynchronous moves between normal desktop Spaces.
 @MainActor
@@ -88,5 +88,42 @@ final class WindowSpaceTransfer {
     throw IPCCommandError.internalError(
       "timed out moving window \(windowID) to Space \(destination.id); movement was not confirmed"
     )
+  }
+}
+
+extension WindowSpaceTransfer {
+  /// Move a window to a Space without switching to it, then fit it to that Space's display.
+  ///
+  /// `fit` runs only when the destination Space is on another display. It receives the window's
+  /// frame, the frame keeping its relative position on the destination display, and the
+  /// destination Space ID.
+  @discardableResult
+  func move(
+    _ window: Window,
+    to target: WindowSpaceTarget,
+    isValidWindow: () -> Bool,
+    fit: (_ frame: CGRect, _ targetFrame: CGRect, _ destinationID: UInt64) throws -> Void
+  ) async throws -> UInt64 {
+    let destinationID = try await move(
+      windowID: window.id,
+      to: target,
+      isValidWindow: isValidWindow
+    )
+    guard
+      let targetScreen = NSScreen.screen(
+        for: WindowServerClient.shared.screenID(for: destinationID)
+      ),
+      let frame = window.frame(),
+      let sourceScreen = NSScreen.screen(containingLargestIntersectionWith: frame),
+      sourceScreen.uuid != targetScreen.uuid
+    else { return destinationID }
+
+    let targetFrame = WindowDisplayTransfer(
+      windowFrame: frame,
+      sourceFrame: sourceScreen.axVisibleFrame,
+      targetFrame: targetScreen.axVisibleFrame
+    ).targetWindowFrame()
+    try fit(frame, targetFrame, destinationID)
+    return destinationID
   }
 }
