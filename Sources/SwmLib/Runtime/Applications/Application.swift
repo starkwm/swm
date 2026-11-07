@@ -233,11 +233,7 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
 
   /// Return the focused window ID for this application.
   func focusedWindowID() -> CGWindowID? {
-    guard let element = AccessibilityClient.shared.focusedWindowElement(for: element) else {
-      return nil
-    }
-
-    return AccessibilityClient.shared.optionalWindowID(for: element)
+    AccessibilityClient.shared.focusedWindowID(for: element)
   }
 
   /// Activate the application and all of its windows.

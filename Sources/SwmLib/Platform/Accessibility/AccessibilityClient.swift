@@ -140,6 +140,11 @@ public final class AccessibilityClient {
     return (value as! AXUIElement)
   }
 
+  /// Return the focused window ID for an application element when available.
+  func focusedWindowID(for element: AXUIElement) -> CGWindowID? {
+    focusedWindowElement(for: element).flatMap(optionalWindowID(for:))
+  }
+
   /// Return the Core Graphics window ID for an accessibility element, or zero on failure.
   func windowID(for element: AXUIElement) -> CGWindowID {
     var identifier: CGWindowID = 0
