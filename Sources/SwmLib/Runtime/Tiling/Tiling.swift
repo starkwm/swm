@@ -600,8 +600,9 @@ public final class Tiling {
     for windowID: CGWindowID
   ) -> CGFloat? {
     var ratio: CGFloat?
+    let hiddenWindowIDs = hiddenWindowIDs(inLayoutContaining: windowID)
     _ = mutateTree(containing: windowID, requiring: .dwindle) {
-      ratio = $0.changeSplitRatio(change, containing: windowID)
+      ratio = $0.changeSplitRatio(change, containing: windowID, hiding: hiddenWindowIDs)
       return ratio != nil
     }
     return ratio
@@ -616,22 +617,26 @@ public final class Tiling {
     guard state.preserveSplitDirections else { return false }
     guard case .layout = layoutPlan(for: layoutID) else { return false }
     guard let display = currentTopology?.displaysByID[layoutID.displayID] else { return false }
+    let hiddenWindowIDs = hiddenWindowIDs(in: state)
     return mutateTree(containing: windowID, requiring: .dwindle) { tree in
       tree =
         dwindleLayout.resolvingSplitDirections(
           in: tree,
           bounds: display.visibleFrame,
           settings: spaces.settings(for: layoutID.spaceID),
-          hiding: hiddenWindowIDs(in: state)
+          hiding: hiddenWindowIDs
         ) ?? tree
-      return tree.toggleSplitDirection(containing: windowID)
+      return tree.toggleSplitDirection(containing: windowID, hiding: hiddenWindowIDs)
     }
   }
 
   /// Exchange the selected window's nearest dwindle sibling subtrees.
   @discardableResult
   func swapDwindleSplit(for windowID: CGWindowID) -> Bool {
-    mutateTree(containing: windowID, requiring: .dwindle) { $0.swapSplit(containing: windowID) }
+    let hiddenWindowIDs = hiddenWindowIDs(inLayoutContaining: windowID)
+    return mutateTree(containing: windowID, requiring: .dwindle) {
+      $0.swapSplit(containing: windowID, hiding: hiddenWindowIDs)
+    }
   }
 
   /// Update the insertion anchor for the focused window's tiled Space.
@@ -1049,6 +1054,11 @@ public final class Tiling {
   /// Return a layout's leaves that receive no geometry: omitted windows and floated windows.
   private func hiddenWindowIDs(in state: TilingLayoutState) -> Set<CGWindowID> {
     state.omittedWindowIDs.union(floatingOverrideWindowIDs)
+  }
+
+  /// Return the hidden leaves of the layout tiling a window, or none when it is not tiled.
+  private func hiddenWindowIDs(inLayoutContaining windowID: CGWindowID) -> Set<CGWindowID> {
+    layoutIDByWindowID[windowID].flatMap { layoutsByID[$0] }.map(hiddenWindowIDs(in:)) ?? []
   }
 
   /// Return a layout's non-omitted windows in tree order, keeping only floated windows or only
