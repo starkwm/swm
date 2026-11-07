@@ -17,6 +17,6 @@ enum LayoutRatioChange: Equatable {
     case .relative(let delta):
       updatedRatio = currentRatio + delta
     }
-    return min(max(updatedRatio, 0.1), 0.9)
+    return TilingLimits.clampedRatio(updatedRatio)
   }
 }

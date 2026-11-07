@@ -95,4 +95,65 @@ struct MasterLayoutTests {
 
     #expect(result == .insufficientSpace(.masterWidth))
   }
+
+  @Test("layout: places the master pane on each edge")
+  func layoutPlacesTheMasterPaneOnEachEdge() {
+    let layout = MasterLayout()
+    let wide = CGRect(x: 0, y: 0, width: 1_000, height: 500)
+    let tall = CGRect(x: 0, y: 0, width: 500, height: 1_000)
+
+    #expect(
+      layout.layout(windowIDs: [1, 2], in: wide, settings: .defaults, placement: .right)
+        == .frames([
+          1: CGRect(x: 500, y: 0, width: 500, height: 500),
+          2: CGRect(x: 0, y: 0, width: 500, height: 500),
+        ])
+    )
+    #expect(
+      layout.layout(windowIDs: [1, 2, 3], in: tall, settings: .defaults, placement: .top)
+        == .frames([
+          1: CGRect(x: 0, y: 0, width: 500, height: 500),
+          2: CGRect(x: 0, y: 500, width: 250, height: 500),
+          3: CGRect(x: 250, y: 500, width: 250, height: 500),
+        ])
+    )
+    #expect(
+      layout.layout(windowIDs: [1, 2, 3], in: tall, settings: .defaults, placement: .bottom)
+        == .frames([
+          1: CGRect(x: 0, y: 500, width: 500, height: 500),
+          2: CGRect(x: 0, y: 0, width: 250, height: 500),
+          3: CGRect(x: 250, y: 0, width: 250, height: 500),
+        ])
+    )
+  }
+
+  @Test(
+    "layout: reports row constraints for top and bottom placements",
+    arguments: [
+      (CGRect(x: 0, y: 0, width: 100, height: 50), 100, 2, TilingLayoutConstraint.verticalGap),
+      (CGRect(x: 0, y: 0, width: 100, height: 100), 100, 2, TilingLayoutConstraint.masterHeight),
+      (CGRect(x: 0, y: 0, width: 1, height: 1), 0, 2, TilingLayoutConstraint.stackHeight),
+      (CGRect(x: 0, y: 0, width: 1, height: 2), 0, 3, TilingLayoutConstraint.stackWidth),
+    ]
+  )
+  func layoutReportsRowConstraints(
+    bounds: CGRect,
+    gap: Int,
+    windowCount: Int,
+    constraint: TilingLayoutConstraint
+  ) {
+    var settings = SpaceSettings.defaults
+    settings.gap = gap
+    let windowIDs = (1...windowCount).map { CGWindowID($0) }
+
+    for placement in [MasterPlacement.top, .bottom] {
+      let result = MasterLayout().layout(
+        windowIDs: windowIDs,
+        in: bounds,
+        settings: settings,
+        placement: placement
+      )
+      #expect(result == .insufficientSpace(constraint))
+    }
+  }
 }

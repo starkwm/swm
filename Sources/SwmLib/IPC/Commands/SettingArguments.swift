@@ -47,7 +47,7 @@ struct SettingArguments {
         expected: CommandValueParser.ratioChangeForm
       )
     }
-    if case .absolute(let ratio) = change, !(0.1...0.9).contains(ratio) {
+    if case .absolute(let ratio) = change, !TilingLimits.ratioRange.contains(ratio) {
       throw IPCCommandError.invalidRequest("\(setting) must be between 0.1 and 0.9")
     }
     return change
