@@ -1,6 +1,8 @@
 import ApplicationServices
 import CoreGraphics
 
+private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
+
 /// Thin wrapper around macOS Accessibility APIs used by swm.
 public final class AccessibilityClient {
   /// Shared accessibility client.
@@ -171,9 +173,20 @@ public final class AccessibilityClient {
     stringAttribute(for: element, attribute: kAXRoleAttribute as String) == kAXWindowRole
   }
 
-  /// Return whether an application has enhanced accessibility UI enabled.
-  func enhancedUIEnabled(for element: AXUIElement, attribute: String) -> Bool {
-    boolAttribute(for: element, attribute: attribute) ?? false
+  /// Turn off an application's enhanced accessibility UI so window writes apply promptly.
+  ///
+  /// Return whether it was enabled, and so must be restored with `enableEnhancedUI(for:)`.
+  func disableEnhancedUI(for application: AXUIElement) -> Bool {
+    let enabled = boolAttribute(for: application, attribute: kAXEnhancedUserInterface) ?? false
+    if enabled {
+      setAttributeValue(kCFBooleanFalse, for: application, attribute: kAXEnhancedUserInterface)
+    }
+    return enabled
+  }
+
+  /// Turn an application's enhanced accessibility UI back on.
+  func enableEnhancedUI(for application: AXUIElement) {
+    setAttributeValue(kCFBooleanTrue, for: application, attribute: kAXEnhancedUserInterface)
   }
 
   /// Create an accessibility observer for a process.
