@@ -42,8 +42,7 @@ struct SpaceLifecycleHandler {
       guard let window = windows.window(by: windowID) else { continue }
       guard !window.isMinimized else { continue }
 
-      windows.removeLostFocusedEvent(for: windowID)
-      Events.shared.post(.window(.focused(windowID)))
+      windows.replayLostFocusedEvent(for: windowID)
     }
   }
 }

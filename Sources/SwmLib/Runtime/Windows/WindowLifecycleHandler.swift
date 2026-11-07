@@ -41,9 +41,7 @@ struct WindowLifecycleHandler {
     log("window created \(window)")
     tiling.reconcileAndReflowVisibleSpaces()
 
-    if windows.removeLostFocusedEvent(for: window.id) {
-      Events.shared.post(.window(.focused(window.id)))
-    }
+    windows.replayLostFocusedEvent(for: window.id)
   }
 
   /// Remove and invalidate a destroyed managed window.
@@ -121,8 +119,6 @@ struct WindowLifecycleHandler {
     log("window deminimized \(window)")
     tiling.reconcileAndReflowVisibleSpaces()
 
-    if windows.removeLostFocusedEvent(for: window.id) {
-      Events.shared.post(.window(.focused(window.id)))
-    }
+    windows.replayLostFocusedEvent(for: window.id)
   }
 }
