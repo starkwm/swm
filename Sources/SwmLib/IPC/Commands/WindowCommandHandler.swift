@@ -98,9 +98,7 @@ struct WindowCommandHandler {
       window = directionalWindow
     }
 
-    guard window.focus() else {
-      throw IPCCommandError.internalError("could not focus window: \(window.id)")
-    }
+    try window.focusOrThrow()
 
     return .acknowledged(id: request.id)
   }
@@ -174,9 +172,7 @@ struct WindowCommandHandler {
     else {
       throw IPCCommandError.invalidRequest("no available window to cycle")
     }
-    guard cycledWindow.focus() else {
-      throw IPCCommandError.internalError("could not focus window: \(cycledWindow.id)")
-    }
+    try cycledWindow.focusOrThrow()
     return .acknowledged(id: request.id)
   }
 
@@ -229,9 +225,7 @@ struct WindowCommandHandler {
     else {
       throw IPCCommandError.invalidRequest("window is not in a master layout: \(window.id)")
     }
-    guard masterWindow.focus() else {
-      throw IPCCommandError.internalError("could not focus window: \(masterWindow.id)")
-    }
+    try masterWindow.focusOrThrow()
     return .acknowledged(id: request.id)
   }
 
@@ -322,12 +316,13 @@ struct WindowCommandHandler {
   /// Move the selected window to another display.
   private func display(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "move --display")
+    let invalidDisplay = IPCCommandError.invalidValue(
+      "window move --display",
+      selection.value,
+      expected: "a one-based display index, next, or prev"
+    )
     guard let target = WindowDisplayTarget(argument: selection.value) else {
-      throw IPCCommandError.invalidValue(
-        "window move --display",
-        selection.value,
-        expected: "a one-based display index, next, or prev"
-      )
+      throw invalidDisplay
     }
 
     let window = try selectedWindow(selector: selection.selector)
@@ -342,11 +337,7 @@ struct WindowCommandHandler {
 
     guard let targetScreen = target.screen(from: sourceScreen, screens: NSScreen.arrangedScreens)
     else {
-      throw IPCCommandError.invalidValue(
-        "window move --display",
-        selection.value,
-        expected: "a one-based display index, next, or prev"
-      )
+      throw invalidDisplay
     }
 
     try transfer(
@@ -375,9 +366,7 @@ struct WindowCommandHandler {
     let window = try selectedWindow(selector: selection.selector)
     let windowID = window.id
 
-    guard !tiling.isInteractingWithWindow(windowID) else {
-      throw IPCCommandError.invalidRequest("window is being dragged: \(windowID)")
-    }
+    try requireUndraggedWindow(windowID)
 
     tiling.prepareForSynchronousMutation(for: windowID)
     defer {
@@ -420,15 +409,11 @@ struct WindowCommandHandler {
     let window = try selectedWindow(selector: selection.selector)
     try requireUntiledWindow(window)
 
-    guard let frame = window.frame() else {
-      throw IPCCommandError.internalError("could not grid window: \(window.id)")
-    }
-
-    guard let screen = NSScreen.screen(containingLargestIntersectionWith: frame) else {
-      throw IPCCommandError.internalError("could not grid window: \(window.id)")
-    }
-
-    guard let spaceID = WindowServerClient.shared.spaceIDs(containing: window.id).first else {
+    guard
+      let frame = window.frame(),
+      let screen = NSScreen.screen(containingLargestIntersectionWith: frame),
+      let spaceID = WindowServerClient.shared.spaceIDs(containing: window.id).first
+    else {
       throw IPCCommandError.internalError("could not grid window: \(window.id)")
     }
 
@@ -470,6 +455,13 @@ struct WindowCommandHandler {
     }
   }
 
+  /// Reject frame changes while the user is dragging the window.
+  private func requireUndraggedWindow(_ windowID: CGWindowID) throws {
+    guard !tiling.isInteractingWithWindow(windowID) else {
+      throw IPCCommandError.invalidRequest("window is being dragged: \(windowID)")
+    }
+  }
+
   /// Apply a multi-part frame change and report unrecoverable partial state.
   private func applyFrame(
     _ targetFrame: CGRect,
@@ -477,9 +469,7 @@ struct WindowCommandHandler {
     failureMessage: String,
     animated: Bool = true
   ) throws {
-    guard !tiling.isInteractingWithWindow(window.id) else {
-      throw IPCCommandError.invalidRequest("window is being dragged: \(window.id)")
-    }
+    try requireUndraggedWindow(window.id)
     if animated, tiling.animateFrame(targetFrame, for: window.id) { return }
     tiling.prepareForSynchronousMutation(for: window.id)
     guard let currentFrame = window.frame() else {
