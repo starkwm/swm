@@ -128,17 +128,16 @@ public final class Tiling {
 
   /// Seed and reconcile all per-Space state from the current runtime inventory.
   public func initialize() {
-    reconcile()
-    reflowVisibleSpaces()
+    reconcileAndReflowVisibleSpaces()
   }
 
-  /// Set the frame animation duration in seconds.
   /// Seconds that window frame animations last, or zero when disabled.
   var animationDuration: Double { frameReconciler?.animationDuration ?? 0 }
 
   /// Curve used by window frame animations.
   var animationEasing: AnimationEasing { frameReconciler?.animationEasing ?? .easeOutQuad }
 
+  /// Set the frame animation duration in seconds.
   func setAnimationDuration(_ duration: Double) {
     frameReconciler?.animationDuration = duration
   }
@@ -398,13 +397,7 @@ public final class Tiling {
     }
     guard updated else { return false }
 
-    updateMembershipPolling()
-    if selection == .float {
-      // Floating releases layout geometry, so grids deferred while tiled can now apply.
-      reconcile()
-    } else {
-      reflow(spaceID: spaceID)
-    }
+    applyLayoutSelection(selection) { reflow(spaceID: spaceID) }
     return true
   }
 
@@ -412,19 +405,13 @@ public final class Tiling {
   func setLayoutForSpaces(_ selection: LayoutSelection) {
     frameReconciler?.cancelAnimations()
     updateAllLayouts(reflowing: nil) { $0.selection = selection }
-    updateMembershipPolling()
-    if selection == .float {
-      // Floating releases layout geometry, so grids deferred while tiled can now apply.
-      reconcile()
-    } else {
-      reflowVisibleSpaces()
-    }
+    applyLayoutSelection(selection) { reflowVisibleSpaces() }
   }
 
   /// Set or adjust the master ratio for one Space.
   @discardableResult
   func changeMasterRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
-    guard let state = firstLayoutState(for: spaceID) else { return false }
+    guard let state = layoutState(for: spaceID) else { return false }
     let ratio = change.applying(to: state.masterRatio)
     return updateLayouts(for: spaceID, reflowing: .master) { $0.masterRatio = ratio }
   }
@@ -447,7 +434,7 @@ public final class Tiling {
     _ direction: CycleDirection,
     for spaceID: UInt64
   ) -> MasterPlacement? {
-    guard let state = firstLayoutState(for: spaceID) else { return nil }
+    guard let state = layoutState(for: spaceID) else { return nil }
     let placement = state.masterPlacement.cycled(in: direction)
     updateLayouts(for: spaceID, reflowing: .master) { $0.masterPlacement = placement }
     return placement
@@ -461,7 +448,7 @@ public final class Tiling {
   /// Set or adjust the dwindle split ratio for one Space, rebalancing its existing splits.
   @discardableResult
   func changeSplitRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
-    guard let state = firstLayoutState(for: spaceID) else { return false }
+    guard let state = layoutState(for: spaceID) else { return false }
     let ratio = change.applying(to: state.splitRatio)
     return updateLayouts(for: spaceID, reflowing: .dwindle) { $0.setSplitRatio(ratio) }
   }
@@ -486,9 +473,9 @@ public final class Tiling {
     updateAllLayouts(reflowing: .dwindle) { $0.setPreserveSplitDirections(enabled) }
   }
 
-  /// Return the layout state of one Space, or nil when it has no automatic tiling.
+  /// Return the first stable layout's state for a Space, or nil when it has no automatic tiling.
   func layoutState(for spaceID: UInt64) -> TilingLayoutState? {
-    firstLayoutState(for: spaceID)
+    layoutIDs(for: spaceID).first.flatMap { layoutsByID[$0] }
   }
 
   /// Swap a window with its closest neighbour in a direction.
@@ -551,15 +538,13 @@ public final class Tiling {
     manualFloatingByWindowID[windowID] = shouldFloat
     if shouldFloat {
       floatingOverrideWindowIDs.insert(windowID)
-    } else {
-      floatingOverrideWindowIDs.remove(windowID)
-    }
-    if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
-      layoutsByID[layoutID]?.focusedWindowID = nil
-    }
-    if shouldFloat {
+      if layoutsByID[layoutID]?.focusedWindowID == windowID {
+        layoutsByID[layoutID]?.focusedWindowID = nil
+      }
       // A grid deferred while the window was tiled can now apply.
       reconcile()
+    } else {
+      floatingOverrideWindowIDs.remove(windowID)
     }
     applyPlans(for: [layoutID])
     return true
@@ -777,7 +762,7 @@ public final class Tiling {
       if desired.grid == nil { applied.grid = nil }
       if desired.display == nil { applied.display = nil }
       if desired.space == nil { applied.space = nil }
-      appliedRulePlacements[window.id] = applied
+      defer { appliedRulePlacements[window.id] = applied }
       guard ruleSpaceMoveTasks[window.id] == nil else { continue }
       var placement = WindowRulePlacement(
         grid: desired.grid != applied.grid ? desired.grid : nil,
@@ -797,11 +782,9 @@ public final class Tiling {
           topology.spacesByID[spaceIDs[space - 1]]?.type == .normal
         else { continue }
         applied.space = space
-        appliedRulePlacements[window.id] = applied
         if spaceIDs[space - 1] != layoutID.spaceID {
           // A grid from the old Space is not a completed placement on the new one.
           applied.grid = nil
-          appliedRulePlacements[window.id] = applied
           startRuleSpaceMove(window.id, to: space)
           continue
         }
@@ -839,7 +822,6 @@ public final class Tiling {
         applied.grid = nil
       }
       if let grid = placement.grid { applied.grid = grid }
-      appliedRulePlacements[window.id] = applied
     }
     return changedWindowIDs
   }
@@ -942,9 +924,8 @@ public final class Tiling {
         if let context = dwindleContext(layoutID), dwindleAttempts[layoutID]?.context != context {
           frameReconciler?.cancelAnimations(for: context.tree?.windowIDs ?? [])
           let attempt = DwindleAttempt(context: context)
-          attempt.phase = .failed
           dwindleAttempts[layoutID] = attempt
-          log("dwindle layout unsatisfied space=\(layoutID.spaceID)", level: .warn)
+          fail(attempt, for: layoutID)
         }
         continue
       }
@@ -1007,9 +988,14 @@ public final class Tiling {
           return
         }
       }
-      attempt.phase = .failed
-      log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
+      self.fail(attempt, for: id)
     }
+  }
+
+  /// Stop retrying a dwindle layout that its windows could not satisfy.
+  private func fail(_ attempt: DwindleAttempt, for id: TilingLayoutID) {
+    attempt.phase = .failed
+    log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
   }
 
   /// Learn refused dimensions and lower observations after verified smaller frames.
@@ -1113,9 +1099,15 @@ public final class Tiling {
     }
   }
 
-  /// Return the first stable layout's state for a Space.
-  private func firstLayoutState(for spaceID: UInt64) -> TilingLayoutState? {
-    layoutIDs(for: spaceID).first.flatMap { layoutsByID[$0] }
+  /// Track a new layout selection, reconciling when it floats and otherwise reflowing.
+  private func applyLayoutSelection(_ selection: LayoutSelection, reflow: () -> Void) {
+    updateMembershipPolling()
+    if selection == .float {
+      // Floating releases layout geometry, so grids deferred while tiled can now apply.
+      reconcile()
+    } else {
+      reflow()
+    }
   }
 
   /// Return a layout's tree without omitted windows or windows floated over the layout.
