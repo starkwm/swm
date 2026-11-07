@@ -4,7 +4,6 @@ import StarkSkyLight
 @MainActor
 final class SpaceActivation {
   static let shared = SpaceActivation()
-  private static let pollAttempts = 40
 
   private let snapshotProvider: () throws -> SpaceSnapshot
   private let submitActivation: (UInt64, String, [UInt64]) throws -> Void
@@ -64,8 +63,7 @@ final class SpaceActivation {
       display.spaces.filter { $0.id != targetID }.map(\.id.rawValue)
     )
 
-    for attempt in 0...Self.pollAttempts {
-      try Task.checkCancellation()
+    let confirmed = try await pollUntilConfirmed(wait: wait) {
       let observed: SpaceSnapshot
       do {
         observed = try snapshotProvider()
@@ -81,9 +79,9 @@ final class SpaceActivation {
           "Space activation was requested, but the target Space or display disappeared"
         )
       }
-      if currentDisplay.currentSpaceID == targetID { return observed }
-      if attempt < Self.pollAttempts { try await wait() }
+      return currentDisplay.currentSpaceID == targetID ? observed : nil
     }
+    if let confirmed { return confirmed }
 
     throw IPCCommandError.internalError(
       "timed out activating Space \(targetID.rawValue); activation was requested but not confirmed"
