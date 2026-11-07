@@ -12,17 +12,8 @@ public final class Windows {
       return nil
     }
 
-    let applicationElement = AccessibilityClient.shared.applicationElement(for: processID)
-
-    guard
-      let focusedWindowElement = AccessibilityClient.shared.focusedWindowElement(
-        for: applicationElement
-      )
-    else {
-      return nil
-    }
-
-    return AccessibilityClient.shared.optionalWindowID(for: focusedWindowElement)
+    let accessibility = AccessibilityClient.shared
+    return accessibility.focusedWindowID(for: accessibility.applicationElement(for: processID))
   }
 
   /// Tracked ID of the current focused window.
