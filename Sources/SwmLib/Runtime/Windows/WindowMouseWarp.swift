@@ -52,11 +52,7 @@ struct WindowMouseWarp {
       throw IPCCommandError.invalidRequest("window is not on screen: \(windowID)")
     }
 
-    guard let frame,
-      frame.origin.x.isFinite, frame.origin.y.isFinite,
-      frame.size.width.isFinite, frame.size.height.isFinite,
-      frame.size.width > 0, frame.size.height > 0,
-      frame.midX.isFinite, frame.midY.isFinite
+    guard let frame, frame.isFiniteAndNonEmpty, frame.midX.isFinite, frame.midY.isFinite
     else {
       throw IPCCommandError.internalError("could not read window frame: \(windowID)")
     }

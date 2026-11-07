@@ -6,6 +6,13 @@ extension CGRect {
     width * height
   }
 
+  /// Whether every origin and size component is finite and the size is positive.
+  var isFiniteAndNonEmpty: Bool {
+    origin.x.isFinite && origin.y.isFinite
+      && size.width.isFinite && size.height.isFinite
+      && size.width > 0 && size.height > 0
+  }
+
   /// Return whether every frame component differs by no more than a tolerance.
   func matches(_ other: CGRect, tolerance: CGFloat) -> Bool {
     abs(minX - other.minX) <= tolerance
