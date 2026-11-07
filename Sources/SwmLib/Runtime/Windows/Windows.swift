@@ -385,9 +385,9 @@ public final class Windows {
   func manage(_ process: Process, retryObservation: (() -> Void)? = nil) -> Application? {
     guard !process.terminated else { return nil }
     if let application = applicationsByPID[process.pid] {
-      guard application.processSerialNumber.highLongOfPSN == process.psn.highLongOfPSN,
-        application.processSerialNumber.lowLongOfPSN == process.psn.lowLongOfPSN
-      else { return nil }
+      guard WindowServerClient.sameProcess(application.processSerialNumber, process.psn) else {
+        return nil
+      }
       return application
     }
 
