@@ -30,7 +30,7 @@ public final class Spaces {
     activeSpace.last
   }
 
-  private var activeSpace: TrackedState<UInt64>
+  private(set) var activeSpace: TrackedState<UInt64>
   private(set) var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
 
