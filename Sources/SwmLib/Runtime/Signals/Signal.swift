@@ -7,8 +7,8 @@ struct Signal: Equatable, Sendable {
     var event: SignalEvent?
     var action: String?
     var label: String?
-    var appFilter: SignalTextFilter?
-    var titleFilter: SignalTextFilter?
+    var appFilter: TextFilter?
+    var titleFilter: TextFilter?
     var active: Bool?
 
     for argument in arguments {
@@ -39,10 +39,10 @@ struct Signal: Equatable, Sendable {
         label = item.value
 
       case "app":
-        appFilter = try SignalTextFilter(pattern: item.value, inverted: item.inverted)
+        appFilter = try textFilter(item)
 
       case "title":
-        titleFilter = try SignalTextFilter(pattern: item.value, inverted: item.inverted)
+        titleFilter = try textFilter(item)
 
       case "active":
         switch item.value {
@@ -86,6 +86,14 @@ struct Signal: Equatable, Sendable {
     )
   }
 
+  private static func textFilter(_ item: KeyValueArgument) throws -> TextFilter {
+    do {
+      return try TextFilter(pattern: item.value, inverted: item.inverted)
+    } catch {
+      throw IPCCommandError.invalidRequest("invalid signal regex: \(item.value)")
+    }
+  }
+
   /// Optional unique user label.
   let label: String?
 
@@ -96,10 +104,10 @@ struct Signal: Equatable, Sendable {
   let action: String
 
   /// Optional application-name filter.
-  let appFilter: SignalTextFilter?
+  let appFilter: TextFilter?
 
   /// Optional window-title filter.
-  let titleFilter: SignalTextFilter?
+  let titleFilter: TextFilter?
 
   /// Optional active/current-state filter.
   let active: Bool?
@@ -121,42 +129,5 @@ struct Signal: Equatable, Sendable {
     }
 
     return true
-  }
-}
-
-/// Regex-backed text filter with optional inverted matching.
-struct SignalTextFilter: Equatable, @unchecked Sendable {
-  /// Original regular-expression pattern.
-  let pattern: String
-
-  /// Whether a regex match should reject instead of accept.
-  let inverted: Bool
-
-  private let regex: NSRegularExpression
-
-  /// Compile a text filter.
-  init(pattern: String, inverted: Bool = false) throws {
-    do {
-      regex = try NSRegularExpression(pattern: pattern)
-    } catch {
-      throw IPCCommandError.invalidRequest("invalid signal regex: \(pattern)")
-    }
-
-    self.pattern = pattern
-    self.inverted = inverted
-  }
-
-  static func == (lhs: SignalTextFilter, rhs: SignalTextFilter) -> Bool {
-    lhs.pattern == rhs.pattern && lhs.inverted == rhs.inverted
-  }
-
-  /// Return whether the optional value satisfies the filter.
-  func matches(_ value: String?) -> Bool {
-    guard let value else { return false }
-
-    let range = NSRange(value.startIndex..<value.endIndex, in: value)
-    let matched = regex.firstMatch(in: value, range: range) != nil
-
-    return inverted ? !matched : matched
   }
 }

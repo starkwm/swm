@@ -42,6 +42,12 @@ struct WindowRule: Encodable {
     return try WindowRule(values: values)
   }
 
+  private static func textFilter(key: String, in values: [String: String]) throws -> TextFilter? {
+    if let pattern = values[key] { return try TextFilter(pattern: pattern) }
+    if let pattern = values[key + "!"] { return try TextFilter(pattern: pattern, inverted: true) }
+    return nil
+  }
+
   let label: String?
   let manage: Bool?
   let grid: WindowGrid?
@@ -50,8 +56,9 @@ struct WindowRule: Encodable {
   let space: Int?
   private let values: [String: String]
   private let bundleID: String?
-  private let app: NSRegularExpression?
-  private let title: NSRegularExpression?
+  private let bundleIDInverted: Bool
+  private let app: TextFilter?
+  private let title: TextFilter?
 
   private init(values: [String: String]) throws {
     self.values = values
@@ -82,18 +89,19 @@ struct WindowRule: Encodable {
       space = nil
     }
     self.bundleID = values["bundle-id"] ?? values["bundle-id!"]
+    self.bundleIDInverted = values["bundle-id!"] != nil
     do {
-      app = try (values["app"] ?? values["app!"]).map { try NSRegularExpression(pattern: $0) }
-      title = try (values["title"] ?? values["title!"]).map { try NSRegularExpression(pattern: $0) }
+      app = try Self.textFilter(key: "app", in: values)
+      title = try Self.textFilter(key: "title", in: values)
     } catch {
       throw IPCCommandError.invalidRequest("invalid rule regex: \(error.localizedDescription)")
     }
   }
 
   func matches(_ window: TilingWindowSnapshot) -> Bool {
-    matches(bundleID, exactly: window.bundleID, inverted: values["bundle-id!"] != nil)
-      && matches(app, value: window.app, inverted: values["app!"] != nil)
-      && matches(title, value: window.title, inverted: values["title!"] != nil)
+    matches(bundleID, exactly: window.bundleID, inverted: bundleIDInverted)
+      && app?.matches(window.app) != false
+      && title?.matches(window.title) != false
   }
 
   func encode(to encoder: Encoder) throws {
@@ -105,14 +113,5 @@ struct WindowRule: Encodable {
     guard let expected else { return true }
     guard let value else { return false }
     return (value == expected) != inverted
-  }
-
-  private func matches(_ regex: NSRegularExpression?, value: String?, inverted: Bool) -> Bool {
-    guard let regex else { return true }
-    guard let value else { return false }
-    let matched =
-      regex.firstMatch(in: value, range: NSRange(value.startIndex..<value.endIndex, in: value))
-      != nil
-    return inverted ? !matched : matched
   }
 }
