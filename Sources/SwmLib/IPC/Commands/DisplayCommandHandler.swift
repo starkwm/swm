@@ -48,9 +48,7 @@ struct DisplayCommandHandler {
     guard targetID != sourceID else { return .acknowledged(id: request.id) }
 
     if let window = frontmostWindow(on: screen) {
-      guard window.focus() else {
-        throw IPCCommandError.internalError("could not focus window: \(window.id)")
-      }
+      try window.focusOrThrow()
       return .acknowledged(id: request.id)
     }
 
