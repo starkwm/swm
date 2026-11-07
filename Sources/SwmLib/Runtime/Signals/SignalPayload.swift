@@ -73,22 +73,12 @@ struct SignalPayload: Equatable, Sendable {
 
   /// Build a display-change payload.
   static func displayChanged(currentID: String?, recentID: String?) -> SignalPayload {
-    var environment = [String: String]()
-
-    if let currentID {
-      environment["SWM_DISPLAY_ID"] = currentID
-    }
-
-    if let recentID {
-      environment["SWM_RECENT_DISPLAY_ID"] = recentID
-    }
-
-    return SignalPayload(
+    SignalPayload(
       event: .displayChanged,
       app: nil,
       title: nil,
       active: nil,
-      environment: environment
+      environment: displayEnvironment(currentID: currentID, recentID: recentID)
     )
   }
 
@@ -99,7 +89,22 @@ struct SignalPayload: Equatable, Sendable {
     currentID: String?,
     recentID: String?
   ) -> SignalPayload {
-    var environment = ["SWM_EVENT_DISPLAY_ID": String(displayID)]
+    var environment = displayEnvironment(currentID: currentID, recentID: recentID)
+    environment["SWM_EVENT_DISPLAY_ID"] = String(displayID)
+
+    return SignalPayload(
+      event: event,
+      app: nil,
+      title: nil,
+      active: nil,
+      environment: environment
+    )
+  }
+
+  /// Build the environment shared by display payloads.
+  private static func displayEnvironment(currentID: String?, recentID: String?) -> [String: String]
+  {
+    var environment = [String: String]()
 
     if let currentID {
       environment["SWM_DISPLAY_ID"] = currentID
@@ -109,13 +114,7 @@ struct SignalPayload: Equatable, Sendable {
       environment["SWM_RECENT_DISPLAY_ID"] = recentID
     }
 
-    return SignalPayload(
-      event: event,
-      app: nil,
-      title: nil,
-      active: nil,
-      environment: environment
-    )
+    return environment
   }
 
   /// Signal event name.
