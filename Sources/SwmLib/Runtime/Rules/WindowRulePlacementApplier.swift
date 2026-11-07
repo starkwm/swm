@@ -39,26 +39,15 @@ struct WindowRulePlacementApplier {
     guard let window = windows.window(by: windowID) else {
       throw IPCCommandError.invalidRequest("window not found: \(windowID)")
     }
-    let destinationID = try await WindowSpaceTransfer.shared.move(
-      windowID: windowID,
-      to: .index(index)
-    ) { windows.window(by: windowID) === window }
-    guard
-      let target = NSScreen.screen(for: WindowServerClient.shared.screenID(for: destinationID)),
-      let frame = window.frame(),
-      let source = NSScreen.screen(containingLargestIntersectionWith: frame),
-      source.uuid != target.uuid
-    else { return }
-    let targetFrame = WindowDisplayTransfer(
-      windowFrame: frame,
-      sourceFrame: source.axVisibleFrame,
-      targetFrame: target.axVisibleFrame
-    ).targetWindowFrame()
-    let result = window.setFrame(targetFrame, from: frame)
-    guard result == .success else {
-      throw IPCCommandError.internalError(
-        "window moved to Space \(destinationID), but display placement failed: \(result)"
-      )
+    try await WindowSpaceTransfer.shared.move(window, to: .index(index)) {
+      windows.window(by: windowID) === window
+    } fit: { frame, targetFrame, destinationID in
+      let result = window.setFrame(targetFrame, from: frame)
+      guard result == .success else {
+        throw IPCCommandError.internalError(
+          "window moved to Space \(destinationID), but display placement failed: \(result)"
+        )
+      }
     }
   }
 }
