@@ -31,9 +31,7 @@ struct SpaceLifecycleHandler {
     spaces.activeSpaceDidChange(to: space.id)
     refresh()
 
-    log(
-      "space changed \(space) current: \(spaces.currentActiveSpaceID.map(String.init) ?? "nil"), last: \(spaces.lastActiveSpaceID.map(String.init) ?? "nil")"
-    )
+    log("space changed \(space) \(spaces.activeSpace)")
   }
 
   /// Replay focused-window events that arrived before their windows were manageable.

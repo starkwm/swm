@@ -96,9 +96,7 @@ struct WindowLifecycleHandler {
     windows.focusedWindowDidChange(to: windowID)
     tiling.windowDidFocus(windowID)
 
-    log(
-      "window focused \(window) current: \(windows.currentFocusedWindowID.map(String.init) ?? "nil"), last: \(windows.lastFocusedWindowID.map(String.init) ?? "nil")"
-    )
+    log("window focused \(window) \(windows.focusedWindowState)")
   }
 
   /// Handle a window move or resize notification.

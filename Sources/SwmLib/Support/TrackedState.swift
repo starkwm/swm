@@ -1,10 +1,15 @@
 /// Tracks a current value and the previous distinct value.
-struct TrackedState<Value: Equatable> {
+struct TrackedState<Value: Equatable>: CustomStringConvertible {
   /// Current tracked value.
   private(set) var current: Value?
 
   /// Previous tracked value.
   private(set) var last: Value?
+
+  /// Current and previous values formatted for logs.
+  var description: String {
+    "current: \(current.map { "\($0)" } ?? "nil"), last: \(last.map { "\($0)" } ?? "nil")"
+  }
 
   /// Create tracked state with the same current and previous value.
   init(current: Value?) {

@@ -26,7 +26,7 @@ public final class Displays {
     activeDisplay.last
   }
 
-  private var activeDisplay: TrackedState<String>
+  private(set) var activeDisplay: TrackedState<String>
 
   /// Create a display observation seeded from the active space.
   public init() {

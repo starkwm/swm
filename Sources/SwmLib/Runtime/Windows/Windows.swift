@@ -35,7 +35,7 @@ public final class Windows {
   private var mouseEventMonitor: Any?
   private var pendingMouseFocusWindowID: CGWindowID?
   private(set) var focusFollowsMouseMode = FocusFollowsMouseMode.off
-  private var focusedWindowState: TrackedState<CGWindowID>
+  private(set) var focusedWindowState: TrackedState<CGWindowID>
   private var applicationsByPID = [pid_t: Application]()
   private var unresolvedApplicationIDs = Set<pid_t>()
   private var windowsByID = [CGWindowID: Window]()
