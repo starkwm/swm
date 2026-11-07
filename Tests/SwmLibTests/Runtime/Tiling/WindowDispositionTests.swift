@@ -16,6 +16,11 @@ struct WindowEligibilityPolicyTests {
       (window(id: 5, subrole: "AXDialog"), Set([UInt64(10)]), .excluded(.unsupportedSubrole)),
       (window(id: 6, isMovable: false), Set([UInt64(10)]), .excluded(.notMovable)),
       (window(id: 7, isResizable: false), Set([UInt64(10)]), .excluded(.notResizable)),
+      (window(id: 9, subrole: nil), Set([UInt64(10)]), .excluded(.unsupportedSubrole)),
+      (
+        window(id: 10, subrole: nil, isMovable: false, hasUnavailableFacts: true),
+        Set([UInt64(10)]), .pending
+      ),
     ]
   )
   func dispositionExplainsEligibilityOutcomes(
@@ -41,9 +46,10 @@ struct WindowEligibilityPolicyTests {
 private func window(
   id: CGWindowID,
   displayID: String? = "display",
-  subrole: String = "AXStandardWindow",
+  subrole: String? = "AXStandardWindow",
   isMovable: Bool = true,
-  isResizable: Bool = true
+  isResizable: Bool = true,
+  hasUnavailableFacts: Bool = false
 ) -> TilingWindowSnapshot {
   TilingWindowSnapshot(
     id: id,
@@ -51,6 +57,7 @@ private func window(
     subrole: subrole,
     isMinimized: false,
     isMovable: isMovable,
-    isResizable: isResizable
+    isResizable: isResizable,
+    hasUnavailableFacts: hasUnavailableFacts
   )
 }

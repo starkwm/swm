@@ -406,6 +406,52 @@ struct TilingTests {
     )
   }
 
+  @Test("reconcile: keeps master order through failed Accessibility reads and recovers by polling")
+  func reconcileKeepsMasterOrderThroughFailedAccessibilityReadsAndRecoversByPolling()
+    async throws
+  {
+    var readsFail = false
+    let tiling = makeTiling(
+      windows: {
+        [
+          window(id: 1),
+          readsFail
+            ? TilingWindowSnapshot(
+              id: 2,
+              displayID: "display",
+              subrole: nil,
+              isMinimized: false,
+              isMovable: false,
+              isResizable: false,
+              hasUnavailableFacts: true
+            ) : window(id: 2),
+        ]
+      },
+      memberships: { [1: [10], 2: [10]] }
+    )
+    tiling.initialize()
+    #expect(tiling.setLayout(.master, for: 10))
+    #expect(tiling.swapWindowWithMaster(2))
+    let promoted = TilingLayoutPlan.layout(
+      .frames([
+        2: CGRect(x: 0, y: 0, width: 500, height: 800),
+        1: CGRect(x: 500, y: 0, width: 500, height: 800),
+      ])
+    )
+    #expect(tiling.layoutPlan(for: layoutID(10)) == promoted)
+
+    readsFail = true
+    tiling.reconcile()
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+    )
+
+    // Membership is unchanged, so only the failed-read retry can recover the window.
+    readsFail = false
+    try await waitForAnimation { tiling.layoutPlan(for: layoutID(10)) == promoted }
+  }
+
   @Test("reconcile: cancels animation only for changed membership")
   func reconcileCancelsAnimationOnlyForChangedMembership() async throws {
     var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
