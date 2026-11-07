@@ -523,8 +523,7 @@ public final class Tiling {
   func masterWindowID(inLayoutContaining windowID: CGWindowID) -> CGWindowID? {
     guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
     guard let state = layoutsByID[layoutID], state.selection == .master else { return nil }
-    let unavailableWindowIDs = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
-    return state.tree?.removing(unavailableWindowIDs)?.windowIDs.first
+    return activeTree(of: state)?.windowIDs.first
   }
 
   /// Return whether an automatic layout currently owns a window's geometry.
@@ -587,10 +586,7 @@ public final class Tiling {
         })
     else { return nil }
     guard let state = layoutsByID[layoutID] else { return nil }
-    var windowIDs = (state.tree?.windowIDs ?? []).filter { candidateID in
-      guard !state.omittedWindowIDs.contains(candidateID) else { return false }
-      return state.selection == .float || !floatingOverrideWindowIDs.contains(candidateID)
-    }
+    var windowIDs = availableWindowIDs(in: state, floating: false)
     if state.selection == .float {
       windowIDs += fixedSizeLayoutIDByWindowID.keys.filter {
         fixedSizeLayoutIDByWindowID[$0] == layoutID
@@ -719,7 +715,6 @@ public final class Tiling {
     guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
     guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
 
-    let omittedWindowIDs = state.omittedWindowIDs.union(floatingOverrideWindowIDs)
     let spaceSettings = spaces.settings(for: layoutID.spaceID)
     if state.selection == .dwindle, state.preserveSplitDirections {
       state.tree = dwindleLayout.resolvingSplitDirections(
@@ -729,7 +724,7 @@ public final class Tiling {
       )
       layoutsByID[layoutID] = state
     }
-    let activeTree = state.tree?.removing(omittedWindowIDs)
+    let activeTree = activeTree(of: state)
 
     switch state.selection {
     case .float:
@@ -967,7 +962,7 @@ public final class Tiling {
       let display = topology.displaysByID[id.displayID]
     else { return nil }
     return DwindleContext(
-      tree: state.tree?.removing(state.omittedWindowIDs.union(floatingOverrideWindowIDs)),
+      tree: activeTree(of: state),
       bounds: display.visibleFrame,
       settings: spaces.settings(for: id.spaceID)
     )
@@ -1123,6 +1118,21 @@ public final class Tiling {
     layoutIDs(for: spaceID).first.flatMap { layoutsByID[$0] }
   }
 
+  /// Return a layout's tree without omitted windows or windows floated over the layout.
+  private func activeTree(of state: TilingLayoutState) -> TilingTree? {
+    state.tree?.removing(state.omittedWindowIDs.union(floatingOverrideWindowIDs))
+  }
+
+  /// Return a layout's non-omitted windows in tree order, keeping only floated windows or only
+  /// tiled windows unless the whole layout floats.
+  private func availableWindowIDs(in state: TilingLayoutState, floating: Bool) -> [CGWindowID] {
+    (state.tree?.windowIDs ?? []).filter { windowID in
+      guard !state.omittedWindowIDs.contains(windowID) else { return false }
+      return state.selection == .float
+        || floatingOverrideWindowIDs.contains(windowID) == floating
+    }
+  }
+
   /// Return stable layout IDs for a Space.
   private func layoutIDs(for spaceID: UInt64) -> [TilingLayoutID] {
     layoutsByID.keys.filter { $0.spaceID == spaceID }.sorted()
@@ -1138,11 +1148,9 @@ public final class Tiling {
     guard currentTopology?.visibleLayoutIDs.contains(layoutID) == true else { return false }
     guard let frameReconciler else { return false }
 
-    let candidateWindowIDs = (state.tree?.windowIDs ?? []).filter { candidateWindowID in
-      guard !state.omittedWindowIDs.contains(candidateWindowID) else { return false }
-      return state.selection == .float || floatingOverrideWindowIDs.contains(candidateWindowID)
-    }
-    let framesByWindowID = frameReconciler.frames(for: candidateWindowIDs)
+    let framesByWindowID = frameReconciler.frames(
+      for: availableWindowIDs(in: state, floating: true)
+    )
     guard
       let sourceFrame = framesByWindowID[windowID],
       let neighborWindowID = direction.neighbor(of: windowID, in: framesByWindowID),
