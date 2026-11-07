@@ -340,6 +340,26 @@ struct SpaceCommandHandlerTests {
   }
 
   @Test(
+    "dispatch: rejects absolute ratios outside the tiled range",
+    arguments: [
+      ("--master-ratio", "abs:0.05", "master-ratio"), ("--master-ratio", "abs:5", "master-ratio"),
+      ("--split-ratio", "abs:0.95", "split-ratio"),
+    ]
+  )
+  func dispatchRejectsAbsoluteRatiosOutsideTheTiledRange(
+    command: String,
+    value: String,
+    setting: String
+  ) async {
+    let response = await handler(spaces: Spaces(activeSpaceID: 42)).dispatch(
+      request(command: command, args: [value])
+    )
+    #expect(!response.ok)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "\(setting) must be between 0.1 and 0.9")
+  }
+
+  @Test(
     "dispatch: rejects unsupported Space commands",
     arguments: [
       ("--unknown", [String]()), ("--toggle", ["tiling"]), ("--focus", ["recent"]),

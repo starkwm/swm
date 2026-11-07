@@ -5,6 +5,7 @@ struct SpaceCommandHandler {
   private let tiling: Tiling
   private let spaceIDProvider: () -> [UInt64]
   private let activateSpace: (Int) async throws -> Void
+  private let arguments = SettingArguments(scope: "space")
 
   /// Create a space command handler backed by space and tiling services.
   init(
@@ -67,38 +68,23 @@ struct SpaceCommandHandler {
 
   /// The selected Space's current value of a setting, in the form its command accepts.
   private func currentValue(of command: String, for spaceID: UInt64) throws -> String {
-    let settings = spaces.settings(for: spaceID)
-    switch command {
-    case "--gap": return String(settings.gap)
-    case "--padding": return settings.padding.commandOptions
-    default: break
+    let setting = String(command.dropFirst(2))
+    if let value = SettingArguments.currentValue(of: setting, in: spaces.settings(for: spaceID)) {
+      return value
     }
 
     guard let state = tiling.layoutState(for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
-    switch command {
-    case "--layout": return state.selection.rawValue
-    case "--master-ratio": return String(Double(state.masterRatio))
-    case "--master-placement": return state.masterPlacement.rawValue
-    case "--split-ratio": return String(Double(state.splitRatio))
-    case "--preserve-split": return state.preserveSplitDirections ? "on" : "off"
-    default:
+    guard let value = SettingArguments.currentValue(of: setting, in: state) else {
       throw IPCCommandError.unsupportedCommand("unsupported space command: \(command)")
     }
+    return value
   }
 
   /// Set or adjust the master pane ratio for the selected Space.
   private func masterRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "space master-ratio").requiredValue()
-    guard let change = CommandValueParser.ratioChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "space master-ratio",
-        argument,
-        expected: CommandValueParser.ratioChangeForm
-      )
-    }
-
+    let change = try arguments.ratioChange(request.args, setting: "master-ratio")
     guard tiling.changeMasterRatio(change, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
@@ -107,15 +93,7 @@ struct SpaceCommandHandler {
 
   /// Set or adjust the dwindle split ratio for the selected Space, rebalancing its splits.
   private func splitRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "space split-ratio").requiredValue()
-    guard let change = CommandValueParser.ratioChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "space split-ratio",
-        argument,
-        expected: CommandValueParser.ratioChangeForm
-      )
-    }
-
+    let change = try arguments.ratioChange(request.args, setting: "split-ratio")
     guard tiling.changeSplitRatio(change, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
@@ -124,23 +102,16 @@ struct SpaceCommandHandler {
 
   /// Set or cycle the master pane edge for the selected Space.
   private func masterPlacement(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(
-      request.args,
-      context: "space master-placement"
-    ).requiredValue()
-    let placement: MasterPlacement
-    if let selectedPlacement = MasterPlacement(rawValue: argument) {
-      guard tiling.setMasterPlacement(selectedPlacement, for: spaceID) else {
-        throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
-      }
-      placement = selectedPlacement
-    } else if let direction = CycleDirection(rawValue: argument) {
-      guard let cycledPlacement = tiling.cycleMasterPlacement(direction, for: spaceID) else {
-        throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
-      }
-      placement = cycledPlacement
-    } else {
-      throw IPCCommandError.invalidRequest("invalid space master-placement: \(argument)")
+    let placement: MasterPlacement?
+    switch try arguments.masterPlacement(request.args) {
+    case .set(let selectedPlacement):
+      placement =
+        tiling.setMasterPlacement(selectedPlacement, for: spaceID) ? selectedPlacement : nil
+    case .cycle(let direction):
+      placement = tiling.cycleMasterPlacement(direction, for: spaceID)
+    }
+    guard let placement else {
+      throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
     return .success(id: request.id, message: placement.rawValue)
   }
@@ -148,14 +119,7 @@ struct SpaceCommandHandler {
   /// Set whether dwindle branches preserve their resolved direction on the selected Space.
   private func preserveSplitDirections(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse
   {
-    let argument = try IPCArguments(
-      request.args,
-      context: "space preserve-split"
-    ).requiredValue()
-    guard let enabled = CommandValueParser.boolean(from: argument) else {
-      throw IPCCommandError.invalidRequest("invalid space preserve-split value: \(argument)")
-    }
-
+    let enabled = try arguments.preserveSplit(request.args)
     guard tiling.setSplitDirectionPreservation(enabled, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
@@ -164,11 +128,7 @@ struct SpaceCommandHandler {
 
   /// Select floating or automatic layout for the selected Space.
   private func layout(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "space layout").requiredValue()
-    guard let selection = LayoutSelection(rawValue: argument) else {
-      throw IPCCommandError.invalidRequest("invalid space layout: \(argument)")
-    }
-
+    let selection = try arguments.layout(request.args)
     guard tiling.setLayout(selection, for: spaceID) else {
       throw IPCCommandError.invalidRequest("automatic tiling unavailable for selected space")
     }
@@ -178,19 +138,8 @@ struct SpaceCommandHandler {
 
   /// Set or adjust padding sides for the selected space, keeping sides left out.
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let changes = try request.args.map { argument in
-      guard let change = PaddingSideChange(argument: argument) else {
-        throw IPCCommandError.invalidValue(
-          "space padding",
-          argument,
-          expected: PaddingSideChange.form
-        )
-      }
-      return change
-    }
-
     let padding = try PaddingSideChange.applying(
-      changes,
+      arguments.paddingChanges(request.args),
       to: spaces.settings(for: spaceID).padding,
       context: "space padding"
     )
@@ -202,22 +151,8 @@ struct SpaceCommandHandler {
 
   /// Set or adjust the window gap for the selected space.
   private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "space gap").requiredValue()
-    guard let change = CommandValueParser.pointsChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "space gap",
-        argument,
-        expected: CommandValueParser.pointsChangeForm
-      )
-    }
-
-    switch change.mode {
-    case .absolute:
-      spaces.setGap(change.value, for: spaceID)
-    case .relative:
-      try spaces.adjustGap(change.value, for: spaceID)
-    }
-
+    let gap = try arguments.gap(request.args, current: spaces.settings(for: spaceID).gap)
+    spaces.setGap(gap, for: spaceID)
     tiling.reflow(spaceID: spaceID)
 
     return .acknowledged(id: request.id)

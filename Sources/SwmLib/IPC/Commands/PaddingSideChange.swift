@@ -13,17 +13,11 @@ struct PaddingSideChange: Equatable {
   ) throws -> SpacePadding {
     var padding = padding
     for change in changes {
-      let current = padding[change.side]
-      switch change.mode {
-      case .absolute:
-        padding[change.side] = change.value
-      case .relative:
-        let (value, overflow) = current.addingReportingOverflow(change.value)
-        guard !overflow else {
-          throw IPCCommandError.invalidRequest("\(context) adjustment overflows integer range")
-        }
-        padding[change.side] = value
-      }
+      padding[change.side] = try change.mode.applying(
+        change.value,
+        to: padding[change.side],
+        context: context
+      )
     }
     return padding.clamped()
   }

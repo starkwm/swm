@@ -20,14 +20,6 @@ public final class Spaces {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
-  private static func add(_ value: Int, _ delta: Int, setting: String) throws -> Int {
-    let (result, overflow) = value.addingReportingOverflow(delta)
-    guard !overflow else {
-      throw IPCCommandError.invalidRequest("space \(setting) adjustment overflows integer range")
-    }
-    return result
-  }
-
   /// ID of the currently active space.
   var currentActiveSpaceID: UInt64? {
     activeSpace.current
@@ -136,14 +128,6 @@ public final class Spaces {
   func setGap(_ gap: Int, for spaceID: UInt64) -> SpaceSettings {
     update(spaceID) { settings in
       settings.gap = max(0, gap)
-    }
-  }
-
-  /// Adjust the window gap for a space, clamping it to zero or greater.
-  @discardableResult
-  func adjustGap(_ gap: Int, for spaceID: UInt64) throws -> SpaceSettings {
-    try update(spaceID) { settings in
-      settings.gap = max(0, try Self.add(settings.gap, gap, setting: "gap"))
     }
   }
 
