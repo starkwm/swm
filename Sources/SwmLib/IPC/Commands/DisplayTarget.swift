@@ -2,9 +2,8 @@ import CoreGraphics
 
 /// Display target for focusing a display.
 enum DisplayTarget: Equatable {
-  case index(Int)
-  case next
-  case previous
+  /// A one-based index, or the display after or before the source display.
+  case cyclic(CyclicTarget)
   case first
   case last
   case recent
@@ -17,21 +16,19 @@ enum DisplayTarget: Equatable {
 
   /// Parse a display target.
   init?(argument: String) {
+    if let target = CyclicTarget(argument: argument) {
+      self = .cyclic(target)
+      return
+    }
+
     switch argument {
-    case "next": self = .next
-    case "prev": self = .previous
     case "first": self = .first
     case "last": self = .last
     case "recent": self = .recent
     case "mouse": self = .mouse
     default:
-      if let direction = CardinalDirection(rawValue: argument) {
-        self = .direction(direction)
-      } else if let index = Int(argument), index > 0 {
-        self = .index(index)
-      } else {
-        return nil
-      }
+      guard let direction = CardinalDirection(rawValue: argument) else { return nil }
+      self = .direction(direction)
     }
   }
 
@@ -48,15 +45,8 @@ enum DisplayTarget: Equatable {
     let sourceIndex = displays.firstIndex { $0.id == sourceID }
 
     switch self {
-    case .index(let index):
-      guard displays.indices.contains(index - 1) else { return nil }
-      return displays[index - 1].id
-    case .next:
-      guard let sourceIndex else { return nil }
-      return displays[(sourceIndex + 1) % displays.count].id
-    case .previous:
-      guard let sourceIndex else { return nil }
-      return displays[(sourceIndex - 1 + displays.count) % displays.count].id
+    case .cyclic(let target):
+      return target.element(in: displays, from: sourceIndex)?.id
     case .first:
       return displays.first?.id
     case .last:

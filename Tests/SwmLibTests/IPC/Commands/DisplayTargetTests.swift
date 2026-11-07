@@ -47,9 +47,9 @@ struct DisplayTargetTests {
 
   @Test("displayID: returns nil when no display matches")
   func displayIDReturnsNilWhenNoDisplayMatches() {
-    #expect(resolve(.index(4), from: "centre") == nil)
+    #expect(resolve(.cyclic(.index(4)), from: "centre") == nil)
     #expect(resolve(.direction(.right), from: "centre") == nil)
-    #expect(resolve(.next, from: nil) == nil)
+    #expect(resolve(.cyclic(.next), from: nil) == nil)
     #expect(resolve(.recent, from: "centre", recentID: nil) == nil)
     #expect(resolve(.recent, from: "centre", recentID: "disconnected") == nil)
     #expect(resolve(.mouse, from: "centre", mouseLocation: CGPoint(x: 0, y: 5000)) == nil)

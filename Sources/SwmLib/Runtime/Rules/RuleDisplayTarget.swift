@@ -6,7 +6,7 @@ enum RuleDisplayTarget: Equatable {
   case uuid(UUID)
 
   init?(argument: String) {
-    if let index = Int(argument), index > 0 {
+    if let index = CyclicTarget.oneBasedIndex(from: argument) {
       self = .index(index)
     } else if let uuid = UUID(uuidString: argument) {
       self = .uuid(uuid)
@@ -19,7 +19,7 @@ enum RuleDisplayTarget: Equatable {
   func resolve(in displayIDs: [String]) -> String? {
     switch self {
     case .index(let index):
-      return displayIDs.indices.contains(index - 1) ? displayIDs[index - 1] : nil
+      return displayIDs.element(atOneBasedIndex: index)
     case .uuid(let uuid):
       return displayIDs.first { UUID(uuidString: $0) == uuid }
     }
