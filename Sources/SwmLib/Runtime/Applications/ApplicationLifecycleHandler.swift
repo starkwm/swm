@@ -35,9 +35,7 @@ struct ApplicationLifecycleHandler {
 
     if !workspace.isFinishedLaunching(process) {
       log("application has not finished launching \(process)")
-      workspace.observeFinishedLaunching(process)
-      guard workspace.isFinishedLaunching(process) else { return }
-      workspace.unobserveFinishedLaunching(process)
+      guard workspace.observeUntilFinishedLaunching(process) else { return }
     }
 
     if !workspace.isObservable(process) {

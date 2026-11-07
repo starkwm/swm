@@ -115,6 +115,16 @@ public final class Workspace: NSObject {
     unobserve(process, registry: finishedLaunchingObservations)
   }
 
+  /// Observe a launching process, removing the observer if it finished while registering.
+  ///
+  /// Returns whether the process has finished launching.
+  func observeUntilFinishedLaunching(_ process: Process) -> Bool {
+    observeFinishedLaunching(process)
+    guard isFinishedLaunching(process) else { return false }
+    unobserveFinishedLaunching(process)
+    return true
+  }
+
   /// Publish an active-space changed event.
   @objc
   func activeSpaceDidChange(_: Notification) {

@@ -84,9 +84,7 @@ public final class Windows {
   public func discover(from processes: Processes, onRecovery: @escaping () -> Void) {
     for process in processes.all() {
       if !workspace.isFinishedLaunching(process) {
-        workspace.observeFinishedLaunching(process)
-        guard workspace.isFinishedLaunching(process) else { continue }
-        workspace.unobserveFinishedLaunching(process)
+        guard workspace.observeUntilFinishedLaunching(process) else { continue }
       }
       discover(process, resolveProcess: { processes.find(by: process.psn) }, onRecovery: onRecovery)
     }
