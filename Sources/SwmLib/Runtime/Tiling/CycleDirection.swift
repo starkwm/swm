@@ -1,5 +1,5 @@
 /// Direction through a cyclic sequence.
-enum CycleDirection: String, Equatable {
+public enum CycleDirection: String, Equatable, Sendable {
   /// Select the following value, wrapping at the end.
   case next
 

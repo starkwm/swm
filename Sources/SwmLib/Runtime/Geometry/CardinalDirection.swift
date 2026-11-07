@@ -1,7 +1,7 @@
 import CoreGraphics
 
 /// Cardinal direction used to select a neighbouring window or display by frame geometry.
-enum CardinalDirection: String, Equatable {
+public enum CardinalDirection: String, Equatable, Sendable {
   case left
   case right
   case up
