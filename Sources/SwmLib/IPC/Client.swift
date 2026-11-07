@@ -31,18 +31,15 @@ public enum Client {
       }
 
       return SendResult(ok: response.ok, outputMessage: response.outputMessage)
-    } catch let error as IPCCommandError {
-      let response = error.response(id: "")
-
-      return SendResult(ok: false, outputMessage: response.outputMessage)
-    } catch let error as SocketError {
-      let response = IPCCommandError.internalError(error.localizedDescription).response(id: "")
-
-      return SendResult(ok: false, outputMessage: response.outputMessage)
     } catch {
-      let response = IPCCommandError.internalError("\(error)").response(id: "")
+      let failure: IPCCommandError
+      switch error {
+      case let error as IPCCommandError: failure = error
+      case let error as SocketError: failure = .internalError(error.localizedDescription)
+      default: failure = .internalError("\(error)")
+      }
 
-      return SendResult(ok: false, outputMessage: response.outputMessage)
+      return SendResult(ok: false, outputMessage: failure.response(id: "").outputMessage)
     }
   }
 
