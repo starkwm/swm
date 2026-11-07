@@ -1,5 +1,20 @@
 import AppKit
 
+/// Window events identified by the notified element's window ID.
+private let windowIDEvents: [String: @Sendable (CGWindowID) -> WindowEvent] = [
+  kAXFocusedWindowChangedNotification: WindowEvent.focused,
+  kAXWindowMovedNotification: WindowEvent.moved,
+  kAXTitleChangedNotification: WindowEvent.titleChanged,
+  kAXWindowResizedNotification: WindowEvent.resized,
+]
+
+/// Window events for the managed window registered as the notification context.
+private let observedWindowEvents: [String: @Sendable (Window) -> WindowEvent] = [
+  kAXWindowMiniaturizedNotification: WindowEvent.minimized,
+  kAXWindowDeminiaturizedNotification: WindowEvent.deminimized,
+  kAXUIElementDestroyedNotification: WindowEvent.destroyed,
+]
+
 /// Forward accessibility window notifications into swm's event service.
 private func accessibilityObserverCallback(
   _ observer: AXObserver,
@@ -7,57 +22,23 @@ private func accessibilityObserverCallback(
   _ notification: CFString,
   _ context: UnsafeMutableRawPointer?
 ) {
-  switch notification as String {
-  case kAXCreatedNotification:
+  let notification = notification as String
+
+  if notification == kAXCreatedNotification {
     guard let pid = AccessibilityClient.shared.processID(for: element) else { return }
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
     Events.shared.post(.window(.created(pid, windowID)))
-
-  case kAXFocusedWindowChangedNotification:
+  } else if let event = windowIDEvents[notification] {
     guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    Events.shared.post(.window(.focused(windowID)))
-
-  case kAXWindowMovedNotification:
-    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    Events.shared.post(.window(.moved(windowID)))
-
-  case kAXTitleChangedNotification:
-    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    Events.shared.post(.window(.titleChanged(windowID)))
-
-  case kAXWindowResizedNotification:
-    guard let windowID = AccessibilityClient.shared.optionalWindowID(for: element) else { return }
-    Events.shared.post(.window(.resized(windowID)))
-
-  case kAXWindowMiniaturizedNotification:
+    Events.shared.post(.window(event(windowID)))
+  } else if let event = observedWindowEvents[notification] {
     guard let context else { return }
     let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
     // The observer source is installed only on CFRunLoopGetMain().
     MainActor.assumeIsolated {
       guard let window = observation.window() else { return }
-      observation.post(.window(.minimized(window)))
+      observation.post(.window(event(window)))
     }
-
-  case kAXWindowDeminiaturizedNotification:
-    guard let context else { return }
-    let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    // The observer source is installed only on CFRunLoopGetMain().
-    MainActor.assumeIsolated {
-      guard let window = observation.window() else { return }
-      observation.post(.window(.deminimized(window)))
-    }
-
-  case kAXUIElementDestroyedNotification:
-    guard let context else { return }
-    let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    // The observer source is installed only on CFRunLoopGetMain().
-    MainActor.assumeIsolated {
-      guard let window = observation.window() else { return }
-      observation.post(.window(.destroyed(window)))
-    }
-
-  default:
-    break
   }
 }
 
