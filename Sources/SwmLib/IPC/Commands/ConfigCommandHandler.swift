@@ -4,6 +4,7 @@ struct ConfigCommandHandler {
   private let windows: Windows
   private let spaces: Spaces
   private let tiling: Tiling
+  private let arguments = SettingArguments(scope: "config")
 
   /// Create a config command handler backed by window, Space, and tiling services.
   init(windows: Windows, spaces: Spaces, tiling: Tiling) {
@@ -48,20 +49,13 @@ struct ConfigCommandHandler {
 
   /// The current global value of a setting, in the form its command accepts.
   private func currentValue(of setting: String) -> String? {
-    let state = tiling.defaultState
-    let settings = spaces.defaultSettings
     switch setting {
-    case "animation-easing": return tiling.animationEasing.rawValue
-    case "animation-duration": return String(tiling.animationDuration)
-    case "layout": return state.selection.rawValue
-    case "focus-follows-mouse": return windows.focusFollowsMouseMode.rawValue
-    case "master-ratio": return String(Double(state.masterRatio))
-    case "master-placement": return state.masterPlacement.rawValue
-    case "split-ratio": return String(Double(state.splitRatio))
-    case "preserve-split": return state.preserveSplitDirections ? "on" : "off"
-    case "gap": return String(settings.gap)
-    case "padding": return settings.padding.commandOptions
-    default: return nil
+    case "animation-easing": tiling.animationEasing.rawValue
+    case "animation-duration": String(tiling.animationDuration)
+    case "focus-follows-mouse": windows.focusFollowsMouseMode.rawValue
+    default:
+      SettingArguments.currentValue(of: setting, in: spaces.defaultSettings)
+        ?? SettingArguments.currentValue(of: setting, in: tiling.defaultState)
     }
   }
 
@@ -110,76 +104,41 @@ struct ConfigCommandHandler {
 
   /// Set or adjust the global master pane ratio, and apply it to every current and future Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "config master-ratio").requiredValue()
-    guard let change = CommandValueParser.ratioChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "config master-ratio",
-        argument,
-        expected: CommandValueParser.ratioChangeForm
-      )
-    }
-    if case .absolute(let ratio) = change, !(0.1...0.9).contains(ratio) {
-      throw IPCCommandError.invalidRequest("master-ratio must be between 0.1 and 0.9")
-    }
-    tiling.changeMasterRatioForAllSpaces(change)
+    tiling.changeMasterRatioForAllSpaces(
+      try arguments.ratioChange(request.args, setting: "master-ratio")
+    )
     return .acknowledged(id: request.id)
   }
 
   /// Set or cycle the global master pane edge, and apply it to every current and future Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(
-      request.args,
-      context: "config master-placement"
-    ).requiredValue()
-    let placement: MasterPlacement
-    if let selectedPlacement = MasterPlacement(rawValue: argument) {
-      placement = selectedPlacement
-    } else if let direction = CycleDirection(rawValue: argument) {
-      placement = tiling.defaultState.masterPlacement.cycled(in: direction)
-    } else {
-      throw IPCCommandError.invalidRequest("invalid config master-placement: \(argument)")
-    }
+    let placement =
+      switch try arguments.masterPlacement(request.args) {
+      case .set(let placement): placement
+      case .cycle(let direction): tiling.defaultState.masterPlacement.cycled(in: direction)
+      }
     tiling.setMasterPlacementForAllSpaces(placement)
     return .success(id: request.id, message: placement.rawValue)
   }
 
   /// Set or adjust the global dwindle split ratio, and apply it to every current and future Space.
   private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "config split-ratio").requiredValue()
-    guard let change = CommandValueParser.ratioChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "config split-ratio",
-        argument,
-        expected: CommandValueParser.ratioChangeForm
-      )
-    }
-    if case .absolute(let ratio) = change, !(0.1...0.9).contains(ratio) {
-      throw IPCCommandError.invalidRequest("split-ratio must be between 0.1 and 0.9")
-    }
-    tiling.changeSplitRatioForAllSpaces(change)
+    tiling.changeSplitRatioForAllSpaces(
+      try arguments.ratioChange(request.args, setting: "split-ratio")
+    )
     return .acknowledged(id: request.id)
   }
 
   /// Set retained dwindle split directions for every current and future Space.
   private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(
-      request.args,
-      context: "config preserve-split"
-    ).requiredValue()
-    guard let enabled = CommandValueParser.boolean(from: argument) else {
-      throw IPCCommandError.invalidRequest("invalid config preserve-split value: \(argument)")
-    }
+    let enabled = try arguments.preserveSplit(request.args)
     tiling.setSplitDirectionPreservationForAllSpaces(enabled)
     return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
   /// Select floating or automatic layout for every Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "config layout").requiredValue()
-    guard let selection = LayoutSelection(rawValue: argument) else {
-      throw IPCCommandError.invalidRequest("invalid config layout: \(argument)")
-    }
-
+    let selection = try arguments.layout(request.args)
     tiling.setLayoutForSpaces(selection)
 
     return .success(id: request.id, message: selection.rawValue)
@@ -187,24 +146,7 @@ struct ConfigCommandHandler {
 
   /// Set or adjust the global window gap, and apply it to every known space.
   private func gap(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "config gap").requiredValue()
-    guard let change = CommandValueParser.pointsChange(from: argument) else {
-      throw IPCCommandError.invalidValue(
-        "config gap",
-        argument,
-        expected: CommandValueParser.pointsChangeForm
-      )
-    }
-
-    var gap = change.value
-    if change.mode == .relative {
-      let (sum, overflow) = spaces.defaultSettings.gap.addingReportingOverflow(change.value)
-      guard !overflow else {
-        throw IPCCommandError.invalidRequest("config gap adjustment overflows integer range")
-      }
-      gap = sum
-    }
-
+    let gap = try arguments.gap(request.args, current: spaces.defaultSettings.gap)
     spaces.updateAllSettings { settings in
       settings.gap = max(0, gap)
     }
@@ -215,17 +157,7 @@ struct ConfigCommandHandler {
 
   /// Set or adjust global padding sides, and apply the changed sides to every known space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
-    let changes = try request.args.map { argument in
-      guard let change = PaddingSideChange(argument: argument) else {
-        throw IPCCommandError.invalidValue(
-          "config padding",
-          argument,
-          expected: PaddingSideChange.form
-        )
-      }
-      return change
-    }
-
+    let changes = try arguments.paddingChanges(request.args)
     let padding = try PaddingSideChange.applying(
       changes,
       to: spaces.defaultSettings.padding,
