@@ -4,7 +4,6 @@ import AppKit
 @MainActor
 final class WindowSpaceTransfer {
   static let shared = WindowSpaceTransfer()
-  private static let pollAttempts = 40
 
   private let spaceProvider: () -> [Space]
   private let membershipProvider: (CGWindowID) -> [UInt64]
@@ -71,19 +70,16 @@ final class WindowSpaceTransfer {
 
     try submitMove(windowID, destination.id)
 
-    for attempt in 0...Self.pollAttempts {
-      try Task.checkCancellation()
-
+    let confirmed = try await pollUntilConfirmed(wait: wait) {
       guard isValidWindow() else {
         throw IPCCommandError.invalidRequest(
           "window disappeared during Space movement: \(windowID)"
         )
       }
 
-      if Set(membershipProvider(windowID)) == [destination.id] { return destination.id }
-
-      if attempt < Self.pollAttempts { try await wait() }
+      return Set(membershipProvider(windowID)) == [destination.id] ? destination.id : nil
     }
+    if let confirmed { return confirmed }
 
     throw IPCCommandError.internalError(
       "timed out moving window \(windowID) to Space \(destination.id); movement was not confirmed"
