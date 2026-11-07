@@ -295,6 +295,12 @@ public final class Windows {
     lostFocusedWindowIDs.remove(windowID) != nil
   }
 
+  /// Post a recorded lost focused-window event again and remove it from the record.
+  func replayLostFocusedEvent(for windowID: CGWindowID) {
+    guard removeLostFocusedEvent(for: windowID) else { return }
+    Events.shared.post(.window(.focused(windowID)))
+  }
+
   /// Remove a managed application and associated pending event state.
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
