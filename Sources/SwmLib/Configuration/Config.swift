@@ -58,11 +58,7 @@ public enum Config {
         throw ConfigError.unableToMakeExecutable
       }
     } catch {
-      if let configError = error as? ConfigError {
-        throw configError
-      }
-
-      throw ConfigError.unableToMakeExecutable
+      throw error as? ConfigError ?? .unableToMakeExecutable
     }
   }
 
@@ -78,11 +74,7 @@ public enum Config {
         throw ConfigError.configurationFailed(status: proc.terminationStatus)
       }
     } catch {
-      if let configError = error as? ConfigError {
-        throw configError
-      }
-
-      throw ConfigError.unableToExecute
+      throw error as? ConfigError ?? .unableToExecute
     }
   }
 }
