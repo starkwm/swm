@@ -1,7 +1,5 @@
 import AppKit
 
-private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
-
 /// One serial execution lane per application, with a bounded per-window mailbox.
 @MainActor
 final class AnimationFrameDelivery {
@@ -395,29 +393,12 @@ private final class AnimationAXHandles: @unchecked Sendable {
       },
       beginBatch: {
         AnimationDiagnostics.shared.measure("enhanced-ui-begin", processID: processID) {
-          let enabled = client.enhancedUIEnabled(
-            for: self.application,
-            attribute: kAXEnhancedUserInterface
-          )
-          if enabled {
-            client.setAttributeValue(
-              kCFBooleanFalse,
-              for: self.application,
-              attribute: kAXEnhancedUserInterface
-            )
-          }
-          return enabled
+          client.disableEnhancedUI(for: self.application)
         }
       },
       endBatch: { restore in
         AnimationDiagnostics.shared.measure("enhanced-ui-end", processID: processID) {
-          if restore {
-            client.setAttributeValue(
-              kCFBooleanTrue,
-              for: self.application,
-              attribute: kAXEnhancedUserInterface
-            )
-          }
+          if restore { client.enableEnhancedUI(for: self.application) }
         }
       }
     )

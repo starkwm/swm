@@ -1,7 +1,5 @@
 import AppKit
 
-private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"
-
 /// Forward accessibility window notifications into swm's event service.
 private func accessibilityObserverCallback(
   _ observer: AXObserver,
@@ -268,34 +266,8 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
 
   /// Temporarily disable enhanced accessibility UI while running a window operation.
   func enhancedUIWorkaround<Result>(callback: () -> Result) -> Result {
-    let enhancedUserInterfaceEnabled = isEnhancedUIEnabled()
-
-    if enhancedUserInterfaceEnabled {
-      AccessibilityClient.shared.setAttributeValue(
-        kCFBooleanFalse,
-        for: element,
-        attribute: kAXEnhancedUserInterface
-      )
-    }
-
-    let result = callback()
-
-    if enhancedUserInterfaceEnabled {
-      AccessibilityClient.shared.setAttributeValue(
-        kCFBooleanTrue,
-        for: element,
-        attribute: kAXEnhancedUserInterface
-      )
-    }
-
-    return result
-  }
-
-  /// Return whether the app has enhanced accessibility UI enabled.
-  private func isEnhancedUIEnabled() -> Bool {
-    AccessibilityClient.shared.enhancedUIEnabled(
-      for: element,
-      attribute: kAXEnhancedUserInterface
-    )
+    let restore = AccessibilityClient.shared.disableEnhancedUI(for: element)
+    defer { if restore { AccessibilityClient.shared.enableEnhancedUI(for: element) } }
+    return callback()
   }
 }
