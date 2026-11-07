@@ -8,6 +8,15 @@ indirect enum TilingTree: Equatable {
   /// Two sibling subtrees sharing one layout region.
   case branch(TilingTree, TilingTree, split: TilingSplit = .equal)
 
+  /// A subtree to update, found by a window's leaf.
+  private enum Match {
+    /// The window's leaf.
+    case leaf(CGWindowID)
+
+    /// The branch whose direct child is the window's leaf.
+    case parent(of: CGWindowID)
+  }
+
   /// Window IDs in stable tree order.
   var windowIDs: [CGWindowID] {
     switch self {
@@ -33,7 +42,9 @@ indirect enum TilingTree: Equatable {
       ?? windowIDs.last
     guard let anchor else { return }
     let split = TilingSplit(ratio: ratio, direction: nil)
-    _ = replaceLeaf(anchor, with: .branch(.leaf(anchor), .leaf(windowID), split: split))
+    updateFirst(.leaf(anchor)) {
+      $0 = .branch(.leaf(anchor), .leaf(windowID), split: split)
+    }
   }
 
   /// Return a copy with omitted leaves removed and unary branches collapsed.
@@ -71,96 +82,36 @@ indirect enum TilingTree: Equatable {
     _ change: LayoutRatioChange,
     containing windowID: CGWindowID
   ) -> CGFloat? {
-    switch self {
-    case .leaf:
-      return nil
-    case .branch(var first, var second, var split):
-      if case .leaf(let candidate) = first, candidate == windowID {
-        split.ratio = change.applying(to: split.ratio)
-        self = .branch(first, second, split: split)
-        return split.ratio
-      }
-      if case .leaf(let candidate) = second, candidate == windowID {
-        let selectedRatio = change.applying(to: 1 - split.ratio)
-        split.ratio = 1 - selectedRatio
-        self = .branch(first, second, split: split)
-        return selectedRatio
-      }
-
-      if let ratio = first.changeSplitRatio(change, containing: windowID) {
-        self = .branch(first, second, split: split)
-        return ratio
-      }
-      if let ratio = second.changeSplitRatio(change, containing: windowID) {
-        self = .branch(first, second, split: split)
-        return ratio
-      }
-      return nil
+    updateFirst(.parent(of: windowID)) { tree in
+      guard case .branch(let first, let second, var split) = tree else { return nil }
+      // The ratio is the first subtree's share, so a second-child window adjusts its complement.
+      let isFirst = first == .leaf(windowID)
+      let selectedRatio = change.applying(to: isFirst ? split.ratio : 1 - split.ratio)
+      split.ratio = isFirst ? selectedRatio : 1 - selectedRatio
+      tree = .branch(first, second, split: split)
+      return selectedRatio
     }
   }
 
   /// Toggle the nearest resolved parent split containing a window leaf.
   mutating func toggleSplitDirection(containing windowID: CGWindowID) -> Bool {
-    switch self {
-    case .leaf:
-      return false
-    case .branch(var first, var second, var split):
-      let containsDirectLeaf: Bool
-      switch (first, second) {
-      case (.leaf(let candidate), _) where candidate == windowID,
-        (_, .leaf(let candidate)) where candidate == windowID:
-        containsDirectLeaf = true
-      default:
-        containsDirectLeaf = false
-      }
-
-      if containsDirectLeaf {
-        guard let direction = split.direction else { return false }
-        split.direction = direction == .vertical ? .horizontal : .vertical
-        self = .branch(first, second, split: split)
-        return true
-      }
-      if first.toggleSplitDirection(containing: windowID) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      if second.toggleSplitDirection(containing: windowID) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      return false
-    }
+    updateFirst(.parent(of: windowID)) { tree in
+      guard case .branch(let first, let second, var split) = tree,
+        let direction = split.direction
+      else { return nil }
+      split.direction = direction == .vertical ? .horizontal : .vertical
+      tree = .branch(first, second, split: split)
+      return true
+    } ?? false
   }
 
   /// Exchange the two subtrees of the nearest parent containing a window leaf.
   mutating func swapSplit(containing windowID: CGWindowID) -> Bool {
-    switch self {
-    case .leaf:
-      return false
-    case .branch(var first, var second, let split):
-      let containsDirectLeaf: Bool
-      switch (first, second) {
-      case (.leaf(let candidate), _) where candidate == windowID,
-        (_, .leaf(let candidate)) where candidate == windowID:
-        containsDirectLeaf = true
-      default:
-        containsDirectLeaf = false
-      }
-
-      if containsDirectLeaf {
-        self = .branch(second, first, split: split)
-        return true
-      }
-      if first.swapSplit(containing: windowID) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      if second.swapSplit(containing: windowID) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      return false
-    }
+    updateFirst(.parent(of: windowID)) { tree in
+      guard case .branch(let first, let second, let split) = tree else { return nil }
+      tree = .branch(second, first, split: split)
+      return true
+    } ?? false
   }
 
   /// Return a copy whose branches dynamically resolve their split directions.
@@ -193,24 +144,40 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Replace one leaf while preserving every other branch relationship.
-  private mutating func replaceLeaf(_ windowID: CGWindowID, with replacement: TilingTree) -> Bool {
-    switch self {
-    case .leaf(let candidate):
-      guard candidate == windowID else { return false }
-      self = replacement
-      return true
-    case .branch(var first, var second, let split):
-      if first.replaceLeaf(windowID, with: replacement) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      if second.replaceLeaf(windowID, with: replacement) {
-        self = .branch(first, second, split: split)
-        return true
-      }
-      return false
+  /// Whether this subtree is the one `match` describes.
+  private func matches(_ match: Match) -> Bool {
+    switch (match, self) {
+    case (.leaf(let windowID), .leaf(let candidate)):
+      candidate == windowID
+    case (.parent(let windowID), .branch(let first, let second, _)):
+      first == .leaf(windowID) || second == .leaf(windowID)
+    default:
+      false
     }
+  }
+
+  /// Apply `body` to the first subtree in tree order that `match` describes, rebuilding the path
+  /// to it.
+  ///
+  /// Returns `body`'s result, or nil when no subtree matches. Only the first match is offered,
+  /// so `body` returns nil to leave the tree unchanged.
+  @discardableResult
+  private mutating func updateFirst<Result>(
+    _ match: Match,
+    _ body: (inout TilingTree) -> Result?
+  ) -> Result? {
+    if matches(match) { return body(&self) }
+    guard case .branch(var first, var second, let split) = self else { return nil }
+
+    if let result = first.updateFirst(match, body) {
+      self = .branch(first, second, split: split)
+      return result
+    }
+    if let result = second.updateFirst(match, body) {
+      self = .branch(first, second, split: split)
+      return result
+    }
+    return nil
   }
 
   /// Return a copy with two leaf identifiers exchanged.
