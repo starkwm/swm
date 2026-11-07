@@ -42,9 +42,7 @@ public final class Tiling {
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
-  private var observedSizes = [CGWindowID: CGSize]()
   private var dwindleAttempts = [TilingLayoutID: DwindleAttempt]()
-  private var verifiedDwindle = [TilingLayoutID: DwindleArrangement]()
   private var pendingFocusedWindowID: CGWindowID?
   private var membershipPollingTask: Task<Void, Never>?
 
@@ -188,7 +186,6 @@ public final class Tiling {
     }
     var windows = snapshot.windows.sorted { $0.id < $1.id }
     var liveIDs = Set(windows.map(\.id))
-    observedSizes = observedSizes.filter { liveIDs.contains($0.key) }
     let previousFloatingIDs = floatingOverrideWindowIDs
     manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
     let actions = Dictionary(
@@ -351,11 +348,6 @@ public final class Tiling {
       if liveIDs.contains(windowID) {
         windowDidFocus(windowID)
       }
-    }
-    verifiedDwindle = verifiedDwindle.filter { id, arrangement in
-      guard let context = dwindleContext(id) else { return false }
-      return context.bounds == arrangement.context.bounds
-        && Set(context.tree?.windowIDs ?? []) == Set(arrangement.frames.keys)
     }
     for (id, attempt) in dwindleAttempts where dwindleContext(id) != attempt.context {
       frameReconciler?.cancelAnimations(for: attempt.context.tree?.windowIDs ?? [])
@@ -737,8 +729,7 @@ public final class Tiling {
         dwindleLayout.layout(
           tree: activeTree,
           in: display.visibleFrame,
-          settings: spaceSettings,
-          minimumSizes: observedSizes
+          settings: spaceSettings
         )
       )
     }
@@ -949,44 +940,20 @@ public final class Tiling {
     )
   }
 
-  /// One generation covers a whole Space/display, including its corrective passes.
+  /// Cache one attempt per Space/display so refused sizes do not cause repeated reflows.
   private func applyDwindle(_ id: TilingLayoutID, frames: [CGWindowID: CGRect]) {
     guard let context = dwindleContext(id), !frames.isEmpty else { return }
     if dwindleAttempts[id]?.context == context { return }
     let attempt = DwindleAttempt(context: context)
     dwindleAttempts[id] = attempt
-    deliverDwindle(id, frames: frames, attempt: attempt)
-  }
 
-  private func deliverDwindle(
-    _ id: TilingLayoutID,
-    frames: [CGWindowID: CGRect],
-    attempt: DwindleAttempt
-  ) {
     frameReconciler?.apply(frames) { [weak self] results in
       guard let self, self.dwindleAttempts[id] === attempt,
         self.dwindleContext(id) == attempt.context
       else { return }
-      let learned = self.updateObservedSizes(from: results)
       if results.values.allSatisfy(\.isVerified) {
-        // A verified restoration still caches the requested layout's failure.
-        attempt.phase = attempt.phase == .restoring ? .failed : .verified
-        self.verifiedDwindle[id] = DwindleArrangement(context: attempt.context, frames: frames)
+        attempt.phase = .verified
         return
-      }
-      if case .applying(let pass) = attempt.phase {
-        if learned, pass < 2,
-          case .layout(.frames(let corrected)) = self.layoutPlan(for: id), corrected != frames
-        {
-          attempt.phase = .applying(pass: pass + 1)
-          self.deliverDwindle(id, frames: corrected, attempt: attempt)
-          return
-        }
-        if let previous = self.fallbackFrames(for: id, context: attempt.context) {
-          attempt.phase = .restoring
-          self.deliverDwindle(id, frames: previous, attempt: attempt)
-          return
-        }
       }
       self.fail(attempt, for: id)
     }
@@ -998,49 +965,11 @@ public final class Tiling {
     log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
   }
 
-  /// Learn refused dimensions and lower observations after verified smaller frames.
-  private func updateObservedSizes(from results: [CGWindowID: WindowFrameSettlement]) -> Bool {
-    var learned = false
-    for (windowID, result) in results {
-      if let size = result.refusedSize {
-        let previous = observedSizes[windowID] ?? CGSize(width: 1, height: 1)
-        observedSizes[windowID] = CGSize(
-          width: max(previous.width, size.width),
-          height: max(previous.height, size.height)
-        )
-        learned = true
-      } else if result.isVerified, let frame = result.frame,
-        let previous = observedSizes[windowID]
-      {
-        observedSizes[windowID] = CGSize(
-          width: min(previous.width, frame.width),
-          height: min(previous.height, frame.height)
-        )
-      }
-    }
-    return learned
-  }
-
-  private func fallbackFrames(
-    for id: TilingLayoutID,
-    context: DwindleContext
-  ) -> [CGWindowID: CGRect]? {
-    guard let previous = verifiedDwindle[id],
-      previous.context.bounds == context.bounds,
-      previous.context.settings == context.settings,
-      Set(previous.frames.keys) == Set(context.tree?.windowIDs ?? [])
-    else { return nil }
-    return previous.frames
-  }
-
-  /// Explicit layout adjustments permit one fresh probe of observed refusals.
+  /// Explicit layout adjustments permit a fresh attempt after a refused size.
   private func retryDwindle(_ ids: some Sequence<TilingLayoutID>) {
     for id in ids {
       dwindleAttempts.removeValue(forKey: id)
       frameReconciler?.cancelAnimations(for: layoutsByID[id]?.tree?.windowIDs ?? [])
-      for windowID in layoutsByID[id]?.tree?.windowIDs ?? [] {
-        observedSizes.removeValue(forKey: windowID)
-      }
     }
   }
 
@@ -1203,21 +1132,15 @@ private struct DwindleContext: Equatable {
   let settings: SpaceSettings
 }
 
-private struct DwindleArrangement {
-  let context: DwindleContext
-  let frames: [CGWindowID: CGRect]
-}
-
 private final class DwindleAttempt {
   enum Phase: Equatable {
-    case applying(pass: Int)
-    case restoring
+    case applying
     case verified
     case failed
   }
 
   let context: DwindleContext
-  var phase = Phase.applying(pass: 0)
+  var phase = Phase.applying
 
   init(context: DwindleContext) { self.context = context }
 }

@@ -7,10 +7,13 @@ import Testing
 @MainActor
 @Suite("Tiling")
 struct TilingTests {
-  @Test("three-window app refusal settles inside the original display bounds")
-  func threeWindowRefusal() async throws {
+  @Test(
+    "three-window minimum sizes preserve planned ratios and directions",
+    arguments: [false, true]
+  )
+  func threeWindowRefusal(preserved: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
-    app.minimumSizes = [2: CGSize(width: 600, height: 1), 3: CGSize(width: 840, height: 1)]
+    app.minimumSizes = [2: CGSize(width: 600, height: 1200), 3: CGSize(width: 840, height: 1)]
     let reconciler = makeTestReconciler(app)
     var inventory = [window(id: 1), window(id: 3)]
     var membership: [CGWindowID: Set<UInt64>] = [1: [10], 3: [10]]
@@ -27,23 +30,33 @@ struct TilingTests {
     membership[2] = [10]
     tiling.reconcile()
     tiling.changeSplitRatio(.absolute(0.8), for: 10)
+    tiling.setSplitDirectionPreservation(preserved, for: 10)
     tiling.setLayout(.dwindle, for: 10)
+    let plan = tiling.layoutPlan(for: layoutID(10))
+    guard case .layout(.frames(let plannedFrames)) = plan else {
+      Issue.record("Expected dwindle frames")
+      return
+    }
     try await waitForAnimation { reconciler.isIdle }
     for id: CGWindowID in [1, 2, 3] {
-      let frame = app.frame(for: id)
-      #expect(bounds.contains(frame))
-      for other: CGWindowID in [1, 2, 3] where id != other {
-        #expect(!frame.intersects(app.frame(for: other)))
+      var expected = try #require(plannedFrames[id])
+      if let minimum = app.minimumSizes[id] {
+        expected.size.width = max(expected.width, minimum.width)
+        expected.size.height = max(expected.height, minimum.height)
       }
+      #expect(app.frame(for: id) == expected)
     }
-    #expect(app.writeCount <= 9)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
+    #expect(app.frame(for: 1).width == 1086)
+    #expect(app.frame(for: 3).minX == 1364)
+    #expect(app.writeCount <= 6)
   }
 
   @Test(
-    "dwindle refusal recovers as a batch, caches refusal, and retries smaller sizes",
+    "dwindle keeps planned positions, caches refusal, and retries after an adjustment",
     arguments: [false, true]
   )
-  func dwindleRefusalRecovery(animated: Bool) async throws {
+  func dwindleRefusalKeepsPositions(animated: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [2: CGSize(width: 400, height: 1)]
     let reconciler = makeTestReconciler(app, automaticallySchedule: true)
@@ -58,7 +71,8 @@ struct TilingTests {
     try await waitForAnimation { reconciler.isIdle }
     tiling.changeSplitRatio(.absolute(0.8), for: 10)
     try await waitForAnimation { reconciler.isIdle }
-    #expect(app.frame(for: 1).width == 600)
+    #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 800, height: 800))
+    #expect(app.frame(for: 2).minX == 800)
     #expect(app.frame(for: 2).width == 400)
     let writes = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
@@ -111,15 +125,15 @@ struct TilingTests {
     }
     app.release()
     try await waitForAnimation { reconciler.isIdle }
-    #expect(app.frame(for: 1).width == (mode == 0 ? 500 : mode == 3 ? 800 : 1000))
+    #expect(app.frame(for: 1).width == (mode == 0 ? 500 : mode == 3 ? 960 : 1000))
     if mode == 0 { #expect(app.frame(for: 2).width == 500) }
     let settledWrites = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
     #expect(app.writeCount == settledWrites)
   }
 
-  @Test("dwindle restores verified frames when a new direction cannot fit")
-  func dwindleRollback() async throws {
+  @Test("dwindle keeps a new split direction when minimum sizes cannot fit")
+  func dwindleKeepsNewDirection() async throws {
     let app = AnimationTestApp(processID: 1)
     let reconciler = makeTestReconciler(app)
     let tiling = makeTiling(
@@ -133,18 +147,18 @@ struct TilingTests {
     tiling.setSplitDirectionPreservation(true, for: 10)
     tiling.toggleDwindleSplit(for: 1)
     try await waitForAnimation { reconciler.isIdle }
-    let previous = [app.frame(for: 1), app.frame(for: 2)]
     app.minimumSizes = [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
     tiling.toggleDwindleSplit(for: 1)
     try await waitForAnimation { reconciler.isIdle }
-    #expect([app.frame(for: 1), app.frame(for: 2)] == previous)
+    #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 600, height: 800))
+    #expect(app.frame(for: 2) == CGRect(x: 500, y: 0, width: 600, height: 800))
     let writes = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
     #expect(app.writeCount == writes)
   }
 
-  @Test("dwindle infeasible arrangement without a verified fallback stops retrying")
-  func dwindleWithoutFallback() async throws {
+  @Test("dwindle minimum sizes that exceed the display stop retrying")
+  func dwindleOversizedWindows() async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
     let reconciler = makeTestReconciler(app)
