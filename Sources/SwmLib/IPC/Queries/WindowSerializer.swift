@@ -170,9 +170,7 @@ struct WindowSerializer: Encodable, Equatable {
     }
     subrole = window.subrole
     let displayScreen = frame.flatMap { rect in
-      screens.max { lhs, rhs in
-        rect.intersection(lhs.axFrame).area < rect.intersection(rhs.axFrame).area
-      }
+      screens.largestIntersection(with: rect, frame: \.axFrame)
     }
     display = displayScreen?.id
     space = spaceIndex

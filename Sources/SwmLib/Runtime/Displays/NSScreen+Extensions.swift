@@ -19,10 +19,7 @@ extension NSScreen {
 
   /// Return the screen whose accessibility-visible frame overlaps a frame the most.
   static func screen(containingLargestIntersectionWith frame: CGRect) -> NSScreen? {
-    screens.max { lhs, rhs in
-      frame.intersection(lhs.axVisibleFrame).area
-        < frame.intersection(rhs.axVisibleFrame).area
-    }
+    screens.largestIntersection(with: frame, frame: \.axVisibleFrame)
   }
 
   /// Core Graphics display ID for this screen.

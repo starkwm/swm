@@ -14,3 +14,12 @@ extension CGRect {
       && abs(height - other.height) <= tolerance
   }
 }
+
+extension Sequence {
+  /// The element whose frame overlaps `rect` the most, or nil for an empty sequence.
+  func largestIntersection(with rect: CGRect, frame: (Element) -> CGRect) -> Element? {
+    self.max { lhs, rhs in
+      rect.intersection(frame(lhs)).area < rect.intersection(frame(rhs)).area
+    }
+  }
+}

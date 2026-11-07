@@ -66,9 +66,7 @@ final class AnimationDisplayLink {
     var groups = [UInt32: Set<CGWindowID>]()
     var missing = Set<CGWindowID>()
     for (id, frame) in frames {
-      if let display = displays.max(by: {
-        frame.intersection($0.frame).area < frame.intersection($1.frame).area
-      }) {
+      if let display = displays.largestIntersection(with: frame, frame: \.frame) {
         groups[display.id, default: []].insert(id)
       } else {
         missing.insert(id)
