@@ -621,7 +621,8 @@ public final class Tiling {
         dwindleLayout.resolvingSplitDirections(
           in: tree,
           bounds: display.visibleFrame,
-          settings: spaces.settings(for: layoutID.spaceID)
+          settings: spaces.settings(for: layoutID.spaceID),
+          hiding: hiddenWindowIDs(in: state)
         ) ?? tree
       return tree.toggleSplitDirection(containing: windowID)
     }
@@ -697,7 +698,8 @@ public final class Tiling {
       state.tree = dwindleLayout.resolvingSplitDirections(
         in: state.tree,
         bounds: display.visibleFrame,
-        settings: spaceSettings
+        settings: spaceSettings,
+        hiding: hiddenWindowIDs(in: state)
       )
       layoutsByID[layoutID] = state
     }
@@ -1041,7 +1043,12 @@ public final class Tiling {
 
   /// Return a layout's tree without omitted windows or windows floated over the layout.
   private func activeTree(of state: TilingLayoutState) -> TilingTree? {
-    state.tree?.removing(state.omittedWindowIDs.union(floatingOverrideWindowIDs))
+    state.tree?.removing(hiddenWindowIDs(in: state))
+  }
+
+  /// Return a layout's leaves that receive no geometry: omitted windows and floated windows.
+  private func hiddenWindowIDs(in state: TilingLayoutState) -> Set<CGWindowID> {
+    state.omittedWindowIDs.union(floatingOverrideWindowIDs)
   }
 
   /// Return a layout's non-omitted windows in tree order, keeping only floated windows or only
