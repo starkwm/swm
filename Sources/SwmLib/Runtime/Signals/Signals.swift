@@ -17,9 +17,6 @@ public final class Signals {
   /// Register a signal, preserving insertion order.
   func add(_ signal: Signal) throws {
     try lock.withLock {
-      if let label = signal.label, Int(label) != nil {
-        throw IPCCommandError.invalidRequest("signal label must not be an integer")
-      }
       if let label = signal.label, signals.contains(where: { $0.label == label }) {
         throw IPCCommandError.invalidRequest("signal label already exists: \(label)")
       }
@@ -31,16 +28,7 @@ public final class Signals {
   /// Remove a signal by one-based index or label.
   func remove(selector: String) throws {
     try lock.withLock {
-      if let index = Int(selector) {
-        guard index > 0, signals.indices.contains(index - 1) else {
-          throw IPCCommandError.invalidRequest("signal not found: \(selector)")
-        }
-
-        signals.remove(at: index - 1)
-        return
-      }
-
-      guard let index = signals.firstIndex(where: { $0.label == selector }) else {
+      guard let index = signals.index(selector: selector, label: \.label) else {
         throw IPCCommandError.invalidRequest("signal not found: \(selector)")
       }
 
