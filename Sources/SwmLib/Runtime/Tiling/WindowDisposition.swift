@@ -11,7 +11,7 @@ enum WindowDisposition: Equatable {
   /// Window is outside automatic-tiling management.
   case excluded(WindowExclusionReason)
 
-  /// Window facts are incomplete and will be reconsidered during reconciliation.
+  /// Window facts are incomplete or unavailable and will be reconsidered during reconciliation.
   case pending
 }
 
@@ -53,6 +53,9 @@ struct TilingWindowSnapshot: Equatable {
   /// Whether Accessibility permits changing the size.
   let isResizable: Bool
 
+  /// Whether a subrole or capability read failed, leaving those values unconfirmed.
+  var hasUnavailableFacts = false
+
   /// Optional identity facts used by window rules.
   var app: String? = nil
   var title: String? = nil
@@ -66,6 +69,8 @@ enum WindowEligibilityPolicy {
     for window: TilingWindowSnapshot,
     topology: SpaceTopology
   ) -> WindowDisposition {
+    // A failed read is not evidence of an unsupported window; wait for a confirmed answer.
+    guard !window.hasUnavailableFacts else { return .pending }
     guard window.subrole == "AXStandardWindow" else {
       return .excluded(.unsupportedSubrole)
     }

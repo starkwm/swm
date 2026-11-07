@@ -8,6 +8,10 @@ public final class Tiling {
   typealias RuleSpaceMoveHandler = (CGWindowID, Int) async throws -> Void
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
+  typealias UnavailableFactsProvider = (Set<CGWindowID>) -> Set<CGWindowID>
+
+  /// Longest wait, in membership polls, between retries of failed Accessibility reads.
+  private static let maximumFactRetryInterval = 16
 
   /// Rules in registration order.
   private(set) var rules = [WindowRule]()
@@ -20,6 +24,7 @@ public final class Tiling {
   private let windows: Windows?
   private let frameReconciler: WindowFrameReconciler?
   private let windowSpaceMembership: WindowSpaceMembershipProvider
+  private let unavailableFacts: UnavailableFactsProvider
   private let ruleDisplayIDs: () -> [String]
   private let rulePlacement: RulePlacementHandler
   private let ruleSpaceIDs: () -> [UInt64]
@@ -45,6 +50,9 @@ public final class Tiling {
   private var dwindleAttempts = [TilingLayoutID: DwindleAttempt]()
   private var pendingFocusedWindowID: CGWindowID?
   private var membershipPollingTask: Task<Void, Never>?
+  private var unavailableFactWindowIDs = Set<CGWindowID>()
+  private var factRetryInterval = 1
+  private var factRetryCountdown = 1
 
   /// Create tiling backed by the live runtime models.
   public convenience init(windows: Windows, spaces: Spaces) {
@@ -68,6 +76,9 @@ public final class Tiling {
             (window.id, Set(WindowServerClient.shared.spaceIDs(containing: window.id)))
           }
         )
+      },
+      unavailableFacts: { windowIDs in
+        windowIDs.filter { windows.window(by: $0)?.hasUnavailableTilingFacts ?? false }
       }
     )
   }
@@ -79,6 +90,7 @@ public final class Tiling {
     windows: Windows? = nil,
     frameReconciler: WindowFrameReconciler? = nil,
     windowSpaceMembership: WindowSpaceMembershipProvider? = nil,
+    unavailableFacts: UnavailableFactsProvider? = nil,
     rulePlacement: RulePlacementHandler? = nil,
     ruleDisplayIDs: @escaping () -> [String] = { WindowRulePlacementApplier.displayIDs() },
     ruleSpaceIDs: @escaping () -> [UInt64] = { WindowServerClient.shared.allSpaceIDs() },
@@ -104,6 +116,13 @@ public final class Tiling {
     self.frameReconciler = frameReconciler
     self.windowSpaceMembership =
       windowSpaceMembership ?? { snapshot().topology?.spaceIDsByWindowID ?? [:] }
+    self.unavailableFacts =
+      unavailableFacts ?? { windowIDs in
+        Set(
+          snapshot().windows.filter { windowIDs.contains($0.id) && $0.hasUnavailableFacts }
+            .map(\.id)
+        )
+      }
     if let windows {
       frameReconciler?.onInteractionEnded = { [weak self] in
         guard let self else { return }
@@ -352,6 +371,12 @@ public final class Tiling {
     for (id, attempt) in dwindleAttempts where dwindleContext(id) != attempt.context {
       frameReconciler?.cancelAnimations(for: attempt.context.tree?.windowIDs ?? [])
       dwindleAttempts.removeValue(forKey: id)
+    }
+    let unavailableIDs = Set(windows.filter(\.hasUnavailableFacts).map(\.id))
+    if unavailableIDs != unavailableFactWindowIDs {
+      unavailableFactWindowIDs = unavailableIDs
+      factRetryInterval = 1
+      factRetryCountdown = 1
     }
     updateMembershipPolling()
   }
@@ -845,7 +870,10 @@ public final class Tiling {
   private func reflowIfMembershipChanged() {
     let membership = windowSpaceMembership()
     let previousMembership = currentTopology?.spaceIDsByWindowID ?? [:]
-    guard currentTopology == nil || membership != previousMembership else { return }
+    guard currentTopology == nil || membership != previousMembership else {
+      retryUnavailableFacts()
+      return
+    }
 
     let changedWindowIDs = Set(membership.keys).union(previousMembership.keys).filter {
       membership[$0] != previousMembership[$0]
@@ -858,6 +886,27 @@ public final class Tiling {
       }
     }
 
+    reconcileAndReflowVisibleSpaces()
+  }
+
+  /// Reconcile once a window answers reads that failed, backing off while they keep failing.
+  ///
+  /// Only the affected windows are read, since a busy app can block each read until it times out.
+  private func retryUnavailableFacts() {
+    guard !unavailableFactWindowIDs.isEmpty else { return }
+    factRetryCountdown -= 1
+    guard factRetryCountdown <= 0 else { return }
+
+    factRetryInterval = min(factRetryInterval * 2, Self.maximumFactRetryInterval)
+    factRetryCountdown = factRetryInterval
+    let recoveredWindowIDs = unavailableFactWindowIDs.subtracting(
+      unavailableFacts(unavailableFactWindowIDs)
+    )
+    guard !recoveredWindowIDs.isEmpty else { return }
+
+    for windowID in recoveredWindowIDs.sorted() {
+      log("window accessibility facts available id: \(windowID)")
+    }
     reconcileAndReflowVisibleSpaces()
   }
 

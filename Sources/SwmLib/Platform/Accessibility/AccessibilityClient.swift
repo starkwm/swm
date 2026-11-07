@@ -73,15 +73,18 @@ public final class AccessibilityClient {
     return Self.frame(from: values)
   }
 
-  /// Return whether an accessibility attribute is settable.
+  /// Return whether an accessibility attribute is settable, or false when that is unknown.
   func isAttributeSettable(_ attribute: String, for element: AXUIElement) -> Bool {
-    var settable = DarwinBoolean(false)
-    guard AXUIElementIsAttributeSettable(element, attribute as CFString, &settable) == .success
-    else {
-      return false
-    }
+    attributeSettability(attribute, for: element).value ?? false
+  }
 
-    return settable.boolValue
+  /// Read whether an accessibility attribute is settable, keeping failed reads distinct.
+  func attributeSettability(_ attribute: String, for element: AXUIElement) -> AccessibilityRead<
+    Bool
+  > {
+    var settable = DarwinBoolean(false)
+    let error = AXUIElementIsAttributeSettable(element, attribute as CFString, &settable)
+    return AccessibilityRead(error, value: { settable.boolValue }, absent: false)
   }
 
   /// Set a raw accessibility attribute value.
@@ -171,6 +174,13 @@ public final class AccessibilityClient {
   /// Return the accessibility subrole for an element.
   func subrole(for element: AXUIElement) -> String? {
     stringAttribute(for: element, attribute: kAXSubroleAttribute as String)
+  }
+
+  /// Read the accessibility subrole for an element, keeping failed reads distinct from none.
+  func subroleRead(for element: AXUIElement) -> AccessibilityRead<String?> {
+    var value: AnyObject?
+    let error = AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &value)
+    return AccessibilityRead(error, value: { value as? String }, absent: nil)
   }
 
   /// Return whether an element has the accessibility window role.

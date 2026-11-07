@@ -58,6 +58,12 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     return AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: element)
   }
 
+  /// Whether a tiling eligibility read failed without confirming the window's capabilities.
+  var hasUnavailableTilingFacts: Bool {
+    guard let element else { return false }
+    return eligibilityReads(for: element).isUnavailable
+  }
+
   /// Accessibility element for the window when still valid.
   private(set) var element: AXUIElement?
 
@@ -182,7 +188,7 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
 
   /// Capture the window facts used by automatic-tiling policy.
   func tilingSnapshot() -> TilingWindowSnapshot {
-    guard element != nil else {
+    guard let element else {
       return TilingWindowSnapshot(
         id: id,
         displayID: nil,
@@ -193,15 +199,17 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
       )
     }
 
+    let reads = eligibilityReads(for: element)
     return TilingWindowSnapshot(
       id: id,
       displayID: frame().flatMap {
         NSScreen.screen(containingLargestIntersectionWith: $0)?.uuid
       },
-      subrole: subrole,
+      subrole: reads.subrole.value ?? nil,
       isMinimized: isMinimized,
-      isMovable: isMovable,
-      isResizable: isResizable,
+      isMovable: reads.movable.value ?? false,
+      isResizable: reads.resizable.value ?? false,
+      hasUnavailableFacts: reads.isUnavailable,
       app: application?.name,
       title: title,
       bundleID: application?.bundleID
@@ -301,6 +309,16 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
 
     observationContext = nil
   }
+
+  /// Read the Accessibility facts that decide whether the window can be tiled.
+  private func eligibilityReads(for element: AXUIElement) -> WindowEligibilityReads {
+    let client = AccessibilityClient.shared
+    return WindowEligibilityReads(
+      subrole: client.subroleRead(for: element),
+      movable: client.attributeSettability(kAXPositionAttribute as String, for: element),
+      resizable: client.attributeSettability(kAXSizeAttribute as String, for: element)
+    )
+  }
 }
 
 /// Weak observation context passed through accessibility notification callbacks.
@@ -321,5 +339,22 @@ final class WindowObservationContext {
   /// Return the observed window if it is still alive.
   func window() -> Window? {
     observedWindow
+  }
+}
+
+/// Accessibility reads that decide whether a window can be tiled.
+private struct WindowEligibilityReads {
+  /// Window subrole read.
+  let subrole: AccessibilityRead<String?>
+
+  /// Position settability read.
+  let movable: AccessibilityRead<Bool>
+
+  /// Size settability read.
+  let resizable: AccessibilityRead<Bool>
+
+  /// Whether any read failed without confirming its value.
+  var isUnavailable: Bool {
+    subrole.isUnavailable || movable.isUnavailable || resizable.isUnavailable
   }
 }
