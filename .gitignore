@@ -1,10 +1,3 @@
 .DS_Store
-/*.xcodeproj
 /.build
 /.swiftpm
-/Packages
-Brewfile.lock.json
-swm*.tar.gz
-swm.tar.gz
-swmrc
-xcuserdata/
