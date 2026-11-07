@@ -160,29 +160,12 @@ final class WindowFrameReconciler {
   ///
   /// Suppress animation feedback, including duplicate notifications at the destination.
   func shouldSuppressNotification(for windowID: CGWindowID, actualFrame: CGRect?) -> Bool {
-    if interactingWindows.contains(windowID) { return true }
-    if animations[windowID] != nil || deliveries[windowID] != nil { return true }
-    expireExpectations()
-    guard var expectation = pendingMutations[windowID] else { return false }
-
-    if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
-      expectation.reachedTarget = true
-      pendingMutations[windowID] = expectation
-    } else if expectation.reachedTarget, actualFrame != nil {
-      pendingMutations.removeValue(forKey: windowID)
-      return false
-    }
-
-    return true
+    shouldSuppressNotification(for: windowID) { actualFrame }
   }
 
   /// Read the current frame and return whether its notification belongs to SWM.
   func shouldSuppressNotification(for windowID: CGWindowID) -> Bool {
-    if interactingWindows.contains(windowID) { return true }
-    if animations[windowID] != nil || deliveries[windowID] != nil { return true }
-    expireExpectations()
-    guard pendingMutations[windowID] != nil else { return false }
-    return shouldSuppressNotification(for: windowID, actualFrame: currentFrame(windowID))
+    shouldSuppressNotification(for: windowID) { currentFrame(windowID) }
   }
 
   /// Suspend the window being dragged until mouse-up, even during reconciliation.
@@ -306,10 +289,7 @@ final class WindowFrameReconciler {
     guard let state = deliveries[id] else { return }
     state.sequence += 1
     state.isFinal = final
-    pendingMutations[id] = ExpectedFrameMutation(
-      target: target,
-      expiresAt: .now.advanced(by: Self.expectationLifetime)
-    )
+    expectMutation(to: target, for: id)
     delivery.submit(
       windowID: id,
       generation: state.generation,
@@ -325,11 +305,7 @@ final class WindowFrameReconciler {
         state.batch?.receive(result, requestedFrame: state.target)
       } else if result.outcome == .verified {
         self.deliveries.removeValue(forKey: id)
-        self.pendingMutations[id] = ExpectedFrameMutation(
-          target: state.target,
-          expiresAt: .now.advanced(by: Self.expectationLifetime),
-          reachedTarget: true
-        )
+        self.expectMutation(to: state.target, for: id, reachedTarget: true)
         state.batch?.receive(result, requestedFrame: state.target)
       }
     }
@@ -341,10 +317,7 @@ final class WindowFrameReconciler {
     if let target {
       // Failed or clamped writes can still emit delayed AX notifications. Do not let
       // those notifications restart the same failing reflow without a bound.
-      pendingMutations[id] = ExpectedFrameMutation(
-        target: target,
-        expiresAt: .now.advanced(by: Self.expectationLifetime)
-      )
+      expectMutation(to: target, for: id)
     }
     terminalFailure(id)
   }
@@ -353,6 +326,38 @@ final class WindowFrameReconciler {
     guard animations.isEmpty else { return }
     displayLink?.stop()
     displayLink = nil
+  }
+
+  /// Suppress notifications caused by a mutation until the expectation expires.
+  private func expectMutation(to target: CGRect, for id: CGWindowID, reachedTarget: Bool = false) {
+    pendingMutations[id] = ExpectedFrameMutation(
+      target: target,
+      expiresAt: .now.advanced(by: Self.expectationLifetime),
+      reachedTarget: reachedTarget
+    )
+  }
+
+  /// Return whether a notification belongs to SWM, reading the frame only when a mutation is
+  /// still expected.
+  private func shouldSuppressNotification(
+    for windowID: CGWindowID,
+    actualFrame: () -> CGRect?
+  ) -> Bool {
+    if interactingWindows.contains(windowID) { return true }
+    if animations[windowID] != nil || deliveries[windowID] != nil { return true }
+    expireExpectations()
+    guard var expectation = pendingMutations[windowID] else { return false }
+
+    let actualFrame = actualFrame()
+    if let actualFrame, actualFrame.matches(expectation.target, tolerance: 1) {
+      expectation.reachedTarget = true
+      pendingMutations[windowID] = expectation
+    } else if expectation.reachedTarget, actualFrame != nil {
+      pendingMutations.removeValue(forKey: windowID)
+      return false
+    }
+
+    return true
   }
 
   /// Stop suppressing notifications after their timeout.

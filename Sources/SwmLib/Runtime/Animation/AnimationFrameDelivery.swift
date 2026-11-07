@@ -44,6 +44,16 @@ final class AnimationFrameDelivery {
     final: Bool,
     completion: @escaping Completion
   ) {
+    let request = { (backend: AnimationFrameBackend) in
+      AnimationFrameRequest(
+        windowID: windowID,
+        generation: generation,
+        sequence: sequence,
+        target: target,
+        final: final,
+        backend: backend
+      )
+    }
     guard let backend = backend(windowID) else {
       // Resolve vanished windows through the same completion path.
       let missing = AnimationFrameBackend(
@@ -55,14 +65,7 @@ final class AnimationFrameDelivery {
       )
       completion(
         AnimationFrameCompletion(
-          request: AnimationFrameRequest(
-            windowID: windowID,
-            generation: generation,
-            sequence: sequence,
-            target: target,
-            final: final,
-            backend: missing
-          ),
+          request: request(missing),
           frame: nil,
           outcome: .failed,
           failure: .missingWindow
@@ -77,17 +80,7 @@ final class AnimationFrameDelivery {
       lane = AnimationAppLane(processID: backend.processID, settlementDelay: settlementDelay)
       lanes[backend.processID] = lane
     }
-    lane.submit(
-      AnimationFrameRequest(
-        windowID: windowID,
-        generation: generation,
-        sequence: sequence,
-        target: target,
-        final: final,
-        backend: backend
-      ),
-      completion: completion
-    )
+    lane.submit(request(backend), completion: completion)
     // Remove idle lanes without allowing two lanes for one app to overlap.
     lanes = lanes.filter { $0.key == backend.processID || !$0.value.isIdle }
   }
@@ -243,22 +236,20 @@ private final class AnimationAppLane: @unchecked Sendable {
       guard isCurrent(request), let result = execute(item) else { continue }
       results.append((item, result))
       lock.withLock {
-        if latest[request.windowID]?.0 === request.generation,
-          latest[request.windowID]?.1 == request.sequence
-        {
-          latest.removeValue(forKey: request.windowID)
-        }
+        if isLatest(request) { latest.removeValue(forKey: request.windowID) }
       }
     }
     return results
   }
 
   private func isCurrent(_ request: AnimationFrameRequest) -> Bool {
-    request.generation.isValid
-      && lock.withLock {
-        latest[request.windowID]?.0 === request.generation
-          && latest[request.windowID]?.1 == request.sequence
-      }
+    request.generation.isValid && lock.withLock { isLatest(request) }
+  }
+
+  /// Return whether a request is still the newest submission for its window. Hold `lock`.
+  private func isLatest(_ request: AnimationFrameRequest) -> Bool {
+    latest[request.windowID]?.0 === request.generation
+      && latest[request.windowID]?.1 == request.sequence
   }
 
   /// Schedule readback without holding the app's AX lane or its enhanced-UI workaround open.
@@ -273,10 +264,7 @@ private final class AnimationAppLane: @unchecked Sendable {
       let start = self.lock.withLock {
         guard self.settlements[next.request.windowID]?.token == token else { return false }
         self.settlements.removeValue(forKey: next.request.windowID)
-        guard next.request.generation.isValid,
-          self.latest[next.request.windowID]?.0 === next.request.generation,
-          self.latest[next.request.windowID]?.1 == next.request.sequence
-        else {
+        guard next.request.generation.isValid, self.isLatest(next.request) else {
           self.latest.removeValue(forKey: next.request.windowID)
           return false
         }
@@ -288,10 +276,7 @@ private final class AnimationAppLane: @unchecked Sendable {
       if start { self.drain() }
     }
     let scheduled = lock.withLock {
-      guard item.request.generation.isValid,
-        latest[item.request.windowID]?.0 === item.request.generation,
-        latest[item.request.windowID]?.1 == item.request.sequence
-      else { return false }
+      guard item.request.generation.isValid, isLatest(item.request) else { return false }
       settlements[item.request.windowID] = Settlement(token: token, work: work)
       return true
     }
