@@ -82,6 +82,37 @@ struct TilingTreeTests {
     #expect(!swappedMissing)
   }
 
+  @Test("nearest split commands: skip branches whose other side is hidden")
+  func nearestSplitCommandsSkipBranchesWhoseOtherSideIsHidden() {
+    let vertical = TilingSplit(ratio: 0.5, direction: .vertical)
+    let nested = TilingTree.branch(.leaf(2), .leaf(3), split: vertical)
+    var tree = TilingTree.branch(.leaf(1), nested, split: vertical)
+
+    let ratio = tree.changeSplitRatio(.absolute(0.2), containing: 2, hiding: [3])
+    #expect(ratio == 0.2)
+    #expect(tree == .branch(.leaf(1), nested, split: TilingSplit(ratio: 0.8, direction: .vertical)))
+
+    let toggled = tree.toggleSplitDirection(containing: 2, hiding: [3])
+    #expect(toggled)
+    #expect(
+      tree == .branch(.leaf(1), nested, split: TilingSplit(ratio: 0.8, direction: .horizontal))
+    )
+
+    let swappedAlone = tree.swapSplit(containing: 2, hiding: [1, 3])
+    #expect(!swappedAlone)
+
+    let swappedHidden = tree.swapSplit(containing: 3, hiding: [3])
+    #expect(swappedHidden)
+    #expect(
+      tree
+        == .branch(
+          .leaf(1),
+          .branch(.leaf(3), .leaf(2), split: vertical),
+          split: TilingSplit(ratio: 0.8, direction: .horizontal)
+        )
+    )
+  }
+
   @Test("settingSplitRatios: replaces every ratio and keeps retained directions")
   func settingSplitRatiosReplacesEveryRatioAndKeepsRetainedDirections() {
     let tree = TilingTree.branch(

@@ -1755,6 +1755,46 @@ struct TilingTests {
   }
 
   @Test(
+    "dwindle split commands: target the visible split when a sibling is hidden",
+    arguments: ["minimized", "floated"]
+  )
+  func dwindleSplitCommandsTargetTheVisibleSplitWhenASiblingIsHidden(hiddenBy: String) {
+    var windows = [window(id: 1), window(id: 2), window(id: 3)]
+    let tiling = makeTiling(windows: { windows }, memberships: { [1: [10], 2: [10], 3: [10]] })
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    switch hiddenBy {
+    case "minimized":
+      windows[2] = window(id: 3, isMinimized: true)
+      tiling.reconcile()
+    default:
+      #expect(tiling.setWindowLayout(.float, for: 3))
+    }
+
+    #expect(tiling.changeDwindleSplitRatio(.absolute(0.2), for: 2) == 0.2)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            1: CGRect(x: 0, y: 0, width: 800, height: 800),
+            2: CGRect(x: 800, y: 0, width: 200, height: 800),
+          ])
+        )
+    )
+
+    #expect(tiling.swapDwindleSplit(for: 2))
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            2: CGRect(x: 0, y: 0, width: 800, height: 800),
+            1: CGRect(x: 800, y: 0, width: 200, height: 800),
+          ])
+        )
+    )
+  }
+
+  @Test(
     "windowDidFocus: retains pending focus unless a newer focus event supersedes it",
     arguments: [false, true]
   )

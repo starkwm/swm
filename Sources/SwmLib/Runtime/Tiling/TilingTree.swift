@@ -13,8 +13,23 @@ indirect enum TilingTree: Equatable {
     /// The window's leaf.
     case leaf(CGWindowID)
 
-    /// The branch whose direct child is the window's leaf.
-    case parent(of: CGWindowID)
+    /// The window's nearest split once hidden leaves are removed: a branch where one side holds
+    /// only the window's leaf and the other side holds a visible window.
+    case parent(of: CGWindowID, hiding: Set<CGWindowID>)
+  }
+
+  /// Whether a branch's sides hold only a window's leaf and another visible window once hidden
+  /// leaves are removed.
+  private static func isParent(
+    of windowID: CGWindowID,
+    first: TilingTree,
+    second: TilingTree,
+    hiding hiddenWindowIDs: Set<CGWindowID>
+  ) -> Bool {
+    switch (first.removing(hiddenWindowIDs), second.removing(hiddenWindowIDs)) {
+    case (.leaf(windowID), .some), (.some, .leaf(windowID)): true
+    default: false
+    }
   }
 
   /// Window IDs in stable tree order.
@@ -76,16 +91,17 @@ indirect enum TilingTree: Equatable {
     return true
   }
 
-  /// Change the nearest parent split for a window leaf.
+  /// Change the nearest visible parent split for a window leaf.
   @discardableResult
   mutating func changeSplitRatio(
     _ change: LayoutRatioChange,
-    containing windowID: CGWindowID
+    containing windowID: CGWindowID,
+    hiding hiddenWindowIDs: Set<CGWindowID> = []
   ) -> CGFloat? {
-    updateFirst(.parent(of: windowID)) { tree in
+    updateFirst(.parent(of: windowID, hiding: hiddenWindowIDs)) { tree in
       guard case .branch(let first, let second, var split) = tree else { return nil }
-      // The ratio is the first subtree's share, so a second-child window adjusts its complement.
-      let isFirst = first == .leaf(windowID)
+      // The ratio is the first subtree's share, so a second-side window adjusts its complement.
+      let isFirst = first.windowIDs.contains(windowID)
       let selectedRatio = change.applying(to: isFirst ? split.ratio : 1 - split.ratio)
       split.ratio = isFirst ? selectedRatio : 1 - selectedRatio
       tree = .branch(first, second, split: split)
@@ -93,9 +109,12 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Toggle the nearest resolved parent split containing a window leaf.
-  mutating func toggleSplitDirection(containing windowID: CGWindowID) -> Bool {
-    updateFirst(.parent(of: windowID)) { tree in
+  /// Toggle the nearest resolved visible parent split containing a window leaf.
+  mutating func toggleSplitDirection(
+    containing windowID: CGWindowID,
+    hiding hiddenWindowIDs: Set<CGWindowID> = []
+  ) -> Bool {
+    updateFirst(.parent(of: windowID, hiding: hiddenWindowIDs)) { tree in
       guard case .branch(let first, let second, var split) = tree,
         let direction = split.direction
       else { return nil }
@@ -105,9 +124,12 @@ indirect enum TilingTree: Equatable {
     } ?? false
   }
 
-  /// Exchange the two subtrees of the nearest parent containing a window leaf.
-  mutating func swapSplit(containing windowID: CGWindowID) -> Bool {
-    updateFirst(.parent(of: windowID)) { tree in
+  /// Exchange the two subtrees of the nearest visible parent containing a window leaf.
+  mutating func swapSplit(
+    containing windowID: CGWindowID,
+    hiding hiddenWindowIDs: Set<CGWindowID> = []
+  ) -> Bool {
+    updateFirst(.parent(of: windowID, hiding: hiddenWindowIDs)) { tree in
       guard case .branch(let first, let second, let split) = tree else { return nil }
       tree = .branch(second, first, split: split)
       return true
@@ -149,8 +171,14 @@ indirect enum TilingTree: Equatable {
     switch (match, self) {
     case (.leaf(let windowID), .leaf(let candidate)):
       candidate == windowID
-    case (.parent(let windowID), .branch(let first, let second, _)):
-      first == .leaf(windowID) || second == .leaf(windowID)
+    case (.parent(let windowID, let hiddenWindowIDs), .branch(let first, let second, _)):
+      // A hidden window has no visible split, so it keeps its full-tree parent.
+      Self.isParent(
+        of: windowID,
+        first: first,
+        second: second,
+        hiding: hiddenWindowIDs.contains(windowID) ? [] : hiddenWindowIDs
+      )
     default:
       false
     }
