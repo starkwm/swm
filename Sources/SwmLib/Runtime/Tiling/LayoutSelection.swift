@@ -1,5 +1,5 @@
 /// User-facing automatic layout selection, including unmanaged floating windows.
-enum LayoutSelection: String, Equatable {
+public enum LayoutSelection: String, Equatable, CaseIterable, Sendable {
   /// Leave windows unmanaged by automatic tiling.
   case float
 

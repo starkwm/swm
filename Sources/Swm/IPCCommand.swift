@@ -128,11 +128,6 @@ extension WindowIPCCommand {
   static var domain: CommandDomain { .window }
 }
 
-/// Values shared by multiple command domains.
-enum LayoutName: String, CaseIterable, ExpressibleByArgument {
-  case float, master, monocle, dwindle
-}
-
 /// A master-area edge, or the next or previous edge in turn.
 enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
   case left, right, top, bottom, next, prev

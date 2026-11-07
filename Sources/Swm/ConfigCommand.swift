@@ -35,7 +35,7 @@ struct ConfigCommand: ParsableCommand {
     @OptionGroup var scope: ConfigScopeOptions
 
     @Argument(help: "Layout used in the selected scope.")
-    var layout: LayoutName?
+    var layout: LayoutSelection?
 
     var settingArguments: [String] { layout.map { [$0.rawValue] } ?? [] }
   }
@@ -47,7 +47,7 @@ struct ConfigCommand: ParsableCommand {
     static let command = "focus-follows-mouse"
 
     @Argument(help: "Focus mode used for managed windows.")
-    var mode: FocusFollowsMouseName?
+    var mode: FocusFollowsMouseMode?
 
     var arguments: [String] { mode.map { [$0.rawValue] } ?? [] }
   }
@@ -203,9 +203,9 @@ struct ConfigCommand: ParsableCommand {
 
 extension AnimationEasing: ExpressibleByArgument {}
 
-enum FocusFollowsMouseName: String, CaseIterable, ExpressibleByArgument {
-  case off, autofocus, autoraise
-}
+extension FocusFollowsMouseMode: ExpressibleByArgument {}
+
+extension LayoutSelection: ExpressibleByArgument {}
 
 /// Padding sides for global or selected Space settings.
 struct PaddingSideOptions: ParsableArguments {

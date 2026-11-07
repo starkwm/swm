@@ -407,15 +407,15 @@ struct WindowIdentityTarget: ExpressibleByArgument {
 
 /// Window to focus, relative to the focused window or by identity.
 enum FocusTarget: Equatable, ExpressibleByArgument {
-  case direction(CardinalDirectionName)
-  case order(CycleDirectionName)
+  case direction(CardinalDirection)
+  case order(CycleDirection)
   case master
   case window(String)
 
   init?(argument: String) {
-    if let direction = CardinalDirectionName(rawValue: argument) {
+    if let direction = CardinalDirection(rawValue: argument) {
       self = .direction(direction)
-    } else if let direction = CycleDirectionName(rawValue: argument) {
+    } else if let direction = CycleDirection(rawValue: argument) {
       self = .order(direction)
     } else if argument == "master" {
       self = .master
@@ -429,8 +429,8 @@ enum FocusTarget: Equatable, ExpressibleByArgument {
 
 /// Window to swap the selected window with.
 enum SwapTarget: Equatable, ExpressibleByArgument {
-  case direction(CardinalDirectionName)
-  case order(CycleDirectionName)
+  case direction(CardinalDirection)
+  case order(CycleDirection)
   case master
 
   init?(argument: String) {
@@ -461,19 +461,11 @@ struct WarpTarget: ExpressibleByArgument {
 
   init?(argument: String) {
     guard
-      CardinalDirectionName(rawValue: argument) != nil
+      CardinalDirection(rawValue: argument) != nil
         || argument == "recent" || UInt32(argument).map({ $0 > 0 }) == true
     else { return nil }
     value = argument
   }
-}
-
-enum CycleDirectionName: String, CaseIterable, ExpressibleByArgument {
-  case next, prev
-}
-
-enum CardinalDirectionName: String, CaseIterable, ExpressibleByArgument {
-  case left, right, up, down
 }
 
 /// Shared destination syntax for window transfers; resolution stays in the daemon.
