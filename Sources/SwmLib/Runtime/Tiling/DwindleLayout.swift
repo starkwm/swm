@@ -2,9 +2,6 @@ import CoreGraphics
 
 /// Pure ordered geometry calculator that recursively bisects the remaining bounds.
 struct DwindleLayout {
-  /// Minimum frame size accepted for every tiled window.
-  private static let minimumWindowSize = CGSize(width: 1, height: 1)
-
   /// Calculate frames for persistent dwindle sibling relationships.
   func layout(
     tree: TilingTree?,
@@ -14,8 +11,7 @@ struct DwindleLayout {
   ) -> TilingLayoutResult {
     guard let tree else { return .frames([:]) }
 
-    let usableBounds = settings.tilingBounds(in: bounds)
-    guard usableBounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
+    guard let usableBounds = settings.usableTilingBounds(in: bounds) else {
       return .insufficientSpace(.usableBounds)
     }
 
@@ -129,7 +125,7 @@ struct DwindleLayout {
   ) -> CGSize {
     switch tree {
     case .leaf(let id):
-      let size = minima[id] ?? Self.minimumWindowSize
+      let size = minima[id] ?? TilingLimits.minimumWindowSize
       return CGSize(width: max(1, size.width), height: max(1, size.height))
     case .branch(let first, let second, let split):
       let a = minimumSize(first, gap: gap, minima: minima)
@@ -150,8 +146,8 @@ struct DwindleLayout {
   ) -> TilingLayoutConstraint? {
     switch tree {
     case .leaf(let windowID):
-      guard bounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
-        return bounds.width < Self.minimumWindowSize.width ? .tileWidth : .tileHeight
+      guard bounds.size.meetsTilingMinimum(TilingLimits.minimumWindowSize) else {
+        return bounds.width < TilingLimits.minimumWindowSize.width ? .tileWidth : .tileHeight
       }
       framesByWindowID[windowID] = bounds
       return nil
@@ -210,8 +206,9 @@ struct DwindleLayout {
     guard available >= 0 else {
       return .insufficientSpace(vertical ? .horizontalGap : .verticalGap)
     }
-    let allocation = (available * min(max(split.ratio, 0.1), 0.9)).rounded()
-    let minimum = vertical ? Self.minimumWindowSize.width : Self.minimumWindowSize.height
+    let allocation = (available * TilingLimits.clampedRatio(split.ratio)).rounded()
+    let minimum =
+      vertical ? TilingLimits.minimumWindowSize.width : TilingLimits.minimumWindowSize.height
     guard allocation >= minimum, available - allocation >= minimum else {
       return .insufficientSpace(vertical ? .tileWidth : .tileHeight)
     }

@@ -2,9 +2,6 @@ import CoreGraphics
 
 /// Pure ordered master layout geometry calculator.
 struct MasterLayout {
-  /// Minimum frame size accepted for every tiled window.
-  private static let minimumWindowSize = CGSize(width: 1, height: 1)
-
   /// Calculate master layout frames without performing window side effects.
   func layout(
     windowIDs: [CGWindowID],
@@ -15,8 +12,7 @@ struct MasterLayout {
   ) -> TilingLayoutResult {
     guard !windowIDs.isEmpty else { return .frames([:]) }
 
-    let usableBounds = settings.tilingBounds(in: bounds)
-    guard usableBounds.size.meetsTilingMinimum(Self.minimumWindowSize) else {
+    guard let usableBounds = settings.usableTilingBounds(in: bounds) else {
       return .insufficientSpace(.usableBounds)
     }
 
@@ -24,138 +20,75 @@ struct MasterLayout {
       return .frames([windowIDs[0]: usableBounds])
     }
 
-    let ratio = min(max(masterRatio, 0.1), 0.9)
-    switch placement {
-    case .left, .right:
-      return columnLayout(
-        windowIDs: windowIDs,
-        in: usableBounds,
-        gap: settings.tilingGap,
-        masterRatio: ratio,
-        placement: placement
-      )
-    case .top, .bottom:
-      return rowLayout(
-        windowIDs: windowIDs,
-        in: usableBounds,
-        gap: settings.tilingGap,
-        masterRatio: ratio,
-        placement: placement
-      )
-    }
+    // Rows are laid out as columns in transposed space, then transposed back.
+    let transposed = placement == .top || placement == .bottom
+    return stackLayout(
+      windowIDs: windowIDs,
+      in: transposed ? usableBounds.transposed : usableBounds,
+      gap: settings.tilingGap,
+      masterRatio: TilingLimits.clampedRatio(masterRatio),
+      masterFirst: placement == .left || placement == .top,
+      transposed: transposed
+    )
   }
 
-  /// Arrange a master column and vertical stack on the left or right.
-  private func columnLayout(
+  /// Arrange a master column and a vertical stack beside it.
+  ///
+  /// With `transposed`, the bounds are a master row and horizontal stack with their axes
+  /// swapped. The constraints then name the original axes, and the frames are swapped back.
+  private func stackLayout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
     gap: CGFloat,
     masterRatio: CGFloat,
-    placement: MasterPlacement
+    masterFirst: Bool,
+    transposed: Bool
   ) -> TilingLayoutResult {
-    let availableWidth = bounds.width - gap
-    guard availableWidth >= 0 else { return .insufficientSpace(.horizontalGap) }
-
-    let masterWidth = (availableWidth * masterRatio).rounded()
-    let stackWidth = availableWidth - masterWidth
-    guard masterWidth >= Self.minimumWindowSize.width else {
-      return .insufficientSpace(.masterWidth)
+    let minimum = TilingLimits.minimumWindowSize
+    let available = bounds.width - gap
+    guard available >= 0 else {
+      return .insufficientSpace(transposed ? .verticalGap : .horizontalGap)
     }
-    guard stackWidth >= Self.minimumWindowSize.width else {
-      return .insufficientSpace(.stackWidth)
+
+    let masterLength = (available * masterRatio).rounded()
+    let stackLength = available - masterLength
+    guard masterLength >= (transposed ? minimum.height : minimum.width) else {
+      return .insufficientSpace(transposed ? .masterHeight : .masterWidth)
+    }
+    guard stackLength >= (transposed ? minimum.height : minimum.width) else {
+      return .insufficientSpace(transposed ? .stackHeight : .stackWidth)
     }
 
     let stackWindowIDs = Array(windowIDs.dropFirst())
     guard
-      let stackHeights = partitions(
+      let stackLengths = partitions(
         length: bounds.height,
         count: stackWindowIDs.count,
         gap: gap,
-        minimum: Self.minimumWindowSize.height
+        minimum: transposed ? minimum.width : minimum.height
       )
     else {
-      return .insufficientSpace(.stackHeight)
+      return .insufficientSpace(transposed ? .stackWidth : .stackHeight)
     }
 
-    let masterX = placement == .left ? bounds.minX : bounds.maxX - masterWidth
-    let stackX = placement == .left ? masterX + masterWidth + gap : bounds.minX
-    var framesByWindowID = [
+    let masterX = masterFirst ? bounds.minX : bounds.maxX - masterLength
+    let stackX = masterFirst ? masterX + masterLength + gap : bounds.minX
+    var frames = [
       windowIDs[0]: CGRect(
         x: masterX,
         y: bounds.minY,
-        width: masterWidth,
+        width: masterLength,
         height: bounds.height
       )
     ]
     var stackY = bounds.minY
     for (index, windowID) in stackWindowIDs.enumerated() {
-      let height = stackHeights[index]
-      framesByWindowID[windowID] = CGRect(
-        x: stackX,
-        y: stackY,
-        width: stackWidth,
-        height: height
-      )
-      stackY += height + gap
+      let length = stackLengths[index]
+      frames[windowID] = CGRect(x: stackX, y: stackY, width: stackLength, height: length)
+      stackY += length + gap
     }
 
-    return .frames(framesByWindowID)
-  }
-
-  /// Arrange a master row and horizontal stack on the top or bottom.
-  private func rowLayout(
-    windowIDs: [CGWindowID],
-    in bounds: CGRect,
-    gap: CGFloat,
-    masterRatio: CGFloat,
-    placement: MasterPlacement
-  ) -> TilingLayoutResult {
-    let availableHeight = bounds.height - gap
-    guard availableHeight >= 0 else { return .insufficientSpace(.verticalGap) }
-
-    let masterHeight = (availableHeight * masterRatio).rounded()
-    let stackHeight = availableHeight - masterHeight
-    guard masterHeight >= Self.minimumWindowSize.height else {
-      return .insufficientSpace(.masterHeight)
-    }
-    guard stackHeight >= Self.minimumWindowSize.height else {
-      return .insufficientSpace(.stackHeight)
-    }
-
-    let stackWindowIDs = Array(windowIDs.dropFirst())
-    guard
-      let stackWidths = partitions(
-        length: bounds.width,
-        count: stackWindowIDs.count,
-        gap: gap,
-        minimum: Self.minimumWindowSize.width
-      )
-    else {
-      return .insufficientSpace(.stackWidth)
-    }
-
-    let masterY = placement == .top ? bounds.minY : bounds.maxY - masterHeight
-    let stackY = placement == .top ? masterY + masterHeight + gap : bounds.minY
-    var framesByWindowID = [
-      windowIDs[0]: CGRect(
-        x: bounds.minX,
-        y: masterY,
-        width: bounds.width,
-        height: masterHeight
-      )
-    ]
-    var stackX = bounds.minX
-    for (index, windowID) in stackWindowIDs.enumerated() {
-      let width = stackWidths[index]
-      framesByWindowID[windowID] = CGRect(
-        x: stackX,
-        y: stackY,
-        width: width,
-        height: stackHeight
-      )
-      stackX += width + gap
-    }
-    return .frames(framesByWindowID)
+    return .frames(transposed ? frames.mapValues(\.transposed) : frames)
   }
 
   /// Return rounded partition lengths whose total plus gaps exactly fills the input length.
@@ -177,5 +110,12 @@ struct MasterLayout {
     }
 
     return lengths.allSatisfy { $0 >= minimum } ? lengths : nil
+  }
+}
+
+extension CGRect {
+  /// The rectangle with its x and y axes swapped.
+  fileprivate var transposed: CGRect {
+    CGRect(x: minY, y: minX, width: height, height: width)
   }
 }
