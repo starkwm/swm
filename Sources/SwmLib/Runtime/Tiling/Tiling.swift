@@ -376,14 +376,7 @@ public final class Tiling {
 
   /// Remove a rule by one-based index or unique label.
   func removeRule(selector: String) throws {
-    let index: Int?
-    if let number = Int(selector) {
-      guard number > 0 else { throw IPCCommandError.invalidRequest("rule not found: \(selector)") }
-      index = number - 1
-    } else {
-      index = rules.firstIndex { $0.label == selector }
-    }
-    guard let index, rules.indices.contains(index) else {
+    guard let index = rules.index(selector: selector, label: \.label) else {
       throw IPCCommandError.invalidRequest("rule not found: \(selector)")
     }
     rules.remove(at: index)
