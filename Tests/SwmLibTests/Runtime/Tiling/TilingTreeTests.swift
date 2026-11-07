@@ -43,6 +43,45 @@ struct TilingTreeTests {
     )
   }
 
+  @Test("toggleSplitDirection: flips only the nearest resolved parent")
+  func toggleSplitDirectionFlipsOnlyTheNearestResolvedParent() {
+    let vertical = TilingSplit(ratio: 0.5, direction: .vertical)
+    let nested = TilingTree.branch(
+      .leaf(2),
+      .leaf(3),
+      split: TilingSplit(ratio: 0.5, direction: nil)
+    )
+    var tree = TilingTree.branch(.leaf(1), nested, split: vertical)
+
+    let unresolved = tree.toggleSplitDirection(containing: 3)
+    let missing = tree.toggleSplitDirection(containing: 99)
+    #expect(!unresolved && !missing)
+    #expect(tree == .branch(.leaf(1), nested, split: vertical))
+
+    let toggled = tree.toggleSplitDirection(containing: 1)
+    #expect(toggled)
+    #expect(
+      tree == .branch(.leaf(1), nested, split: TilingSplit(ratio: 0.5, direction: .horizontal))
+    )
+  }
+
+  @Test("swapSplit: exchanges the subtrees of the nearest parent")
+  func swapSplitExchangesTheSubtreesOfTheNearestParent() {
+    let split = TilingSplit(ratio: 0.3, direction: .vertical)
+    var tree = TilingTree.branch(.leaf(1), .branch(.leaf(2), .leaf(3), split: split))
+
+    let swappedNested = tree.swapSplit(containing: 3)
+    #expect(swappedNested)
+    #expect(tree == .branch(.leaf(1), .branch(.leaf(3), .leaf(2), split: split)))
+
+    let swappedRoot = tree.swapSplit(containing: 1)
+    #expect(swappedRoot)
+    #expect(tree == .branch(.branch(.leaf(3), .leaf(2), split: split), .leaf(1)))
+
+    let swappedMissing = tree.swapSplit(containing: 99)
+    #expect(!swappedMissing)
+  }
+
   @Test("settingSplitRatios: replaces every ratio and keeps retained directions")
   func settingSplitRatiosReplacesEveryRatioAndKeepsRetainedDirections() {
     let tree = TilingTree.branch(
