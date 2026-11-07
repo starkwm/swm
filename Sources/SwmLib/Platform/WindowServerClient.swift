@@ -12,6 +12,11 @@ final class WindowServerClient {
   @MainActor
   static let spaceClient = Result { try SpaceClient() }
 
+  /// Return whether two Carbon process serial numbers identify the same process.
+  static func sameProcess(_ lhs: ProcessSerialNumber, _ rhs: ProcessSerialNumber) -> Bool {
+    lhs.highLongOfPSN == rhs.highLongOfPSN && lhs.lowLongOfPSN == rhs.lowLongOfPSN
+  }
+
   /// Return the main WindowServer connection ID for this process.
   func mainConnectionID() -> Int32 {
     SLSMainConnectionID()
@@ -73,7 +78,7 @@ final class WindowServerClient {
 
     if var currentProcessSerialNumber,
       let currentWindowID,
-      sameProcess(currentProcessSerialNumber, processSerialNumber)
+      Self.sameProcess(currentProcessSerialNumber, processSerialNumber)
     {
       guard
         postFocusTransition(
@@ -314,11 +319,6 @@ final class WindowServerClient {
       guard let baseAddress = buffer.baseAddress else { return false }
       return SLPSPostEventRecordTo(&processSerialNumber, baseAddress) == .success
     }
-  }
-
-  /// Return whether two Carbon process serial numbers identify the same process.
-  private func sameProcess(_ lhs: ProcessSerialNumber, _ rhs: ProcessSerialNumber) -> Bool {
-    lhs.highLongOfPSN == rhs.highLongOfPSN && lhs.lowLongOfPSN == rhs.lowLongOfPSN
   }
 
   /// Return whether WindowServer attributes and tags describe a manageable window.
