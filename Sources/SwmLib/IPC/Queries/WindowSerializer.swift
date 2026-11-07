@@ -93,113 +93,6 @@ struct WindowSerializer: Encodable, Equatable {
   /// Whether accessibility reports the window as minimized.
   let isMinimized: Bool
 
-  /// Create query output from explicit window fields.
-  init(
-    id: CGWindowID,
-    pid: pid_t?,
-    app: String?,
-    title: String?,
-    frame: FrameSerializer?,
-    role: String?,
-    subrole: String?,
-    display: UInt32?,
-    space: Int?,
-    layer: Int?,
-    canMove: Bool?,
-    canResize: Bool?,
-    hasFocus: Bool?,
-    hasAXReference: Bool,
-    isNativeFullscreen: Bool,
-    isVisible: Bool,
-    isMinimized: Bool,
-  ) {
-    self.id = id
-    self.pid = pid
-    self.app = app
-    self.title = title
-    self.frame = frame
-    self.role = role
-    self.subrole = subrole
-    self.display = display
-    self.space = space
-    self.layer = layer
-    self.canMove = canMove
-    self.canResize = canResize
-    self.hasFocus = hasFocus
-    self.hasAXReference = hasAXReference
-    self.isNativeFullscreen = isNativeFullscreen
-    self.isVisible = isVisible
-    self.isMinimized = isMinimized
-  }
-
-  /// Create query output by combining window, accessibility, and Core Graphics metadata.
-  @MainActor
-  init(
-    window: Window,
-    focusedWindowID: CGWindowID?,
-    info: [String: Any]?,
-    screens: [NSScreen] = NSScreen.screens,
-    spaceIndex: Int? = nil,
-    knownSpaceIDs: [UInt64]? = nil,
-    nativeFullscreen: Bool? = nil
-  ) {
-    let element = window.element
-    let frame = element.flatMap { AccessibilityClient.shared.frame(for: $0) }
-    let spaceIDs = knownSpaceIDs ?? WindowServerClient.shared.spaceIDs(containing: window.id)
-
-    id = window.id
-    pid =
-      window.application?.processID
-      ?? element.flatMap { AccessibilityClient.shared.processID(for: $0) }
-    app =
-      window.application?.name
-      ?? (info?[kCGWindowOwnerName as String] as? String)
-    title =
-      element.flatMap {
-        AccessibilityClient.shared.stringAttribute(
-          for: $0,
-          attribute: kAXTitleAttribute as String
-        )
-      } ?? (info?[kCGWindowName as String] as? String)
-    self.frame = frame.map(FrameSerializer.init)
-    role = element.flatMap {
-      AccessibilityClient.shared.stringAttribute(
-        for: $0,
-        attribute: kAXRoleAttribute as String
-      )
-    }
-    subrole = window.subrole
-    let displayScreen = frame.flatMap { rect in
-      screens.largestIntersection(with: rect, frame: \.axFrame)
-    }
-    display = displayScreen?.id
-    space = spaceIndex
-    layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
-    canMove = element.map {
-      AccessibilityClient.shared.isAttributeSettable(
-        kAXPositionAttribute as String,
-        for: $0
-      )
-    }
-    canResize = element.map {
-      AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: $0)
-    }
-    hasFocus = focusedWindowID.map { $0 == window.id }
-    hasAXReference = element != nil
-    isNativeFullscreen =
-      nativeFullscreen ?? spaceIDs.first.map {
-        WindowServerClient.shared.spaceType(for: $0) == .fullscreen
-      } ?? false
-    isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
-    isMinimized =
-      element.flatMap {
-        AccessibilityClient.shared.boolAttribute(
-          for: $0,
-          attribute: kAXMinimizedAttribute as String
-        )
-      } ?? false
-  }
-
   /// Encode window state using stable query output keys.
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
@@ -220,5 +113,57 @@ struct WindowSerializer: Encodable, Equatable {
     try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
     try container.encodeNilOrValue(isVisible, forKey: .isVisible)
     try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
+  }
+}
+
+extension WindowSerializer {
+  /// Create query output by combining window, accessibility, and Core Graphics metadata.
+  @MainActor
+  init(
+    window: Window,
+    focusedWindowID: CGWindowID?,
+    info: [String: Any]?,
+    screens: [NSScreen] = NSScreen.screens,
+    spaceIndex: Int? = nil,
+    knownSpaceIDs: [UInt64]? = nil,
+    nativeFullscreen: Bool? = nil
+  ) {
+    let element = window.element
+    let frame = window.frame()
+    let spaceIDs = knownSpaceIDs ?? WindowServerClient.shared.spaceIDs(containing: window.id)
+
+    id = window.id
+    pid =
+      window.application?.processID
+      ?? element.flatMap { AccessibilityClient.shared.processID(for: $0) }
+    app =
+      window.application?.name
+      ?? (info?[kCGWindowOwnerName as String] as? String)
+    title = window.accessibilityTitle ?? (info?[kCGWindowName as String] as? String)
+    self.frame = frame.map(FrameSerializer.init)
+    role = element.flatMap {
+      AccessibilityClient.shared.stringAttribute(
+        for: $0,
+        attribute: kAXRoleAttribute as String
+      )
+    }
+    subrole = window.subrole
+    let displayScreen = frame.flatMap { rect in
+      screens.largestIntersection(with: rect, frame: \.axFrame)
+    }
+    display = displayScreen?.id
+    space = spaceIndex
+    layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
+    // Without an accessibility element, whether the window can move or resize is unknown.
+    canMove = element.map { _ in window.isMovable }
+    canResize = element.map { _ in window.isResizable }
+    hasFocus = focusedWindowID.map { $0 == window.id }
+    hasAXReference = element != nil
+    isNativeFullscreen =
+      nativeFullscreen ?? spaceIDs.first.map {
+        WindowServerClient.shared.spaceType(for: $0) == .fullscreen
+      } ?? false
+    isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
+    isMinimized = window.isMinimized
   }
 }

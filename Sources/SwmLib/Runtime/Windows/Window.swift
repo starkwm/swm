@@ -43,20 +43,40 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     ) ?? false
   }
 
+  /// Whether accessibility allows moving the window.
+  var isMovable: Bool {
+    guard let element else { return false }
+    return AccessibilityClient.shared.isAttributeSettable(
+      kAXPositionAttribute as String,
+      for: element
+    )
+  }
+
+  /// Whether accessibility allows resizing the window.
+  var isResizable: Bool {
+    guard let element else { return false }
+    return AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: element)
+  }
+
   /// Accessibility element for the window when still valid.
   private(set) var element: AXUIElement?
 
   /// Core Graphics window ID.
   private(set) var id: CGWindowID
 
-  /// Accessibility title for the window.
-  var title: String {
-    guard let element else { return "" }
+  /// Accessibility title for the window, or nil when accessibility reports none.
+  var accessibilityTitle: String? {
+    guard let element else { return nil }
 
     return AccessibilityClient.shared.stringAttribute(
       for: element,
       attribute: kAXTitleAttribute as String
-    ) ?? ""
+    )
+  }
+
+  /// Accessibility title for the window, or an empty string when accessibility reports none.
+  var title: String {
+    accessibilityTitle ?? ""
   }
 
   private var observedNotifications = Set<String>()
@@ -162,7 +182,7 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
 
   /// Capture the window facts used by automatic-tiling policy.
   func tilingSnapshot() -> TilingWindowSnapshot {
-    guard let element else {
+    guard element != nil else {
       return TilingWindowSnapshot(
         id: id,
         displayID: nil,
@@ -180,14 +200,8 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
       },
       subrole: subrole,
       isMinimized: isMinimized,
-      isMovable: AccessibilityClient.shared.isAttributeSettable(
-        kAXPositionAttribute as String,
-        for: element
-      ),
-      isResizable: AccessibilityClient.shared.isAttributeSettable(
-        kAXSizeAttribute as String,
-        for: element
-      ),
+      isMovable: isMovable,
+      isResizable: isResizable,
       app: application?.name,
       title: title,
       bundleID: application?.bundleID
