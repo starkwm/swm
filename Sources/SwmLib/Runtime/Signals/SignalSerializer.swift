@@ -10,7 +10,7 @@ struct SignalSerializer: Encodable, Equatable {
     case action
   }
 
-  private static func filterDescription(_ filter: SignalTextFilter) -> String {
+  private static func filterDescription(_ filter: TextFilter) -> String {
     filter.inverted ? "!\(filter.pattern)" : filter.pattern
   }
 
