@@ -28,16 +28,21 @@ struct DwindleLayout {
   }
 
   /// Resolve dynamic branch directions from their current bounds and retain them in a copy.
+  ///
+  /// Hidden windows receive no bounds, so a branch with a hidden side keeps its own direction and
+  /// passes its whole region to the visible side, matching the geometry drawn without them.
   func resolvingSplitDirections(
     in tree: TilingTree?,
     bounds: CGRect,
-    settings: SpaceSettings
+    settings: SpaceSettings,
+    hiding hiddenWindowIDs: Set<CGWindowID> = []
   ) -> TilingTree? {
     guard let tree else { return nil }
     return resolvingSplitDirections(
       in: tree,
       bounds: settings.tilingBounds(in: bounds),
-      gap: settings.tilingGap
+      gap: settings.tilingGap,
+      hiding: hiddenWindowIDs
     )
   }
 
@@ -70,12 +75,26 @@ struct DwindleLayout {
   private func resolvingSplitDirections(
     in tree: TilingTree,
     bounds: CGRect,
-    gap: CGFloat
+    gap: CGFloat,
+    hiding hiddenWindowIDs: Set<CGWindowID>
   ) -> TilingTree {
     switch tree {
     case .leaf:
       return tree
     case .branch(let first, let second, var split):
+      let firstIsVisible = first.removing(hiddenWindowIDs) != nil
+      let secondIsVisible = second.removing(hiddenWindowIDs) != nil
+      guard firstIsVisible, secondIsVisible else {
+        // A branch with a hidden side draws as its visible side, which keeps the whole region.
+        let resolve = {
+          resolvingSplitDirections(in: $0, bounds: bounds, gap: gap, hiding: hiddenWindowIDs)
+        }
+        return .branch(
+          firstIsVisible ? resolve(first) : first,
+          secondIsVisible ? resolve(second) : second,
+          split: split
+        )
+      }
       split.direction = split.direction ?? direction(for: bounds)
       guard
         case .frames(let firstBounds, let secondBounds) = splitBounds(
@@ -87,8 +106,18 @@ struct DwindleLayout {
         return .branch(first, second, split: split)
       }
       return .branch(
-        resolvingSplitDirections(in: first, bounds: firstBounds, gap: gap),
-        resolvingSplitDirections(in: second, bounds: secondBounds, gap: gap),
+        resolvingSplitDirections(
+          in: first,
+          bounds: firstBounds,
+          gap: gap,
+          hiding: hiddenWindowIDs
+        ),
+        resolvingSplitDirections(
+          in: second,
+          bounds: secondBounds,
+          gap: gap,
+          hiding: hiddenWindowIDs
+        ),
         split: split
       )
     }

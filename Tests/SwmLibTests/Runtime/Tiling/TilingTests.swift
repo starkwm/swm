@@ -1696,6 +1696,42 @@ struct TilingTests {
     )
   }
 
+  @Test(
+    "layoutPlan: preserved split directions follow bounds without hidden windows",
+    arguments: ["minimized", "floated"]
+  )
+  func layoutPlanPreservedSplitDirectionsFollowBoundsWithoutHiddenWindows(hiddenBy: String) {
+    var windows = [window(id: 1), window(id: 2)]
+    var memberships: [CGWindowID: Set<UInt64>] = [1: [10], 2: [10]]
+    let tiling = makeTiling(windows: { windows }, memberships: { memberships })
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    #expect(tiling.setSplitDirectionPreservation(true, for: 10))
+    _ = tiling.layoutPlan(for: layoutID(10))
+
+    switch hiddenBy {
+    case "minimized":
+      windows[0] = window(id: 1, isMinimized: true)
+      tiling.reconcile()
+    default:
+      #expect(tiling.setWindowLayout(.float, for: 1))
+    }
+    tiling.windowDidFocus(2)
+    windows.append(window(id: 3))
+    memberships[3] = [10]
+    tiling.reconcile()
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10))
+        == .layout(
+          .frames([
+            2: CGRect(x: 0, y: 0, width: 500, height: 800),
+            3: CGRect(x: 500, y: 0, width: 500, height: 800),
+          ])
+        )
+    )
+  }
+
   @Test("swapDwindleSplit: swap the nearest sibling subtrees")
   func swapDwindleSplitSwapTheNearestSiblingSubtrees() {
     let tiling = makeTiling(
