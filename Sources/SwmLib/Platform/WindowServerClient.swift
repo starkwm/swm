@@ -122,16 +122,16 @@ final class WindowServerClient {
     try Self.spaceClient.get().snapshot()
   }
 
-  /// Return the active WindowServer space ID.
+  /// Return the active WindowServer space ID, or nil when it cannot be read.
   @MainActor
-  func activeSpace() -> UInt64 {
-    querySpaces(default: 0) { try $0.activeSpace()?.rawValue ?? 0 }
+  func activeSpace() -> UInt64? {
+    querySpaces(default: nil) { try $0.activeSpace()?.rawValue }
   }
 
-  /// Return the current space ID for a display UUID.
+  /// Return the current space ID for a display UUID, or nil when it cannot be read.
   @MainActor
-  func currentSpace(for screenUUID: String) -> UInt64 {
-    querySpaces(default: 0) { try $0.currentSpace(for: .init(rawValue: screenUUID))?.rawValue ?? 0 }
+  func currentSpace(for screenUUID: String) -> UInt64? {
+    querySpaces(default: nil) { try $0.currentSpace(for: .init(rawValue: screenUUID))?.rawValue }
   }
 
   /// Return all known WindowServer space IDs.

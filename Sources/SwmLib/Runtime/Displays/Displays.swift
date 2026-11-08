@@ -30,7 +30,7 @@ public final class Displays {
 
   /// Create a display observation seeded from the active space.
   public init() {
-    activeDisplay = TrackedState(current: Spaces.display(for: Spaces.active()))
+    activeDisplay = TrackedState(current: Spaces.active().flatMap(Spaces.display(for:)))
   }
 
   /// Start observing CoreGraphics display reconfiguration callbacks.
@@ -46,7 +46,7 @@ public final class Displays {
 
   /// Update tracked display state after the active space changes.
   func activeDisplayDidChange() {
-    guard let activeDisplayID = Spaces.display(for: Spaces.active()) else { return }
+    guard let activeDisplayID = Spaces.active().flatMap(Spaces.display(for:)) else { return }
     activeDisplay.update(to: activeDisplayID)
   }
 

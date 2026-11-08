@@ -10,9 +10,9 @@ public final class Spaces {
     WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))
   }
 
-  /// Return the currently active WindowServer space.
-  static func active() -> Space {
-    Space(id: WindowServerClient.shared.activeSpace())
+  /// Return the currently active WindowServer space, or nil when it cannot be read.
+  static func active() -> Space? {
+    WindowServerClient.shared.activeSpace().map(Space.init(id:))
   }
 
   /// Return the display UUID for a space.
@@ -33,21 +33,44 @@ public final class Spaces {
   private(set) var activeSpace: TrackedState<UInt64>
   private(set) var defaultSettings = SpaceSettings.defaults
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
+  private let activeSpaceProvider: () -> UInt64?
 
   /// Create a Space service seeded from the active space.
   public convenience init() throws {
     _ = try WindowServerClient.spaceClient.get()
-    self.init(activeSpaceID: Self.active().id)
+    let provider = { WindowServerClient.shared.activeSpace() }
+    self.init(activeSpaceID: provider(), activeSpaceProvider: provider)
   }
 
-  /// Create a Space service with an explicit active space ID.
-  init(activeSpaceID: UInt64?) {
+  /// Create a Space service with an explicit active space ID and active-Space lookup.
+  init(activeSpaceID: UInt64?, activeSpaceProvider: @escaping () -> UInt64? = { nil }) {
     activeSpace = TrackedState(current: activeSpaceID)
+    self.activeSpaceProvider = activeSpaceProvider
   }
 
   /// Update tracked space state after the active space changes.
   func activeSpaceDidChange(to spaceID: UInt64) {
     activeSpace.update(to: spaceID)
+  }
+
+  /// Forget the tracked active space after a Space change whose target could not be read.
+  func activeSpaceBecameUnavailable() {
+    activeSpace.invalidate()
+  }
+
+  /// Adopt an observed active space when the tracked one is unknown.
+  func restoreActiveSpace(_ spaceID: UInt64) {
+    guard activeSpace.current == nil else { return }
+    activeSpace.update(to: spaceID)
+  }
+
+  /// Return the tracked active space, reading it again when it is unknown.
+  func resolveActiveSpaceID() -> UInt64? {
+    if let id = activeSpace.current { return id }
+    guard let id = activeSpaceProvider() else { return nil }
+
+    activeSpace.update(to: id)
+    return id
   }
 
   /// Return layout settings for a space, falling back to defaults.
@@ -91,7 +114,8 @@ public final class Spaces {
         spaceIDsByWindowID: try Dictionary(
           uniqueKeysWithValues: windowIDs.map { ($0, Set(try membership($0))) }
         ),
-        displaysByID: displays()
+        displaysByID: displays(),
+        activeSpaceID: snapshot.activeSpaceID?.rawValue
       )
     } catch {
       log("could not capture Space topology: \(error)", level: .warn)

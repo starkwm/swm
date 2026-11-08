@@ -14,6 +14,9 @@ struct SpaceTopology: Equatable {
   /// Attached physical displays keyed by Core Graphics UUID.
   let displaysByID: [String: SpaceTopologyDisplay]
 
+  /// Active WindowServer Space observed with this topology.
+  var activeSpaceID: UInt64? = nil
+
   /// Every normal Space and physical display pair available for tiling.
   var layoutIDs: Set<TilingLayoutID> {
     Set(

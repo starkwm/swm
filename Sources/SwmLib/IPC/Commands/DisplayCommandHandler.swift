@@ -70,7 +70,7 @@ struct DisplayCommandHandler {
       return screen.uuid
     }
 
-    return Spaces.display(for: Spaces.active())
+    return Spaces.active().flatMap(Spaces.display(for:))
   }
 
   /// Return the frontmost managed, visible window on a display.

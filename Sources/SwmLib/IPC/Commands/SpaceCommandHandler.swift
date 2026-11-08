@@ -160,7 +160,7 @@ struct SpaceCommandHandler {
 
   /// Return the currently active space ID.
   private func currentSpaceID() throws -> UInt64 {
-    guard let id = spaces.currentActiveSpaceID else {
+    guard let id = spaces.resolveActiveSpaceID() else {
       throw IPCCommandError.invalidRequest("no active space")
     }
 

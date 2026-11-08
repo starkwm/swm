@@ -203,6 +203,9 @@ public final class Tiling {
       suspendTopology()
       return
     }
+    if let activeSpaceID = snapshot.topology?.activeSpaceID {
+      spaces.restoreActiveSpace(activeSpaceID)
+    }
     var windows = snapshot.windows.sorted { $0.id < $1.id }
     var liveIDs = Set(windows.map(\.id))
     let previousFloatingIDs = floatingOverrideWindowIDs

@@ -128,7 +128,7 @@ public final class Workspace: NSObject {
   /// Publish an active-space changed event.
   @objc
   func activeSpaceDidChange(_: Notification) {
-    Events.shared.post(.space(.changed(Spaces.active())))
+    Events.shared.post(.space(Spaces.active().map(SpaceEvent.changed) ?? .unavailable))
   }
 
   /// Publish an active-display changed event.

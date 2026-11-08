@@ -26,6 +26,23 @@ struct SpacesTests {
     #expect(spaces.currentActiveSpaceID == 3)
     #expect(spaces.lastActiveSpaceID == 2)
   }
+  @Test("activeSpaceBecameUnavailable: keeps Space history for the next known Space")
+  func activeSpaceBecameUnavailableKeepsSpaceHistoryForTheNextKnownSpace() {
+    let spaces = Spaces(activeSpaceID: 1)
+    spaces.activeSpaceDidChange(to: 2)
+
+    spaces.activeSpaceBecameUnavailable()
+    #expect(spaces.currentActiveSpaceID == nil)
+    spaces.activeSpaceDidChange(to: 2)
+    #expect(spaces.currentActiveSpaceID == 2)
+    #expect(spaces.lastActiveSpaceID == 1)
+
+    spaces.activeSpaceBecameUnavailable()
+    spaces.activeSpaceDidChange(to: 3)
+    #expect(spaces.currentActiveSpaceID == 3)
+    #expect(spaces.lastActiveSpaceID == 2)
+  }
+
   @Test("snapshotTopology: carries failed and incomplete snapshots as unavailable")
   func snapshotTopologyCarriesFailedAndIncompleteSnapshotsAsUnavailable() throws {
     let spaces = Spaces(activeSpaceID: nil)

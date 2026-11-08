@@ -49,4 +49,37 @@ struct SpaceLifecycleHandlerTests {
     #expect(spaces.currentActiveSpaceID == 11)
     #expect(spaces.lastActiveSpaceID == 33)
   }
+
+  @Test("unavailable change: clears focus tracking until reconciliation reads the active Space")
+  func unavailableChangeClearsFocusTrackingUntilReconciliationReadsTheActiveSpace() {
+    let spaces = Spaces(activeSpaceID: 33)
+    spaces.activeSpaceDidChange(to: 11)
+    var topology: SpaceTopology?
+    let tiling = Tiling(
+      snapshot: { TilingReconciliationSnapshot(windows: [], topology: topology) },
+      spaces: spaces
+    )
+    let handler = SpaceLifecycleHandler(
+      spaces: spaces,
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      tiling: tiling
+    )
+
+    handler.handle(.unavailable)
+
+    #expect(spaces.currentActiveSpaceID == nil)
+    #expect(spaces.lastActiveSpaceID == 33)
+
+    topology = SpaceTopology(
+      spacesByID: [11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal)],
+      visibleSpaceIDByDisplayID: ["display": 11],
+      spaceIDsByWindowID: [:],
+      displaysByID: [:],
+      activeSpaceID: 11
+    )
+    handler.refresh()
+
+    #expect(spaces.currentActiveSpaceID == 11)
+    #expect(spaces.lastActiveSpaceID == 33)
+  }
 }

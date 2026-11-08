@@ -72,6 +72,9 @@ struct RuntimeEventSignalMapper {
     case .window(.deminimized(let window)):
       return windowPayload(event: .windowDeminimized, windowID: window.id, window: window)
 
+    case .space(.unavailable):
+      return nil
+
     case .space(.changed(let space)):
       let allSpaces = Spaces.all()
       return .spaceChanged(
