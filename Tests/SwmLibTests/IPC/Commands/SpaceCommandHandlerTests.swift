@@ -489,6 +489,47 @@ struct SpaceCommandHandlerTests {
     #expect(response.message == "no active space")
   }
 
+  @Test("dispatch: rejects current-Space commands until the active Space can be read again")
+  func dispatchRejectsCurrentSpaceCommandsUntilTheActiveSpaceCanBeReadAgain() async {
+    var readActiveSpaceID: UInt64?
+    let spaces = Spaces(activeSpaceID: 11, activeSpaceProvider: { readActiveSpaceID })
+    let tiling = makeTestTiling(
+      spaces: spaces,
+      windows: [window(id: 1)],
+      topology: SpaceTopology(
+        spacesByID: [11: SpaceTopologyDescriptor(id: 11, displayID: "display", type: .normal)],
+        visibleSpaceIDByDisplayID: ["display": 11],
+        spaceIDsByWindowID: [1: [11]],
+        displaysByID: [
+          "display": SpaceTopologyDisplay(
+            visibleFrame: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+          )
+        ]
+      )
+    )
+    tiling.initialize()
+    let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
+    spaces.activeSpaceBecameUnavailable()
+
+    let gap = await handler.dispatch(request(command: "--gap", args: ["abs:10"]))
+    let layout = await handler.dispatch(request(command: "--layout", args: ["master"]))
+
+    for response in [gap, layout] {
+      #expect(!response.ok)
+      #expect(response.errorCode == .invalidRequest)
+      #expect(response.message == "no active space")
+    }
+    #expect(spaces.settings(for: 11).gap == SpaceSettings.defaults.gap)
+    #expect(tiling.layoutState(for: 11)?.selection == .float)
+
+    readActiveSpaceID = 11
+    #expect(await handler.dispatch(request(command: "--gap", args: ["abs:10"])).ok)
+    #expect(await handler.dispatch(request(command: "--layout", args: ["master"])).ok)
+    #expect(spaces.settings(for: 11).gap == 10)
+    #expect(tiling.layoutState(for: 11)?.selection == .master)
+    #expect(spaces.currentActiveSpaceID == 11)
+  }
+
   private func request(command: String, args: [String]) -> IPCRequest {
     IPCRequest(id: "request-id", domain: .space, command: command, args: args)
   }

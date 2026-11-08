@@ -15,7 +15,7 @@ final class QuerySnapshot {
   }
 
   lazy var focusedWindowID = focusProvider()
-  lazy var activeSpaceID = Spaces.active().id
+  lazy var activeSpaceID = WindowServerClient.shared.activeSpace()
   lazy var arrangedScreens = NSScreen.arrangedScreens
   lazy var displaySpaces = WindowServerClient.shared.displaySpaces()
   lazy var screens = NSScreen.screens
@@ -25,8 +25,8 @@ final class QuerySnapshot {
   lazy var currentSpaceByScreenID: [String: UInt64] = {
     let screenIDs = Set(displaySpaces.map(\.id) + arrangedScreens.map(\.uuid))
     return Dictionary(
-      uniqueKeysWithValues: screenIDs.map { screenID in
-        (screenID, WindowServerClient.shared.currentSpace(for: screenID))
+      uniqueKeysWithValues: screenIDs.compactMap { screenID in
+        WindowServerClient.shared.currentSpace(for: screenID).map { (screenID, $0) }
       }
     )
   }()

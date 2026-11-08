@@ -166,7 +166,7 @@ struct WindowCommandHandler {
       let cycledWindowID = tiling.cycledWindowID(
         from: focusedWindowID,
         in: direction,
-        fallbackSpaceID: Spaces.active().id
+        fallbackSpaceID: spaces.resolveActiveSpaceID()
       ),
       let cycledWindow = windows.window(by: cycledWindowID)
     else {

@@ -33,7 +33,9 @@ struct DisplaySerializer: Encodable, Equatable {
         index: index + 1,
         frame: FrameSerializer(screen.frame),
         spaces: indexedSpaces.compactMap { spaces.contains($0.id) ? $0.index : nil },
-        hasFocus: snapshot.currentSpaceByScreenID[screen.uuid] == snapshot.activeSpaceID
+        hasFocus: snapshot.activeSpaceID.map {
+          snapshot.currentSpaceByScreenID[screen.uuid] == $0
+        } ?? false
       )
     }
   }

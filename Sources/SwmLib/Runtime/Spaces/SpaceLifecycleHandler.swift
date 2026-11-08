@@ -15,6 +15,10 @@ struct SpaceLifecycleHandler {
     switch event {
     case .changed(let space):
       spaceChanged(with: space)
+    case .unavailable:
+      spaces.activeSpaceBecameUnavailable()
+      refresh()
+      log("space changed to an unavailable space \(spaces.activeSpace)", level: .warn)
     }
   }
 
