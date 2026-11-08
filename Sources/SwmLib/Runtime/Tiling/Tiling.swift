@@ -553,17 +553,14 @@ public final class Tiling {
     case .toggle: shouldFloat = !floatingOverrideWindowIDs.contains(windowID)
     }
     manualFloatingByWindowID[windowID] = shouldFloat
-    if shouldFloat {
-      floatingOverrideWindowIDs.insert(windowID)
-      if layoutsByID[layoutID]?.focusedWindowID == windowID {
-        layoutsByID[layoutID]?.focusedWindowID = nil
-      }
-      // A grid deferred while the window was tiled can now apply.
-      reconcile()
-    } else {
-      floatingOverrideWindowIDs.remove(windowID)
+    if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
+      layoutsByID[layoutID]?.focusedWindowID = nil
     }
-    applyPlans(for: [layoutID])
+    // Floating applies a grid deferred while the window was tiled. Tiling needs current display
+    // ownership, since floating frame changes do not reconcile and shared Spaces keep membership.
+    reconcile()
+    let refreshedLayoutID = layoutIDByWindowID[windowID]
+    applyPlans(for: Set([layoutID, refreshedLayoutID].compactMap { $0 }).sorted())
     return true
   }
 
