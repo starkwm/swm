@@ -1525,6 +1525,44 @@ struct TilingTests {
     #expect(tiling.layoutPlan(for: layoutID(10)) == initialPlan)
   }
 
+  @Test(
+    "setWindowLayout: tiles a floating window on the display it moved to",
+    arguments: [false, true]
+  )
+  func setWindowLayoutTilesAFloatingWindowOnTheDisplayItMovedTo(ruleFloated: Bool) throws {
+    var moved = window(id: 1, displayID: "display-a")
+    moved.title = "Moved"
+    var windows = [moved, window(id: 2, displayID: "display-b")]
+    let tiling = makeSharedSpaceTiling(windows: { windows })
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    if ruleFloated {
+      try tiling.addRule(WindowRule.parse(arguments: ["title=^Moved$", "manage=off"]))
+    } else {
+      #expect(tiling.setWindowLayout(.float, for: 1))
+    }
+
+    // Moving between displays that share a Space leaves membership unchanged.
+    moved = window(id: 1, displayID: "display-b")
+    moved.title = "Moved"
+    windows[0] = moved
+    tiling.windowFrameDidChange(1)
+    #expect(tiling.setWindowLayout(.tile, for: 1))
+
+    #expect(
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-a")) == .layout(.frames([:]))
+    )
+    #expect(
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
+        == .layout(
+          .frames([
+            2: CGRect(x: 1_000, y: 0, width: 400, height: 800),
+            1: CGRect(x: 1_400, y: 0, width: 400, height: 800),
+          ])
+        )
+    )
+  }
+
   @Test("setWindowLayout: toggle alternates floating participation")
   func setWindowLayoutToggleAlternatesFloatingParticipation() {
     let tiling = makeTiling(
