@@ -33,7 +33,7 @@ struct SpaceLifecycleHandlerTests {
     )
     tiling.initialize()
     #expect(tiling.setLayout(.master, for: 11))
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .layout(.frames([1: visibleFrame])))
+    #expect(tiling.layoutPlan(for: layoutID(11)) == [1: visibleFrame])
     let handler = SpaceLifecycleHandler(
       spaces: spaces,
       windows: Windows(workspace: Workspace(), focusedWindowID: nil),
@@ -43,7 +43,7 @@ struct SpaceLifecycleHandlerTests {
     visibleFrame.size.width = 800
     handler.refresh()
 
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .layout(.frames([1: visibleFrame])))
+    #expect(tiling.layoutPlan(for: layoutID(11)) == [1: visibleFrame])
     #expect(spaces.settings(for: 99).gap == 5)
     #expect(spaces.settings(for: 33).gap == 10)
     #expect(spaces.currentActiveSpaceID == 11)

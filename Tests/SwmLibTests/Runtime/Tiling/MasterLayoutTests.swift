@@ -18,12 +18,12 @@ struct MasterLayoutTests {
 
     #expect(
       result
-        == .frames([
+        == [
           1: CGRect(x: -301, y: 25, width: 148, height: 202),
           2: CGRect(x: -148, y: 25, width: 148, height: 64),
           3: CGRect(x: -148, y: 94, width: 148, height: 64),
           4: CGRect(x: -148, y: 163, width: 148, height: 64),
-        ])
+        ]
     )
   }
 
@@ -34,44 +34,40 @@ struct MasterLayoutTests {
 
     #expect(
       layout.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 0)
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 0, width: 100, height: 500),
           2: CGRect(x: 100, y: 0, width: 900, height: 500),
-        ])
+        ]
     )
     #expect(
       layout.layout(windowIDs: [1, 2], in: bounds, settings: .defaults, masterRatio: 1)
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 0, width: 900, height: 500),
           2: CGRect(x: 900, y: 0, width: 100, height: 500),
-        ])
+        ]
     )
   }
 
   @Test(
-    "layout: reports minimum-size constraint",
+    "layout: returns no frames below the minimum size",
     arguments: [
       (
         CGRect(x: 0, y: 0, width: 0, height: 1),
-        [CGWindowID(1)],
-        TilingLayoutConstraint.usableBounds
+        [CGWindowID(1)]
       ),
       (
         CGRect(x: 0, y: 0, width: 1, height: 1),
-        [CGWindowID(1), 2],
-        TilingLayoutConstraint.stackWidth
+        [CGWindowID(1), 2]
       ),
       (
         CGRect(x: 0, y: 0, width: 2, height: 1),
-        [CGWindowID(1), 2, 3],
-        TilingLayoutConstraint.stackHeight
+        [CGWindowID(1), 2, 3]
       ),
     ]
   )
-  func layoutReportsMinimumSizeConstraint(
+  func layoutReturnsNoFramesBelowTheMinimumSize(
     bounds: CGRect,
-    windowIDs: [CGWindowID],
-    constraint: TilingLayoutConstraint
+    windowIDs: [CGWindowID]
   ) {
     let result = MasterLayout().layout(
       windowIDs: windowIDs,
@@ -79,7 +75,7 @@ struct MasterLayoutTests {
       settings: .defaults
     )
 
-    #expect(result == .insufficientSpace(constraint))
+    #expect(result == nil)
   }
 
   @Test("layout: rejects zero-width tiles with default constraints")
@@ -93,7 +89,7 @@ struct MasterLayoutTests {
       settings: settings
     )
 
-    #expect(result == .insufficientSpace(.masterWidth))
+    #expect(result == nil)
   }
 
   @Test("layout: places the master pane on each edge")
@@ -104,43 +100,42 @@ struct MasterLayoutTests {
 
     #expect(
       layout.layout(windowIDs: [1, 2], in: wide, settings: .defaults, placement: .right)
-        == .frames([
+        == [
           1: CGRect(x: 500, y: 0, width: 500, height: 500),
           2: CGRect(x: 0, y: 0, width: 500, height: 500),
-        ])
+        ]
     )
     #expect(
       layout.layout(windowIDs: [1, 2, 3], in: tall, settings: .defaults, placement: .top)
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 0, width: 500, height: 500),
           2: CGRect(x: 0, y: 500, width: 250, height: 500),
           3: CGRect(x: 250, y: 500, width: 250, height: 500),
-        ])
+        ]
     )
     #expect(
       layout.layout(windowIDs: [1, 2, 3], in: tall, settings: .defaults, placement: .bottom)
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 500, width: 500, height: 500),
           2: CGRect(x: 0, y: 0, width: 250, height: 500),
           3: CGRect(x: 250, y: 0, width: 250, height: 500),
-        ])
+        ]
     )
   }
 
   @Test(
-    "layout: reports row constraints for top and bottom placements",
+    "layout: returns no frames for undersized top and bottom placements",
     arguments: [
-      (CGRect(x: 0, y: 0, width: 100, height: 50), 100, 2, TilingLayoutConstraint.verticalGap),
-      (CGRect(x: 0, y: 0, width: 100, height: 100), 100, 2, TilingLayoutConstraint.masterHeight),
-      (CGRect(x: 0, y: 0, width: 1, height: 1), 0, 2, TilingLayoutConstraint.stackHeight),
-      (CGRect(x: 0, y: 0, width: 1, height: 2), 0, 3, TilingLayoutConstraint.stackWidth),
+      (CGRect(x: 0, y: 0, width: 100, height: 50), 100, 2),
+      (CGRect(x: 0, y: 0, width: 100, height: 100), 100, 2),
+      (CGRect(x: 0, y: 0, width: 1, height: 1), 0, 2),
+      (CGRect(x: 0, y: 0, width: 1, height: 2), 0, 3),
     ]
   )
-  func layoutReportsRowConstraints(
+  func layoutReturnsNoFramesForUndersizedRows(
     bounds: CGRect,
     gap: Int,
-    windowCount: Int,
-    constraint: TilingLayoutConstraint
+    windowCount: Int
   ) {
     var settings = SpaceSettings.defaults
     settings.gap = gap
@@ -153,7 +148,7 @@ struct MasterLayoutTests {
         settings: settings,
         placement: placement
       )
-      #expect(result == .insufficientSpace(constraint))
+      #expect(result == nil)
     }
   }
 }

@@ -164,22 +164,20 @@ struct SpaceCommandHandlerTests {
     #expect(layout.ok)
     #expect(
       tiling.layoutPlan(for: layoutID(42))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 700, height: 800),
-            2: CGRect(x: 700, y: 0, width: 300, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 700, height: 800),
+          2: CGRect(x: 700, y: 0, width: 300, height: 800),
+        ]
     )
 
     #expect(
       (await handler.dispatch(request(command: "--layout", args: ["monocle"]))).message == "monocle"
     )
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .layout(.frames([1: bounds, 2: bounds])))
+    #expect(tiling.layoutPlan(for: layoutID(42)) == [1: bounds, 2: bounds])
     #expect(
       (await handler.dispatch(request(command: "--layout", args: ["float"]))).message == "float"
     )
-    #expect(tiling.layoutPlan(for: layoutID(42)) == .disabled)
+    #expect(tiling.layoutPlan(for: layoutID(42)) == nil)
     #expect(
       (await handler.dispatch(request(command: "--layout", args: ["dwindle"]))).message == "dwindle"
     )
@@ -187,12 +185,10 @@ struct SpaceCommandHandlerTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(42))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 200, height: 800),
-            2: CGRect(x: 200, y: 0, width: 200, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 200, height: 800),
+          2: CGRect(x: 200, y: 0, width: 200, height: 800),
+        ]
     )
   }
 
@@ -236,12 +232,10 @@ struct SpaceCommandHandlerTests {
     #expect((await handler.dispatch(request(command: "--split-ratio", args: ["abs:0.6"]))).ok)
     #expect(
       tiling.layoutPlan(for: layoutID(42))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 600, height: 800),
-            2: CGRect(x: 600, y: 0, width: 400, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 600, height: 800),
+          2: CGRect(x: 600, y: 0, width: 400, height: 800),
+        ]
     )
 
     #expect((await handler.dispatch(request(command: "--split-ratio", args: ["rel:-0.2"]))).ok)
@@ -249,13 +243,11 @@ struct SpaceCommandHandlerTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(42))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 400, height: 800),
-            2: CGRect(x: 400, y: 0, width: 600, height: 320),
-            3: CGRect(x: 400, y: 320, width: 600, height: 480),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 400, height: 800),
+          2: CGRect(x: 400, y: 0, width: 600, height: 320),
+          3: CGRect(x: 400, y: 320, width: 600, height: 480),
+        ]
     )
   }
 

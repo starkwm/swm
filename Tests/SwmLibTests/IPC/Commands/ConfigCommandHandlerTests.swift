@@ -23,10 +23,10 @@ struct ConfigCommandHandlerTests {
     #expect(response.ok)
     #expect(response.message == selection)
     if selection == "float" {
-      #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
+      #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
       return
     }
-    guard case .layout(.frames(let frames)) = tiling.layoutPlan(for: layoutID(10)) else {
+    guard let frames = tiling.layoutPlan(for: layoutID(10)) else {
       Issue.record("Expected layout frames")
       return
     }
@@ -116,34 +116,28 @@ struct ConfigCommandHandlerTests {
     #expect(cycled.ok && cycled.message == "top")
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 1000, height: 520),
-            2: CGRect(x: 0, y: 520, width: 1000, height: 280),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 1000, height: 520),
+          2: CGRect(x: 0, y: 520, width: 1000, height: 280),
+        ]
     )
     #expect(handler.dispatch(request(command: "preserve-split", args: ["true"])).ok)
     #expect(handler.dispatch(request(command: "layout", args: ["dwindle"])).ok)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
     bounds.size.width = 400
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 200, height: 800),
-            2: CGRect(x: 200, y: 0, width: 200, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 200, height: 800),
+          2: CGRect(x: 200, y: 0, width: 200, height: 800),
+        ]
     )
   }
 

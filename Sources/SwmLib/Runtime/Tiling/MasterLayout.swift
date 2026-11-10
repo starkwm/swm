@@ -2,23 +2,17 @@ import CoreGraphics
 
 /// Pure ordered master layout geometry calculator.
 struct MasterLayout {
-  /// Calculate master layout frames without performing window side effects.
+  /// Calculate master layout frames, or nil when the bounds cannot fit every window.
   func layout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
     settings: SpaceSettings,
     masterRatio: CGFloat = 0.5,
     placement: MasterPlacement = .left
-  ) -> TilingLayoutResult {
-    guard !windowIDs.isEmpty else { return .frames([:]) }
-
-    guard let usableBounds = settings.usableTilingBounds(in: bounds) else {
-      return .insufficientSpace(.usableBounds)
-    }
-
-    guard windowIDs.count > 1 else {
-      return .frames([windowIDs[0]: usableBounds])
-    }
+  ) -> [CGWindowID: CGRect]? {
+    guard !windowIDs.isEmpty else { return [:] }
+    guard let usableBounds = settings.usableTilingBounds(in: bounds) else { return nil }
+    guard windowIDs.count > 1 else { return [windowIDs[0]: usableBounds] }
 
     // Rows are laid out as columns in transposed space, then transposed back.
     let transposed = placement == .top || placement == .bottom
@@ -35,7 +29,7 @@ struct MasterLayout {
   /// Arrange a master column and a vertical stack beside it.
   ///
   /// With `transposed`, the bounds are a master row and horizontal stack with their axes
-  /// swapped. The constraints then name the original axes, and the frames are swapped back.
+  /// swapped, and the frames are swapped back.
   private func stackLayout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
@@ -43,21 +37,12 @@ struct MasterLayout {
     masterRatio: CGFloat,
     masterFirst: Bool,
     transposed: Bool
-  ) -> TilingLayoutResult {
-    let minimum = TilingLimits.minimumWindowSize
+  ) -> [CGWindowID: CGRect]? {
+    let minimum = TilingLimits.minimumWindowLength
     let available = bounds.width - gap
-    guard available >= 0 else {
-      return .insufficientSpace(transposed ? .verticalGap : .horizontalGap)
-    }
-
     let masterLength = (available * masterRatio).rounded()
     let stackLength = available - masterLength
-    guard masterLength >= (transposed ? minimum.height : minimum.width) else {
-      return .insufficientSpace(transposed ? .masterHeight : .masterWidth)
-    }
-    guard stackLength >= (transposed ? minimum.height : minimum.width) else {
-      return .insufficientSpace(transposed ? .stackHeight : .stackWidth)
-    }
+    guard masterLength >= minimum, stackLength >= minimum else { return nil }
 
     let stackWindowIDs = Array(windowIDs.dropFirst())
     guard
@@ -65,11 +50,9 @@ struct MasterLayout {
         length: bounds.height,
         count: stackWindowIDs.count,
         gap: gap,
-        minimum: transposed ? minimum.width : minimum.height
+        minimum: minimum
       )
-    else {
-      return .insufficientSpace(transposed ? .stackWidth : .stackHeight)
-    }
+    else { return nil }
 
     let masterX = masterFirst ? bounds.minX : bounds.maxX - masterLength
     let stackX = masterFirst ? masterX + masterLength + gap : bounds.minX
@@ -88,7 +71,7 @@ struct MasterLayout {
       stackY += length + gap
     }
 
-    return .frames(transposed ? frames.mapValues(\.transposed) : frames)
+    return transposed ? frames.mapValues(\.transposed) : frames
   }
 
   /// Return rounded partition lengths whose total plus gaps exactly fills the input length.

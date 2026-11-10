@@ -2,29 +2,20 @@ import CoreGraphics
 
 /// Pure ordered geometry calculator that recursively bisects the remaining bounds.
 struct DwindleLayout {
-  /// Calculate frames for persistent dwindle sibling relationships.
+  /// Calculate frames for persistent dwindle sibling relationships, or nil when they do not fit.
   func layout(
     tree: TilingTree?,
     in bounds: CGRect,
     settings: SpaceSettings
-  ) -> TilingLayoutResult {
-    guard let tree else { return .frames([:]) }
+  ) -> [CGWindowID: CGRect]? {
+    guard let tree else { return [:] }
+    guard let usableBounds = settings.usableTilingBounds(in: bounds) else { return nil }
 
-    guard let usableBounds = settings.usableTilingBounds(in: bounds) else {
-      return .insufficientSpace(.usableBounds)
-    }
-
-    let gap = settings.tilingGap
     var framesByWindowID = [CGWindowID: CGRect]()
-    if let constraint = layout(
-      tree,
-      in: usableBounds,
-      gap: gap,
-      framesByWindowID: &framesByWindowID
-    ) {
-      return .insufficientSpace(constraint)
-    }
-    return .frames(framesByWindowID)
+    guard
+      layout(tree, in: usableBounds, gap: settings.tilingGap, framesByWindowID: &framesByWindowID)
+    else { return nil }
+    return framesByWindowID
   }
 
   /// Resolve dynamic branch directions from their current bounds and retain them in a copy.
@@ -46,28 +37,24 @@ struct DwindleLayout {
     )
   }
 
-  /// Recursively calculate leaf frames from the retained binary tree.
+  /// Recursively calculate leaf frames from the retained binary tree, returning whether they fit.
   private func layout(
     _ tree: TilingTree,
     in bounds: CGRect,
     gap: CGFloat,
     framesByWindowID: inout [CGWindowID: CGRect]
-  ) -> TilingLayoutConstraint? {
+  ) -> Bool {
     switch tree {
     case .leaf(let windowID):
-      guard bounds.size.meetsTilingMinimum(TilingLimits.minimumWindowSize) else {
-        return bounds.width < TilingLimits.minimumWindowSize.width ? .tileWidth : .tileHeight
-      }
+      guard bounds.size.meetsTilingMinimum else { return false }
       framesByWindowID[windowID] = bounds
-      return nil
+      return true
     case .branch(let first, let second, let split):
-      switch splitBounds(bounds, gap: gap, split: split) {
-      case .frames(let firstBounds, let secondBounds):
-        return layout(first, in: firstBounds, gap: gap, framesByWindowID: &framesByWindowID)
-          ?? layout(second, in: secondBounds, gap: gap, framesByWindowID: &framesByWindowID)
-      case .insufficientSpace(let constraint):
-        return constraint
+      guard let (firstBounds, secondBounds) = splitBounds(bounds, gap: gap, split: split) else {
+        return false
       }
+      return layout(first, in: firstBounds, gap: gap, framesByWindowID: &framesByWindowID)
+        && layout(second, in: secondBounds, gap: gap, framesByWindowID: &framesByWindowID)
     }
   }
 
@@ -96,13 +83,7 @@ struct DwindleLayout {
         )
       }
       split.direction = split.direction ?? direction(for: bounds)
-      guard
-        case .frames(let firstBounds, let secondBounds) = splitBounds(
-          bounds,
-          gap: gap,
-          split: split
-        )
-      else {
+      guard let (firstBounds, secondBounds) = splitBounds(bounds, gap: gap, split: split) else {
         return .branch(first, second, split: split)
       }
       return .branch(
@@ -128,30 +109,19 @@ struct DwindleLayout {
     bounds.width >= bounds.height ? .vertical : .horizontal
   }
 
-  /// Divide bounds using retained geometry or the current longest edge.
+  /// Divide bounds using retained geometry or the current longest edge, or return nil when the
+  /// gap leaves either side below the minimum length.
   private func splitBounds(
     _ bounds: CGRect,
     gap: CGFloat,
     split: TilingSplit
-  ) -> SplitResult {
+  ) -> (CGRect, CGRect)? {
     let vertical = (split.direction ?? direction(for: bounds)) == .vertical
     let available = (vertical ? bounds.width : bounds.height) - gap
-    guard available >= 0 else {
-      return .insufficientSpace(vertical ? .horizontalGap : .verticalGap)
-    }
     let allocation = (available * TilingLimits.clampedRatio(split.ratio)).rounded()
-    let minimum =
-      vertical ? TilingLimits.minimumWindowSize.width : TilingLimits.minimumWindowSize.height
-    guard allocation >= minimum, available - allocation >= minimum else {
-      return .insufficientSpace(vertical ? .tileWidth : .tileHeight)
-    }
-    let (first, second) = dividedBounds(
-      bounds,
-      gap: gap,
-      vertical: vertical,
-      allocation: allocation
-    )
-    return .frames(first, second)
+    let minimum = TilingLimits.minimumWindowLength
+    guard allocation >= minimum, available - allocation >= minimum else { return nil }
+    return dividedBounds(bounds, gap: gap, vertical: vertical, allocation: allocation)
   }
 
   /// Construct sibling rectangles after the caller chooses a feasible allocation.
@@ -174,13 +144,4 @@ struct DwindleLayout {
     }
     return (first, second)
   }
-}
-
-/// Internal outcome from splitting one remaining dwindle region.
-private enum SplitResult {
-  /// Leading window frame and bounds retained for later windows.
-  case frames(CGRect, CGRect)
-
-  /// The split cannot satisfy gap or minimum-size constraints.
-  case insufficientSpace(TilingLayoutConstraint)
 }
