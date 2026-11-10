@@ -506,9 +506,7 @@ public final class Tiling {
     if state.selection == .float || floatingOverrideWindowIDs.contains(windowID) {
       return swapFloatingWindow(windowID, in: direction, layoutID: layoutID, state: state)
     }
-    guard case .layout(.frames(let framesByWindowID)) = layoutPlan(for: layoutID) else {
-      return false
-    }
+    guard let framesByWindowID = layoutPlan(for: layoutID) else { return false }
     guard let neighborWindowID = direction.neighbor(of: windowID, in: framesByWindowID) else {
       return false
     }
@@ -638,17 +636,15 @@ public final class Tiling {
   func toggleDwindleSplit(for windowID: CGWindowID) -> Bool {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
-    guard let state = layoutsByID[layoutID], state.selection == .dwindle else { return false }
-    guard state.preserveSplitDirections else { return false }
-    guard case .layout = layoutPlan(for: layoutID) else { return false }
-    guard let display = currentTopology?.displaysByID[layoutID.displayID] else { return false }
+    guard let state = layoutsByID[layoutID], state.preserveSplitDirections else { return false }
+    guard let context = dwindleContext(layoutID) else { return false }
     let hiddenWindowIDs = hiddenWindowIDs(in: state)
     return mutateTree(containing: windowID, requiring: .dwindle) { tree in
       tree =
         dwindleLayout.resolvingSplitDirections(
           in: tree,
-          bounds: display.visibleFrame,
-          settings: spaces.settings(for: layoutID.spaceID),
+          bounds: context.bounds,
+          settings: context.settings,
           hiding: hiddenWindowIDs
         ) ?? tree
       return tree.toggleSplitDirection(containing: windowID, hiding: hiddenWindowIDs)
@@ -698,7 +694,7 @@ public final class Tiling {
       return
     }
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }
-    if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.phase == .verified {
+    if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.verified == true {
       dwindleAttempts.removeValue(forKey: id)
     }
     reconcileAndReflowVisibleSpaces()
@@ -715,13 +711,14 @@ public final class Tiling {
     applyPlans(for: currentTopology.visibleLayoutIDs.sorted())
   }
 
-  /// Calculate the current plan for an enabled, visible layout without applying frames.
-  func layoutPlan(for layoutID: TilingLayoutID) -> TilingLayoutPlan {
-    guard var state = layoutsByID[layoutID] else { return .unknownSpace }
-    guard state.selection != .float else { return .disabled }
-    guard let topology = currentTopology else { return .unknownSpace }
-    guard topology.visibleLayoutIDs.contains(layoutID) else { return .notVisible }
-    guard let display = topology.displaysByID[layoutID.displayID] else { return .unknownSpace }
+  /// Calculate frames for an enabled, visible layout without applying them, or nil when the
+  /// layout is floating, hidden, unknown, or too small for its windows.
+  func layoutPlan(for layoutID: TilingLayoutID) -> [CGWindowID: CGRect]? {
+    guard var state = layoutsByID[layoutID], state.selection != .float else { return nil }
+    guard let topology = currentTopology, topology.visibleLayoutIDs.contains(layoutID) else {
+      return nil
+    }
+    guard let display = topology.displaysByID[layoutID.displayID] else { return nil }
 
     let spaceSettings = spaces.settings(for: layoutID.spaceID)
     if state.selection == .dwindle, state.preserveSplitDirections {
@@ -737,32 +734,26 @@ public final class Tiling {
 
     switch state.selection {
     case .float:
-      return .disabled
+      return nil
     case .master:
-      return .layout(
-        masterLayout.layout(
-          windowIDs: activeTree?.windowIDs ?? [],
-          in: display.visibleFrame,
-          settings: spaceSettings,
-          masterRatio: state.masterRatio,
-          placement: state.masterPlacement
-        )
+      return masterLayout.layout(
+        windowIDs: activeTree?.windowIDs ?? [],
+        in: display.visibleFrame,
+        settings: spaceSettings,
+        masterRatio: state.masterRatio,
+        placement: state.masterPlacement
       )
     case .monocle:
-      return .layout(
-        monocleLayout.layout(
-          windowIDs: activeTree?.windowIDs ?? [],
-          in: display.visibleFrame,
-          settings: spaceSettings
-        )
+      return monocleLayout.layout(
+        windowIDs: activeTree?.windowIDs ?? [],
+        in: display.visibleFrame,
+        settings: spaceSettings
       )
     case .dwindle:
-      return .layout(
-        dwindleLayout.layout(
-          tree: activeTree,
-          in: display.visibleFrame,
-          settings: spaceSettings
-        )
+      return dwindleLayout.layout(
+        tree: activeTree,
+        in: display.visibleFrame,
+        settings: spaceSettings
       )
     }
   }
@@ -967,12 +958,11 @@ public final class Tiling {
   /// Apply actionable plans for a stable sequence of layouts.
   private func applyPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     for layoutID in layoutIDs {
-      guard case .layout(.frames(let frames)) = layoutPlan(for: layoutID) else {
+      guard let frames = layoutPlan(for: layoutID) else {
         if let context = dwindleContext(layoutID), dwindleAttempts[layoutID]?.context != context {
           frameReconciler?.cancelAnimations(for: context.tree?.windowIDs ?? [])
-          let attempt = DwindleAttempt(context: context)
-          dwindleAttempts[layoutID] = attempt
-          fail(attempt, for: layoutID)
+          dwindleAttempts[layoutID] = DwindleAttempt(context: context)
+          logUnsatisfiedDwindle(layoutID)
         }
         continue
       }
@@ -1007,17 +997,13 @@ public final class Tiling {
       guard let self, self.dwindleAttempts[id] === attempt,
         self.dwindleContext(id) == attempt.context
       else { return }
-      if results.values.allSatisfy(\.isVerified) {
-        attempt.phase = .verified
-        return
-      }
-      self.fail(attempt, for: id)
+      attempt.verified = results.values.allSatisfy(\.isVerified)
+      if !attempt.verified { self.logUnsatisfiedDwindle(id) }
     }
   }
 
-  /// Stop retrying a dwindle layout that its windows could not satisfy.
-  private func fail(_ attempt: DwindleAttempt, for id: TilingLayoutID) {
-    attempt.phase = .failed
+  /// Report a dwindle layout that its windows could not satisfy; its cached attempt stops retries.
+  private func logUnsatisfiedDwindle(_ id: TilingLayoutID) {
     log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
   }
 
@@ -1177,21 +1163,6 @@ struct TilingReconciliationSnapshot {
   let topology: SpaceTopology?
 }
 
-/// Explainable result of asking the runtime coordinator for Space geometry.
-enum TilingLayoutPlan: Equatable {
-  /// Space is not part of the current normal-Space topology.
-  case unknownSpace
-
-  /// The Space is using unmanaged floating layout.
-  case disabled
-
-  /// Space exists but is not currently visible.
-  case notVisible
-
-  /// Pure engine result for the Space's active retained leaves.
-  case layout(TilingLayoutResult)
-}
-
 private struct DwindleContext: Equatable {
   let tree: TilingTree?
   let bounds: CGRect
@@ -1199,14 +1170,8 @@ private struct DwindleContext: Equatable {
 }
 
 private final class DwindleAttempt {
-  enum Phase: Equatable {
-    case applying
-    case verified
-    case failed
-  }
-
   let context: DwindleContext
-  var phase = Phase.applying
+  var verified = false
 
   init(context: DwindleContext) { self.context = context }
 }

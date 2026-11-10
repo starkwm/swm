@@ -33,7 +33,7 @@ struct TilingTests {
     tiling.setSplitDirectionPreservation(preserved, for: 10)
     tiling.setLayout(.dwindle, for: 10)
     let plan = tiling.layoutPlan(for: layoutID(10))
-    guard case .layout(.frames(let plannedFrames)) = plan else {
+    guard let plannedFrames = plan else {
       Issue.record("Expected dwindle frames")
       return
     }
@@ -185,11 +185,11 @@ struct TilingTests {
 
     tiling.initialize()
 
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .disabled)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     #expect(tiling.setLayout(.master, for: 10))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
   }
 
@@ -255,7 +255,7 @@ struct TilingTests {
     #expect(reconciler.isIdle)
     #expect(app.frame == stoppedFrame)
     #expect(app.writeCount == 1)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: app.frame))
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test("reconcile: preserves layouts through unavailable topology and recovers by polling")
@@ -294,7 +294,7 @@ struct TilingTests {
     #expect(tiling.setWindowLayout(.float, for: 3))
     tiling.windowDidFocus(2)
     let plan = tiling.layoutPlan(for: layoutID(10))
-    guard case .layout(.frames(let planFrames)) = plan else {
+    guard let planFrames = plan else {
       Issue.record("expected a master layout plan")
       return
     }
@@ -308,7 +308,7 @@ struct TilingTests {
     #expect(!reconciler.isAnimating(1))
     let stoppedWrites = app.writeCount
     #expect(spaces.settings(for: 10) == settings)
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
     // Settings commands must retain their changes without writing stale frames.
     let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
@@ -350,7 +350,7 @@ struct TilingTests {
       displaysByID: [:]
     )
     tiling.reconcile()
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     #expect(spaces.settings(for: 10) == .defaults)
   }
 
@@ -389,7 +389,7 @@ struct TilingTests {
     #expect(tiling.setLayout(.dwindle, for: 10))
     #expect(tiling.swapWindowInOrder(1, in: .next))
     try tiling.addRule(WindowRule.parse(arguments: ["display=1"]))
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .unknownSpace)
+    #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     available = true
     tiling.reconcile()
     #expect(tiling.changeDwindleSplitRatio(.absolute(0.7), for: 1) == 0.7)
@@ -397,12 +397,10 @@ struct TilingTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 300, height: 800),
-            1: CGRect(x: 300, y: 0, width: 700, height: 800),
-          ])
-        )
+        == [
+          2: CGRect(x: 0, y: 0, width: 300, height: 800),
+          1: CGRect(x: 300, y: 0, width: 700, height: 800),
+        ]
     )
   }
 
@@ -432,19 +430,17 @@ struct TilingTests {
     tiling.initialize()
     #expect(tiling.setLayout(.master, for: 10))
     #expect(tiling.swapWindowWithMaster(2))
-    let promoted = TilingLayoutPlan.layout(
-      .frames([
-        2: CGRect(x: 0, y: 0, width: 500, height: 800),
-        1: CGRect(x: 500, y: 0, width: 500, height: 800),
-      ])
-    )
+    let promoted: [CGWindowID: CGRect]? = [
+      2: CGRect(x: 0, y: 0, width: 500, height: 800),
+      1: CGRect(x: 500, y: 0, width: 500, height: 800),
+    ]
     #expect(tiling.layoutPlan(for: layoutID(10)) == promoted)
 
     readsFail = true
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
 
     // Membership is unchanged, so only the failed-read retry can recover the window.
@@ -553,14 +549,12 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
-    #expect(tiling.layoutPlan(for: layoutID(11)) == .disabled)
+    #expect(tiling.layoutPlan(for: layoutID(11)) == nil)
   }
 
   @Test(
@@ -586,14 +580,12 @@ struct TilingTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            4: CGRect(x: 0, y: 0, width: 650, height: 800),
-            3: CGRect(x: 650, y: 0, width: 350, height: 267),
-            7: CGRect(x: 650, y: 267, width: 350, height: 266),
-            8: CGRect(x: 650, y: 533, width: 350, height: 267),
-          ])
-        )
+        == [
+          4: CGRect(x: 0, y: 0, width: 650, height: 800),
+          3: CGRect(x: 650, y: 0, width: 350, height: 267),
+          7: CGRect(x: 650, y: 267, width: 350, height: 266),
+          8: CGRect(x: 650, y: 533, width: 350, height: 267),
+        ]
     )
 
     candidates[0] = window(id: 1)
@@ -608,11 +600,9 @@ struct TilingTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            9: CGRect(x: 0, y: 0, width: 1000, height: 800)
-          ])
-        )
+        == [
+          9: CGRect(x: 0, y: 0, width: 1000, height: 800)
+        ]
     )
   }
 
@@ -632,14 +622,12 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 400),
-            4: CGRect(x: 0, y: 400, width: 500, height: 400),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            3: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 400),
+          4: CGRect(x: 0, y: 400, width: 500, height: 400),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          3: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -652,7 +640,7 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
 
     windows[1] = window(id: 2, isMinimized: false)
@@ -660,12 +648,10 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
   }
 
@@ -742,16 +728,14 @@ struct TilingTests {
     #expect(tiling.setLayout(.master, for: 10))
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-a"))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
-        == .layout(.frames([3: CGRect(x: 1_000, y: 0, width: 800, height: 800)]))
+        == [3: CGRect(x: 1_000, y: 0, width: 800, height: 800)]
     )
 
     windows[1] = window(id: 2, displayID: "display-b")
@@ -759,16 +743,14 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-a"))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
-        == .layout(
-          .frames([
-            3: CGRect(x: 1_000, y: 0, width: 400, height: 800),
-            2: CGRect(x: 1_400, y: 0, width: 400, height: 800),
-          ])
-        )
+        == [
+          3: CGRect(x: 1_000, y: 0, width: 400, height: 800),
+          2: CGRect(x: 1_400, y: 0, width: 400, height: 800),
+        ]
     )
 
     #expect(tiling.setLayout(.dwindle, for: 10))
@@ -791,7 +773,7 @@ struct TilingTests {
     tiling.reconcile()
 
     #expect(
-      tiling.layoutPlan(for: layoutID(10, displayID: "display-b")) == .layout(.frames([:]))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-b")) == [:]
     )
   }
 
@@ -951,7 +933,7 @@ struct TilingTests {
     #expect(!tiling.isWindowTiled(2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
     await tiling.waitForRuleSpaceMoves()
     #expect(moves.map(\.0) == [2])
@@ -1049,20 +1031,16 @@ struct TilingTests {
     #expect(placements == [WindowRulePlacement(display: .index(2))])
     #expect(
       tiling.layoutPlan(for: layoutID(11, displayID: "right"))
-        == .layout(
-          .frames([
-            1: CGRect(x: 1_000, y: 0, width: 1_000, height: 800)
-          ])
-        )
+        == [
+          1: CGRect(x: 1_000, y: 0, width: 1_000, height: 800)
+        ]
     )
     tiling.setLayout(.master, for: 10)
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "left"))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-          ])
-        )
+        == [
+          2: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+        ]
     )
     try tiling.addRule(WindowRule.parse(arguments: ["manage=off"]))
     #expect(placements.count == 2)
@@ -1106,11 +1084,9 @@ struct TilingTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+        ]
     )
     candidates[1].title = "Document"
     WindowLifecycleHandler(
@@ -1163,11 +1139,9 @@ struct TilingTests {
     try tiling.addRule(WindowRule.parse(arguments: ["label=finder", "app=^Finder$", "manage=off"]))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+        ]
     )
     #expect(tiling.cycledWindowID(from: 1, in: .next) == nil)
     try tiling.addRule(
@@ -1193,28 +1167,24 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            3: CGRect(x: 500, y: 400, width: 250, height: 400),
-            4: CGRect(x: 750, y: 400, width: 250, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          3: CGRect(x: 500, y: 400, width: 250, height: 400),
+          4: CGRect(x: 750, y: 400, width: 250, height: 400),
+        ]
     )
 
     tiling.reconcile()
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            3: CGRect(x: 500, y: 400, width: 250, height: 400),
-            4: CGRect(x: 750, y: 400, width: 250, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          3: CGRect(x: 500, y: 400, width: 250, height: 400),
+          4: CGRect(x: 750, y: 400, width: 250, height: 400),
+        ]
     )
   }
 
@@ -1253,12 +1223,10 @@ struct TilingTests {
     tiling.setMasterPlacementForAllSpaces(.bottom)
     tiling.setSplitDirectionPreservationForAllSpaces(true)
 
-    let expectedPlan = TilingLayoutPlan.layout(
-      .frames([
-        1: CGRect(x: 0, y: 280, width: 1_000, height: 520),
-        2: CGRect(x: 0, y: 0, width: 1_000, height: 280),
-      ])
-    )
+    let expectedPlan: [CGWindowID: CGRect]? = [
+      1: CGRect(x: 0, y: 280, width: 1_000, height: 520),
+      2: CGRect(x: 0, y: 0, width: 1_000, height: 280),
+    ]
     #expect(tiling.layoutPlan(for: layoutID(10)) == expectedPlan)
 
     spaceIDs.insert(11)
@@ -1273,12 +1241,10 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(11))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 300, height: 1_000),
-            2: CGRect(x: 300, y: 0, width: 300, height: 1_000),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 300, height: 1_000),
+          2: CGRect(x: 300, y: 0, width: 300, height: 1_000),
+        ]
     )
   }
 
@@ -1321,7 +1287,7 @@ struct TilingTests {
       Issue.record("unexpected placement")
       return
     }
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(frames)))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == frames)
   }
 
   @Test("cycleMasterPlacement: cycle placement clockwise and counter-clockwise")
@@ -1372,13 +1338,11 @@ struct TilingTests {
     #expect(tiling.swapWindow(2, in: .down) == false)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            2: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 400),
+          2: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1395,13 +1359,11 @@ struct TilingTests {
     #expect(tiling.swapWindow(99, in: .left) == false)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            2: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 400),
+          2: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1423,13 +1385,11 @@ struct TilingTests {
     #expect(!tiling.swapWindowWithMaster(99))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            3: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            4: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          3: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          4: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1486,11 +1446,9 @@ struct TilingTests {
     try tiling.removeRule(selector: "all")
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 1_000, height: 800)
+        ]
     )
     candidates.removeLast()
     tiling.reconcile()
@@ -1513,12 +1471,10 @@ struct TilingTests {
     tiling.reconcile()
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
 
     #expect(tiling.setWindowLayout(.tile, for: 2))
@@ -1550,16 +1506,14 @@ struct TilingTests {
     #expect(tiling.setWindowLayout(.tile, for: 1))
 
     #expect(
-      tiling.layoutPlan(for: layoutID(10, displayID: "display-a")) == .layout(.frames([:]))
+      tiling.layoutPlan(for: layoutID(10, displayID: "display-a")) == [:]
     )
     #expect(
       tiling.layoutPlan(for: layoutID(10, displayID: "display-b"))
-        == .layout(
-          .frames([
-            2: CGRect(x: 1_000, y: 0, width: 400, height: 800),
-            1: CGRect(x: 1_400, y: 0, width: 400, height: 800),
-          ])
-        )
+        == [
+          2: CGRect(x: 1_000, y: 0, width: 400, height: 800),
+          1: CGRect(x: 1_400, y: 0, width: 400, height: 800),
+        ]
     )
   }
 
@@ -1576,7 +1530,7 @@ struct TilingTests {
     #expect(tiling.setWindowLayout(.toggle, for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
 
     #expect(tiling.setWindowLayout(.toggle, for: 2))
@@ -1600,13 +1554,11 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            4: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          2: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 400),
+          4: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1650,7 +1602,7 @@ struct TilingTests {
     #expect(tiling.cycledWindowID(from: 2, in: .next) == nil)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(.frames([1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]))
+        == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
 
     tiling.setLayout(.float, for: 10)
@@ -1705,13 +1657,11 @@ struct TilingTests {
     #expect(tiling.swapWindowInOrder(1, in: .prev))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            3: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            1: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          3: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          1: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
 
     tiling.setLayout(.float, for: 10)
@@ -1731,13 +1681,11 @@ struct TilingTests {
     #expect(tiling.changeDwindleSplitRatio(.absolute(0.4), for: 99) == nil)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 700, height: 800),
-            2: CGRect(x: 700, y: 0, width: 300, height: 400),
-            3: CGRect(x: 700, y: 400, width: 300, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 700, height: 800),
+          2: CGRect(x: 700, y: 0, width: 300, height: 400),
+          3: CGRect(x: 700, y: 400, width: 300, height: 400),
+        ]
     )
   }
 
@@ -1758,25 +1706,21 @@ struct TilingTests {
     #expect(tiling.toggleDwindleSplit(for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 250, height: 800),
-            3: CGRect(x: 750, y: 0, width: 250, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 250, height: 800),
+          3: CGRect(x: 750, y: 0, width: 250, height: 800),
+        ]
     )
 
     #expect(tiling.toggleDwindleSplit(for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            2: CGRect(x: 500, y: 0, width: 500, height: 400),
-            3: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          2: CGRect(x: 500, y: 0, width: 500, height: 400),
+          3: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1807,12 +1751,10 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          2: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
   }
 
@@ -1828,13 +1770,11 @@ struct TilingTests {
     #expect(tiling.swapDwindleSplit(for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 400),
-            2: CGRect(x: 500, y: 400, width: 500, height: 400),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 400),
+          2: CGRect(x: 500, y: 400, width: 500, height: 400),
+        ]
     )
   }
 
@@ -1858,23 +1798,19 @@ struct TilingTests {
     #expect(tiling.changeDwindleSplitRatio(.absolute(0.2), for: 2) == 0.2)
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 800, height: 800),
-            2: CGRect(x: 800, y: 0, width: 200, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 800, height: 800),
+          2: CGRect(x: 800, y: 0, width: 200, height: 800),
+        ]
     )
 
     #expect(tiling.swapDwindleSplit(for: 2))
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            2: CGRect(x: 0, y: 0, width: 800, height: 800),
-            1: CGRect(x: 800, y: 0, width: 200, height: 800),
-          ])
-        )
+        == [
+          2: CGRect(x: 0, y: 0, width: 800, height: 800),
+          1: CGRect(x: 800, y: 0, width: 200, height: 800),
+        ]
     )
   }
 
@@ -1916,7 +1852,7 @@ struct TilingTests {
         2: CGRect(x: 500, y: 0, width: 500, height: 400),
         3: CGRect(x: 500, y: 400, width: 500, height: 400),
       ]
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expectedFrames)))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == expectedFrames)
   }
 
   @Test("windowFrameDidChange: suppresses failed settlement feedback")
@@ -1999,7 +1935,7 @@ struct TilingTests {
     let tiling = makeTiling(windows: [], memberships: [:])
     tiling.initialize()
     #expect(tiling.setLayout(selection, for: 10))
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames([:])))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == [:])
   }
 
   @Test("layoutPlan: requires a visible Space")
@@ -2008,7 +1944,7 @@ struct TilingTests {
     hiddenTiling.initialize()
     hiddenTiling.setLayout(.master, for: 10)
 
-    #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == .notVisible)
+    #expect(hiddenTiling.layoutPlan(for: layoutID(10)) == nil)
   }
 
   @Test(
@@ -2048,7 +1984,7 @@ struct TilingTests {
         ($0, CGRect(x: -270, y: 34, width: 230, height: 170))
       }
     )
-    #expect(tiling.layoutPlan(for: layoutID(10)) == .layout(.frames(expected)))
+    #expect(tiling.layoutPlan(for: layoutID(10)) == expected)
   }
 
   @Test("membership polling: reflows without lifecycle events")
@@ -2074,12 +2010,10 @@ struct TilingTests {
 
     #expect(
       tiling.layoutPlan(for: layoutID(10))
-        == .layout(
-          .frames([
-            1: CGRect(x: 0, y: 0, width: 500, height: 800),
-            3: CGRect(x: 500, y: 0, width: 500, height: 800),
-          ])
-        )
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 800),
+          3: CGRect(x: 500, y: 0, width: 500, height: 800),
+        ]
     )
     #expect(app.frame(for: 3) == CGRect(x: 500, y: 0, width: 500, height: 800))
   }

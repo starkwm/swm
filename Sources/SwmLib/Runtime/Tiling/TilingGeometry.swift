@@ -2,8 +2,8 @@ import CoreGraphics
 
 /// Limits shared by the automatic-tiling layouts.
 enum TilingLimits {
-  /// Minimum frame size accepted for every tiled window.
-  static let minimumWindowSize = CGSize(width: 1, height: 1)
+  /// Minimum width and height accepted for every tiled window.
+  static let minimumWindowLength: CGFloat = 1
 
   /// Range of useful master and split ratios.
   static let ratioRange: ClosedRange<CGFloat> = 0.1...0.9
@@ -15,9 +15,9 @@ enum TilingLimits {
 }
 
 extension CGSize {
-  /// Return whether both dimensions meet a minimum tile size.
-  func meetsTilingMinimum(_ minimum: CGSize) -> Bool {
-    width >= minimum.width && height >= minimum.height
+  /// Whether both dimensions meet the minimum tile length.
+  var meetsTilingMinimum: Bool {
+    width >= TilingLimits.minimumWindowLength && height >= TilingLimits.minimumWindowLength
   }
 }
 
@@ -30,8 +30,7 @@ extension SpaceSettings {
   /// Padded bounds for tiling, or nil when they cannot fit a minimum-size window.
   func usableTilingBounds(in bounds: CGRect) -> CGRect? {
     let usableBounds = tilingBounds(in: bounds)
-    return usableBounds.size.meetsTilingMinimum(TilingLimits.minimumWindowSize)
-      ? usableBounds : nil
+    return usableBounds.size.meetsTilingMinimum ? usableBounds : nil
   }
 
   /// Visible bounds after applying per-Space padding.

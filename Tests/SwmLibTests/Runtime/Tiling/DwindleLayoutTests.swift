@@ -18,12 +18,12 @@ struct DwindleLayoutTests {
 
     #expect(
       result
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 0, width: 495, height: 800),
           2: CGRect(x: 505, y: 0, width: 495, height: 395),
           3: CGRect(x: 505, y: 405, width: 243, height: 395),
           4: CGRect(x: 758, y: 405, width: 242, height: 395),
-        ])
+        ]
     )
   }
 
@@ -37,38 +37,34 @@ struct DwindleLayoutTests {
 
     #expect(
       result
-        == .frames([
+        == [
           1: CGRect(x: -200, y: 20, width: 400, height: 400),
           2: CGRect(x: -200, y: 420, width: 200, height: 400),
           3: CGRect(x: 0, y: 420, width: 200, height: 400),
-        ])
+        ]
     )
   }
 
   @Test(
-    "layout: reports minimum-size constraint",
+    "layout: returns no frames below the minimum size",
     arguments: [
       (
         CGRect(x: 0, y: 0, width: 0, height: 1),
-        [CGWindowID(1)],
-        TilingLayoutConstraint.usableBounds
+        [CGWindowID(1)]
       ),
       (
         CGRect(x: 0, y: 0, width: 1, height: 1.5),
-        [CGWindowID(1), 2],
-        TilingLayoutConstraint.tileHeight
+        [CGWindowID(1), 2]
       ),
       (
         CGRect(x: 0, y: 0, width: 1.5, height: 1),
-        [CGWindowID(1), 2],
-        TilingLayoutConstraint.tileWidth
+        [CGWindowID(1), 2]
       ),
     ]
   )
-  func layoutReportsMinimumSizeConstraint(
+  func layoutReturnsNoFramesBelowTheMinimumSize(
     bounds: CGRect,
-    windowIDs: [CGWindowID],
-    constraint: TilingLayoutConstraint
+    windowIDs: [CGWindowID]
   ) {
     let result = DwindleLayout().layout(
       tree: tilingTree(windowIDs),
@@ -76,11 +72,11 @@ struct DwindleLayoutTests {
       settings: .defaults
     )
 
-    #expect(result == .insufficientSpace(constraint))
+    #expect(result == nil)
   }
 
-  @Test("layout: reports gaps that consume the remaining split")
-  func layoutReportsGapsThatConsumeTheRemainingSplit() {
+  @Test("layout: returns no frames when gaps consume the remaining split")
+  func layoutReturnsNoFramesWhenGapsConsumeTheRemainingSplit() {
     var settings = SpaceSettings.defaults
     settings.gap = 400
     let layout = DwindleLayout()
@@ -90,14 +86,14 @@ struct DwindleLayoutTests {
         tree: tilingTree([1, 2]),
         in: CGRect(x: 0, y: 0, width: 300, height: 150),
         settings: settings
-      ) == .insufficientSpace(.horizontalGap)
+      ) == nil
     )
     #expect(
       layout.layout(
         tree: tilingTree([1, 2]),
         in: CGRect(x: 0, y: 0, width: 150, height: 300),
         settings: settings
-      ) == .insufficientSpace(.verticalGap)
+      ) == nil
     )
   }
 
@@ -112,6 +108,6 @@ struct DwindleLayoutTests {
       settings: settings
     )
 
-    #expect(result == .insufficientSpace(.tileWidth))
+    #expect(result == nil)
   }
 }

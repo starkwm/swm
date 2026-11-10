@@ -35,11 +35,11 @@ struct TilingTreeTests {
         in: CGRect(x: 0, y: 0, width: 1000, height: 800),
         settings: .defaults
       )
-        == .frames([
+        == [
           1: CGRect(x: 0, y: 0, width: 500, height: 800),
           2: CGRect(x: 500, y: 0, width: 500, height: 80),
           3: CGRect(x: 500, y: 80, width: 500, height: 720),
-        ])
+        ]
     )
   }
 

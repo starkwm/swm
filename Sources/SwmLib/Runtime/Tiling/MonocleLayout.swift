@@ -2,18 +2,15 @@ import CoreGraphics
 
 /// Pure monocle layout geometry calculator.
 struct MonocleLayout {
-  /// Give every tiled window the complete padded visible bounds.
+  /// Give every tiled window the complete padded visible bounds, or nil when they are too small.
   func layout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
     settings: SpaceSettings
-  ) -> TilingLayoutResult {
-    guard !windowIDs.isEmpty else { return .frames([:]) }
+  ) -> [CGWindowID: CGRect]? {
+    guard !windowIDs.isEmpty else { return [:] }
+    guard let usableBounds = settings.usableTilingBounds(in: bounds) else { return nil }
 
-    guard let usableBounds = settings.usableTilingBounds(in: bounds) else {
-      return .insufficientSpace(.usableBounds)
-    }
-
-    return .frames(Dictionary(uniqueKeysWithValues: windowIDs.map { ($0, usableBounds) }))
+    return Dictionary(uniqueKeysWithValues: windowIDs.map { ($0, usableBounds) })
   }
 }
