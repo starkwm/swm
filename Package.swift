@@ -41,7 +41,6 @@ let package = Package(
         "SwmLib",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ],
-      exclude: ["Version.swift.tmpl"],
       swiftSettings: releaseDebugSettings
     ),
     .target(
