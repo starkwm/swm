@@ -36,8 +36,7 @@ struct WindowSerializer: Encodable, Equatable {
         info: snapshot.windowInfoByID[window.id],
         screens: snapshot.screens,
         spaceIndex: spaceIndex,
-        knownSpaceIDs: spaceIDs,
-        nativeFullscreen: spaceIDs.first.map(snapshot.nativeFullscreenSpaceIDs.contains)
+        nativeFullscreen: spaceIDs.first.map(snapshot.nativeFullscreenSpaceIDs.contains) ?? false
       )
     }
   }
@@ -123,14 +122,12 @@ extension WindowSerializer {
     window: Window,
     focusedWindowID: CGWindowID?,
     info: [String: Any]?,
-    screens: [NSScreen] = NSScreen.screens,
-    spaceIndex: Int? = nil,
-    knownSpaceIDs: [UInt64]? = nil,
-    nativeFullscreen: Bool? = nil
+    screens: [NSScreen],
+    spaceIndex: Int?,
+    nativeFullscreen: Bool
   ) {
     let element = window.element
     let frame = window.frame()
-    let spaceIDs = knownSpaceIDs ?? WindowServerClient.shared.spaceIDs(containing: window.id)
 
     id = window.id
     pid =
@@ -159,10 +156,7 @@ extension WindowSerializer {
     canResize = element.map { _ in window.isResizable }
     hasFocus = focusedWindowID.map { $0 == window.id }
     hasAXReference = element != nil
-    isNativeFullscreen =
-      nativeFullscreen ?? spaceIDs.first.map {
-        WindowServerClient.shared.spaceType(for: $0) == .fullscreen
-      } ?? false
+    isNativeFullscreen = nativeFullscreen
     isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
     isMinimized = window.isMinimized
   }

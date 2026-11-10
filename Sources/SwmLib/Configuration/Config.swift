@@ -48,15 +48,6 @@ public enum Config {
         [.posixPermissions: NSNumber(value: currentPermissions | ownerExecute)],
         ofItemAtPath: path
       )
-
-      let updatedAttributes = try FileManager.default.attributesOfItem(atPath: path)
-
-      guard
-        let updatedPermissions = updatedAttributes[.posixPermissions] as? NSNumber,
-        updatedPermissions.uint16Value & ownerExecute == ownerExecute
-      else {
-        throw ConfigError.unableToMakeExecutable
-      }
     } catch {
       throw error as? ConfigError ?? .unableToMakeExecutable
     }

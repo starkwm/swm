@@ -51,7 +51,7 @@ struct SpaceSerializer: Encodable, Equatable {
       return SpaceSerializer(
         id: space.id,
         index: index + 1,
-        type: space.type.description,
+        type: space.type.rawValue,
         displays: resolvedScreens.compactMap(\.id),
         windows: windowIDsBySpaceID[space.id] ?? [],
         hasFocus: space.id == snapshot.activeSpaceID,

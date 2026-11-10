@@ -1,12 +1,14 @@
 import StarkSkyLight
 
 /// WindowServer space type.
-enum SpaceType: Int32 {
+///
+/// Raw values are the type names reported by queries.
+enum SpaceType: String {
   /// Standard desktop space.
-  case normal = 0
+  case normal
 
   /// Native fullscreen app space.
-  case fullscreen = 4
+  case fullscreen
 
   /// Space type not recognized by swm.
   case unknown
@@ -16,20 +18,6 @@ enum SpaceType: Int32 {
     case .desktop: self = .normal
     case .fullscreen: self = .fullscreen
     case .unknown: self = .unknown
-    }
-  }
-}
-
-extension SpaceType: CustomStringConvertible {
-  /// Human-readable space type.
-  var description: String {
-    switch self {
-    case .normal:
-      return "normal"
-    case .fullscreen:
-      return "fullscreen"
-    case .unknown:
-      return "unknown"
     }
   }
 }
