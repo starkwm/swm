@@ -102,11 +102,6 @@ final class AnimationDisplayLink {
           deadline = WindowFrameReconciler.nextAnimationDeadline(after: deadline, now: clock.now)
           do { try await clock.sleep(until: deadline, tolerance: .zero) } catch { return }
           guard let self, !Task.isCancelled else { return }
-          AnimationDiagnostics.shared.record(
-            "fallback-deadline",
-            since: clock.now,
-            missedDeadline: deadline.duration(to: clock.now) > .seconds(1.0 / 60)
-          )
           self.tick(self.fallbackIDs, clock.now)
         }
       }
@@ -162,7 +157,6 @@ protocol AnimationScreenLink: AnyObject {
 @MainActor
 private final class ScreenAnimationLink: NSObject, AnimationScreenLink {
   private var link: CADisplayLink?
-  private var previousTimestamp: CFTimeInterval?
   private let tick: (ContinuousClock.Instant) -> Void
 
   init(screen: NSScreen, tick: @escaping (ContinuousClock.Instant) -> Void) {
@@ -182,15 +176,6 @@ private final class ScreenAnimationLink: NSObject, AnimationScreenLink {
 
   @objc private func advance(_ link: CADisplayLink) {
     let now = ContinuousClock.now
-    let interval = max(1.0 / 60, link.targetTimestamp - link.timestamp)
-    if let previousTimestamp {
-      AnimationDiagnostics.shared.record(
-        "display-deadline",
-        since: now,
-        missedDeadline: link.timestamp - previousTimestamp > interval * 1.5
-      )
-    }
-    previousTimestamp = link.timestamp
     tick(
       AnimationDisplayLink.presentationTime(
         targetTimestamp: link.targetTimestamp,

@@ -266,9 +266,8 @@ private final class AnimationAppLane: @unchecked Sendable {
   private func execute(_ item: Pending) -> AnimationFrameCompletion? {
     let request = item.request
     let backend = request.backend
-    let diagnostics = AnimationDiagnostics.shared
     func read() -> CGRect? {
-      diagnostics.measure("read", processID: backend.processID, backend.read)
+      backend.read()
     }
     func result(
       _ frame: CGRect?,
@@ -282,9 +281,7 @@ private final class AnimationAppLane: @unchecked Sendable {
       }
       if actual.matches(target, tolerance: 1) { return result(actual, .verified) }
       guard item.phase == .verify else { return result(actual, .failed) }
-      let correction = diagnostics.measure("mutation", processID: backend.processID) {
-        backend.write(target, actual, request.generation)
-      }
+      let correction = backend.write(target, actual, request.generation)
       guard correction == .success, isCurrent(request) else { return result(nil, .failed) }
       settle(item, phase: .verifyCorrection)
       return nil
@@ -303,9 +300,7 @@ private final class AnimationAppLane: @unchecked Sendable {
     if !request.final, current.matches(target, tolerance: 1) {
       return result(current, .applied)
     }
-    let mutation = diagnostics.measure("mutation", processID: backend.processID) {
-      backend.write(target, current, request.generation)
-    }
+    let mutation = backend.write(target, current, request.generation)
     guard mutation == .success, request.generation.isValid else {
       request.generation.acceptedFrame = nil
       return result(nil, .failed)
@@ -350,14 +345,10 @@ private final class AnimationAXHandles: @unchecked Sendable {
         )
       },
       beginBatch: {
-        AnimationDiagnostics.shared.measure("enhanced-ui-begin", processID: processID) {
-          client.disableEnhancedUI(for: self.application)
-        }
+        client.disableEnhancedUI(for: self.application)
       },
       endBatch: { restore in
-        AnimationDiagnostics.shared.measure("enhanced-ui-end", processID: processID) {
-          if restore { client.enableEnhancedUI(for: self.application) }
-        }
+        if restore { client.enableEnhancedUI(for: self.application) }
       }
     )
   }
