@@ -94,7 +94,7 @@ public final class Windows {
       }
     }
     guard let application = manage(process, retryObservation: { retry() }) else { return }
-    if !reconcileWindows(for: application, mode: .initialDiscovery) { retry() }
+    if !reconcileWindows(for: application) { retry() }
   }
 
   /// Share launch and startup retries, rejecting late work for a replaced process.
@@ -245,7 +245,7 @@ public final class Windows {
   /// Rediscover windows, including windows lost after an earlier successful discovery.
   @discardableResult
   func refreshWindows(for application: Application) -> Bool {
-    reconcileWindows(for: application, mode: .refreshAttempt)
+    reconcileWindows(for: application)
   }
 
   /// Recover an unknown focused window without waiting for another creation notification.
@@ -427,10 +427,7 @@ public final class Windows {
   }
 
   /// Reconcile WindowServer IDs with accessibility window elements for an application.
-  private func reconcileWindows(
-    for application: Application,
-    mode: WindowDiscoveryMode
-  ) -> Bool {
+  private func reconcileWindows(for application: Application) -> Bool {
     let globalWindowIDs = application.windowIdentifiers()
     addWindows(for: application)
     guard let globalWindowIDs else {
@@ -450,25 +447,20 @@ public final class Windows {
 
     guard !unresolvedWindowIDs.isEmpty else {
       remoteTokenCursors.removeValue(forKey: application.processID)
-      finishResolution(for: application, mode: mode)
+      unresolvedApplicationIDs.remove(application.processID)
       return true
     }
 
     resolveRemoteWindows(&unresolvedWindowIDs, for: application)
 
-    updateRefreshTracking(
-      for: application,
-      unresolvedWindowIDs: unresolvedWindowIDs,
-      mode: mode
-    )
+    if unresolvedWindowIDs.isEmpty {
+      log("workaround resolved all windows \(application)", level: .info)
+      unresolvedApplicationIDs.remove(application.processID)
+    } else {
+      log("workaround failed to resolve all windows \(application)", level: .info)
+      unresolvedApplicationIDs.insert(application.processID)
+    }
     return true
-  }
-
-  /// Finish a refresh attempt when all windows are resolved.
-  private func finishResolution(for application: Application, mode: WindowDiscoveryMode) {
-    unresolvedApplicationIDs.remove(application.processID)
-    guard mode == .refreshAttempt else { return }
-    log("all windows resolved \(application)")
   }
 
   /// Attempt to resolve missing windows by creating accessibility elements from remote tokens.
@@ -530,35 +522,4 @@ public final class Windows {
 
     return token as CFData
   }
-
-  /// Update unresolved-application tracking after a discovery pass.
-  private func updateRefreshTracking(
-    for application: Application,
-    unresolvedWindowIDs: [CGWindowID],
-    mode: WindowDiscoveryMode
-  ) {
-    switch mode {
-    case .initialDiscovery:
-      if unresolvedWindowIDs.isEmpty {
-        unresolvedApplicationIDs.remove(application.processID)
-      } else {
-        log("workaround failed to resolve all windows \(application)", level: .info)
-        unresolvedApplicationIDs.insert(application.processID)
-      }
-
-    case .refreshAttempt:
-      if unresolvedWindowIDs.isEmpty {
-        log("workaround successfully resolved all windows \(application)", level: .info)
-        unresolvedApplicationIDs.remove(application.processID)
-      } else {
-        unresolvedApplicationIDs.insert(application.processID)
-      }
-    }
-  }
-}
-
-/// Identifies whether discovery is initial or a retry for unresolved windows.
-private enum WindowDiscoveryMode {
-  case initialDiscovery
-  case refreshAttempt
 }
