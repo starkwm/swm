@@ -294,7 +294,8 @@ struct WindowCommandHandler {
   ) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: action)
 
-    guard let change = WindowGeometryChange(argument: selection.value) else {
+    guard let change = WindowGeometryChange(selection.value, value: WindowGeometryChange.pair)
+    else {
       throw IPCCommandError.invalidValue("window \(action)", selection.value, expected: form)
     }
 
@@ -539,52 +540,41 @@ struct WindowCommandHandler {
   }
 }
 
-/// Parsed two-axis window geometry change.
-private struct WindowGeometryChange {
-  let mode: NumericChangeMode
-  let first: Int
-  let second: Int
+/// Two-axis window geometry change in `mode:first:second` format.
+private typealias WindowGeometryChange = NumericChange<(first: Int, second: Int)>
 
-  /// Parse a geometry change in `mode:first:second` format.
-  init?(argument: String) {
-    let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-
-    guard
-      parts.count == 3,
-      let mode = NumericChangeMode(rawValue: parts[0]),
-      let first = Int(parts[1]),
-      let second = Int(parts[2])
-    else {
+extension WindowGeometryChange {
+  /// Parse the `first:second` integers after the mode.
+  fileprivate static func pair(_ text: String) -> (first: Int, second: Int)? {
+    let parts = text.split(separator: ":", omittingEmptySubsequences: false)
+    guard parts.count == 2, let first = Int(parts[0]), let second = Int(parts[1]) else {
       return nil
     }
-
-    self.mode = mode
-    self.first = first
-    self.second = second
+    return (first, second)
   }
 
   /// Return the frame with this change applied to its origin.
-  func moving(_ frame: CGRect) -> CGRect {
+  fileprivate func moving(_ frame: CGRect) -> CGRect {
     var target = frame
-    switch mode {
-    case .absolute:
-      target.origin = CGPoint(x: first, y: second)
-    case .relative:
-      target.origin.x += CGFloat(first)
-      target.origin.y += CGFloat(second)
+    switch self {
+    case .absolute(let point):
+      target.origin = CGPoint(x: point.first, y: point.second)
+    case .relative(let delta):
+      target.origin.x += CGFloat(delta.first)
+      target.origin.y += CGFloat(delta.second)
     }
     return target
   }
 
   /// Return the frame with this change applied to its size.
-  func resizing(_ frame: CGRect) -> CGRect {
+  fileprivate func resizing(_ frame: CGRect) -> CGRect {
     var target = frame
-    switch mode {
-    case .absolute:
-      target.size = CGSize(width: first, height: second)
-    case .relative:
-      target.size.width += CGFloat(first)
-      target.size.height += CGFloat(second)
+    switch self {
+    case .absolute(let size):
+      target.size = CGSize(width: size.first, height: size.second)
+    case .relative(let delta):
+      target.size.width += CGFloat(delta.first)
+      target.size.height += CGFloat(delta.second)
     }
     return target
   }
