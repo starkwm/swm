@@ -132,8 +132,6 @@ final class WindowFrameReconciler {
     windowIDs: Set<CGWindowID>? = nil,
     finishImmediately: Bool = false
   ) {
-    let tickStart = ContinuousClock.now
-    defer { AnimationDiagnostics.shared.record("tick", since: tickStart) }
     var finished = Set<CGWindowID>()
     for (windowID, animation) in animations {
       if let windowIDs, !windowIDs.contains(windowID) { continue }
