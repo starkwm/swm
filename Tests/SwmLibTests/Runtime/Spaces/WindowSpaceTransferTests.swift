@@ -125,11 +125,11 @@ struct WindowSpaceTransferTests {
     let transfer = WindowSpaceTransfer(
       spaceProvider: { spaces },
       membershipProvider: { _ in [11] },
-      submitMove: { _, _ in throw WindowSpaceBridgeError.unavailable },
+      submitMove: { _, _ in throw SpaceBridgeError.unavailable(.windowMove) },
       wait: { Issue.record("unexpected wait") }
     )
 
-    await #expect(throws: WindowSpaceBridgeError.unavailable) {
+    await #expect(throws: SpaceBridgeError.unavailable(.windowMove)) {
       try await transfer.move(windowID: 42, to: .next)
     }
   }

@@ -15,7 +15,7 @@ final class SpaceActivation {
       try WindowServerClient.spaceClient.get().snapshot()
     },
     submitActivation: @escaping (UInt64, String, [UInt64]) throws -> Void = {
-      try SpaceActivationBridge.activate(spaceID: $0, displayID: $1, hiding: $2)
+      try SpaceBridge.activate(spaceID: $0, displayID: $1, hiding: $2)
     },
     wait: @escaping () async throws -> Void = { try await Task.sleep(for: .milliseconds(50)) }
   ) {

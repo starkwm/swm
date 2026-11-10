@@ -17,7 +17,7 @@ final class WindowSpaceTransfer {
       WindowServerClient.shared.spaceIDs(containing: $0)
     },
     submitMove: @escaping (CGWindowID, UInt64) throws -> Void = {
-      try WindowSpaceBridge.move(windowID: $0, to: $1)
+      try SpaceBridge.move(windowID: $0, to: $1)
     },
     wait: @escaping () async throws -> Void = { try await Task.sleep(for: .milliseconds(50)) }
   ) {
