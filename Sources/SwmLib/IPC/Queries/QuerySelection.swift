@@ -14,52 +14,15 @@ enum QuerySelection: Equatable {
   /// Select a window by ID, or the focused window when the ID is absent.
   case window(CGWindowID?)
 
-  private static let commandFlags = Set(["--displays", "--spaces", "--windows"])
   private static let selectorFlags = Set(["--display", "--space", "--window"])
 
-  /// Parse selector arguments from an IPC request.
+  /// Parse at most one selector flag from an IPC request's arguments.
   static func parse(arguments: [String]) throws -> QuerySelection {
-    try parseComponents(arguments: arguments).selection
-  }
-
-  /// Parse a query command and selector from command-line style arguments.
-  static func parseRequest(arguments: [String]) throws -> (
-    command: String, selection: QuerySelection
-  ) {
-    let (command, selection) = try parseComponents(arguments: arguments)
-
-    if let command {
-      return (command, selection)
-    }
-
-    if let command = selection.defaultCommand {
-      return (command, selection)
-    }
-
-    throw IPCCommandError.invalidRequest("exactly one query flag is required")
-  }
-
-  /// Parse query command and selector flags while enforcing one of each.
-  private static func parseComponents(
-    arguments: [String]
-  ) throws -> (command: String?, selection: QuerySelection) {
-    var command: String?
     var selection: QuerySelection = .none
     var index = 0
 
     while index < arguments.count {
       let argument = arguments[index]
-
-      if commandFlags.contains(argument) {
-        guard command == nil else {
-          throw IPCCommandError.invalidRequest("exactly one query flag is required")
-        }
-
-        command = argument
-        index += 1
-
-        continue
-      }
 
       guard selectorFlags.contains(argument) else {
         throw IPCCommandError.invalidRequest("unsupported query argument: \(argument)")
@@ -90,7 +53,7 @@ enum QuerySelection: Equatable {
       index += values.count + 1
     }
 
-    return (command, selection)
+    return selection
   }
 
   /// Return non-flag values following a selector flag.
@@ -124,42 +87,5 @@ enum QuerySelection: Equatable {
     }
 
     return CGWindowID(id)
-  }
-
-  /// Command-line arguments that reproduce this selector.
-  var requestArguments: [String] {
-    switch self {
-    case .none:
-      []
-    case .display(let value):
-      selectorArguments(flag: "--display", value: value.map(String.init))
-    case .space(let value):
-      selectorArguments(flag: "--space", value: value.map(String.init))
-    case .window(let value):
-      selectorArguments(flag: "--window", value: value.map(String.init))
-    }
-  }
-
-  /// The query command implied by this selector when no explicit command is supplied.
-  var defaultCommand: String? {
-    switch self {
-    case .none:
-      nil
-    case .display:
-      "--displays"
-    case .space:
-      "--spaces"
-    case .window:
-      "--windows"
-    }
-  }
-
-  /// Build command-line style arguments for a selector flag and optional value.
-  private func selectorArguments(flag: String, value: String?) -> [String] {
-    if let value {
-      [flag, value]
-    } else {
-      [flag]
-    }
   }
 }
