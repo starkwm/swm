@@ -997,7 +997,7 @@ public final class Tiling {
       guard let self, self.dwindleAttempts[id] === attempt,
         self.dwindleContext(id) == attempt.context
       else { return }
-      attempt.verified = results.values.allSatisfy(\.isVerified)
+      attempt.verified = results.values.allSatisfy { $0 }
       if !attempt.verified { self.logUnsatisfiedDwindle(id) }
     }
   }

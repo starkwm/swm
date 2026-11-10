@@ -7,7 +7,10 @@ import Testing
 @MainActor
 @Suite("WindowFrameReconciler")
 struct WindowFrameReconcilerTests {
-  @Test("apply: batch feedback retains requested and settled frames", arguments: [false, true])
+  @Test(
+    "apply: batch feedback reports which windows reached their frames",
+    arguments: [false, true]
+  )
   func batchSettlementFrames(animated: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
     let unchanged = animationFrame(0)
@@ -15,7 +18,7 @@ struct WindowFrameReconcilerTests {
     app.minimumSizes = [2: CGSize(width: 400, height: 100)]
     let reconciler = makeTestReconciler(app)
     reconciler.animationDuration = animated ? 1 : 0
-    var settlements: [CGWindowID: WindowFrameSettlement]?
+    var settlements: [CGWindowID: Bool]?
     reconciler.apply([1: unchanged, 2: requested]) { settlements = $0 }
     if animated {
       try await waitForAnimation { reconciler.isAnimating(2) }
@@ -24,14 +27,9 @@ struct WindowFrameReconcilerTests {
     }
     try await waitForAnimation { settlements != nil }
     let results = try #require(settlements)
-    #expect(results.count == 2)
-    #expect(results[1]?.isVerified == true)
-    #expect(results[1]?.requestedFrame == unchanged)
-    #expect(results[1]?.frame == unchanged)
-    #expect(results[2]?.isVerified == false)
-    #expect(results[2]?.requestedFrame == requested)
-    #expect(results[2]?.frame == CGRect(x: 100, y: 0, width: 400, height: 100))
-    #expect(results[2]?.refusedSize == CGSize(width: 400, height: 1))
+    #expect(results == [1: true, 2: false])
+    #expect(app.frame(for: 1) == unchanged)
+    #expect(app.frame(for: 2) == CGRect(x: 100, y: 0, width: 400, height: 100))
     #expect(reconciler.isIdle)
   }
 
@@ -111,8 +109,9 @@ struct WindowFrameReconcilerTests {
     reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
     try await waitForAnimation { reconciler.isIdle }
     #expect(app.frame == animationFrame(200))
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(200)))
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(300)))
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    app.frame = animationFrame(300)
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test(
@@ -147,7 +146,7 @@ struct WindowFrameReconcilerTests {
     try await waitForAnimation { reconciler.isIdle }
     #expect(failures == [1])
     #expect(app.writeCount == 2)
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: app.frame))
+    #expect(reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test("apply: preserves a pending final write for repeated targets")
@@ -186,7 +185,7 @@ struct WindowFrameReconcilerTests {
     try await waitForAnimation { reconciler.isIdle }
     #expect(app.frame(for: 1) == newerFrame)
     #expect(app.frame(for: 2) == target)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: newerFrame))
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test("prepareForSynchronousMutation: waits for cancelled writes and UI restoration")
@@ -206,7 +205,7 @@ struct WindowFrameReconcilerTests {
     #expect(reconciler.isIdle)
     await Task.yield()
     #expect(app.frame == animationFrame(200))
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: app.frame))
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test("retainWindows/beginInteraction: cancels pending reads and prevents restart")
@@ -219,7 +218,7 @@ struct WindowFrameReconcilerTests {
     reconciler.beginInteraction(for: 1)
     reconciler.apply([1: animationFrame(200)])
     #expect(reconciler.isIdle)
-    #expect(reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(20)))
+    #expect(reconciler.shouldSuppressNotification(for: 1))
     reconciler.endInteractions()
     reconciler.apply([1: animationFrame(300)])
     reconciler.retainWindows([])
@@ -228,7 +227,7 @@ struct WindowFrameReconcilerTests {
     await Task.yield()
     #expect(reconciler.isIdle)
     #expect(app.writeCount == 0)
-    #expect(!reconciler.shouldSuppressNotification(for: 1, actualFrame: animationFrame(20)))
+    #expect(!reconciler.shouldSuppressNotification(for: 1))
   }
 
   @Test("advanceAnimations: finishes only stalled display windows during long animations")
