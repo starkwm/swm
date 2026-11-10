@@ -78,14 +78,14 @@ struct SettingArguments {
   func gap(_ args: [String], current: Int) throws -> Int {
     let context = "\(scope) gap"
     let argument = try IPCArguments(args, context: context).requiredValue()
-    guard let change = CommandValueParser.pointsChange(from: argument) else {
+    guard let change = NumericChange(argument, value: { Int($0) }) else {
       throw IPCCommandError.invalidValue(
         context,
         argument,
         expected: CommandValueParser.pointsChangeForm
       )
     }
-    return try change.mode.applying(change.value, to: current, context: context)
+    return try change.applying(to: current, context: context)
   }
 
   /// Parse padding side changes.

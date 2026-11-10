@@ -1,4 +1,5 @@
 import AppKit
+import StarkSkyLight
 
 /// Lazy raw-state snapshot shared by display, space, and window query serializers.
 @MainActor
@@ -15,18 +16,34 @@ final class QuerySnapshot {
   }
 
   lazy var focusedWindowID = focusProvider()
-  lazy var activeSpaceID = WindowServerClient.shared.activeSpace()
+  lazy var spaceSnapshot = WindowServerClient.shared.spaceSnapshotIfAvailable()
+  lazy var activeSpaceID = spaceSnapshot?.activeSpaceID?.rawValue
   lazy var arrangedScreens = NSScreen.arrangedScreens
-  lazy var displaySpaces = WindowServerClient.shared.displaySpaces()
   lazy var screens = NSScreen.screens
-  lazy var spaces = Spaces.all()
+  lazy var spaces = Spaces.all(in: spaceSnapshot)
   lazy var windows = managedWindows.allWindows()
 
+  /// Space IDs keyed by WindowServer display identifier, which may be "Main".
+  lazy var displaySpaces: [String: [UInt64]] = Dictionary(
+    uniqueKeysWithValues: (spaceSnapshot?.displays ?? []).map {
+      ($0.id.rawValue, $0.spaces.map(\.id.rawValue))
+    }
+  )
+
+  /// Current Spaces keyed by display identifier and by screen UUID.
+  ///
+  /// Without separate Spaces, every screen shows WindowServer's Main display Space.
   lazy var currentSpaceByScreenID: [String: UInt64] = {
-    let screenIDs = Set(displaySpaces.map(\.id) + arrangedScreens.map(\.uuid))
+    let displays = spaceSnapshot?.displays ?? []
+    let currentByID = Dictionary(
+      uniqueKeysWithValues: displays.map { ($0.id.rawValue.lowercased(), $0.currentSpaceID) }
+    )
+    let screenIDs = Set(displays.map(\.id.rawValue) + arrangedScreens.map(\.uuid))
     return Dictionary(
       uniqueKeysWithValues: screenIDs.compactMap { screenID in
-        WindowServerClient.shared.currentSpace(for: screenID).map { (screenID, $0) }
+        guard let current = currentByID[screenID.lowercased()] ?? currentByID["main"], let current
+        else { return nil }
+        return (screenID, current.rawValue)
       }
     )
   }()

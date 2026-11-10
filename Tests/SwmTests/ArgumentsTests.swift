@@ -43,7 +43,7 @@ struct ArgumentsTests {
       (["config", "gap", "-2", "--space", "3"], ["config", "gap", "--space", "3", "--", "-2"]),
       (
         ["config", "padding", "--space", "current", "--top", "-4"],
-        ["config", "padding", "--space", "current", "--top", "-4"]
+        ["config", "padding", "--space", "current", "--top", "-4", "--"]
       ),
     ]
   )

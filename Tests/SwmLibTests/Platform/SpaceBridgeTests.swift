@@ -3,9 +3,9 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("SpaceActivationBridge", .serialized)
+@Suite("SpaceBridge", .serialized)
 @MainActor
-struct SpaceActivationBridgeTests {
+struct SpaceBridgeTests {
   @Test("activate: shows, hides, then sets current with full-width IDs and owned objects")
   func activateShowsHidesThenSetsCurrentWithFullWidthIDsAndOwnedObjects() throws {
     ActivationCalls.values = []
@@ -25,11 +25,11 @@ struct SpaceActivationBridgeTests {
   func activateMissingClassesAndSelectorsDoNotSubmitAnyOperations() {
     for operationClass: AnyClass? in [nil, NSObject.self] {
       ActivationCalls.values = []
-      #expect(throws: SpaceActivationBridgeError.unavailable) {
+      #expect(throws: SpaceBridgeError.unavailable(.activation)) {
         try activate(hideClass: operationClass)
       }
       #expect(ActivationCalls.values.isEmpty)
-      #expect(throws: SpaceActivationBridgeError.unavailable) {
+      #expect(throws: SpaceBridgeError.unavailable(.activation)) {
         try activate(currentClass: operationClass)
       }
       #expect(ActivationCalls.values.isEmpty)
@@ -40,7 +40,7 @@ struct SpaceActivationBridgeTests {
   func activateRejectsChangedArgumentAndReturnTypesDespiteMatchingArgumentCounts() {
     for operationClass: AnyClass in [WrongActivationArgument.self, WrongActivationReturn.self] {
       ActivationCalls.values = []
-      #expect(throws: SpaceActivationBridgeError.unavailable) {
+      #expect(throws: SpaceBridgeError.unavailable(.activation)) {
         try activate(hideClass: operationClass)
       }
       #expect(ActivationCalls.values.isEmpty)
@@ -50,17 +50,43 @@ struct SpaceActivationBridgeTests {
   @Test("activate: a failed initializer prevents partial submission")
   func activateAFailedInitializerPreventsPartialSubmission() {
     ActivationCalls.values = []
-    #expect(throws: SpaceActivationBridgeError.creationFailed) {
+    #expect(throws: SpaceBridgeError.creationFailed(.activation)) {
       try activate(hideClass: FailedActivationOperation.self)
     }
     #expect(ActivationCalls.values.isEmpty)
+  }
+
+  @Test("move: invokes the Objective-C initializer and perform method with correct arguments")
+  func moveInvokesTheObjectiveCInitializerAndPerformMethodWithCorrectArguments() throws {
+    TestSpaceOperation.receivedWindows = nil
+    TestSpaceOperation.receivedSpaceID = nil
+    TestSpaceOperation.releasedCount = 0
+
+    try SpaceBridge.move(
+      windowID: 42,
+      to: 123_456_789_012,
+      operationClass: TestSpaceOperation.self
+    )
+
+    #expect(TestSpaceOperation.receivedWindows == [42])
+    #expect(TestSpaceOperation.receivedSpaceID == 123_456_789_012)
+    #expect(TestSpaceOperation.releasedCount == 1)
+  }
+
+  @Test("move: reports missing classes and selectors before invocation")
+  func moveReportsMissingClassesAndSelectorsBeforeInvocation() {
+    for operationClass: AnyClass? in [nil, NSObject.self] {
+      #expect(throws: SpaceBridgeError.unavailable(.windowMove)) {
+        try SpaceBridge.move(windowID: 42, to: 33, operationClass: operationClass)
+      }
+    }
   }
 
   private func activate(
     hideClass: AnyClass? = TestActivationSpacesOperation.self,
     currentClass: AnyClass? = TestActivationCurrentOperation.self
   ) throws {
-    try SpaceActivationBridge.activate(
+    try SpaceBridge.activate(
       spaceID: 123_456_789_012,
       displayID: "Main",
       hiding: [11, 33],
@@ -142,4 +168,30 @@ private final class FailedActivationOperation: NSObject {
   init?(spaces: NSArray) { return nil }
 
   @objc func performWithWMBridgeDelegate() {}
+}
+
+@objc(SwmTestSpaceOperation)
+@MainActor
+private final class TestSpaceOperation: NSObject {
+  static var receivedWindows: [UInt32]?
+  static var receivedSpaceID: UInt64?
+  static var releasedCount = 0
+
+  private let windows: NSArray
+  private let spaceID: UInt64
+
+  @objc(initWithWindows:spaceID:)
+  init(windows: NSArray, spaceID: UInt64) {
+    self.windows = windows
+    self.spaceID = spaceID
+
+    super.init()
+  }
+
+  isolated deinit { Self.releasedCount += 1 }
+
+  @objc func performWithWMBridgeDelegate() {
+    Self.receivedWindows = windows.compactMap { ($0 as? NSNumber)?.uint32Value }
+    Self.receivedSpaceID = spaceID
+  }
 }

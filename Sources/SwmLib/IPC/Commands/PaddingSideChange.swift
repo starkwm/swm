@@ -13,11 +13,7 @@ struct PaddingSideChange: Equatable {
   ) throws -> SpacePadding {
     var padding = padding
     for change in changes {
-      padding[change.side] = try change.mode.applying(
-        change.value,
-        to: padding[change.side],
-        context: context
-      )
+      padding[change.side] = try change.change.applying(to: padding[change.side], context: context)
     }
     return padding.clamped()
   }
@@ -25,11 +21,8 @@ struct PaddingSideChange: Equatable {
   /// Padding edge to change.
   let side: PaddingSide
 
-  /// Whether the value replaces or adjusts the side.
-  let mode: NumericChangeMode
-
   /// Points to set, or the signed points to add.
-  let value: Int
+  let change: NumericChange<Int>
 
   /// Parse a `side=mode:value` argument.
   init?(argument: String) {
@@ -38,18 +31,10 @@ struct PaddingSideChange: Equatable {
       return nil
     }
 
-    let change = assignment[1].split(separator: ":", omittingEmptySubsequences: false)
-    guard
-      change.count == 2,
-      let mode = NumericChangeMode(rawValue: String(change[0])),
-      let value = Int(change[1])
-    else {
-      return nil
-    }
+    guard let change = NumericChange(assignment[1], value: { Int($0) }) else { return nil }
 
     self.side = side
-    self.mode = mode
-    self.value = value
+    self.change = change
   }
 }
 

@@ -22,7 +22,7 @@ struct SpaceSerializerTests {
   ) throws {
     let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.spaces = [Space(id: 42, type: SwmLib.SpaceType(type))]
-    snapshot.displaySpaces = []
+    snapshot.displaySpaces = [:]
     snapshot.arrangedScreens = []
     snapshot.windows = []
     snapshot.spaceIDsByWindowID = [:]
@@ -38,7 +38,7 @@ struct SpaceSerializerTests {
   func allDerivesWindowMembershipAndSharedVisibilityFromTheQuerySnapshot() {
     let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.spaces = [Space(id: 42, type: .normal), Space(id: 43, type: .normal)]
-    snapshot.displaySpaces = [WindowServerDisplaySpaces(id: "Main", spaces: [42, 43])]
+    snapshot.displaySpaces = ["Main": [42, 43]]
     snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
     snapshot.windows = [Window(id: 1), Window(id: 2)]
     snapshot.spaceIDsByWindowID = [1: [42], 2: [42]]

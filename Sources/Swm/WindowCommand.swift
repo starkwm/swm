@@ -90,7 +90,7 @@ struct WindowCommand: ParsableCommand {
     var arguments: [String] { [target.value] }
   }
 
-  struct Move: WindowGeometryCommand {
+  struct Move: WindowIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Move a window.",
       usage: """
@@ -197,7 +197,7 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct Resize: WindowGeometryCommand {
+  struct Resize: WindowIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Resize a window.",
       discussion: """
@@ -229,7 +229,7 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct Grid: WindowGeometryCommand {
+  struct Grid: WindowIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Place a window on a grid.",
       discussion: """
@@ -331,7 +331,7 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct SplitRatio: WindowIPCCommand, SettingChangeCommand {
+  struct SplitRatio: WindowIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Change a dwindle split ratio.",
       discussion: """
@@ -341,6 +341,7 @@ struct WindowCommand: ParsableCommand {
         """
     )
     static let command = "--split-ratio"
+    static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
 

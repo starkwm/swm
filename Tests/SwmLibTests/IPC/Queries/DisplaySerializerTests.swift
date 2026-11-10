@@ -10,9 +10,7 @@ struct DisplaySerializerTests {
   func allMapsSharedSpacesToEveryScreen(sharedDisplayID: String) {
     let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
-    snapshot.displaySpaces = [
-      WindowServerDisplaySpaces(id: sharedDisplayID, spaces: [1, 3, 4, 5, 6])
-    ]
+    snapshot.displaySpaces = [sharedDisplayID: [1, 3, 4, 5, 6]]
     snapshot.spaces = [1, 3, 4, 5, 6].map { Space(id: $0) }
     snapshot.activeSpaceID = 5
     snapshot.currentSpaceByScreenID = ["": 5, sharedDisplayID: 5]
@@ -29,7 +27,7 @@ struct DisplaySerializerTests {
   func allRetainsScreensWhileDisplaySpacesAreUnavailable() {
     let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
     snapshot.arrangedScreens = [QueryTestScreen(), QueryTestScreen()]
-    snapshot.displaySpaces = [WindowServerDisplaySpaces(id: "disconnected-display", spaces: [10])]
+    snapshot.displaySpaces = ["disconnected-display": [10]]
     snapshot.spaces = [Space(id: 10)]
     snapshot.activeSpaceID = 10
     snapshot.currentSpaceByScreenID = [:]
@@ -40,7 +38,7 @@ struct DisplaySerializerTests {
     #expect(displays.allSatisfy { $0.spaces.isEmpty })
     #expect(displays.allSatisfy { !$0.hasFocus })
 
-    snapshot.displaySpaces = [WindowServerDisplaySpaces(id: "", spaces: [10])]
+    snapshot.displaySpaces = ["": [10]]
     snapshot.currentSpaceByScreenID = ["": 10]
 
     let resolvedDisplays = DisplaySerializer.all(snapshot: snapshot)

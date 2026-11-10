@@ -184,11 +184,11 @@ struct SpaceActivationTests {
   func activateAnUnavailableBridgeDoesNotWaitForConfirmation() async {
     let activation = SpaceActivation(
       snapshotProvider: { snapshot() },
-      submitActivation: { _, _, _ in throw SpaceActivationBridgeError.unavailable },
+      submitActivation: { _, _, _ in throw SpaceBridgeError.unavailable(.activation) },
       wait: { Issue.record("unexpected wait") }
     )
 
-    await #expect(throws: SpaceActivationBridgeError.unavailable) {
+    await #expect(throws: SpaceBridgeError.unavailable(.activation)) {
       try await activation.activate(index: 2)
     }
   }

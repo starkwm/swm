@@ -29,13 +29,13 @@ struct SpaceCommandHandlerTests {
     let handler = SpaceCommandHandler(
       spaces: spaces,
       tiling: makeTestTiling(spaces: spaces),
-      activateSpace: { _ in throw SpaceActivationBridgeError.unavailable }
+      activateSpace: { _ in throw SpaceBridgeError.unavailable(.activation) }
     )
 
     let response = await handler.dispatch(request(command: "--activate", args: ["1"]))
     #expect(!response.ok)
     #expect(response.errorCode == .internalError)
-    #expect(response.message == SpaceActivationBridgeError.unavailable.description)
+    #expect(response.message == SpaceBridgeError.unavailable(.activation).description)
   }
 
   @Test(

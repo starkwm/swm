@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import StarkSkyLight
 import Testing
 
 @testable import SwmLib
@@ -75,4 +76,28 @@ struct QuerySnapshotTests {
     }
   }
 
+  @Test("spaceSnapshot: derives Spaces and current Spaces, using Main for every screen")
+  func spaceSnapshotDerivesSpacesAndCurrentSpacesUsingMainForEveryScreen() {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
+    snapshot.arrangedScreens = [QueryTestScreen()]
+    snapshot.spaceSnapshot = SpaceSnapshot(
+      displays: [
+        DisplaySpaces(
+          id: DisplayID(rawValue: "Main"),
+          spaces: [
+            StarkSkyLight.Space(id: SpaceID(rawValue: 4), type: .desktop),
+            StarkSkyLight.Space(id: SpaceID(rawValue: 7), type: .fullscreen),
+          ],
+          currentSpaceID: SpaceID(rawValue: 7)
+        )
+      ],
+      activeSpaceID: SpaceID(rawValue: 7)
+    )
+
+    #expect(snapshot.spaces.map(\.id) == [4, 7])
+    #expect(snapshot.spaces.map(\.type) == [.normal, .fullscreen])
+    #expect(snapshot.activeSpaceID == 7)
+    #expect(snapshot.displaySpaces == ["Main": [4, 7]])
+    #expect(snapshot.currentSpaceByScreenID == ["Main": 7, "": 7])
+  }
 }

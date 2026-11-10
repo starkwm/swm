@@ -30,34 +30,3 @@ struct SettingChange<Value: LosslessStringConvertible & Comparable & SignedNumer
     }
   }
 }
-
-/// A command whose positional value may be a negative adjustment such as `-2`.
-///
-/// The argument parser reads `-2` as an option, so `Arguments.resolve` moves a
-/// negative positional number after a `--` terminator for these commands.
-protocol SettingChangeCommand: ParsableCommand {}
-
-extension SettingChangeCommand {
-  /// Move negative positional numbers after `--` so the parser reads them as values.
-  ///
-  /// A negative number that follows an option name is that option's value and stays put.
-  static func escapingNegativeNumbers(_ arguments: [String]) -> [String] {
-    guard !arguments.contains("--") else { return arguments }
-
-    var kept = [String]()
-    var values = [String]()
-    for argument in arguments {
-      let followsOption = kept.last.map { $0.hasPrefix("--") && !$0.contains("=") } ?? false
-      if isNegativeNumber(argument), !followsOption {
-        values.append(argument)
-      } else {
-        kept.append(argument)
-      }
-    }
-    return values.isEmpty ? arguments : kept + ["--"] + values
-  }
-
-  private static func isNegativeNumber(_ argument: String) -> Bool {
-    argument.hasPrefix("-") && Double(argument) != nil
-  }
-}

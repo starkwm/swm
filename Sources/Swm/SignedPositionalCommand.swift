@@ -1,10 +1,12 @@
-/// A window command accepting numeric positionals and options.
-protocol WindowGeometryCommand: WindowIPCCommand {
+import ArgumentParser
+
+/// A command whose positional values may be negative numbers such as `-20` or `-0.05`.
+protocol SignedPositionalCommand: ParsableCommand {
   /// Options that consume the following argument, so it is not escaped as a positional.
   static var valueOptions: Set<String> { get }
 }
 
-extension WindowGeometryCommand {
+extension SignedPositionalCommand {
   /// Move options before `--` and values after it, keeping value order.
   /// ArgumentParser otherwise treats negative positional numbers as options.
   static func escapingPositionals(_ arguments: [String]) -> [String] {
@@ -20,7 +22,7 @@ extension WindowGeometryCommand {
         expectsValue = false
       } else if argument == "--" {
         afterTerminator = true
-      } else if argument.hasPrefix("-"), Int(argument) == nil {
+      } else if argument.hasPrefix("-"), Double(argument) == nil {
         options.append(argument)
         expectsValue = valueOptions.contains(argument)
       } else {

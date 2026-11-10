@@ -20,9 +20,9 @@ struct SpaceSerializer: Encodable, Equatable {
     var screenIDsBySpaceID = [UInt64: [String]]()
     var windowIDsBySpaceID = [UInt64: [CGWindowID]]()
 
-    for display in snapshot.displaySpaces {
-      for spaceID in display.spaces {
-        screenIDsBySpaceID[spaceID, default: []].append(display.id)
+    for (displayID, spaceIDs) in snapshot.displaySpaces {
+      for spaceID in spaceIDs {
+        screenIDsBySpaceID[spaceID, default: []].append(displayID)
       }
     }
 
