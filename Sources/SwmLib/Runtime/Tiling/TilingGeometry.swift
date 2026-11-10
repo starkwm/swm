@@ -22,10 +22,8 @@ extension CGSize {
 }
 
 extension SpaceSettings {
-  /// Effective gap between adjacent tiled windows.
-  var tilingGap: CGFloat {
-    CGFloat(max(0, gap))
-  }
+  /// Gap between adjacent tiled windows; writers store it clamped to zero or greater.
+  var tilingGap: CGFloat { CGFloat(gap) }
 
   /// Padded bounds for tiling, or nil when they cannot fit a minimum-size window.
   func usableTilingBounds(in bounds: CGRect) -> CGRect? {
@@ -33,12 +31,10 @@ extension SpaceSettings {
     return usableBounds.size.meetsTilingMinimum ? usableBounds : nil
   }
 
-  /// Visible bounds after applying per-Space padding.
+  /// Visible bounds after applying per-Space padding, which writers store clamped.
   func tilingBounds(in bounds: CGRect) -> CGRect {
-    let top = CGFloat(max(0, padding.top))
-    let bottom = CGFloat(max(0, padding.bottom))
-    let left = CGFloat(max(0, padding.left))
-    let right = CGFloat(max(0, padding.right))
+    let (top, bottom) = (CGFloat(padding.top), CGFloat(padding.bottom))
+    let (left, right) = (CGFloat(padding.left), CGFloat(padding.right))
 
     return CGRect(
       x: bounds.minX + left,
