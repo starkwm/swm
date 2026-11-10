@@ -50,6 +50,8 @@ func runSwm(with arguments: StartCommand) {
     tiling: tiling
   )
 
+  workspace.observe()
+
   if case .failure(let error) = displays.observe() {
     fail("unable to start display observation - \(error)")
   }

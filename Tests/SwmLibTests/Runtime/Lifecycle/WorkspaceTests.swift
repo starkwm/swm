@@ -72,6 +72,23 @@ struct WorkspaceTests {
     #expect(application.removedKeyPaths == ["activationPolicy"])
   }
 
+  @Test("observe: delivers display changes to the injected event handler")
+  func observeDeliversDisplayChangesToTheInjectedEventHandler() {
+    var displayChanges = 0
+    let workspace = Workspace { event in
+      if case .display(.changed) = event { displayChanges += 1 }
+    }
+
+    workspace.observe()
+    NSWorkspace.shared.notificationCenter.post(
+      name: Notification.Name("NSWorkspaceActiveDisplayDidChangeNotification"),
+      object: nil
+    )
+
+    #expect(displayChanges == 1)
+    NSWorkspace.shared.notificationCenter.removeObserver(workspace)
+  }
+
   @Test("observeFinishedLaunching/observeActivationPolicy: registers each observer once")
   func observeFinishedLaunchingObserveActivationPolicyRegistersEachObserverOnce() {
     let workspace = Workspace()
