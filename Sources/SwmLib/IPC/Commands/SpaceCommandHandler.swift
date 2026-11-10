@@ -12,8 +12,8 @@ struct SpaceCommandHandler {
     spaces: Spaces,
     tiling: Tiling,
     spaceIDProvider: @escaping () -> [UInt64] = { Spaces.all().map(\.id) },
-    activateSpace: @escaping (Int) async throws -> Void = {
-      _ = try await SpaceActivation.shared.activate(index: $0)
+    activateSpace: @escaping (Int) async throws -> Void = { _ in
+      throw SpaceActivationBridgeError.unavailable
     }
   ) {
     self.spaces = spaces
