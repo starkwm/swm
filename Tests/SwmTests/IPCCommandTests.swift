@@ -50,6 +50,25 @@ struct IPCCommandTests {
     #expect(read(errors) == (ok ? "" : printed))
   }
 
+  @Test(
+    "query: singular commands send the plural command with a selector",
+    arguments: [
+      (["display"], ["--displays", "--display"]),
+      (["display", "2"], ["--displays", "--display", "2"]),
+      (["space", "3"], ["--spaces", "--space", "3"]),
+      (["window"], ["--windows", "--window"]),
+      (["window", "42"], ["--windows", "--window", "42"]),
+      (["windows", "--space", "3"], ["--windows", "--space", "3"]),
+    ]
+  )
+  func querySingularCommandsSendThePluralCommandWithASelector(
+    arguments: [String],
+    expected: [String]
+  ) throws {
+    let command = try #require(Arguments.parseAsRoot(["query"] + arguments) as? any IPCCommand)
+    #expect(command.commandArguments == expected)
+  }
+
   @Test("formatted: indents query JSON for terminals and keeps it compact for pipes")
   func formattedIndentsQueryJSONForTerminalsAndKeepsItCompactForPipes() throws {
     let command = try #require(

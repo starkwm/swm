@@ -7,12 +7,6 @@ struct IPCRequest: Codable, Equatable, Sendable {
 
   /// Build a request from a command domain and command-line style arguments.
   static func make(domain: CommandDomain, arguments: [String]) throws -> IPCRequest {
-    if domain == .query {
-      let (command, selection) = try QuerySelection.parseRequest(arguments: arguments)
-
-      return IPCRequest(domain: .query, command: command, args: selection.requestArguments)
-    }
-
     guard let command = arguments.first else {
       throw IPCCommandError.invalidRequest("missing command for \(domain.rawValue)")
     }

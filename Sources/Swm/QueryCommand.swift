@@ -48,12 +48,12 @@ struct QueryCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a display by index, or the focused display."
     )
-    static let command = "--display"
+    static let command = "--displays"
 
     @Argument(help: "One-based display index.")
     var index: Int?
 
-    var arguments: [String] { index.map { [String($0)] } ?? [] }
+    var arguments: [String] { ["--display"] + (index.map { [String($0)] } ?? []) }
 
     func validate() throws {
       try validatePositiveIndex(index, name: "Display")
@@ -64,12 +64,12 @@ struct QueryCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a Space by index, or the focused Space."
     )
-    static let command = "--space"
+    static let command = "--spaces"
 
     @Argument(help: "One-based Space index.")
     var index: Int?
 
-    var arguments: [String] { index.map { [String($0)] } ?? [] }
+    var arguments: [String] { ["--space"] + (index.map { [String($0)] } ?? []) }
 
     func validate() throws {
       try validatePositiveIndex(index, name: "Space")
@@ -80,12 +80,12 @@ struct QueryCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a window by ID, or the focused window."
     )
-    static let command = "--window"
+    static let command = "--windows"
 
     @Argument(help: "Window ID.")
     var id: UInt32?
 
-    var arguments: [String] { id.map { [String($0)] } ?? [] }
+    var arguments: [String] { ["--window"] + (id.map { [String($0)] } ?? []) }
   }
 }
 
