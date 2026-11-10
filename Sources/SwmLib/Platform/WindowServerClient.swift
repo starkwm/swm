@@ -122,32 +122,22 @@ final class WindowServerClient {
     try Self.spaceClient.get().snapshot()
   }
 
+  /// Capture topology, or nil after logging when it cannot be read.
+  @MainActor
+  func spaceSnapshotIfAvailable() -> SpaceSnapshot? {
+    querySpaces(default: nil) { try $0.snapshot() }
+  }
+
   /// Return the active WindowServer space ID, or nil when it cannot be read.
   @MainActor
   func activeSpace() -> UInt64? {
     querySpaces(default: nil) { try $0.activeSpace()?.rawValue }
   }
 
-  /// Return the current space ID for a display UUID, or nil when it cannot be read.
-  @MainActor
-  func currentSpace(for screenUUID: String) -> UInt64? {
-    querySpaces(default: nil) { try $0.currentSpace(for: .init(rawValue: screenUUID))?.rawValue }
-  }
-
   /// Return all known WindowServer space IDs.
   @MainActor
   func allSpaceIDs() -> [UInt64] {
     querySpaces(default: []) { try $0.snapshot().allSpaceIDs.map(\.rawValue) }
-  }
-
-  /// Return each display and the spaces assigned to it.
-  @MainActor
-  func displaySpaces() -> [WindowServerDisplaySpaces] {
-    querySpaces(default: []) { client in
-      try client.snapshot().displays.map {
-        WindowServerDisplaySpaces(id: $0.id.rawValue, spaces: $0.spaces.map(\.id.rawValue))
-      }
-    }
   }
 
   /// Return the display UUID for a space ID.
@@ -341,12 +331,3 @@ final class WindowServerClient {
 }
 
 extension WindowServerClient: @unchecked Sendable {}
-
-/// WindowServer display identifier and the spaces assigned to it.
-struct WindowServerDisplaySpaces: Equatable {
-  /// WindowServer display UUID.
-  let id: String
-
-  /// WindowServer space IDs assigned to the display.
-  let spaces: [UInt64]
-}

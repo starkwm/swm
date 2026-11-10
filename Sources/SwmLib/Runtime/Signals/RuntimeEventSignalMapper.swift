@@ -76,13 +76,13 @@ struct RuntimeEventSignalMapper {
       return nil
 
     case .space(.changed(let space)):
-      let allSpaces = Spaces.all()
+      let allSpaceIDs = WindowServerClient.shared.allSpaceIDs()
       return .spaceChanged(
         space: space,
-        currentIndex: allSpaces.firstIndex(where: { $0.id == space.id }).map { $0 + 1 },
+        currentIndex: allSpaceIDs.firstIndex(of: space.id).map { $0 + 1 },
         recentSpaceID: spaces.lastActiveSpaceID,
         recentIndex: spaces.lastActiveSpaceID.flatMap { recentID in
-          allSpaces.firstIndex { $0.id == recentID }.map { $0 + 1 }
+          allSpaceIDs.firstIndex(of: recentID).map { $0 + 1 }
         }
       )
 

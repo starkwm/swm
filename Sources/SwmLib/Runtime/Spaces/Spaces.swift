@@ -5,9 +5,15 @@ import StarkSkyLight
 /// Owns active Space state, per-Space settings, and runtime topology observations.
 @MainActor
 public final class Spaces {
-  /// Return all known WindowServer spaces.
-  static func all() -> [Space] {
-    WindowServerClient.shared.allSpaceIDs().map(Space.init(id:))
+  /// Return the spaces in a topology snapshot in WindowServer order.
+  static func all(
+    in snapshot: SpaceSnapshot? = WindowServerClient.shared.spaceSnapshotIfAvailable()
+  ) -> [Space] {
+    var seen = Set<UInt64>()
+    return (snapshot?.displays ?? []).flatMap(\.spaces).compactMap { space in
+      guard seen.insert(space.id.rawValue).inserted else { return nil }
+      return Space(id: space.id.rawValue, type: SpaceType(space.type))
+    }
   }
 
   /// Return the currently active WindowServer space, or nil when it cannot be read.

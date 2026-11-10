@@ -16,7 +16,7 @@ struct DisplaySerializer: Encodable, Equatable {
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
     let displaySpaces = Dictionary(
-      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.id.lowercased(), $0.spaces) }
+      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.key.lowercased(), $0.value) }
     )
     let indexedSpaces = snapshot.spaces
       .enumerated()

@@ -113,7 +113,7 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
       enumerateWindows ?? {
         WindowServerClient.shared.windowIdentifiers(
           applicationConnectionID: $0,
-          spaceIDs: Spaces.all().map(\.id)
+          spaceIDs: WindowServerClient.shared.allSpaceIDs()
         )
       }
     processID = process.pid
