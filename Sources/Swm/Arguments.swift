@@ -49,13 +49,10 @@ struct Arguments: ParsableCommand {
       subcommands = subcommands[index].configuration.subcommands
       path.append(argument)
     }
-    if let command = command as? any WindowGeometryCommand.Type, first != "help" {
+    if let command = command as? any SignedPositionalCommand.Type, first != "help" {
       let prefixCount = path.count - 1
       return Array(arguments.prefix(prefixCount))
         + command.escapingPositionals(Array(arguments.dropFirst(prefixCount)))
-    }
-    if let command = command as? any SettingChangeCommand.Type {
-      return command.escapingNegativeNumbers(arguments)
     }
     return arguments
   }

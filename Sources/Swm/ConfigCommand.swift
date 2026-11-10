@@ -52,7 +52,7 @@ struct ConfigCommand: ParsableCommand {
     var arguments: [String] { mode.map { [$0.rawValue] } ?? [] }
   }
 
-  struct MasterRatio: ScopedConfigIPCCommand, SettingChangeCommand {
+  struct MasterRatio: ScopedConfigIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust the master-area ratio.",
       discussion: """
@@ -65,6 +65,7 @@ struct ConfigCommand: ParsableCommand {
         """
     )
     static let command = "master-ratio"
+    static let valueOptions: Set<String> = ["--space"]
 
     @OptionGroup var scope: ConfigScopeOptions
 
@@ -94,7 +95,7 @@ struct ConfigCommand: ParsableCommand {
     var settingArguments: [String] { placement.map { [$0.rawValue] } ?? [] }
   }
 
-  struct SplitRatio: ScopedConfigIPCCommand, SettingChangeCommand {
+  struct SplitRatio: ScopedConfigIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust the dwindle split ratio.",
       discussion: """
@@ -108,6 +109,7 @@ struct ConfigCommand: ParsableCommand {
         """
     )
     static let command = "split-ratio"
+    static let valueOptions: Set<String> = ["--space"]
 
     @OptionGroup var scope: ConfigScopeOptions
 
@@ -135,7 +137,7 @@ struct ConfigCommand: ParsableCommand {
     var settingArguments: [String] { state.map { [$0.rawValue] } ?? [] }
   }
 
-  struct Gap: ScopedConfigIPCCommand, SettingChangeCommand {
+  struct Gap: ScopedConfigIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust the window gap.",
       discussion: """
@@ -150,6 +152,7 @@ struct ConfigCommand: ParsableCommand {
         """
     )
     static let command = "gap"
+    static let valueOptions: Set<String> = ["--space"]
 
     @OptionGroup var scope: ConfigScopeOptions
 
@@ -159,7 +162,7 @@ struct ConfigCommand: ParsableCommand {
     var settingArguments: [String] { points.map { [$0.ipcValue] } ?? [] }
   }
 
-  struct Padding: ScopedConfigIPCCommand, SettingChangeCommand {
+  struct Padding: ScopedConfigIPCCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Show, set, or adjust Space padding.",
       discussion: """
@@ -176,6 +179,7 @@ struct ConfigCommand: ParsableCommand {
         """
     )
     static let command = "padding"
+    static let valueOptions: Set<String> = ["--space", "--top", "--bottom", "--left", "--right"]
 
     @OptionGroup var scope: ConfigScopeOptions
 
