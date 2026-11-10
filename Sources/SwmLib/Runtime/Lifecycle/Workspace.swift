@@ -15,7 +15,7 @@ public final class Workspace: NSObject {
     kind: .finishedLaunching
   )
 
-  /// Create a workspace observer for active space and display changes.
+  /// Create a workspace observer that posts to the shared event dispatcher.
   public override convenience init() {
     self.init(postEvent: { Events.shared.post($0) })
   }
@@ -23,7 +23,10 @@ public final class Workspace: NSObject {
   init(postEvent: @escaping (RuntimeEvent) -> Void) {
     self.postEvent = postEvent
     super.init()
+  }
 
+  /// Start observing active space and display change notifications.
+  public func observe() {
     NSWorkspace.shared.notificationCenter.addObserver(
       self,
       selector: #selector(activeSpaceDidChange(_:)),
@@ -128,13 +131,13 @@ public final class Workspace: NSObject {
   /// Publish an active-space changed event.
   @objc
   func activeSpaceDidChange(_: Notification) {
-    Events.shared.post(.space(Spaces.active().map(SpaceEvent.changed) ?? .unavailable))
+    postEvent(.space(Spaces.active().map(SpaceEvent.changed) ?? .unavailable))
   }
 
   /// Publish an active-display changed event.
   @objc
   func activeDisplayDidChange(_: Notification) {
-    Events.shared.post(.display(.changed))
+    postEvent(.display(.changed))
   }
 
   /// Start observing one KVO-backed process readiness condition.
