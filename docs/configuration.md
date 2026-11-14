@@ -96,8 +96,9 @@ Add the commands to `swmrc` to apply them at startup. Animation smoothness depen
 the app. Moving a window to another display cancels its animation.
 
 When you drag or resize a window, swm stops sending animation updates to it until you
-release the mouse, then recalculates the layout. Clicking without dragging leaves the
-animation running. Geometry commands return an error during a drag. Placement rules
+release the mouse, then recalculates the layout. A drag counts once the window starts
+to move or change size, so clicking, or dragging inside a window to select text, leaves
+the animation running. Geometry commands return an error during a drag. Placement rules
 wait until you release the mouse.
 
 An Accessibility call already in progress can finish after swm cancels an animation.

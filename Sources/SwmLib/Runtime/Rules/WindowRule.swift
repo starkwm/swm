@@ -98,7 +98,10 @@ struct WindowRule: Encodable {
     }
   }
 
-  func matches(_ window: TilingWindowSnapshot) -> Bool {
+  /// Whether the rule filters on the window title, so a title change can change its match.
+  var filtersTitle: Bool { title != nil }
+
+  func matches(_ window: some WindowRuleSubject) -> Bool {
     matches(bundleID, exactly: window.bundleID, inverted: bundleIDInverted)
       && app?.matches(window.app) != false
       && title?.matches(window.title) != false
@@ -114,4 +117,20 @@ struct WindowRule: Encodable {
     guard let value else { return false }
     return (value == expected) != inverted
   }
+}
+
+/// Window identity facts that rules filter on.
+protocol WindowRuleSubject {
+  var app: String? { get }
+  var title: String? { get }
+  var bundleID: String? { get }
+}
+
+extension TilingWindowSnapshot: WindowRuleSubject {}
+
+/// Rule identity facts read for one window without its tiling facts.
+struct WindowRuleIdentity: WindowRuleSubject {
+  let app: String?
+  let title: String?
+  let bundleID: String?
 }
