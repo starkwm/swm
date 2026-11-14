@@ -9,6 +9,7 @@ public final class Tiling {
   typealias SnapshotProvider = () -> TilingReconciliationSnapshot
   typealias WindowSpaceMembershipProvider = () -> [CGWindowID: Set<UInt64>]
   typealias UnavailableFactsProvider = (Set<CGWindowID>) -> Set<CGWindowID>
+  typealias RuleIdentityProvider = (CGWindowID) -> WindowRuleIdentity?
 
   /// Longest wait, in membership polls, between retries of failed Accessibility reads.
   private static let maximumFactRetryInterval = 16
@@ -25,11 +26,14 @@ public final class Tiling {
   private let frameReconciler: WindowFrameReconciler?
   private let windowSpaceMembership: WindowSpaceMembershipProvider
   private let unavailableFacts: UnavailableFactsProvider
+  private let ruleIdentity: RuleIdentityProvider
   private let ruleDisplayIDs: () -> [String]
   private let rulePlacement: RulePlacementHandler
   private let ruleSpaceIDs: () -> [UInt64]
   private let ruleSpaceMove: RuleSpaceMoveHandler
   private var appliedRulePlacements = [CGWindowID: WindowRulePlacement]()
+  private var ruleActionsByWindowID = [CGWindowID: WindowRuleActions]()
+  private var scheduledReconcile: Task<Void, Never>?
   private var ruleSpaceMoveTasks = [CGWindowID: Task<Void, Never>]()
   private var currentTopology: SpaceTopology?
   private(set) var defaultState = TilingLayoutState(
@@ -79,6 +83,15 @@ public final class Tiling {
       },
       unavailableFacts: { windowIDs in
         windowIDs.filter { windows.window(by: $0)?.hasUnavailableTilingFacts ?? false }
+      },
+      ruleIdentity: { windowID in
+        windows.window(by: windowID).map {
+          WindowRuleIdentity(
+            app: $0.application?.name,
+            title: $0.title,
+            bundleID: $0.application?.bundleID
+          )
+        }
       }
     )
   }
@@ -91,6 +104,7 @@ public final class Tiling {
     frameReconciler: WindowFrameReconciler? = nil,
     windowSpaceMembership: WindowSpaceMembershipProvider? = nil,
     unavailableFacts: UnavailableFactsProvider? = nil,
+    ruleIdentity: RuleIdentityProvider? = nil,
     rulePlacement: RulePlacementHandler? = nil,
     ruleDisplayIDs: @escaping () -> [String] = { WindowRulePlacementApplier.displayIDs() },
     ruleSpaceIDs: @escaping () -> [UInt64] = { WindowServerClient.shared.allSpaceIDs() },
@@ -123,6 +137,12 @@ public final class Tiling {
             .map(\.id)
         )
       }
+    self.ruleIdentity =
+      ruleIdentity ?? { windowID in
+        snapshot().windows.first { $0.id == windowID }.map {
+          WindowRuleIdentity(app: $0.app, title: $0.title, bundleID: $0.bundleID)
+        }
+      }
     if let windows {
       frameReconciler?.onInteractionEnded = { [weak self] in
         guard let self else { return }
@@ -140,6 +160,7 @@ public final class Tiling {
 
   deinit {
     membershipPollingTask?.cancel()
+    scheduledReconcile?.cancel()
     for task in ruleSpaceMoveTasks.values { task.cancel() }
   }
 
@@ -215,6 +236,7 @@ public final class Tiling {
         ($0.id, WindowRuleActions.resolve(rules, for: $0))
       }
     )
+    ruleActionsByWindowID = actions
     floatingOverrideWindowIDs = Set(
       windows.filter {
         manualFloatingByWindowID[$0.id] ?? (actions[$0.id]?.manage == false)
@@ -676,9 +698,40 @@ public final class Tiling {
   }
 
   /// Reconcile current facts and apply every visible enabled Space plan.
+  ///
+  /// This also satisfies a scheduled reconcile, which would only repeat the same work.
   func reconcileAndReflowVisibleSpaces() {
+    scheduledReconcile?.cancel()
+    scheduledReconcile = nil
     reconcile()
     reflowVisibleSpaces()
+  }
+
+  /// Reconcile and reflow once on a later main-actor turn, however many events ask first.
+  ///
+  /// High-frequency notifications use this so a burst costs one full reconcile.
+  func scheduleReconcileAndReflow() {
+    guard scheduledReconcile == nil else { return }
+    scheduledReconcile = Task { @MainActor [weak self] in
+      guard !Task.isCancelled, let self else { return }
+      scheduledReconcile = nil
+      reconcileAndReflowVisibleSpaces()
+    }
+  }
+
+  /// Wait for a scheduled reconcile to run.
+  func waitForScheduledReconcile() async {
+    await scheduledReconcile?.value
+  }
+
+  /// Re-evaluate rules for one retitled window, reconciling only when its actions change.
+  func windowTitleDidChange(_ windowID: CGWindowID) {
+    guard rules.contains(where: \.filtersTitle) else { return }
+    guard let identity = ruleIdentity(windowID) else { return }
+    guard WindowRuleActions.resolve(rules, for: identity) != ruleActionsByWindowID[windowID] else {
+      return
+    }
+    scheduleReconcileAndReflow()
   }
 
   /// Wait for in-flight rule Space moves and the reconciliation that follows each one.
@@ -697,7 +750,7 @@ public final class Tiling {
     if let id = layoutIDByWindowID[windowID], dwindleAttempts[id]?.verified == true {
       dwindleAttempts.removeValue(forKey: id)
     }
-    reconcileAndReflowVisibleSpaces()
+    scheduleReconcileAndReflow()
   }
 
   /// Apply a fresh plan for one Space when it is visible and enabled.

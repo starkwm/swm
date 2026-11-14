@@ -21,8 +21,8 @@ struct WindowLifecycleHandler {
       windowFocused(with: windowID)
     case .moved(let windowID), .resized(let windowID):
       windowFrameChanged(with: windowID)
-    case .titleChanged:
-      if !tiling.rules.isEmpty { tiling.reconcileAndReflowVisibleSpaces() }
+    case .titleChanged(let windowID):
+      tiling.windowTitleDidChange(windowID)
     case .minimized(let window):
       windowMinimized(with: window)
     case .deminimized(let window):

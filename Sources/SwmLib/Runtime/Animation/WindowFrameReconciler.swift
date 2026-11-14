@@ -44,6 +44,7 @@ final class WindowFrameReconciler {
   private var interactingWindows = Set<CGWindowID>()
   private var interactionMonitor: Any?
   private var interactionCandidate: CGWindowID?
+  private var interactionCandidateDragged = false
   private let terminalFailure: (CGWindowID) -> Void
 
   private var animations = [CGWindowID: FrameAnimation]()
@@ -123,7 +124,10 @@ final class WindowFrameReconciler {
   func retainWindows(_ liveIDs: Set<CGWindowID>) {
     cancelAnimations(for: Set(animations.keys).union(deliveries.keys).subtracting(liveIDs))
     interactingWindows.formIntersection(liveIDs)
-    if let id = interactionCandidate, !liveIDs.contains(id) { interactionCandidate = nil }
+    if let id = interactionCandidate, !liveIDs.contains(id) {
+      interactionCandidate = nil
+      interactionCandidateDragged = false
+    }
   }
 
   /// Calculate each frame from elapsed time so delayed ticks do not slow the animation.
@@ -161,7 +165,7 @@ final class WindowFrameReconciler {
     shouldSuppressNotification(for: windowID) { currentFrame(windowID) }
   }
 
-  /// Suspend the window being dragged until mouse-up, even during reconciliation.
+  /// Suspend the window being moved or resized until mouse-up, even during reconciliation.
   func beginInteraction(for windowID: CGWindowID) {
     interactingWindows.insert(windowID)
     cancelAnimations(for: [windowID])
@@ -169,16 +173,19 @@ final class WindowFrameReconciler {
 
   func pointerDown(on windowID: CGWindowID?) {
     interactionCandidate = windowID
+    interactionCandidateDragged = false
   }
 
+  /// Note a drag; the interaction starts only once the window's frame then changes, so a drag
+  /// inside a window, such as a text selection, does not suspend it.
   func pointerDragged() {
-    guard let id = interactionCandidate, !interactingWindows.contains(id) else { return }
-    beginInteraction(for: id)
+    interactionCandidateDragged = interactionCandidate != nil
   }
 
   func endInteractions() {
     let wasInteracting = !interactingWindows.isEmpty
     interactionCandidate = nil
+    interactionCandidateDragged = false
     interactingWindows.removeAll()
     if wasInteracting { onInteractionEnded() }
   }
@@ -334,6 +341,11 @@ final class WindowFrameReconciler {
     actualFrame: () -> CGRect?
   ) -> Bool {
     if interactingWindows.contains(windowID) { return true }
+    if windowID == interactionCandidate, interactionCandidateDragged {
+      // The user is moving or resizing the window under the pointer.
+      beginInteraction(for: windowID)
+      return true
+    }
     if animations[windowID] != nil || deliveries[windowID] != nil { return true }
     expireExpectations()
     guard var expectation = pendingMutations[windowID] else { return false }

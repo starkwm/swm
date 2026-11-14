@@ -74,8 +74,9 @@ window supports it. It cannot force fixed-size, nonstandard, or native-fullscree
 windows into a layout.
 
 swm checks rules before a new window's first layout, when rules change, and during
-later window updates. Title changes trigger a check when the app supports title
-notifications. Removing a management rule restores the earlier matching value or
+later window updates. When a rule filters on `title`, a title change rechecks that
+window, if the app supports title notifications, and updates layouts only when the
+window's matching rules change. Removing a management rule restores the earlier matching value or
 the normal default.
 
 `swm window float on` floats a window and `swm window float off` returns it to

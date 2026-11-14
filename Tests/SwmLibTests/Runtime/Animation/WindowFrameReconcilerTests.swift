@@ -276,9 +276,19 @@ struct WindowFrameReconcilerTests {
     reconciler.endInteractions()
     #expect(reconciler.isAnimating(1))
     #expect(ended == 0)
+
+    // A drag that never changes the window frame, such as a text selection, is not a move.
     reconciler.pointerDown(on: 1)
     reconciler.pointerDragged()
+    #expect(reconciler.isAnimating(1))
+    #expect(!reconciler.isInteracting(1))
+    reconciler.endInteractions()
+    #expect(ended == 0)
+
+    reconciler.pointerDown(on: 1)
     reconciler.pointerDragged()
+    #expect(reconciler.shouldSuppressNotification(for: 1))
+    #expect(reconciler.isInteracting(1))
     #expect(reconciler.isIdle)
     reconciler.apply([1: animationFrame(200)])
     #expect(reconciler.isIdle)

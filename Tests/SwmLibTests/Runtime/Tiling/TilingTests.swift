@@ -1073,7 +1073,7 @@ struct TilingTests {
   }
 
   @Test("reconcile: applies rules before layout after creation and title changes")
-  func reconcileAppliesRulesBeforeLayoutAfterCreationAndTitleChanges() throws {
+  func reconcileAppliesRulesBeforeLayoutAfterCreationAndTitleChanges() async throws {
     var candidates = [window(id: 1)]
     let tiling = makeTiling(windows: { candidates }, memberships: { [1: [10], 2: [10], 3: [10]] })
     try tiling.addRule(WindowRule.parse(arguments: ["title=^Preferences$", "manage=off"]))
@@ -1094,6 +1094,7 @@ struct TilingTests {
       tiling: tiling
     )
     .handle(.titleChanged(2))
+    await tiling.waitForScheduledReconcile()
     #expect(tiling.cycledWindowID(from: 1, in: .next) == 2)
     candidates.append(window(id: 3, isResizable: false))
     try tiling.addRule(WindowRule.parse(arguments: ["manage=on"]))
@@ -1921,10 +1922,73 @@ struct TilingTests {
     try await waitForAnimation { reconciler.isIdle }
     #expect(app.frame(for: 2) == secondTarget)
 
-    // A real user move after completion must still reach reconciliation immediately.
+    // A real user move after completion must still reach reconciliation on the next turn.
     app.setFrame(firstTarget.offsetBy(dx: 50, dy: 0), for: 1)
     tiling.windowFrameDidChange(1)
+    await tiling.waitForScheduledReconcile()
     #expect(snapshots == initialSnapshots + 1)
+  }
+
+  @Test("windowFrameDidChange: coalesces a burst of external changes into one reconcile")
+  func windowFrameDidChangeCoalescesABurstOfExternalChangesIntoOneReconcile() async {
+    var snapshots = 0
+    let tiling = makeTiling(
+      windows: {
+        snapshots += 1
+        return [window(id: 1), window(id: 2)]
+      },
+      memberships: { [1: [10], 2: [10]] }
+    )
+    tiling.initialize()
+    let initialSnapshots = snapshots
+
+    for _ in 0..<20 {
+      tiling.windowFrameDidChange(1)
+      tiling.windowFrameDidChange(2)
+    }
+    #expect(snapshots == initialSnapshots)
+    await tiling.waitForScheduledReconcile()
+    #expect(snapshots == initialSnapshots + 1)
+
+    // A synchronous reconcile satisfies a pending one.
+    tiling.windowFrameDidChange(1)
+    tiling.reconcileAndReflowVisibleSpaces()
+    await tiling.waitForScheduledReconcile()
+    #expect(snapshots == initialSnapshots + 2)
+  }
+
+  @Test("windowTitleDidChange: reconciles only when a title rule changes the window's actions")
+  func windowTitleDidChangeReconcilesOnlyWhenATitleRuleChangesTheWindowsActions() async throws {
+    var candidate = window(id: 1)
+    candidate.title = "Document"
+    var snapshots = 0
+    let tiling = makeTiling(
+      windows: {
+        snapshots += 1
+        return [candidate]
+      },
+      memberships: { [1: [10]] }
+    )
+    try tiling.addRule(WindowRule.parse(arguments: ["app=^Notes$", "manage=off"]))
+    var before = snapshots
+    tiling.windowTitleDidChange(1)
+    await tiling.waitForScheduledReconcile()
+    #expect(snapshots == before)
+
+    try tiling.addRule(WindowRule.parse(arguments: ["title=^Preferences$", "manage=off"]))
+    candidate.title = "Other document"
+    before = snapshots
+    tiling.windowTitleDidChange(1)
+    await tiling.waitForScheduledReconcile()
+    // Reading this window's rule identity takes one snapshot in tests; no reconcile follows.
+    #expect(snapshots == before + 1)
+
+    candidate.title = "Preferences"
+    before = snapshots
+    tiling.windowTitleDidChange(1)
+    await tiling.waitForScheduledReconcile()
+    #expect(snapshots == before + 2)
+    #expect(!tiling.isWindowTiled(1))
   }
 
   @Test(

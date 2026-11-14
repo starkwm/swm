@@ -1,6 +1,6 @@
 /// Independently resolved properties from all matching rules.
 struct WindowRuleActions: Equatable {
-  static func resolve(_ rules: [WindowRule], for window: TilingWindowSnapshot) -> Self {
+  static func resolve(_ rules: [WindowRule], for window: some WindowRuleSubject) -> Self {
     var result = Self()
     for rule in rules where rule.matches(window) {
       if let manage = rule.manage { result.manage = manage }
