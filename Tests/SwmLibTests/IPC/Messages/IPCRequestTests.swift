@@ -42,6 +42,20 @@ struct IPCRequestTests {
     #expect(try JSONDecoder().decode(IPCRequest.self, from: Data(fixture.utf8)) == request)
   }
 
+  @Test("encode/decode: carries a reload transaction only when one is set")
+  func encodeDecodeCarriesAReloadTransactionOnlyWhenOneIsSet() throws {
+    let request = IPCRequest(
+      id: "request-id",
+      domain: .rule,
+      command: "--add",
+      args: ["manage=off"],
+      transaction: "token"
+    )
+    let json = try wireJSON(request)
+    #expect(json.contains(#""transaction":"token""#))
+    #expect(try JSONDecoder().decode(IPCRequest.self, from: Data(json.utf8)) == request)
+  }
+
   private func wireJSON(_ value: some Encodable) throws -> String {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys]

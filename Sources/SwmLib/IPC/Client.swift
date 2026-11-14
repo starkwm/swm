@@ -3,6 +3,13 @@ import StarkIPC
 
 /// Unix socket IPC client for sending commands to the daemon.
 public enum Client {
+  /// Environment variable naming the configuration reload a command is sent from.
+  ///
+  /// `swm reload` sets it for the configuration file, so every `swm` command the file runs
+  /// joins the reload. Programs the file leaves running inherit it too, which is why the
+  /// daemon treats a token that is not the open reload as no token at all.
+  public static let reloadTokenVariable = "SWM_RELOAD_TOKEN"
+
   /// Result of sending a command to the daemon.
   public struct SendResult {
     /// Whether the daemon accepted and completed the command.
@@ -10,6 +17,15 @@ public enum Client {
 
     /// Response text intended for command-line output.
     public let outputMessage: String
+
+    /// Machine-readable category of a failure reported by the daemon.
+    public let errorCode: IPCErrorCode?
+
+    public init(ok: Bool, outputMessage: String, errorCode: IPCErrorCode? = nil) {
+      self.ok = ok
+      self.outputMessage = outputMessage
+      self.errorCode = errorCode
+    }
   }
 
   /// Send a command request and wait for a response from the daemon.
@@ -18,19 +34,27 @@ public enum Client {
   }
 
   /// Send a command using an injected request/response exchange.
+  ///
+  /// A command sent from a configuration reload carries its token from the environment.
   static func send(
     domain: CommandDomain,
     args: [String],
+    environment: [String: String] = ProcessInfo.processInfo.environment,
     exchange: (IPCRequest) throws -> IPCResponse
   ) -> SendResult {
     do {
-      let request = try IPCRequest.make(domain: domain, arguments: args)
+      let token = environment[reloadTokenVariable].flatMap { $0.isEmpty ? nil : $0 }
+      let request = try IPCRequest.make(domain: domain, arguments: args, transaction: token)
       let response = try exchange(request)
       guard response.id == request.id else {
         throw IPCClientError.responseIDMismatch
       }
 
-      return SendResult(ok: response.ok, outputMessage: response.outputMessage)
+      return SendResult(
+        ok: response.ok,
+        outputMessage: response.outputMessage,
+        errorCode: response.errorCode
+      )
     } catch {
       let failure: IPCCommandError
       switch error {
