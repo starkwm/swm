@@ -6,6 +6,7 @@ macOS window manager (Swift 6, macOS 26+). One `swm` process runs as a daemon; o
 
 - `Sources/Swm`: CLI executable (swift-argument-parser commands).
 - `Sources/SwmLib`: daemon logic (`Configuration`, `IPC`, `Platform`, `Runtime`, `Support`). Links the private SkyLight framework.
+- `Sources/CSkyLight`: C declarations of the private SkyLight functions that `SwmLib` calls.
 - `Tests/SwmLibTests`, `Tests/SwmTests`: Swift Testing suites.
 - `docs/`: user documentation. Update it when command behavior or syntax changes.
 
