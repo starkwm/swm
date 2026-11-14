@@ -91,42 +91,92 @@ struct IPCCommandTests {
     #expect(command.formatted("null", forTerminal: true) == "null")
   }
 
-  @Test("reload: clears rules and signals before running the configuration file")
-  func reloadClearsRulesAndSignalsBeforeRunningTheConfigurationFile() throws {
+  @Test("reload: runs the file in a daemon reload and commits it when the file succeeds")
+  func reloadRunsTheFileInADaemonReloadAndCommitsItWhenTheFileSucceeds() throws {
     let errors = try #require(tmpfile())
     defer { fclose(errors) }
     let command = try #require(
       Arguments.parseAsRoot(["reload", "--config", "/tmp/swmrc"]) as? ReloadCommand
     )
-    var calls = [String]()
+    let reload = RecordedReload()
 
-    try command.run(
-      send: { domain, args in
-        calls.append("\(domain.rawValue) \(args.joined(separator: " "))")
-        return Client.SendResult(ok: true, outputMessage: "")
-      },
-      execute: { calls.append("exec \($0)") },
-      errors: errors
+    try command.run(send: reload.send, execute: reload.execute, processID: 42, errors: errors)
+
+    #expect(
+      reload.calls == [
+        "config --begin-reload 42", "exec /tmp/swmrc token", "config --commit-reload token",
+      ]
     )
-
-    #expect(calls == ["rule --clear", "signal --clear", "exec /tmp/swmrc"])
+    #expect(read(errors).isEmpty)
   }
 
-  @Test("reload: stops before running the configuration file when clearing fails")
-  func reloadStopsBeforeRunningTheConfigurationFileWhenClearingFails() throws {
+  @Test("reload: rolls back when the file fails")
+  func reloadRollsBackWhenTheFileFails() throws {
+    let errors = try #require(tmpfile())
+    defer { fclose(errors) }
+    let command = try #require(
+      Arguments.parseAsRoot(["reload", "--config", "/tmp/swmrc"]) as? ReloadCommand
+    )
+    let reload = RecordedReload(executeFails: true)
+
+    #expect(throws: ExitCode.failure) {
+      try command.run(send: reload.send, execute: reload.execute, processID: 42, errors: errors)
+    }
+    #expect(
+      reload.calls == [
+        "config --begin-reload 42", "exec /tmp/swmrc token", "config --rollback-reload token",
+      ]
+    )
+    #expect(
+      read(errors)
+        == "Error: configuration file exited with status 1\n"
+        + "Kept the previous rules, signals, and settings.\n"
+    )
+  }
+
+  @Test("reload: stops before running the file when the daemon cannot begin a reload")
+  func reloadStopsBeforeRunningTheFileWhenTheDaemonCannotBeginAReload() throws {
     let errors = try #require(tmpfile())
     defer { fclose(errors) }
     let command = try #require(Arguments.parseAsRoot(["reload"]) as? ReloadCommand)
+    let reload = RecordedReload(
+      begin: Client.SendResult(
+        ok: false,
+        outputMessage: "Error: a configuration reload is already in progress",
+        errorCode: .invalidRequest
+      )
+    )
 
     #expect(throws: ExitCode.failure) {
-      try command.run(
-        send: { _, _ in Client.SendResult(ok: false, outputMessage: "Error: daemon is not running")
-        },
-        execute: { _ in Issue.record("unexpected execution") },
-        errors: errors
-      )
+      try command.run(send: reload.send, execute: reload.execute, processID: 42, errors: errors)
     }
-    #expect(read(errors) == "Error: daemon is not running\n")
+    #expect(reload.calls == ["config --begin-reload 42"])
+    #expect(read(errors) == "Error: a configuration reload is already in progress\n")
+  }
+
+  @Test("reload: clears rules and signals, then runs the file, for a daemon without reloads")
+  func reloadClearsRulesAndSignalsThenRunsTheFileForADaemonWithoutReloads() throws {
+    let errors = try #require(tmpfile())
+    defer { fclose(errors) }
+    let command = try #require(
+      Arguments.parseAsRoot(["reload", "--config", "/tmp/swmrc"]) as? ReloadCommand
+    )
+    let reload = RecordedReload(
+      begin: Client.SendResult(
+        ok: false,
+        outputMessage: "Error: unsupported config command: --begin-reload",
+        errorCode: .unsupportedCommand
+      )
+    )
+
+    try command.run(send: reload.send, execute: reload.execute, processID: 42, errors: errors)
+
+    #expect(
+      reload.calls == [
+        "config --begin-reload 42", "rule --clear", "signal --clear", "exec /tmp/swmrc none",
+      ]
+    )
+    #expect(read(errors) == "Warning: restart the daemon to make reloads all-or-nothing.\n")
   }
 
   private func read(_ stream: UnsafeMutablePointer<FILE>) -> String {
@@ -135,5 +185,30 @@ struct IPCCommandTests {
     let data = FileHandle(fileDescriptor: fileno(stream), closeOnDealloc: false)
       .readDataToEndOfFile()
     return String(decoding: data, as: UTF8.self)
+  }
+}
+
+/// Records the requests and file runs of one reload against a simulated daemon.
+private final class RecordedReload {
+  private(set) var calls = [String]()
+  private let begin: Client.SendResult
+  private let executeFails: Bool
+
+  init(
+    begin: Client.SendResult = Client.SendResult(ok: true, outputMessage: "token"),
+    executeFails: Bool = false
+  ) {
+    self.begin = begin
+    self.executeFails = executeFails
+  }
+
+  func send(_ domain: CommandDomain, _ args: [String]) -> Client.SendResult {
+    calls.append("\(domain.rawValue) \(args.joined(separator: " "))")
+    return args.first == "--begin-reload" ? begin : Client.SendResult(ok: true, outputMessage: "")
+  }
+
+  func execute(_ path: String, _ token: String?) throws {
+    calls.append("exec \(path) \(token ?? "none")")
+    if executeFails { throw ConfigError.configurationFailed(status: 1) }
   }
 }

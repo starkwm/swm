@@ -104,8 +104,9 @@ struct ReloadCommand: ParsableCommand {
     commandName: "reload",
     abstract: "Run the configuration file again in the running daemon.",
     discussion: """
-      Removes every rule and signal first, because the file registers them again. Settings \
-      the file no longer sets keep their current values.
+      Rules and signals the file registers replace the current ones when the file exits \
+      successfully. If it fails, the current rules and signals stay, and settings it changed \
+      are restored. Settings the file no longer sets keep their current values.
       """
   )
 
@@ -118,13 +119,68 @@ struct ReloadCommand: ParsableCommand {
   var config: String?
 
   mutating func run() throws {
-    try run(send: Client.send, execute: { try Config.exec(path: $0) }, errors: stderr)
+    try run(
+      send: Client.send,
+      execute: { path, token in
+        try Config.exec(
+          path: path,
+          environment: token.map { [Client.reloadTokenVariable: $0] } ?? [:]
+        )
+      },
+      processID: getpid(),
+      errors: stderr
+    )
+  }
+
+  /// Run the configuration file in a daemon reload, committing it only when the file succeeds.
+  ///
+  /// `execute` receives the reload's token, or nil for a daemon that predates reloads; that
+  /// daemon gets the previous behaviour of clearing rules and signals, then running the file.
+  func run(
+    send: (CommandDomain, [String]) -> Client.SendResult,
+    execute: (String, String?) throws -> Void,
+    processID: pid_t,
+    errors: UnsafeMutablePointer<FILE>
+  ) throws {
+    let path = config ?? StartCommand.defaultConfigPath
+    let begin = send(.config, ["--begin-reload", String(processID)])
+    guard begin.ok else {
+      guard begin.errorCode == .unsupportedCommand else {
+        fputs("\(begin.outputMessage)\n", errors)
+        throw ExitCode.failure
+      }
+      fputs("Warning: restart the daemon to make reloads all-or-nothing.\n", errors)
+      try clearThenRun(path: path, send: send, execute: execute, errors: errors)
+      return
+    }
+
+    let token = begin.outputMessage
+    do {
+      try execute(path, token)
+    } catch {
+      fputs("Error: \(error)\n", errors)
+      let rollback = send(.config, ["--rollback-reload", token])
+      fputs(
+        rollback.ok
+          ? "Kept the previous rules, signals, and settings.\n"
+          : "\(rollback.outputMessage)\n",
+        errors
+      )
+      throw ExitCode.failure
+    }
+
+    let commit = send(.config, ["--commit-reload", token])
+    guard commit.ok else {
+      fputs("\(commit.outputMessage)\n", errors)
+      throw ExitCode.failure
+    }
   }
 
   /// Clear rules and signals, then execute the configuration file.
-  func run(
+  private func clearThenRun(
+    path: String,
     send: (CommandDomain, [String]) -> Client.SendResult,
-    execute: (String) throws -> Void,
+    execute: (String, String?) throws -> Void,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
     for domain in [CommandDomain.rule, .signal] {
@@ -136,7 +192,7 @@ struct ReloadCommand: ParsableCommand {
     }
 
     do {
-      try execute(config ?? StartCommand.defaultConfigPath)
+      try execute(path, nil)
     } catch {
       fputs("Error: \(error)\n", errors)
       throw ExitCode.failure

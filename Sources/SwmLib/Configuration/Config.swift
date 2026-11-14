@@ -16,16 +16,18 @@ public enum Config {
   /// If the file is not executable by its owner, this marks it executable before
   /// launching it and waiting for it to exit.
   ///
-  /// - Parameter path: Absolute or relative path to the configuration file.
+  /// - Parameters:
+  ///   - path: Absolute or relative path to the configuration file.
+  ///   - environment: Variables to set for the file, in addition to this process's environment.
   /// - Throws: A `ConfigError` when the file is missing, cannot be made
   ///   executable, cannot be launched, or exits with a non-zero status.
-  public static func exec(path: String) throws {
+  public static func exec(path: String, environment: [String: String] = [:]) throws {
     if !FileManager.default.fileExists(atPath: path) {
       throw ConfigError.fileDoesNotExist
     }
 
     try ensureOwnerExecutable(path: path)
-    try runAndWait(path: path)
+    try runAndWait(path: path, environment: environment)
   }
 
   /// Add owner execute permission to the configuration file when it is missing.
@@ -54,10 +56,13 @@ public enum Config {
   }
 
   /// Launch the configuration file and wait for it to finish.
-  private static func runAndWait(path: String) throws {
+  private static func runAndWait(path: String, environment: [String: String]) throws {
     do {
       let proc = Foundation.Process()
       proc.executableURL = URL(fileURLWithPath: path)
+      if !environment.isEmpty {
+        proc.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
+      }
       try proc.run()
       proc.waitUntilExit()
 

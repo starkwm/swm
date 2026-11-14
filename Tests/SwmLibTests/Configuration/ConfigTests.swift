@@ -28,6 +28,22 @@ struct ConfigTests {
     #expect(try String(contentsOf: marker, encoding: .utf8) == "done")
   }
 
+  @Test("exec: adds variables to the file's environment")
+  func execAddsVariablesToTheFilesEnvironment() throws {
+    let directory = try TemporaryDirectory()
+    let marker = directory.url.appending(path: "marker")
+    let script = try directory.makeScript(
+      name: "swmrc",
+      contents: "#!/bin/sh\nprintf \"$SWM_RELOAD_TOKEN:$HOME\" > \"\(marker.path())\"",
+      permissions: 0o700
+    )
+
+    try Config.exec(path: script.path(), environment: ["SWM_RELOAD_TOKEN": "token"])
+
+    let home = ProcessInfo.processInfo.environment["HOME"] ?? ""
+    #expect(try String(contentsOf: marker, encoding: .utf8) == "token:\(home)")
+  }
+
   @Test("exec: rejects missing file")
   func execRejectsMissingFile() throws {
     let directory = try TemporaryDirectory()
