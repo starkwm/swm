@@ -1,3 +1,4 @@
+import CHIServices
 import Carbon
 
 /// Forward Carbon process events to a process observation instance.
@@ -106,7 +107,7 @@ public final class Processes {
   private func addRunningProcesses() {
     var psn = ProcessSerialNumber()
 
-    while GetNextProcess(&psn) == noErr {
+    while SWMGetNextProcess(&psn) == noErr {
       guard let process = Process(psn: psn) else { continue }
       processes[process.psn.lowLongOfPSN] = process
     }

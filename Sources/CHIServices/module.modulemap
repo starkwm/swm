@@ -1,0 +1,4 @@
+module CHIServices {
+  header "HIServices.h"
+  export *
+}
