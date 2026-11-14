@@ -24,10 +24,11 @@ final class QuerySnapshot {
   lazy var windows = managedWindows.allWindows()
 
   /// Space IDs keyed by WindowServer display identifier, which may be "Main".
+  ///
+  /// A display identifier that WindowServer reports more than once keeps all of its Spaces.
   lazy var displaySpaces: [String: [UInt64]] = Dictionary(
-    uniqueKeysWithValues: (spaceSnapshot?.displays ?? []).map {
-      ($0.id.rawValue, $0.spaces.map(\.id.rawValue))
-    }
+    (spaceSnapshot?.displays ?? []).map { ($0.id.rawValue, $0.spaces.map(\.id.rawValue)) },
+    uniquingKeysWith: +
   )
 
   /// Current Spaces keyed by display identifier and by screen UUID.
@@ -35,8 +36,10 @@ final class QuerySnapshot {
   /// Without separate Spaces, every screen shows WindowServer's Main display Space.
   lazy var currentSpaceByScreenID: [String: UInt64] = {
     let displays = spaceSnapshot?.displays ?? []
+    // Identifiers that differ only by case, or repeat, share the first known current Space.
     let currentByID = Dictionary(
-      uniqueKeysWithValues: displays.map { ($0.id.rawValue.lowercased(), $0.currentSpaceID) }
+      displays.map { ($0.id.rawValue.lowercased(), $0.currentSpaceID) },
+      uniquingKeysWith: { first, second in first ?? second }
     )
     let screenIDs = Set(displays.map(\.id.rawValue) + arrangedScreens.map(\.uuid))
     return Dictionary(

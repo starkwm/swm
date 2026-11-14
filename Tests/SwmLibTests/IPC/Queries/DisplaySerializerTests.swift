@@ -48,6 +48,21 @@ struct DisplaySerializerTests {
     #expect(resolvedDisplays.allSatisfy { $0.hasFocus })
   }
 
+  @Test("all: merges Spaces of display identifiers that differ only by case")
+  @MainActor
+  func allMergesSpacesOfDisplayIdentifiersThatDifferOnlyByCase() {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
+    snapshot.arrangedScreens = [QueryTestScreen()]
+    snapshot.displaySpaces = ["Main": [1], "main": [2]]
+    snapshot.spaces = [1, 2, 3].map { Space(id: $0) }
+    snapshot.activeSpaceID = 1
+    snapshot.currentSpaceByScreenID = ["": 1]
+
+    let displays = DisplaySerializer.all(snapshot: snapshot)
+
+    #expect(displays.map(\.spaces) == [[1, 2]])
+  }
+
   @Test("encode: uses kebab-case keys")
   func encodeUsesKebabCaseKeys() throws {
     let display = DisplaySerializer(
