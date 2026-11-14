@@ -15,8 +15,10 @@ struct DisplaySerializer: Encodable, Equatable {
   /// Snapshot all displays and their associated space indexes.
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
+    // Identifiers that differ only by case name the same display, so their Spaces merge.
     let displaySpaces = Dictionary(
-      uniqueKeysWithValues: snapshot.displaySpaces.map { ($0.key.lowercased(), $0.value) }
+      snapshot.displaySpaces.map { ($0.key.lowercased(), $0.value) },
+      uniquingKeysWith: +
     )
     let indexedSpaces = snapshot.spaces
       .enumerated()

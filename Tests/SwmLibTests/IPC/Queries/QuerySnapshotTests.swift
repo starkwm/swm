@@ -100,4 +100,28 @@ struct QuerySnapshotTests {
     #expect(snapshot.displaySpaces == ["Main": [4, 7]])
     #expect(snapshot.currentSpaceByScreenID == ["Main": 7, "": 7])
   }
+
+  @Test("spaceSnapshot: tolerates display identifiers that WindowServer repeats")
+  func spaceSnapshotToleratesDisplayIdentifiersThatWindowServerRepeats() {
+    let snapshot = QuerySnapshot(windows: Windows(workspace: Workspace(), focusedWindowID: nil))
+    snapshot.arrangedScreens = []
+    let display = { (id: String, spaceID: UInt64, current: UInt64?) in
+      DisplaySpaces(
+        id: DisplayID(rawValue: id),
+        spaces: [StarkSkyLight.Space(id: SpaceID(rawValue: spaceID), type: .desktop)],
+        currentSpaceID: current.map(SpaceID.init(rawValue:))
+      )
+    }
+    snapshot.spaceSnapshot = SpaceSnapshot(
+      displays: [
+        display("display", 1, nil),
+        display("display", 2, 2),
+        display("DISPLAY", 3, 3),
+      ],
+      activeSpaceID: SpaceID(rawValue: 2)
+    )
+
+    #expect(snapshot.displaySpaces == ["display": [1, 2], "DISPLAY": [3]])
+    #expect(snapshot.currentSpaceByScreenID == ["display": 2, "DISPLAY": 2])
+  }
 }
