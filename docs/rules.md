@@ -11,7 +11,9 @@ swm rule add label=finder bundle-id=com.apple.finder manage=off
 ```
 
 Rules last until the daemon stops. Adding or removing a rule updates existing
-windows as well as windows opened later.
+windows as well as windows opened later. `swm reload` replaces every rule at
+once with the rules the configuration file adds; see
+[reload the configuration](cli.md#reload-the-configuration).
 
 ## Commands
 

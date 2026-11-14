@@ -57,6 +57,45 @@ struct DaemonTests {
     #expect(spaces.settings(for: 42).gap == 17)
   }
 
+  @Test("run: stages tagged rules over the client transport until the reload commits")
+  func runStagesTaggedRulesOverTheClientTransportUntilTheReloadCommits() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    let spaces = Spaces(activeSpaceID: nil)
+    let tiling = makeTestTiling(spaces: spaces)
+    let dispatcher = IPCCommandDispatcher(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      displays: Displays(),
+      tiling: tiling
+    )
+    let daemon = Daemon(path: endpoint.path, dispatch: dispatcher.dispatch)
+    try daemon.run()
+    defer { daemon.shutdown() }
+    @Sendable func send(_ domain: CommandDomain, _ args: [String], token: String? = nil)
+      -> Client.SendResult
+    {
+      Client.send(
+        domain: domain,
+        args: args,
+        environment: token.map { [Client.reloadTokenVariable: $0] } ?? [:]
+      ) { try Client.exchange($0, path: endpoint.path) }
+    }
+
+    let processID = getpid()
+    let token = try await runBlocking {
+      send(.config, ["--begin-reload", String(processID)]).outputMessage
+    }
+    let staged = try await runBlocking {
+      send(.rule, ["--add", "label=staged", "manage=off"], token: token).ok
+    }
+    #expect(staged)
+    #expect(tiling.rules.isEmpty)
+    let committed = try await runBlocking { send(.config, ["--commit-reload", token]).ok }
+    #expect(committed)
+    #expect(tiling.rules.map(\.label) == ["staged"])
+  }
+
   @Test("run: rejects unsupported versions before dispatch and preserves IDs")
   func runRejectsUnsupportedVersionsBeforeDispatchAndPreservesIDs() async throws {
     let endpoint = try TestEndpoint()
