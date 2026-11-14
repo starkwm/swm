@@ -54,7 +54,7 @@ swm window move [--window <window|recent>] --display <next|prev|display-index>
 
 Choose one `move` mode: `<x> <y>`, `--display <target>`, or `--space <target>`. Use `--absolute` only with coordinates. Moving to a display or Space keeps the current Space active.
 
-`move <x> <y>` and `resize <width> <height>` take integer values in points. They add offsets to the current position or size by default. Use `--absolute` to set the top-left coordinates or dimensions.
+`move <x> <y>` and `resize <width> <height>` take integer values in points. They add offsets to the current position or size by default. Use `--absolute` to set the top-left coordinates or dimensions. `resize` rejects a width or height that is zero or negative, whether set directly or left by an offset.
 
 Negative values work in either position, even between options. No `--` separator is needed:
 
