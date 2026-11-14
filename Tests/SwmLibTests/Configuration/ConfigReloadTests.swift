@@ -91,6 +91,41 @@ struct ConfigReloadTests {
     _ = try fixture.begin()
   }
 
+  @Test(
+    "rollback: restores settings the reload changed, and commit keeps them",
+    arguments: [false, true]
+  )
+  func rollbackRestoresSettingsTheReloadChangedAndCommitKeepsThem(commit: Bool) throws {
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2)],
+      memberships: [1: [10], 2: [10]]
+    )
+    tiling.initialize()
+    let fixture = ReloadFixture(tiling: tiling)
+    #expect(fixture.send(.config, "gap", ["abs:4"]).ok)
+    let before = fixture.settings
+    let token = try fixture.begin()
+
+    for (setting, value) in [
+      ("layout", ["dwindle"]), ("master-ratio", ["abs:0.6"]), ("master-placement", ["top"]),
+      ("split-ratio", ["abs:0.7"]), ("preserve-split", ["on"]), ("gap", ["abs:12"]),
+      ("padding", ["top=abs:8"]), ("focus-follows-mouse", ["autofocus"]),
+    ] {
+      #expect(fixture.send(.config, setting, value, token: token).ok)
+    }
+    fixture.spaces.setGap(30, for: 10)
+    let plan = try #require(tiling.layoutPlan(for: layoutID(10)))
+
+    #expect(fixture.send(.config, commit ? "--commit-reload" : "--rollback-reload", [token]).ok)
+    if commit {
+      #expect(fixture.settings != before)
+      #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
+    } else {
+      #expect(fixture.settings == before)
+      #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
+    }
+  }
+
   @Test("begin: rolls back when the reload process exits before finishing")
   func beginRollsBackWhenTheReloadProcessExitsBeforeFinishing() throws {
     let fixture = ReloadFixture()
@@ -161,15 +196,33 @@ struct ConfigReloadTests {
 @MainActor
 private final class ReloadFixture {
   let tiling: Tiling
+  let spaces: Spaces
+  let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
   let signals = Signals()
   var stoppedWatching: Bool { process.stopped }
+
+  /// Every setting a rollback restores.
+  var settings: ReloadedSettings {
+    ReloadedSettings(
+      spaces: spaces.settingsSnapshot(),
+      tiling: tiling.settingsSnapshot(),
+      focusFollowsMouse: windows.focusFollowsMouseMode
+    )
+  }
   private let process = WatchedProcess()
   private let reload: ConfigReload
 
-  init(tiling: Tiling = makeTiling(), runningProcessIDs: Set<pid_t> = [42]) {
+  init(
+    tiling: Tiling = makeTiling(),
+    spaces: Spaces = Spaces(activeSpaceID: nil),
+    runningProcessIDs: Set<pid_t> = [42]
+  ) {
     self.tiling = tiling
+    self.spaces = spaces
     reload = ConfigReload(
       tiling: tiling,
+      spaces: spaces,
+      windows: windows,
       signals: signals,
       watchProcess: { [process] processID, onExit in
         guard runningProcessIDs.contains(processID) else { return nil }
@@ -200,6 +253,9 @@ private final class ReloadFixture {
     return switch domain {
     case .rule: RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request)
     case .signal: SignalCommandHandler(signals: signals, reload: reload).dispatch(request)
+    case .config where !ConfigReloadCommandHandler.commands.contains(command):
+      // Settings commands are not staged, so the request's token does not route them.
+      ConfigCommandHandler(windows: windows, spaces: spaces, tiling: tiling).dispatch(request)
     default: ConfigReloadCommandHandler(reload: reload).dispatch(request)
     }
   }
@@ -213,6 +269,13 @@ private final class ReloadFixture {
       ($0["label"] as? String) ?? (($0["rule"] as? [String: String])?["label"])
     }
   }
+}
+
+/// Every setting a rollback restores, compared as one value.
+private struct ReloadedSettings: Equatable {
+  let spaces: SpaceSettingsSnapshot
+  let tiling: TilingSettingsSnapshot
+  let focusFollowsMouse: FocusFollowsMouseMode
 }
 
 /// The simulated reload process a fixture watches.

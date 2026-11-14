@@ -8,6 +8,9 @@ import Foundation
 /// untouched. A request with no token, or with a token that is not the open reload's, applies
 /// live; programs the file leaves running inherit the token, so a closed token must not block
 /// their commands.
+///
+/// Settings commands still apply live, because staging them would need a shadow of every Space
+/// and layout. Their values are captured when the reload begins and restored if it rolls back.
 @MainActor
 final class ConfigReload {
   /// Watch a process and call `onExit` once when it exits.
@@ -18,14 +21,13 @@ final class ConfigReload {
   private struct Transaction {
     let token: String
     let staging: ReloadStaging
+    let settings: ReloadSettings
     let stopWatching: () -> Void
   }
 
   /// Watch a process exit on the main queue.
   ///
   /// Keep the returned action until the watch ends, because the source does not outlive it.
-  ///
-  /// The returned action owns the watch: releasing it without calling it stops watching.
   static func watchExit(
     of processID: pid_t,
     onExit: @escaping @MainActor @Sendable () -> Void
@@ -49,6 +51,8 @@ final class ConfigReload {
   }
 
   private let tiling: Tiling
+  private let spaces: Spaces
+  private let windows: Windows
   private let signals: Signals
   private let watchProcess: ProcessWatcher
   private let makeToken: () -> String
@@ -56,11 +60,15 @@ final class ConfigReload {
 
   init(
     tiling: Tiling,
+    spaces: Spaces,
+    windows: Windows,
     signals: Signals = .shared,
     watchProcess: @escaping ProcessWatcher = { watchExit(of: $0, onExit: $1) },
     makeToken: @escaping () -> String = { UUID().uuidString }
   ) {
     self.tiling = tiling
+    self.spaces = spaces
+    self.windows = windows
     self.signals = signals
     self.watchProcess = watchProcess
     self.makeToken = makeToken
@@ -81,7 +89,16 @@ final class ConfigReload {
       throw IPCCommandError.invalidRequest("reload process is not running: \(processID)")
     }
 
-    transaction = Transaction(token: token, staging: ReloadStaging(), stopWatching: stopWatching)
+    transaction = Transaction(
+      token: token,
+      staging: ReloadStaging(),
+      settings: ReloadSettings(
+        spaces: spaces.settingsSnapshot(),
+        tiling: tiling.settingsSnapshot(),
+        focusFollowsMouse: windows.focusFollowsMouseMode
+      ),
+      stopWatching: stopWatching
+    )
     log("configuration reload started", level: .info)
     return token
   }
@@ -94,9 +111,20 @@ final class ConfigReload {
     log("configuration reload committed", level: .info)
   }
 
-  /// Discard the staged rules and signals.
+  /// Discard the staged rules and signals, and restore settings the reload changed.
+  ///
+  /// Windows already moved or resized by the reload stay where they are, except that layouts
+  /// reflow when a restored setting changes them.
   func rollback(token: String) throws {
-    _ = try close(token: token)
+    let settings = try close(token: token).settings
+    if windows.focusFollowsMouseMode != settings.focusFollowsMouse {
+      windows.setFocusFollowsMouseMode(settings.focusFollowsMouse)
+    }
+    let spacesChanged = spaces.settingsSnapshot() != settings.spaces
+    spaces.restoreSettings(settings.spaces)
+    if tiling.restoreSettings(settings.tiling) || spacesChanged {
+      tiling.reconcileAndReflowVisibleSpaces()
+    }
     log("configuration reload rolled back", level: .info)
   }
 
@@ -125,6 +153,13 @@ final class ConfigReload {
     transaction.stopWatching()
     return transaction
   }
+}
+
+/// Settings captured when a configuration reload begins.
+private struct ReloadSettings {
+  let spaces: SpaceSettingsSnapshot
+  let tiling: TilingSettingsSnapshot
+  let focusFollowsMouse: FocusFollowsMouseMode
 }
 
 /// Rule and signal registrations built by an open configuration reload.

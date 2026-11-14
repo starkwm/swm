@@ -185,6 +185,38 @@ public final class Tiling {
     frameReconciler?.animationEasing = easing
   }
 
+  /// Capture animation and layout settings for the defaults and every layout.
+  func settingsSnapshot() -> TilingSettingsSnapshot {
+    TilingSettingsSnapshot(
+      animationDuration: animationDuration,
+      animationEasing: animationEasing,
+      defaults: defaultState.settings,
+      byLayoutID: layoutsByID.mapValues(\.settings)
+    )
+  }
+
+  /// Restore settings captured by `settingsSnapshot()`, returning whether any layout changed.
+  ///
+  /// A layout created since the capture takes the captured defaults. The caller reconciles and
+  /// reflows after a change, so it can do so once for other settings too.
+  @discardableResult
+  func restoreSettings(_ snapshot: TilingSettingsSnapshot) -> Bool {
+    setAnimationDuration(snapshot.animationDuration)
+    setAnimationEasing(snapshot.animationEasing)
+    defaultState.restore(snapshot.defaults)
+    var changed = false
+    for (layoutID, state) in layoutsByID {
+      let settings = snapshot.byLayoutID[layoutID] ?? snapshot.defaults
+      guard state.settings != settings else { continue }
+      if state.selection != settings.selection {
+        frameReconciler?.cancelAnimations(for: state.tree?.windowIDs ?? [])
+      }
+      layoutsByID[layoutID]?.restore(settings)
+      changed = true
+    }
+    return changed
+  }
+
   /// Return the pending destination so repeated geometry commands accumulate.
   func destinationFrame(for windowID: CGWindowID) -> CGRect? {
     frameReconciler?.frames(for: [windowID])[windowID]

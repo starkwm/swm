@@ -40,3 +40,9 @@ struct SpacePadding: Equatable {
     )
   }
 }
+
+/// Default and per-Space settings captured at one moment.
+struct SpaceSettingsSnapshot: Equatable {
+  let defaults: SpaceSettings
+  let bySpaceID: [UInt64: SpaceSettings]
+}
