@@ -3,6 +3,7 @@ import Testing
 
 @testable import SwmLib
 
+@MainActor
 @Suite("SignalCommandHandler", .serialized)
 struct SignalCommandHandlerTests {
   @Test(

@@ -3,22 +3,31 @@
 struct RuleCommandHandler {
   let tiling: Tiling
 
+  /// Open configuration reload whose tagged requests change staged rules.
+  var reload: ConfigReload?
+
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
+      let staging = reload?.staging(for: request)
       switch request.command {
       case "--add":
-        try tiling.addRule(WindowRule.parse(arguments: request.args))
+        let rule = try WindowRule.parse(arguments: request.args)
+        if let staging { try staging.addRule(rule) } else { try tiling.addRule(rule) }
       case "--remove":
         let selector = try IPCArguments(request.args, context: "rule remove").requiredValue()
-        try tiling.removeRule(selector: selector)
+        if let staging {
+          try staging.removeRule(selector: selector)
+        } else {
+          try tiling.removeRule(selector: selector)
+        }
       case "--clear":
         try IPCArguments(request.args, context: "rule clear").requireEmpty()
-        tiling.removeAllRules()
+        if let staging { staging.removeAllRules() } else { tiling.removeAllRules() }
       case "--list":
         try IPCArguments(request.args, context: "rule list").requireEmpty()
         return try .json(
           id: request.id,
-          payload: tiling.rules.enumerated().map {
+          payload: (staging?.rules ?? tiling.rules).enumerated().map {
             IndexedRule(index: $0.offset + 1, rule: $0.element)
           }
         )
