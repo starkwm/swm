@@ -359,6 +359,38 @@ struct DaemonTests {
     #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))
   }
 
+  @Test("run: cancels a command that outlives the request timeout and reports the timeout")
+  func runCancelsACommandThatOutlivesTheRequestTimeoutAndReportsTheTimeout() async throws {
+    let endpoint = try TestEndpoint()
+    defer { endpoint.remove() }
+    let (cancelled, cancellationContinuation) = AsyncStream<Bool>.makeStream()
+    let daemon = Daemon(path: endpoint.path, requestTimeout: .milliseconds(50)) { request in
+      defer { cancellationContinuation.finish() }
+      do {
+        try await Task.sleep(for: .seconds(30))
+        cancellationContinuation.yield(false)
+      } catch {
+        cancellationContinuation.yield(error is CancellationError)
+        return IPCCommandError.internalError("\(error)").response(id: request.id)
+      }
+      return .success(id: request.id, message: "late")
+    }
+    try daemon.run()
+    defer { daemon.shutdown() }
+
+    let response = try await exchange(path: endpoint.path)
+    #expect(
+      response
+        == .failure(
+          id: "test-id",
+          message: "request timed out and was cancelled",
+          errorCode: .internalError
+        )
+    )
+    var cancellations = cancelled.makeAsyncIterator()
+    #expect(await cancellations.next() == true)
+  }
+
   private func exchange(path: String, version: Int = 1) async throws -> IPCResponse {
     try await runBlocking {
       try Client.exchange(

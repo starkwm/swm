@@ -4,7 +4,15 @@ import StarkIPC
 /// Adapts transport requests to the main-actor runtime.
 @MainActor
 public final class Daemon {
+  /// Longest time one request may run before it is cancelled and answered with a failure.
+  ///
+  /// The transport closes a one-shot connection 5 seconds after accepting it and the client
+  /// stops reading after 5 seconds, so a later reply would be lost while its command kept
+  /// running. Stopping slightly earlier still delivers the failure.
+  static let requestTimeout = Duration.milliseconds(4_500)
+
   private let path: String
+  private let requestTimeout: Duration
   private let dispatch: @MainActor (IPCRequest) async -> IPCResponse
   private var server: SocketServer<IPCRequest, IPCResponse>?
   private var runID: UUID?
@@ -20,8 +28,13 @@ public final class Daemon {
     self.init(path: UnixSocket.filePath(), dispatch: dispatcher.dispatch)
   }
 
-  init(path: String, dispatch: @escaping @MainActor (IPCRequest) async -> IPCResponse) {
+  init(
+    path: String,
+    requestTimeout: Duration = Daemon.requestTimeout,
+    dispatch: @escaping @MainActor (IPCRequest) async -> IPCResponse
+  ) {
     self.path = path
+    self.requestTimeout = requestTimeout
     self.dispatch = dispatch
   }
 
@@ -62,7 +75,10 @@ public final class Daemon {
     server = nil
   }
 
-  /// Admit work only for this run and cancel suspended commands when the daemon stops.
+  /// Admit work only for this run, and cancel a command when the daemon stops, when the
+  /// transport cancels the reply, or when the command outlives the request timeout.
+  ///
+  /// Cancellation stops a command at its next suspension point. Changes it already made remain.
   private func reply(to request: IPCRequest, runID: UUID) async -> SocketReply<IPCResponse> {
     guard self.runID == runID else {
       return SocketReply(
@@ -88,6 +104,29 @@ public final class Daemon {
     requests[requestID] = task
     defer { requests.removeValue(forKey: requestID) }
 
-    return SocketReply(await task.value)
+    let timeout = requestTimeout
+    let deadline = Task {
+      do { try await Task.sleep(for: timeout) } catch { return false }
+      task.cancel()
+      return true
+    }
+
+    let response = await withTaskCancellationHandler {
+      await task.value
+    } onCancel: {
+      task.cancel()
+    }
+    deadline.cancel()
+
+    // A command that finished despite the deadline keeps its own response.
+    if await deadline.value, !response.ok {
+      log("daemon request timed out: \(request.domain.rawValue) \(request.command)", level: .warn)
+      return SocketReply(
+        IPCCommandError.internalError("request timed out and was cancelled").response(
+          id: request.id
+        )
+      )
+    }
+    return SocketReply(response)
   }
 }
