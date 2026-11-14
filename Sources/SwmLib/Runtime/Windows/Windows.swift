@@ -341,9 +341,17 @@ public final class Windows {
   }
 
   /// Create, observe, and store one managed window for an application.
+  ///
+  /// The caller passes the ID it already read from the element. An element whose ID could not
+  /// be read reports zero, and is never stored: zero is not a WindowServer window.
   @discardableResult
-  func addWindow(for application: Application, with element: AXUIElement) -> Window? {
-    let window = Window(with: element, for: application)
+  func addWindow(
+    for application: Application,
+    with element: AXUIElement,
+    id windowID: CGWindowID
+  ) -> Window? {
+    guard windowID != 0 else { return nil }
+    let window = Window(id: windowID, element: element, application: application)
 
     guard let subrole = window.subrole else { return nil }
 
@@ -372,7 +380,7 @@ public final class Windows {
     // Some apps expose their focused window before including it in AXWindows.
     if let element = AccessibilityClient.shared.focusedWindowElement(for: application.element),
       AccessibilityClient.shared.optionalWindowID(for: element) == windowID,
-      let window = addWindow(for: application, with: element)
+      let window = addWindow(for: application, with: element, id: windowID)
     {
       return window
     }
@@ -380,7 +388,7 @@ public final class Windows {
     if let element = application.windowElements().first(where: {
       AccessibilityClient.shared.optionalWindowID(for: $0) == windowID
     }) {
-      return addWindow(for: application, with: element)
+      return addWindow(for: application, with: element, id: windowID)
     }
 
     addWindows(for: application)
@@ -390,7 +398,8 @@ public final class Windows {
   /// Add all currently accessible windows for an application.
   func addWindows(for application: Application) {
     if let accessibleWindows {
-      for window in accessibleWindows(application) where windowsByID[window.id] == nil {
+      for window in accessibleWindows(application)
+      where window.id != 0 && windowsByID[window.id] == nil {
         windowsByID[window.id] = window
       }
       return
@@ -403,7 +412,7 @@ public final class Windows {
         continue
       }
 
-      _ = addWindow(for: application, with: element)
+      _ = addWindow(for: application, with: element, id: windowID)
     }
   }
 
@@ -524,7 +533,7 @@ public final class Windows {
       }
 
       guard let index = unresolvedWindowIDs.firstIndex(of: windowID) else { continue }
-      guard addWindow(for: application, with: element) != nil else {
+      guard addWindow(for: application, with: element, id: windowID) != nil else {
         if ignoredWindowIDsByPID[application.processID]?.contains(windowID) == true {
           unresolvedWindowIDs.remove(at: index)
         }

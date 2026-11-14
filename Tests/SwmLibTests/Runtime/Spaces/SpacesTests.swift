@@ -75,14 +75,29 @@ struct SpacesTests {
     #expect(topology.spacesByID[10]?.type == .normal)
     #expect(topology.visibleSpaceIDByDisplayID == ["display": 10])
     #expect(topology.spaceIDsByWindowID == [1: [10]])
-    #expect(
-      spaces.snapshotTopology(
-        for: [1],
-        snapshot: { snapshot },
-        membership: { _ in throw TestTopologyError.unavailable },
-        displays: { [:] }
-      ) == nil
+  }
+
+  @Test("snapshotTopology: reports a window whose membership read fails on no Space")
+  func snapshotTopologyReportsAWindowWhoseMembershipReadFailsOnNoSpace() throws {
+    let spaces = Spaces(activeSpaceID: nil)
+    let display = DisplaySpaces(
+      id: .init(rawValue: "display"),
+      spaces: [.init(id: .init(rawValue: 10), type: .desktop)],
+      currentSpaceID: .init(rawValue: 10)
     )
+    let topology = try #require(
+      spaces.snapshotTopology(
+        for: [0, 1],
+        snapshot: { SpaceSnapshot(displays: [display], activeSpaceID: .init(rawValue: 10)) },
+        membership: { windowID in
+          guard windowID != 0 else { throw TestTopologyError.unavailable }
+          return [10]
+        },
+        displays: { [:] }
+      )
+    )
+    #expect(topology.spaceIDsByWindowID == [0: [], 1: [10]])
+    #expect(topology.visibleSpaceIDByDisplayID == ["display": 10])
   }
 
   @Test("topologyDisplays: keeps the first display when screens share a UUID")
