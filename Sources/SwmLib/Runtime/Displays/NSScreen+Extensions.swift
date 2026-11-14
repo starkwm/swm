@@ -28,12 +28,15 @@ extension NSScreen {
     return number?.uint32Value
   }
 
-  /// Core Graphics display UUID string for this screen.
+  /// Core Graphics display UUID string for this screen, or an empty string when unavailable.
+  ///
+  /// Core Graphics has no UUID for a display that is being disconnected.
   var uuid: String {
-    guard let id = id else { return "" }
+    guard let id, let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else {
+      return ""
+    }
 
-    let uuid = CGDisplayCreateUUIDFromDisplayID(id).takeRetainedValue()
-    return CFUUIDCreateString(nil, uuid) as String
+    return (CFUUIDCreateString(nil, uuid) as String?) ?? ""
   }
 
   /// Full frame converted to the coordinate space used by accessibility APIs.

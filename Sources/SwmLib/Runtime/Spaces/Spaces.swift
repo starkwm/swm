@@ -26,6 +26,18 @@ public final class Spaces {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
+  /// Index display geometry by UUID, keeping the first display when UUIDs repeat.
+  ///
+  /// Every screen whose UUID cannot be read reports the same empty UUID.
+  static func topologyDisplays(
+    _ displays: [(uuid: String, visibleFrame: CGRect)]
+  ) -> [String: SpaceTopologyDisplay] {
+    Dictionary(
+      displays.map { ($0.uuid, SpaceTopologyDisplay(visibleFrame: $0.visibleFrame)) },
+      uniquingKeysWith: { first, _ in first }
+    )
+  }
+
   /// ID of the currently active space.
   var currentActiveSpaceID: UInt64? {
     activeSpace.current
@@ -92,11 +104,7 @@ public final class Spaces {
       try WindowServerClient.spaceClient.get().spaceIDs(containing: $0).map(\.rawValue)
     },
     displays: () -> [String: SpaceTopologyDisplay] = {
-      Dictionary(
-        uniqueKeysWithValues: NSScreen.screens.map {
-          ($0.uuid, SpaceTopologyDisplay(visibleFrame: $0.axVisibleFrame))
-        }
-      )
+      Spaces.topologyDisplays(NSScreen.screens.map { ($0.uuid, $0.axVisibleFrame) })
     }
   ) -> SpaceTopology? {
     do {
