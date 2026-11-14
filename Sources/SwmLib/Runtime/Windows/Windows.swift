@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import CHIServices
 import Carbon
 import Foundation
 
@@ -545,7 +546,7 @@ public final class Windows {
       let token = createRemoteToken(for: application.processID, with: id)
 
       guard
-        let element = _AXUIElementCreateWithRemoteToken(token)?.takeRetainedValue(),
+        let element = _AXUIElementCreateWithRemoteToken(token),
         AccessibilityClient.shared.isWindow(element),
         let windowID = AccessibilityClient.shared.optionalWindowID(for: element),
         unresolvedWindowIDs.contains(windowID)

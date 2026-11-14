@@ -1,4 +1,5 @@
 import AppKit
+import CHIServices
 
 private let processIgnoreList = [
   "Discord Helper (Plugin)",
@@ -40,10 +41,10 @@ public final class Process: @MainActor CustomStringConvertible {
     self.psn = psn
 
     var info = ProcessInfoRec()
-    GetProcessInformation(&self.psn, &info)
+    SWMGetProcessInformation(&self.psn, &info)
 
     var pid = pid_t()
-    GetProcessPID(&self.psn, &pid)
+    SWMGetProcessPID(&self.psn, &pid)
 
     self.pid = pid
     application = NSRunningApplication(processIdentifier: self.pid)

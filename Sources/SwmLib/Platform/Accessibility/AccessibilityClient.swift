@@ -1,4 +1,5 @@
 import ApplicationServices
+import CHIServices
 import CoreGraphics
 
 private let kAXEnhancedUserInterface = "AXEnhancedUserInterface"

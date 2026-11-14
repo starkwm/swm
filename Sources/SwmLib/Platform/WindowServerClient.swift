@@ -1,4 +1,5 @@
 import AppKit
+import CHIServices
 import CSkyLight
 import Carbon
 import CoreGraphics
@@ -29,7 +30,7 @@ final class WindowServerClient {
     guard _SLPSGetFrontProcess(&psn) == noErr else { return nil }
 
     var pid = pid_t()
-    guard GetProcessPID(&psn, &pid) == noErr else { return nil }
+    guard SWMGetProcessPID(&psn, &pid) == noErr else { return nil }
 
     return pid
   }
