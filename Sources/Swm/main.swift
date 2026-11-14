@@ -21,6 +21,8 @@ func runSwm(with arguments: StartCommand) {
     fail("could not access accessibility features")
   }
 
+  AccessibilityClient.shared.limitMessagingTimeout()
+
   runOrFail("unable to create lock file") {
     try LockFile.acquire()
   }

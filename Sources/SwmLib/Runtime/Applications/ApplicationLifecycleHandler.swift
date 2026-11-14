@@ -60,7 +60,11 @@ struct ApplicationLifecycleHandler {
       )
     else { return }
 
-    if !windows.refreshWindows(for: application) { retry() }
+    if windows.refreshWindows(for: application) {
+      windows.resetDiscoveryRetries(for: process)
+    } else {
+      retry()
+    }
     tiling.reconcileAndReflowVisibleSpaces()
     if !wasManaged { emitApplicationSignal(.applicationLaunched, application: application) }
 

@@ -28,7 +28,31 @@ public final class AccessibilityClient {
     return CGRect(origin: origin, size: dimensions)
   }
 
+  /// Longest time, in seconds, that one Accessibility request may wait for an application.
+  ///
+  /// Requests run on the main actor, so this bounds how long each one can stall the daemon.
+  static let messagingTimeout: Float = 1
+
   private init() {}
+
+  /// Bound every Accessibility request so an unresponsive application cannot stall the daemon.
+  ///
+  /// A request that times out fails with `.cannotComplete`, like any other failed read.
+  @discardableResult
+  public func limitMessagingTimeout() -> Bool {
+    // The system-wide element carries the timeout for every element in this process.
+    let result = AXUIElementSetMessagingTimeout(
+      AXUIElementCreateSystemWide(),
+      Self.messagingTimeout
+    )
+    if result != .success {
+      log(
+        "could not limit the accessibility messaging timeout: AXError \(result.diagnosticDescription)",
+        level: .warn
+      )
+    }
+    return result == .success
+  }
 
   /// Prompt for accessibility permission when needed and return current trust status.
   public func askForAccessibilityIfNeeded() -> Bool {

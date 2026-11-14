@@ -31,7 +31,9 @@ public final class Windows {
   private let makeApplication: (Process) -> Application?
   private let observeApplication: (Application) -> Result<Void, AccessibilityClientError>
   private let accessibleWindows: ((Application) -> [Window])?
+  private let discoveryRetryPolicy: DiscoveryRetryPolicy
   private var discoveryRetries = [ObjectIdentifier: Task<Void, Never>]()
+  private var discoveryRetryCounts = [ObjectIdentifier: Int]()
   private var mouseEventMonitor: Any?
   private var pendingMouseFocusWindowID: CGWindowID?
   private(set) var focusFollowsMouseMode = FocusFollowsMouseMode.off
@@ -57,13 +59,15 @@ public final class Windows {
     observeApplication: @escaping (Application) -> Result<Void, AccessibilityClientError> = {
       $0.observe()
     },
-    accessibleWindows: ((Application) -> [Window])? = nil
+    accessibleWindows: ((Application) -> [Window])? = nil,
+    discoveryRetryPolicy: DiscoveryRetryPolicy = .standard
   ) {
     self.workspace = workspace
     self.isObservable = isObservable ?? workspace.isObservable
     self.makeApplication = makeApplication
     self.observeApplication = observeApplication
     self.accessibleWindows = accessibleWindows
+    self.discoveryRetryPolicy = discoveryRetryPolicy
     focusedWindowState = TrackedState(current: focusedWindowID)
   }
 
@@ -94,10 +98,17 @@ public final class Windows {
       }
     }
     guard let application = manage(process, retryObservation: { retry() }) else { return }
-    if !reconcileWindows(for: application) { retry() }
+    if reconcileWindows(for: application) {
+      resetDiscoveryRetries(for: process)
+    } else {
+      retry()
+    }
   }
 
   /// Share launch and startup retries, rejecting late work for a replaced process.
+  ///
+  /// Retries back off and stop after the policy's limit, so a process that never becomes
+  /// ready is not polled forever. A later discovery request starts a new schedule.
   func retryDiscovery(
     for process: Process,
     resolveProcess: @escaping () -> Process?,
@@ -105,18 +116,36 @@ public final class Windows {
   ) {
     let identity = ObjectIdentifier(process)
     guard !process.terminated, discoveryRetries[identity] == nil else { return }
+
+    let retries = discoveryRetryCounts[identity, default: 0]
+    guard let delay = discoveryRetryPolicy.delay(afterRetries: retries) else {
+      discoveryRetryCounts.removeValue(forKey: identity)
+      log("giving up discovery after \(retries) retries \(process)", level: .warn)
+      return
+    }
+
+    discoveryRetryCounts[identity] = retries + 1
     discoveryRetries[identity] = Task { @MainActor [weak self] in
       do {
-        try await Task.sleep(for: .milliseconds(100))
+        try await Task.sleep(for: delay)
       } catch { return }
       guard let self else { return }
       discoveryRetries.removeValue(forKey: identity)
-      guard !process.terminated, resolveProcess() === process else { return }
+      guard !process.terminated, resolveProcess() === process else {
+        discoveryRetryCounts.removeValue(forKey: identity)
+        return
+      }
       retry()
     }
   }
 
+  /// Start the next failed discovery of a process from the beginning of the retry schedule.
+  func resetDiscoveryRetries(for process: Process) {
+    discoveryRetryCounts.removeValue(forKey: ObjectIdentifier(process))
+  }
+
   func cancelDiscoveryRetry(for process: Process) {
+    resetDiscoveryRetries(for: process)
     discoveryRetries.removeValue(forKey: ObjectIdentifier(process))?.cancel()
   }
 

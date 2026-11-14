@@ -148,6 +148,43 @@ struct WindowsTests {
     #expect(windows.application(by: process.pid) == nil)
   }
 
+  @Test("discover: gives up on a process that stays unready until discovery is requested again")
+  func discoverGivesUpOnAProcessThatStaysUnreadyUntilDiscoveryIsRequestedAgain() async {
+    let process = Process(
+      psn: .init(),
+      pid: ProcessInfo.processInfo.processIdentifier,
+      name: "test",
+      application: .current
+    )
+    var attempts = 0
+    let windows = Windows(
+      workspace: Workspace(),
+      focusedWindowID: nil,
+      isObservable: { _ in true },
+      makeApplication: { Application(for: $0, lookupConnection: { nil }) },
+      observeApplication: { application in
+        attempts += 1
+        return application.observe(addNotification: { _ in .cannotComplete })
+      },
+      discoveryRetryPolicy: DiscoveryRetryPolicy(
+        initialDelay: .milliseconds(1),
+        maximumDelay: .milliseconds(2),
+        maximumRetries: 3
+      )
+    )
+    let discover = {
+      windows.discover(process, resolveProcess: { process }, onRecovery: {})
+    }
+
+    discover()
+    await windows.waitForDiscoveryRetries()
+    #expect(attempts == 4)
+
+    discover()
+    await windows.waitForDiscoveryRetries()
+    #expect(attempts == 8)
+  }
+
   @Test("retryDiscovery: a terminated process cannot suppress its replacement's retry")
   func retryDiscoveryATerminatedProcessCannotSuppressItsReplacementsRetry() async {
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
