@@ -6,4 +6,24 @@ extension Array {
     }
     return firstIndex { label($0) == selector }
   }
+
+  /// Append an element unless another element already has its label.
+  mutating func appendUniquelyLabeled(
+    _ element: Element,
+    kind: String,
+    label: (Element) -> String?
+  ) throws {
+    if let value = label(element), contains(where: { label($0) == value }) {
+      throw IPCCommandError.invalidRequest("\(kind) label already exists: \(value)")
+    }
+    append(element)
+  }
+
+  /// Remove the element named by a one-based index or label.
+  mutating func remove(selector: String, kind: String, label: (Element) -> String?) throws {
+    guard let index = index(selector: selector, label: label) else {
+      throw IPCCommandError.invalidRequest("\(kind) not found: \(selector)")
+    }
+    remove(at: index)
+  }
 }

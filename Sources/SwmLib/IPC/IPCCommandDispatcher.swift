@@ -5,6 +5,7 @@ struct IPCCommandDispatcher {
   private let spaces: Spaces
   private let displays: Displays
   private let tiling: Tiling
+  private let reload: ConfigReload
 
   /// Create a dispatcher backed by explicit window, Space, and display services.
   init(
@@ -17,6 +18,7 @@ struct IPCCommandDispatcher {
     self.spaces = spaces
     self.displays = displays
     self.tiling = tiling
+    self.reload = ConfigReload(tiling: tiling)
   }
 
   /// Dispatch a request to its domain-specific command handler.
@@ -31,6 +33,9 @@ struct IPCCommandDispatcher {
         tiling: tiling,
         activateSpace: activateSpace
       ).dispatch(request)
+
+    case .config where ConfigReloadCommandHandler.commands.contains(request.command):
+      return ConfigReloadCommandHandler(reload: reload).dispatch(request)
 
     case .config:
       return ConfigCommandHandler(
@@ -50,10 +55,10 @@ struct IPCCommandDispatcher {
       ).dispatch(request)
 
     case .rule:
-      return RuleCommandHandler(tiling: tiling).dispatch(request)
+      return RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request)
 
     case .signal:
-      return SignalCommandHandler().dispatch(request)
+      return SignalCommandHandler(reload: reload).dispatch(request)
     }
   }
 

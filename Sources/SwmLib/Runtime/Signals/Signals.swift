@@ -17,28 +17,25 @@ public final class Signals {
   /// Register a signal, preserving insertion order.
   func add(_ signal: Signal) throws {
     try lock.withLock {
-      if let label = signal.label, signals.contains(where: { $0.label == label }) {
-        throw IPCCommandError.invalidRequest("signal label already exists: \(label)")
-      }
-
-      signals.append(signal)
+      try signals.appendUniquelyLabeled(signal, kind: "signal", label: \.label)
     }
   }
 
   /// Remove a signal by one-based index or label.
   func remove(selector: String) throws {
     try lock.withLock {
-      guard let index = signals.index(selector: selector, label: \.label) else {
-        throw IPCCommandError.invalidRequest("signal not found: \(selector)")
-      }
-
-      signals.remove(at: index)
+      try signals.remove(selector: selector, kind: "signal", label: \.label)
     }
   }
 
   /// Remove every signal.
   func removeAll() {
-    lock.withLock { signals.removeAll() }
+    replaceAll([])
+  }
+
+  /// Replace every signal at once, so no event sees a partial registry.
+  func replaceAll(_ signals: [Signal]) {
+    lock.withLock { self.signals = signals }
   }
 
   /// Return registered signals with their one-based indexes.

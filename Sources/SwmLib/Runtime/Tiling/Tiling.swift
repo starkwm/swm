@@ -408,25 +408,27 @@ public final class Tiling {
 
   /// Add a rule and immediately update existing windows.
   func addRule(_ rule: WindowRule) throws {
-    if let label = rule.label, rules.contains(where: { $0.label == label }) {
-      throw IPCCommandError.invalidRequest("rule label already exists: \(label)")
-    }
-    rules.append(rule)
+    try rules.appendUniquelyLabeled(rule, kind: "rule", label: \.label)
     reconcileAndReflowVisibleSpaces()
   }
 
   /// Remove a rule by one-based index or unique label.
   func removeRule(selector: String) throws {
-    guard let index = rules.index(selector: selector, label: \.label) else {
-      throw IPCCommandError.invalidRequest("rule not found: \(selector)")
-    }
-    rules.remove(at: index)
+    try rules.remove(selector: selector, kind: "rule", label: \.label)
     reconcileAndReflowVisibleSpaces()
   }
 
   /// Remove every rule.
   func removeAllRules() {
-    rules.removeAll()
+    replaceRules([])
+  }
+
+  /// Replace every rule at once and reconcile a single time.
+  ///
+  /// Placements already applied are kept, so a window whose resolved placement is the same
+  /// under the new rules is not moved again.
+  func replaceRules(_ rules: [WindowRule]) {
+    self.rules = rules
     reconcileAndReflowVisibleSpaces()
   }
 
