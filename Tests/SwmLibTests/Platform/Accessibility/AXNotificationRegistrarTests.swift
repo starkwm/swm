@@ -34,4 +34,32 @@ struct AXNotificationRegistrarTests {
     )
     #expect(observed == ["AXCreated", "AXFocusedWindowChanged"])
   }
+
+  @Test("observe: stops at the first timeout and registers the rest on retry")
+  func observeStopsAtTheFirstTimeoutAndRegistersTheRestOnRetry() {
+    let registrar = AXNotificationRegistrar(notifications: ["A", "B", "C", "D"])
+    var observed = Set<String>()
+    var requested = [String]()
+    #expect(
+      !registrar.observe(
+        observedNotifications: &observed,
+        addNotification: { notification in
+          requested.append(notification)
+          return notification == "B" ? .cannotComplete : .success
+        },
+        onFailure: { _, _ in }
+      )
+    )
+    #expect(requested == ["A", "B"])
+    #expect(observed == ["A"])
+
+    #expect(
+      registrar.observe(
+        observedNotifications: &observed,
+        addNotification: { _ in .success },
+        onFailure: { _, _ in Issue.record("Retry unexpectedly failed") }
+      )
+    )
+    #expect(observed == ["A", "B", "C", "D"])
+  }
 }

@@ -6,6 +6,9 @@ struct AXNotificationRegistrar: Sendable {
   let notifications: [String]
 
   /// Register notifications and update the observed-name set.
+  ///
+  /// Registration stops at the first request that times out: the application is not answering,
+  /// and each later request would wait out the full messaging timeout as well.
   func observe(
     observedNotifications: inout Set<String>,
     addNotification: (String) -> ApplicationServices.AXError,
@@ -18,6 +21,7 @@ struct AXNotificationRegistrar: Sendable {
         observedNotifications.insert(notification)
       } else {
         onFailure(notification, result)
+        if result == .cannotComplete { break }
       }
     }
 
