@@ -89,6 +89,18 @@ struct WindowCommandHandlerTests {
     }
   }
 
+  @Test(
+    "dispatch: rejects an absolute resize to a zero or negative size",
+    arguments: ["abs:0:100", "abs:100:0", "abs:-1:100"]
+  )
+  func dispatchRejectsAnAbsoluteResizeToAZeroOrNegativeSize(value: String) async {
+    let response = await handler().dispatch(request(command: "--resize", args: [value]))
+
+    #expect(response.ok == false)
+    #expect(response.errorCode == .invalidRequest)
+    #expect(response.message == "window size must be positive: \(value)")
+  }
+
   @Test("dispatch: rejects geometry action with invalid window selector")
   func dispatchRejectsGeometryActionWithInvalidWindowSelector() async {
     let handler = handler()

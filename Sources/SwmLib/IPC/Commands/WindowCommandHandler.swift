@@ -58,8 +58,22 @@ struct WindowCommandHandler {
         return try performGeometryAction(
           request,
           action: "resize",
-          form: "abs|rel:<width>:<height>, such as rel:40:0"
-        ) { $1.resizing($0) }
+          form: "abs|rel:<width>:<height>, such as rel:40:0",
+          validate: { change, value in
+            guard case .absolute(let size) = change, size.first <= 0 || size.second <= 0 else {
+              return
+            }
+            throw IPCCommandError.invalidRequest("window size must be positive: \(value)")
+          }
+        ) { frame, change in
+          let target = change.resizing(frame)
+          guard target.width > 0, target.height > 0 else {
+            throw IPCCommandError.invalidRequest(
+              "window resize would leave a size of \(Int(target.width))x\(Int(target.height))"
+            )
+          }
+          return target
+        }
       case "--grid":
         return try grid(request)
       case "--display":
@@ -290,7 +304,8 @@ struct WindowCommandHandler {
     _ request: IPCRequest,
     action: String,
     form: String,
-    operation: (CGRect, WindowGeometryChange) -> CGRect
+    validate: (WindowGeometryChange, String) throws -> Void = { _, _ in },
+    operation: (CGRect, WindowGeometryChange) throws -> CGRect
   ) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: action)
 
@@ -298,6 +313,7 @@ struct WindowCommandHandler {
     else {
       throw IPCCommandError.invalidValue("window \(action)", selection.value, expected: form)
     }
+    try validate(change, selection.value)
 
     let window = try selectedWindow(selector: selection.selector)
     try requireUntiledWindow(window)
@@ -306,7 +322,7 @@ struct WindowCommandHandler {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
     try applyFrame(
-      operation(destination, change),
+      try operation(destination, change),
       window: window,
       failureMessage: "could not \(action) window: \(window.id)"
     )
