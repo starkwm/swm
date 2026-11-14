@@ -57,4 +57,25 @@ struct ClientTests {
     #expect(!output.0)
     #expect(output.1 == "Error: Connection closed or timed out.")
   }
+
+  @Test("send: tags a request with a non-empty reload token from the environment")
+  func sendTagsARequestWithANonEmptyReloadTokenFromTheEnvironment() {
+    var transactions = [String?]()
+    for environment in [[:], [Client.reloadTokenVariable: ""], [Client.reloadTokenVariable: "t"]] {
+      _ = Client.send(domain: .rule, args: ["--clear"], environment: environment) { request in
+        transactions.append(request.transaction)
+        return .acknowledged(id: request.id)
+      }
+    }
+    #expect(transactions == [nil, nil, "t"])
+  }
+
+  @Test("send: reports the daemon's error code")
+  func sendReportsTheDaemonsErrorCode() {
+    let result = Client.send(domain: .config, args: ["--unknown"], environment: [:]) { request in
+      .failure(id: request.id, message: "unsupported", errorCode: .unsupportedCommand)
+    }
+    #expect(!result.ok)
+    #expect(result.errorCode == .unsupportedCommand)
+  }
 }

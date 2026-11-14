@@ -190,7 +190,8 @@ struct SpaceCommandHandler {
         id: request.id,
         domain: request.domain,
         command: request.command,
-        args: Array(request.args.dropFirst(2))
+        args: Array(request.args.dropFirst(2)),
+        transaction: request.transaction
       ),
       spaceIDs[index - 1]
     )

@@ -1,5 +1,5 @@
 /// Error-code categories for IPC command failures.
-enum IPCErrorCode: String, Codable, Equatable, Sendable {
+public enum IPCErrorCode: String, Codable, Equatable, Sendable {
   /// The request shape or arguments are invalid.
   case invalidRequest
 
