@@ -62,6 +62,20 @@ public final class Process: @MainActor CustomStringConvertible {
     }
   }
 
+  /// Return the AppKit application, looking it up again when it was unavailable before.
+  ///
+  /// AppKit can report no running application for a process that has only just launched.
+  func resolveApplication(
+    lookup: (pid_t) -> NSRunningApplication? = { NSRunningApplication(processIdentifier: $0) }
+  ) -> NSRunningApplication? {
+    if let application { return application }
+    guard !terminated, let found = lookup(pid) else { return nil }
+
+    application = found
+    if name == "-", let localizedName = found.localizedName { name = localizedName }
+    return found
+  }
+
   /// Create a process model from explicit process fields.
   init(
     psn: ProcessSerialNumber,

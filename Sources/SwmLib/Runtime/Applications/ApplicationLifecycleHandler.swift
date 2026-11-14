@@ -13,6 +13,9 @@ struct ApplicationLifecycleHandler {
   /// Tiling coordinator reconciled after application inventory changes.
   let tiling: Tiling
 
+  /// Queue a follow-up runtime event.
+  var postEvent: (RuntimeEvent) -> Void = { Events.shared.post($0) }
+
   /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
     switch event {
@@ -33,9 +36,21 @@ struct ApplicationLifecycleHandler {
       return
     }
 
+    let retry = {
+      windows.retryDiscovery(
+        for: process,
+        resolveProcess: { processes.find(by: process.psn) },
+        retry: { postEvent(.application(.launched(process))) }
+      )
+    }
+
     if !workspace.isFinishedLaunching(process) {
       log("application has not finished launching \(process)")
-      guard workspace.observeUntilFinishedLaunching(process) else { return }
+      guard workspace.observeUntilFinishedLaunching(process) else {
+        // Without an AppKit application there is nothing to observe, so look it up again later.
+        if process.application == nil { retry() }
+        return
+      }
     }
 
     if !workspace.isObservable(process) {
@@ -46,13 +61,6 @@ struct ApplicationLifecycleHandler {
     }
 
     let wasManaged = windows.application(by: process.pid) != nil
-    let retry = {
-      windows.retryDiscovery(
-        for: process,
-        resolveProcess: { processes.find(by: process.psn) },
-        retry: { Events.shared.post(.application(.launched(process))) }
-      )
-    }
     guard
       let application = windows.manage(
         process,
@@ -69,7 +77,7 @@ struct ApplicationLifecycleHandler {
     if !wasManaged { emitApplicationSignal(.applicationLaunched, application: application) }
 
     if windows.removeLostFrontSwitchedEvent(for: process.pid) {
-      Events.shared.post(.application(.frontSwitched(process)))
+      postEvent(.application(.frontSwitched(process)))
     }
 
     log("application launched \(application)")
@@ -118,7 +126,7 @@ struct ApplicationLifecycleHandler {
     tiling.reconcileAndReflowVisibleSpaces()
 
     if let focusedWindowID = application.focusedWindowID() {
-      Events.shared.post(.window(.focused(focusedWindowID)))
+      postEvent(.window(.focused(focusedWindowID)))
     }
 
     log(

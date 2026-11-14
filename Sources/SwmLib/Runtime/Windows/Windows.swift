@@ -80,7 +80,17 @@ public final class Windows {
   public func discover(from processes: Processes, onRecovery: @escaping () -> Void) {
     for process in processes.all() {
       if !workspace.isFinishedLaunching(process) {
-        guard workspace.observeUntilFinishedLaunching(process) else { continue }
+        guard workspace.observeUntilFinishedLaunching(process) else {
+          // Without an AppKit application there is nothing to observe, so look it up again later.
+          if process.application == nil {
+            retryDiscovery(
+              for: process,
+              resolveProcess: { processes.find(by: process.psn) },
+              retry: { Events.shared.post(.application(.launched(process))) }
+            )
+          }
+          continue
+        }
       }
       discover(process, resolveProcess: { processes.find(by: process.psn) }, onRecovery: onRecovery)
     }
