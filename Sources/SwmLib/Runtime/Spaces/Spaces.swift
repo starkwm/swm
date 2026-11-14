@@ -97,6 +97,10 @@ public final class Spaces {
   }
 
   /// Capture the Space facts needed by one tiling reconciliation.
+  ///
+  /// A failed snapshot makes the whole topology unavailable. A failed membership read affects
+  /// only its own window, which is reported on no Space, so one bad window cannot suspend
+  /// tiling everywhere.
   func snapshotTopology(
     for windowIDs: [CGWindowID],
     snapshot: () throws -> SpaceSnapshot = { try WindowServerClient.shared.spaceSnapshot() },
@@ -125,8 +129,16 @@ public final class Spaces {
       return SpaceTopology(
         spacesByID: spacesByID,
         visibleSpaceIDByDisplayID: visibleSpaceIDByDisplayID,
-        spaceIDsByWindowID: try Dictionary(
-          uniqueKeysWithValues: windowIDs.map { ($0, Set(try membership($0))) }
+        spaceIDsByWindowID: Dictionary(
+          windowIDs.map { windowID in
+            do {
+              return (windowID, Set(try membership(windowID)))
+            } catch {
+              log("could not read Space membership for window \(windowID): \(error)", level: .warn)
+              return (windowID, [])
+            }
+          },
+          uniquingKeysWith: { first, _ in first }
         ),
         displaysByID: displays(),
         activeSpaceID: snapshot.activeSpaceID?.rawValue

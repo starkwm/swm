@@ -203,6 +203,31 @@ struct WindowsTests {
     #expect(retries == ["replacement"])
   }
 
+  @Test("addWindow: never stores a window whose ID could not be read")
+  func addWindowNeverStoresAWindowWhoseIDCouldNotBeRead() throws {
+    let process = Process(
+      psn: .init(),
+      pid: ProcessInfo.processInfo.processIdentifier,
+      name: "test",
+      application: .current
+    )
+    let application = try #require(Application(for: process, lookupConnection: { nil }))
+    let windows = Windows(
+      workspace: Workspace(),
+      focusedWindowID: nil,
+      isObservable: { _ in true },
+      makeApplication: { _ in application },
+      observeApplication: { _ in .success(()) },
+      accessibleWindows: { [Window(id: 0, application: $0), Window(id: 1, application: $0)] }
+    )
+
+    let element = AccessibilityClient.shared.applicationElement(for: process.pid)
+    #expect(windows.addWindow(for: application, with: element, id: 0) == nil)
+
+    windows.addWindows(for: application)
+    #expect(windows.allWindows().map(\.id) == [1])
+  }
+
   @Test("addLostFrontSwitchedEvent/removeLostFrontSwitchedEvent: consumes once")
   func addLostFrontSwitchedEventRemoveLostFrontSwitchedEventConsumesOnce() {
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)

@@ -88,15 +88,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
   private var observedNotifications = Set<String>()
   private var observationContext: WindowObservationContext?
 
-  /// Create a window model from an accessibility element and owning application.
-  convenience init(with element: AXUIElement, for application: Application) {
-    self.init(
-      id: AccessibilityClient.shared.windowID(for: element),
-      element: element,
-      application: application
-    )
-  }
-
   init(id: CGWindowID, element: AXUIElement? = nil, application: Application? = nil) {
     self.id = id
     self.element = element
