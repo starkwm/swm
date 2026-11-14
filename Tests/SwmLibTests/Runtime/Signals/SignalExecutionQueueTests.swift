@@ -24,30 +24,61 @@ struct SignalExecutionQueueTests {
 
     #expect(recorder.startedActions == ["one", "two", "three"])
   }
+
+  @Test("enqueue: replaces a pending action with the same coalescing key")
+  func enqueueReplacesAPendingActionWithTheSameCoalescingKey() throws {
+    let recorder = SignalExecutionRecorder()
+    let queue = SignalExecutionQueue(
+      maximumConcurrentActions: 1,
+      maximumPendingActions: 2,
+      executor: recorder.execute
+    )
+
+    #expect(queue.enqueue(action: "moved", environment: ["N": "1"], coalescingKey: "window-1"))
+    for n in 2...20 {
+      #expect(queue.enqueue(action: "moved", environment: ["N": "\(n)"], coalescingKey: "window-1"))
+    }
+    #expect(queue.enqueue(action: "moved", environment: ["N": "other"], coalescingKey: "window-2"))
+
+    try recorder.complete(action: "moved")
+    try recorder.complete(action: "moved")
+    try recorder.complete(action: "moved")
+
+    #expect(recorder.startedEnvironments == [["N": "1"], ["N": "20"], ["N": "other"]])
+  }
 }
 
 private final class SignalExecutionRecorder: @unchecked Sendable {
   private let lock = NSLock()
-  private var completions = [String: @Sendable () -> Void]()
+  private var completions = [String: [@Sendable () -> Void]]()
   private var actions = [String]()
+  private var environments = [[String: String]]()
 
   var startedActions: [String] {
     lock.withLock { actions }
   }
 
+  var startedEnvironments: [[String: String]] {
+    lock.withLock { environments }
+  }
+
   func execute(
     action: String,
-    environment _: [String: String],
+    environment: [String: String],
     completion: @escaping @Sendable () -> Void
   ) {
     lock.withLock {
       actions.append(action)
-      completions[action] = completion
+      environments.append(environment)
+      completions[action, default: []].append(completion)
     }
   }
 
   func complete(action: String) throws {
-    let completion = lock.withLock { completions.removeValue(forKey: action) }
+    let completion = lock.withLock { () -> (@Sendable () -> Void)? in
+      guard completions[action]?.isEmpty == false else { return nil }
+      return completions[action]?.removeFirst()
+    }
     let requiredCompletion = try #require(completion)
     requiredCompletion()
   }

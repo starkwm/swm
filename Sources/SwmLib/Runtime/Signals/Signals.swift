@@ -56,13 +56,29 @@ public final class Signals {
   }
 
   /// Execute actions whose registrations match the payload.
+  ///
+  /// Moves and resizes arrive in bursts while a window is dragged, so a registration's pending
+  /// action for the same window runs once with the latest event.
   func emit(_ payload: SignalPayload) {
     let matches = lock.withLock {
-      signals.filter { $0.matches(payload) }
+      signals.enumerated().filter { $0.element.matches(payload) }
     }
 
-    for signal in matches {
-      guard executionQueue.enqueue(action: signal.action, environment: payload.environment) else {
+    for (index, signal) in matches {
+      var coalescingKey: String?
+      if payload.event == .windowMoved || payload.event == .windowResized,
+        let windowID = payload.environment["SWM_WINDOW_ID"]
+      {
+        coalescingKey =
+          "\(index)\u{0}\(signal.action)\u{0}\(payload.event.rawValue)\u{0}\(windowID)"
+      }
+      guard
+        executionQueue.enqueue(
+          action: signal.action,
+          environment: payload.environment,
+          coalescingKey: coalescingKey
+        )
+      else {
         log("signal action queue is full; dropping action", level: .warn)
         continue
       }

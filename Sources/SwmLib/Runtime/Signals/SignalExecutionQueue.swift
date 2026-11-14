@@ -11,12 +11,14 @@ final class SignalExecutionQueue: @unchecked Sendable {
 
   private struct Job: Sendable {
     let action: String
-    let environment: [String: String]
+    var environment: [String: String]
+    let coalescingKey: String?
   }
 
   private enum EnqueueDisposition {
     case start
     case queued
+    case coalesced
     case rejected
   }
 
@@ -41,10 +43,24 @@ final class SignalExecutionQueue: @unchecked Sendable {
   }
 
   /// Enqueue an action, returning false when the pending bound is full.
+  ///
+  /// A pending action with the same coalescing key takes the new environment instead of
+  /// queueing another run, so a burst of updates for one subject runs once with the latest.
   @discardableResult
-  func enqueue(action: String, environment: [String: String]) -> Bool {
-    let job = Job(action: action, environment: environment)
+  func enqueue(
+    action: String,
+    environment: [String: String],
+    coalescingKey: String? = nil
+  ) -> Bool {
+    let job = Job(action: action, environment: environment, coalescingKey: coalescingKey)
     let disposition = lock.withLock {
+      if let coalescingKey,
+        let index = pendingJobs.firstIndex(where: { $0.coalescingKey == coalescingKey })
+      {
+        pendingJobs[index].environment = environment
+        return EnqueueDisposition.coalesced
+      }
+
       if runningActions < maximumConcurrentActions {
         runningActions += 1
         return EnqueueDisposition.start
@@ -61,7 +77,7 @@ final class SignalExecutionQueue: @unchecked Sendable {
     case .start:
       start(job)
       return true
-    case .queued:
+    case .queued, .coalesced:
       return true
     case .rejected:
       return false
