@@ -6,6 +6,8 @@
 
 At startup, the daemon executes `~/.config/swm/swmrc` if it exists. Use `--config <path>` to select another file; an explicitly selected file must exist. `swm` makes the file owner-executable when needed and stops if it exits unsuccessfully.
 
+The daemon runs the file at startup as its own child process, so the file and every program it starts can use swm's Accessibility access. See [signal permissions](signals.md#permissions), which apply to the file in the same way. `swm reload` runs the file from the `swm reload` process instead, with the permissions of whatever ran that command. Keep the file writable only by your user.
+
 The file can be any executable script. A shell script is the simplest option:
 
 ```sh
