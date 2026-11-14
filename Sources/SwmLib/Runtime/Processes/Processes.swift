@@ -22,6 +22,13 @@ public final class Processes {
   /// Create an empty process observation.
   public init() {}
 
+  /// Create a process observation that already tracks the given processes.
+  init(tracking processes: [Process]) {
+    for process in processes {
+      self.processes[process.psn.lowLongOfPSN] = process
+    }
+  }
+
   /// Seed the process list and start observing Carbon application events.
   public func observe() -> Result<Void, ProcessesError> {
     addRunningProcesses()

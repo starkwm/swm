@@ -81,7 +81,7 @@ public final class Workspace: NSObject {
   /// Accessory processes are included because some apps draw their windows
   /// from accessory helpers, such as VMPal's per-VM machine process.
   func isObservable(_ process: Process) -> Bool {
-    guard let application = process.application else {
+    guard let application = process.resolveApplication() else {
       process.policy = .prohibited
       return false
     }
@@ -103,7 +103,7 @@ public final class Workspace: NSObject {
 
   /// Return whether a process application has finished launching.
   func isFinishedLaunching(_ process: Process) -> Bool {
-    guard let application = process.application else { return false }
+    guard let application = process.resolveApplication() else { return false }
 
     return application.isFinishedLaunching
   }
@@ -142,7 +142,7 @@ public final class Workspace: NSObject {
 
   /// Start observing one KVO-backed process readiness condition.
   private func observe(_ process: Process, registry: ProcessObservationRegistry) {
-    guard let application = process.application else { return }
+    guard let application = process.resolveApplication() else { return }
 
     guard let token = registry.register(process, application: application) else { return }
     observationContexts.withLock { $0[token.contextID] = token }
