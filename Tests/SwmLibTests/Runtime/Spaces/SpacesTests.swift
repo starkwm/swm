@@ -1,3 +1,4 @@
+import CoreGraphics
 import StarkSkyLight
 import Testing
 
@@ -84,6 +85,24 @@ struct SpacesTests {
     )
   }
 
+  @Test("topologyDisplays: keeps the first display when screens share a UUID")
+  func topologyDisplaysKeepsTheFirstDisplayWhenScreensShareAUUID() {
+    let first = CGRect(x: 0, y: 0, width: 100, height: 100)
+    let second = CGRect(x: 100, y: 0, width: 200, height: 200)
+
+    let displays = Spaces.topologyDisplays([
+      (uuid: "", visibleFrame: first),
+      (uuid: "display", visibleFrame: second),
+      (uuid: "", visibleFrame: second),
+    ])
+
+    #expect(
+      displays == [
+        "": SpaceTopologyDisplay(visibleFrame: first),
+        "display": SpaceTopologyDisplay(visibleFrame: second),
+      ]
+    )
+  }
 }
 
 private enum TestTopologyError: Error {
