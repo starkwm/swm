@@ -26,6 +26,17 @@ struct TilingLayoutState {
   /// Last focused tiled window used as the insertion anchor.
   var focusedWindowID: CGWindowID?
 
+  /// The configurable values, without windows or focus.
+  var settings: TilingLayoutSettings {
+    TilingLayoutSettings(
+      selection: selection,
+      masterRatio: masterRatio,
+      masterPlacement: masterPlacement,
+      splitRatio: splitRatio,
+      preserveSplitDirections: preserveSplitDirections
+    )
+  }
+
   /// Use a dwindle split ratio for new branches and rebalance existing ones to it.
   mutating func setSplitRatio(_ ratio: CGFloat) {
     splitRatio = ratio
@@ -39,4 +50,34 @@ struct TilingLayoutState {
       tree = tree?.clearingSplitDirections()
     }
   }
+
+  /// Restore configurable values, rebalancing or clearing splits only when those values change.
+  mutating func restore(_ settings: TilingLayoutSettings) {
+    selection = settings.selection
+    masterRatio = settings.masterRatio
+    masterPlacement = settings.masterPlacement
+    if splitRatio != settings.splitRatio {
+      setSplitRatio(settings.splitRatio)
+    }
+    if preserveSplitDirections != settings.preserveSplitDirections {
+      setPreserveSplitDirections(settings.preserveSplitDirections)
+    }
+  }
+}
+
+/// The configurable values of one layout.
+struct TilingLayoutSettings: Equatable {
+  let selection: LayoutSelection
+  let masterRatio: CGFloat
+  let masterPlacement: MasterPlacement
+  let splitRatio: CGFloat
+  let preserveSplitDirections: Bool
+}
+
+/// Animation and layout settings for the defaults and every layout, captured at one moment.
+struct TilingSettingsSnapshot: Equatable {
+  let animationDuration: Double
+  let animationEasing: AnimationEasing
+  let defaults: TilingLayoutSettings
+  let byLayoutID: [TilingLayoutID: TilingLayoutSettings]
 }

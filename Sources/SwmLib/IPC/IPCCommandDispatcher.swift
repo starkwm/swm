@@ -18,7 +18,7 @@ struct IPCCommandDispatcher {
     self.spaces = spaces
     self.displays = displays
     self.tiling = tiling
-    self.reload = ConfigReload(tiling: tiling)
+    self.reload = ConfigReload(tiling: tiling, spaces: spaces, windows: windows)
   }
 
   /// Dispatch a request to its domain-specific command handler.

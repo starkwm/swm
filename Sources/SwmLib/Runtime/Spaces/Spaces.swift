@@ -160,6 +160,17 @@ public final class Spaces {
     }
   }
 
+  /// Capture the defaults and every Space's settings.
+  func settingsSnapshot() -> SpaceSettingsSnapshot {
+    SpaceSettingsSnapshot(defaults: defaultSettings, bySpaceID: settingsBySpaceID)
+  }
+
+  /// Restore settings captured by `settingsSnapshot()`.
+  func restoreSettings(_ snapshot: SpaceSettingsSnapshot) {
+    defaultSettings = snapshot.defaults
+    settingsBySpaceID = snapshot.bySpaceID
+  }
+
   /// Discard overrides for spaces that no longer exist.
   func retainSettings(for spaceIDs: Set<UInt64>) {
     settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
