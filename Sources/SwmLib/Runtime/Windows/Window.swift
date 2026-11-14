@@ -268,11 +268,15 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
         context: context
       )
     }
+    // Title notifications are optional, but a timeout means the app is not answering, and the
+    // required notifications would each wait out the timeout too.
+    var titleTimedOut = false
     _ = Self.titleNotificationRegistrar.observe(
       observedNotifications: &observedNotifications,
       addNotification: addNotification,
-      onFailure: { _, _ in }
+      onFailure: { _, result in titleTimedOut = result == .cannotComplete }
     )
+    guard !titleTimedOut else { return false }
     return Self.notificationRegistrar.observe(
       observedNotifications: &observedNotifications,
       addNotification: addNotification,
