@@ -43,9 +43,11 @@ let package = Package(
       ],
       swiftSettings: releaseDebugSettings
     ),
+    .systemLibrary(name: "CSkyLight"),
     .target(
       name: "SwmLib",
       dependencies: [
+        "CSkyLight",
         .product(name: "StarkIPC", package: "stark-ipc"),
         .product(name: "StarkSkyLight", package: "stark-skylight"),
       ],

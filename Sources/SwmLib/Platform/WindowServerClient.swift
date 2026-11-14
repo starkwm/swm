@@ -1,4 +1,5 @@
 import AppKit
+import CSkyLight
 import Carbon
 import CoreGraphics
 import Darwin
@@ -176,24 +177,32 @@ final class WindowServerClient {
     var setTags: UInt64 = 0
     var clearTags: UInt64 = 0
 
-    let windows = SLSCopyWindowsWithOptionsAndTags(
-      mainConnectionID(),
-      connectionID,
-      spaces,
-      options,
-      &setTags,
-      &clearTags
-    )
-
-    let query = SLSWindowQueryWindows(mainConnectionID(), windows, Int32(CFArrayGetCount(windows)))
-    let iterator = SLSWindowQueryResultCopyWindows(query)
+    // WindowServer returns NULL rather than an empty result when a query fails.
+    guard
+      let windows = SLSCopyWindowsWithOptionsAndTags(
+        mainConnectionID(),
+        connectionID,
+        spaces,
+        options,
+        &setTags,
+        &clearTags
+      ),
+      let query = SLSWindowQueryWindows(
+        mainConnectionID(),
+        windows,
+        Int32(clamping: CFArrayGetCount(windows))
+      ),
+      let iterator = SLSWindowQueryResultCopyWindows(query)
+    else {
+      return []
+    }
 
     var windowIDs = [CGWindowID]()
 
     while SLSWindowIteratorAdvance(iterator) {
       guard SLSWindowIteratorGetParentID(iterator) == 0 else { continue }
 
-      let level = NSWindow.Level(rawValue: SLSWindowIteratorGetLevel(iterator))
+      let level = NSWindow.Level(rawValue: Int(SLSWindowIteratorGetLevel(iterator)))
       guard level == .normal || level == .floating || level == .modalPanel else { continue }
 
       let attributes = SLSWindowIteratorGetAttributes(iterator)
