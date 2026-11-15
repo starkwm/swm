@@ -1,6 +1,5 @@
 import AppKit
 
-/// One serial execution lane per application, with a bounded per-window mailbox.
 @MainActor
 final class AnimationFrameDelivery {
   typealias Completion = @MainActor @Sendable (AnimationFrameCompletion) -> Void
@@ -27,8 +26,6 @@ final class AnimationFrameDelivery {
     }
   }
 
-  /// Explicit synchronous commands must run after started AX calls and batch restoration.
-  /// Workers never wait for main-actor completions, so this barrier cannot depend on its caller.
   func waitForPendingOperations(for windowID: CGWindowID) {
     guard let processID = backend(windowID)?.processID else { return }
     lanes[processID]?.waitForPendingOperations()
@@ -53,7 +50,6 @@ final class AnimationFrameDelivery {
       )
     }
     guard let backend = backend(windowID) else {
-      // Resolve vanished windows through the same completion path.
       let missing = AnimationFrameBackend(
         processID: 0,
         read: { nil },
@@ -72,12 +68,10 @@ final class AnimationFrameDelivery {
       lanes[backend.processID] = lane
     }
     lane.submit(request(backend), completion: completion)
-    // Remove idle lanes without allowing two lanes for one app to overlap.
     lanes = lanes.filter { $0.key == backend.processID || !$0.value.isIdle }
   }
 }
 
-/// Immutable operations captured on the main actor, without sharing mutable Window models.
 struct AnimationFrameBackend: Sendable {
   let processID: pid_t
   let read: @Sendable () -> CGRect?
@@ -86,7 +80,6 @@ struct AnimationFrameBackend: Sendable {
   let endBatch: @Sendable (Bool) -> Void
 }
 
-/// Cancellation does not wait for AX. Workers check before every subsequent AX write.
 final class AnimationGeneration: @unchecked Sendable {
   var acceptedFrame: CGRect? {
     get { lock.withLock { accepted } }
@@ -111,7 +104,6 @@ struct AnimationFrameRequest: Sendable {
   let windowID: CGWindowID
   let generation: AnimationGeneration
   let sequence: UInt64
-  /// Nil requests a fresh frame after previously started work has settled.
   let target: CGRect?
   let final: Bool
   let backend: AnimationFrameBackend
@@ -227,13 +219,11 @@ private final class AnimationAppLane: @unchecked Sendable {
     request.generation.isValid && lock.withLock { isLatest(request) }
   }
 
-  /// Return whether a request is still the newest submission for its window. Hold `lock`.
   private func isLatest(_ request: AnimationFrameRequest) -> Bool {
     latest[request.windowID]?.0 === request.generation
       && latest[request.windowID]?.1 == request.sequence
   }
 
-  /// Schedule readback without holding the app's AX lane or its enhanced-UI workaround open.
   private func settle(_ item: Pending, phase: Pending.Phase) {
     let token = UUID()
     var verification = item
@@ -315,7 +305,6 @@ private final class AnimationAppLane: @unchecked Sendable {
   }
 }
 
-/// AX handles are immutable references; only a single app lane operates on these handles.
 private final class AnimationAXHandles: @unchecked Sendable {
   private let window: AXUIElement
   private let application: AXUIElement

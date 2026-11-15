@@ -1,8 +1,6 @@
 import Foundation
 
-/// A user-registered command to run when a matching runtime event is emitted.
 struct Signal: Equatable, Sendable {
-  /// Create a signal from command-line `key=value` arguments.
   static func parseAdd(arguments: [String]) throws -> Signal {
     var event: SignalEvent?
     var action: String?
@@ -94,25 +92,18 @@ struct Signal: Equatable, Sendable {
     }
   }
 
-  /// Optional unique user label.
   let label: String?
 
-  /// Event name matched by this signal.
   let event: SignalEvent
 
-  /// Shell command executed for matching events.
   let action: String
 
-  /// Optional application-name filter.
   let appFilter: TextFilter?
 
-  /// Optional window-title filter.
   let titleFilter: TextFilter?
 
-  /// Optional active/current-state filter.
   let active: Bool?
 
-  /// Return whether this signal should run for the payload.
   func matches(_ payload: SignalPayload) -> Bool {
     guard event == payload.event else { return false }
 

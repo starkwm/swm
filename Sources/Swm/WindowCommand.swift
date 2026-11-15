@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Focus, move, resize, arrange windows, and position the mouse cursor.
 struct WindowCommand: ParsableCommand {
   struct Focus: WindowIPCCommand {
     static let configuration = CommandConfiguration(
@@ -118,7 +117,6 @@ struct WindowCommand: ParsableCommand {
     static let command = "--move"
     static let valueOptions: Set<String> = ["--window", "--display", "--space"]
 
-    /// The single way a move was requested.
     enum Mode {
       case coordinates(x: Int, y: Int)
       case display(WindowTransferTarget)
@@ -151,7 +149,6 @@ struct WindowCommand: ParsableCommand {
     )
     var space: WindowTransferTarget?
 
-    /// The requested mode, or nil when modes conflict or coordinates are incomplete.
     var mode: Mode? {
       switch (x, y, display, space) {
       case (let x?, let y?, nil, nil): .coordinates(x: x, y: y)
@@ -383,7 +380,6 @@ struct WindowCommand: ParsableCommand {
   )
 }
 
-/// Optional window selector for commands that default to the focused window.
 struct WindowSelector: ParsableArguments {
   @Option(
     name: .long,
@@ -392,11 +388,9 @@ struct WindowSelector: ParsableArguments {
   )
   var window: String?
 
-  /// IPC arguments selecting the window, or none for the focused window.
   var arguments: [String] { window.map { [$0] } ?? [] }
 }
 
-/// A specific window or the previously focused window.
 struct WindowIdentityTarget: ExpressibleByArgument {
   let value: String
 
@@ -406,7 +400,6 @@ struct WindowIdentityTarget: ExpressibleByArgument {
   }
 }
 
-/// Window to focus, relative to the focused window or by identity.
 enum FocusTarget: Equatable, ExpressibleByArgument {
   case direction(CardinalDirection)
   case order(CycleDirection)
@@ -428,7 +421,6 @@ enum FocusTarget: Equatable, ExpressibleByArgument {
   }
 }
 
-/// Window to swap the selected window with.
 enum SwapTarget: Equatable, ExpressibleByArgument {
   case direction(CardinalDirection)
   case order(CycleDirection)
@@ -456,7 +448,6 @@ enum WindowFloatState: String, CaseIterable, ExpressibleByArgument {
   }
 }
 
-/// A cursor destination without focus-only navigation targets.
 struct WarpTarget: ExpressibleByArgument {
   let value: String
 
@@ -469,7 +460,6 @@ struct WarpTarget: ExpressibleByArgument {
   }
 }
 
-/// Shared destination syntax for window transfers; resolution stays in the daemon.
 struct WindowTransferTarget: ExpressibleByArgument {
   static let keywords = ["next", "prev"]
 

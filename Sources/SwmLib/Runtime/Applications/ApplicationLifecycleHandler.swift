@@ -1,22 +1,15 @@
-/// Handles application lifecycle events and starts or stops application/window management.
 @MainActor
 struct ApplicationLifecycleHandler {
-  /// Workspace bridge used for AppKit readiness and observability checks.
   let workspace: Workspace
 
-  /// Process service used to retry launch handling.
   let processes: Processes
 
-  /// Window service updated by application lifecycle changes.
   let windows: Windows
 
-  /// Tiling coordinator reconciled after application inventory changes.
   let tiling: Tiling
 
-  /// Queue a follow-up runtime event.
   var postEvent: (RuntimeEvent) -> Void = { Events.shared.post($0) }
 
-  /// Handle one application lifecycle event.
   func handle(_ event: ApplicationEvent) {
     switch event {
     case .launched(let process):
@@ -28,7 +21,6 @@ struct ApplicationLifecycleHandler {
     }
   }
 
-  /// Make a launched process observable and discover its windows.
   private func applicationLaunched(for process: Process) {
     if process.terminated {
       windows.removeLostFrontSwitchedEvent(for: process.pid)
@@ -47,7 +39,6 @@ struct ApplicationLifecycleHandler {
     if !workspace.isFinishedLaunching(process) {
       log("application has not finished launching \(process)")
       guard workspace.observeUntilFinishedLaunching(process) else {
-        // Without an AppKit application there is nothing to observe, so look it up again later.
         if process.application == nil { retry() }
         return
       }
@@ -83,7 +74,6 @@ struct ApplicationLifecycleHandler {
     log("application launched \(application)")
   }
 
-  /// Stop observing a terminated application and remove its windows.
   private func applicationTerminated(for process: Process) {
     windows.cancelDiscoveryRetry(for: process)
     workspace.unobserveActivationPolicy(process)
@@ -113,7 +103,6 @@ struct ApplicationLifecycleHandler {
     application.unobserve()
   }
 
-  /// Refresh windows and publish focused-window events after a frontmost app switch.
   private func applicationFrontSwitched(for process: Process) {
     guard let application = windows.application(by: process.pid) else {
       windows.addLostFrontSwitchedEvent(for: process.pid)
@@ -134,7 +123,6 @@ struct ApplicationLifecycleHandler {
     )
   }
 
-  /// Emit an application lifecycle signal after the model state changes.
   private func emitApplicationSignal(_ event: SignalEvent, application: Application) {
     Signals.shared.emit(
       .application(

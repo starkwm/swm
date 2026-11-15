@@ -1,13 +1,9 @@
-/// Handles IPC commands that register, remove, clear, and list runtime signals.
 @MainActor
 struct SignalCommandHandler {
-  /// Live signal registry.
   var signals = Signals.shared
 
-  /// Open configuration reload whose tagged requests change staged signals.
   var reload: ConfigReload?
 
-  /// Dispatch a signal IPC request.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       let staging = reload?.staging(for: request)

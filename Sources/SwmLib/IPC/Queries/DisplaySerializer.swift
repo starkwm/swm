@@ -1,8 +1,6 @@
 import AppKit
 
-/// Display state returned by query commands.
 struct DisplaySerializer: Encodable, Equatable {
-  /// JSON keys used for display query output.
   enum CodingKeys: String, CodingKey {
     case id
     case uuid
@@ -12,10 +10,8 @@ struct DisplaySerializer: Encodable, Equatable {
     case hasFocus = "has-focus"
   }
 
-  /// Snapshot all displays and their associated space indexes.
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [DisplaySerializer] {
-    // Identifiers that differ only by case name the same display, so their Spaces merge.
     let displaySpaces = Dictionary(
       snapshot.displaySpaces.map { ($0.key.lowercased(), $0.value) },
       uniquingKeysWith: +
@@ -25,8 +21,6 @@ struct DisplaySerializer: Encodable, Equatable {
       .map { (index: $0.offset + 1, id: $0.element.id) }
 
     return snapshot.arrangedScreens.enumerated().map { index, screen in
-      // Without separate Spaces, every screen belongs to WindowServer's Main group.
-      // Keep screens visible even while their Spaces are unavailable.
       let spaces = displaySpaces[screen.uuid.lowercased()] ?? displaySpaces["main"] ?? []
 
       return DisplaySerializer(
@@ -42,25 +36,18 @@ struct DisplaySerializer: Encodable, Equatable {
     }
   }
 
-  /// Core Graphics display ID when available.
   let id: UInt32?
 
-  /// Stable display UUID when available.
   let uuid: String?
 
-  /// One-based display index in physical arrangement order.
   let index: Int
 
-  /// Display frame in global screen coordinates.
   let frame: FrameSerializer
 
-  /// One-based indexes of Spaces on this display.
   let spaces: [Int]
 
-  /// Whether this display owns the active space.
   let hasFocus: Bool
 
-  /// Encode display state using stable query output keys.
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encodeNilOrValue(id, forKey: .id)

@@ -1,18 +1,15 @@
 import AppKit
 
-/// Handles display IPC commands.
 @MainActor
 struct DisplayCommandHandler {
   private let windows: Windows
   private let displays: Displays
 
-  /// Create a display command handler backed by window and display services.
   init(windows: Windows, displays: Displays) {
     self.windows = windows
     self.displays = displays
   }
 
-  /// Dispatch a display IPC request.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       switch request.command {
@@ -24,7 +21,6 @@ struct DisplayCommandHandler {
     }
   }
 
-  /// Focus the frontmost window on a display, or the display's desktop when it has none.
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "display focus").requiredValue()
     guard let target = DisplayTarget(argument: argument) else {
@@ -61,7 +57,6 @@ struct DisplayCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Return the display of the focused window, or of the active Space without one.
   private func currentDisplayID() -> String? {
     if let window = windows.currentFocusedWindowID.flatMap(windows.window(by:)),
       let frame = window.frame(),
@@ -73,7 +68,6 @@ struct DisplayCommandHandler {
     return Spaces.active().flatMap(Spaces.display(for:))
   }
 
-  /// Return the frontmost managed, visible window on a display.
   private func frontmostWindow(on screen: NSScreen) -> Window? {
     WindowServerClient.shared.onScreenWindowIDs()
       .lazy

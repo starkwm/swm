@@ -2,10 +2,8 @@ import AppKit
 import CoreGraphics
 import StarkSkyLight
 
-/// Owns active Space state, per-Space settings, and runtime topology observations.
 @MainActor
 public final class Spaces {
-  /// Return the spaces in a topology snapshot in WindowServer order.
   static func all(
     in snapshot: SpaceSnapshot? = WindowServerClient.shared.spaceSnapshotIfAvailable()
   ) -> [Space] {
@@ -16,19 +14,14 @@ public final class Spaces {
     }
   }
 
-  /// Return the currently active WindowServer space, or nil when it cannot be read.
   static func active() -> Space? {
     WindowServerClient.shared.activeSpace().map(Space.init(id:))
   }
 
-  /// Return the display UUID for a space.
   static func display(for space: Space) -> String? {
     WindowServerClient.shared.screenID(for: space.id)
   }
 
-  /// Index display geometry by UUID, keeping the first display when UUIDs repeat.
-  ///
-  /// Every screen whose UUID cannot be read reports the same empty UUID.
   static func topologyDisplays(
     _ displays: [(uuid: String, visibleFrame: CGRect)]
   ) -> [String: SpaceTopologyDisplay] {
@@ -38,12 +31,10 @@ public final class Spaces {
     )
   }
 
-  /// ID of the currently active space.
   var currentActiveSpaceID: UInt64? {
     activeSpace.current
   }
 
-  /// ID of the previously active space.
   var lastActiveSpaceID: UInt64? {
     activeSpace.last
   }
@@ -53,36 +44,30 @@ public final class Spaces {
   private var settingsBySpaceID = [UInt64: SpaceSettings]()
   private let activeSpaceProvider: () -> UInt64?
 
-  /// Create a Space service seeded from the active space.
   public convenience init() throws {
     _ = try WindowServerClient.spaceClient.get()
     let provider = { WindowServerClient.shared.activeSpace() }
     self.init(activeSpaceID: provider(), activeSpaceProvider: provider)
   }
 
-  /// Create a Space service with an explicit active space ID and active-Space lookup.
   init(activeSpaceID: UInt64?, activeSpaceProvider: @escaping () -> UInt64? = { nil }) {
     activeSpace = TrackedState(current: activeSpaceID)
     self.activeSpaceProvider = activeSpaceProvider
   }
 
-  /// Update tracked space state after the active space changes.
   func activeSpaceDidChange(to spaceID: UInt64) {
     activeSpace.update(to: spaceID)
   }
 
-  /// Forget the tracked active space after a Space change whose target could not be read.
   func activeSpaceBecameUnavailable() {
     activeSpace.invalidate()
   }
 
-  /// Adopt an observed active space when the tracked one is unknown.
   func restoreActiveSpace(_ spaceID: UInt64) {
     guard activeSpace.current == nil else { return }
     activeSpace.update(to: spaceID)
   }
 
-  /// Return the tracked active space, reading it again when it is unknown.
   func resolveActiveSpaceID() -> UInt64? {
     if let id = activeSpace.current { return id }
     guard let id = activeSpaceProvider() else { return nil }
@@ -91,16 +76,10 @@ public final class Spaces {
     return id
   }
 
-  /// Return layout settings for a space, falling back to defaults.
   func settings(for spaceID: UInt64) -> SpaceSettings {
     settingsBySpaceID[spaceID] ?? defaultSettings
   }
 
-  /// Capture the Space facts needed by one tiling reconciliation.
-  ///
-  /// A failed snapshot makes the whole topology unavailable. A failed membership read affects
-  /// only its own window, which is reported on no Space, so one bad window cannot suspend
-  /// tiling everywhere.
   func snapshotTopology(
     for windowIDs: [CGWindowID],
     snapshot: () throws -> SpaceSnapshot = { try WindowServerClient.shared.spaceSnapshot() },
@@ -149,7 +128,6 @@ public final class Spaces {
     }
   }
 
-  /// Apply a global configuration change to defaults and existing overrides.
   func updateAllSettings(_ transform: (inout SpaceSettings) throws -> Void) rethrows {
     try transform(&defaultSettings)
 
@@ -160,23 +138,19 @@ public final class Spaces {
     }
   }
 
-  /// Capture the defaults and every Space's settings.
   func settingsSnapshot() -> SpaceSettingsSnapshot {
     SpaceSettingsSnapshot(defaults: defaultSettings, bySpaceID: settingsBySpaceID)
   }
 
-  /// Restore settings captured by `settingsSnapshot()`.
   func restoreSettings(_ snapshot: SpaceSettingsSnapshot) {
     defaultSettings = snapshot.defaults
     settingsBySpaceID = snapshot.bySpaceID
   }
 
-  /// Discard overrides for spaces that no longer exist.
   func retainSettings(for spaceIDs: Set<UInt64>) {
     settingsBySpaceID = settingsBySpaceID.filter { spaceIDs.contains($0.key) }
   }
 
-  /// Replace padding for a space, clamping each side to zero or greater.
   @discardableResult
   func setPadding(_ padding: SpacePadding, for spaceID: UInt64) -> SpaceSettings {
     update(spaceID) { settings in
@@ -184,7 +158,6 @@ public final class Spaces {
     }
   }
 
-  /// Replace the window gap for a space, clamping it to zero or greater.
   @discardableResult
   func setGap(_ gap: Int, for spaceID: UInt64) -> SpaceSettings {
     update(spaceID) { settings in
@@ -192,7 +165,6 @@ public final class Spaces {
     }
   }
 
-  /// Update stored settings for a space.
   private func update(
     _ spaceID: UInt64,
     transform: (inout SpaceSettings) throws -> Void

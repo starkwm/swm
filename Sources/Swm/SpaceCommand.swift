@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Activate a desktop Space.
 struct SpaceCommand: ParsableCommand {
   struct Activate: SpaceIPCCommand {
     static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")

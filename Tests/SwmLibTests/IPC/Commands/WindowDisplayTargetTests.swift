@@ -38,8 +38,6 @@ struct WindowDisplayTargetTests {
   }
 }
 
-// A bare NSScreen can expose a display ID without a WindowServer UUID.
-// Empty device metadata keeps these fixtures independent of connected displays.
 private final class TargetTestScreen: NSScreen {
   override var deviceDescription: [NSDeviceDescriptionKey: Any] { [:] }
 }

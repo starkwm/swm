@@ -1,7 +1,6 @@
 import ApplicationServices
 
 extension AXError {
-  /// Stable diagnostic name and raw value returned by the accessibility API.
   var diagnosticDescription: String {
     let name: String
     switch self {

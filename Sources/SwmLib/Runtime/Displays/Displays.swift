@@ -13,27 +13,22 @@ private func displayReconfigurationCallback(
   }
 }
 
-/// Tracks the current and previous active display.
 @MainActor
 public final class Displays {
-  /// Display ID for the currently active display.
   var currentActiveDisplayID: String? {
     activeDisplay.current
   }
 
-  /// Display ID for the previously active display.
   var lastActiveDisplayID: String? {
     activeDisplay.last
   }
 
   private(set) var activeDisplay: TrackedState<String>
 
-  /// Create a display observation seeded from the active space.
   public init() {
     activeDisplay = TrackedState(current: Spaces.active().flatMap(Spaces.display(for:)))
   }
 
-  /// Start observing CoreGraphics display reconfiguration callbacks.
   public func observe() -> Result<Void, DisplaysError> {
     let result = CGDisplayRegisterReconfigurationCallback(
       displayReconfigurationCallback,
@@ -44,13 +39,11 @@ public final class Displays {
       ? .success(()) : .failure(.accessFailed("failed to register display callback: \(result)"))
   }
 
-  /// Update tracked display state after the active space changes.
   func activeDisplayDidChange() {
     guard let activeDisplayID = Spaces.active().flatMap(Spaces.display(for:)) else { return }
     activeDisplay.update(to: activeDisplayID)
   }
 
-  /// Publish display events for CoreGraphics reconfiguration flags.
   func displayReconfiguration(
     displayID: CGDirectDisplayID,
     flags: CGDisplayChangeSummaryFlags
@@ -73,12 +66,9 @@ public final class Displays {
   }
 }
 
-/// Errors raised while starting display observation.
 public enum DisplaysError: Error, CustomStringConvertible {
-  /// Display observation could not be started or accessed.
   case accessFailed(String)
 
-  /// Human-readable display observation failure description.
   public var description: String {
     switch self {
     case .accessFailed(let message):

@@ -8,7 +8,6 @@ func encodedObject<T: Encodable>(_ value: T) throws -> [String: Any] {
   return try #require(object as? [String: Any])
 }
 
-/// Screen geometry independent of the test host's connected displays.
 final class QueryTestScreen: NSScreen {
   override var deviceDescription: [NSDeviceDescriptionKey: Any] { [:] }
 

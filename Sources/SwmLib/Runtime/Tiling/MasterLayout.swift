@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Pure ordered master layout geometry calculator.
 struct MasterLayout {
-  /// Calculate master layout frames, or nil when the bounds cannot fit every window.
   func layout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
@@ -14,7 +12,6 @@ struct MasterLayout {
     guard let usableBounds = settings.usableTilingBounds(in: bounds) else { return nil }
     guard windowIDs.count > 1 else { return [windowIDs[0]: usableBounds] }
 
-    // Rows are laid out as columns in transposed space, then transposed back.
     let transposed = placement == .top || placement == .bottom
     return stackLayout(
       windowIDs: windowIDs,
@@ -26,10 +23,6 @@ struct MasterLayout {
     )
   }
 
-  /// Arrange a master column and a vertical stack beside it.
-  ///
-  /// With `transposed`, the bounds are a master row and horizontal stack with their axes
-  /// swapped, and the frames are swapped back.
   private func stackLayout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,
@@ -74,7 +67,6 @@ struct MasterLayout {
     return transposed ? frames.mapValues(\.transposed) : frames
   }
 
-  /// Return rounded partition lengths whose total plus gaps exactly fills the input length.
   private func partitions(
     length: CGFloat,
     count: Int,
@@ -97,7 +89,6 @@ struct MasterLayout {
 }
 
 extension CGRect {
-  /// The rectangle with its x and y axes swapped.
   fileprivate var transposed: CGRect {
     CGRect(x: minY, y: minX, width: height, height: width)
   }

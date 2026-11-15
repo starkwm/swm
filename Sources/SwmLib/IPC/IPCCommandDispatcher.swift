@@ -1,4 +1,3 @@
-/// Routes IPC requests to the command handler for their domain.
 @MainActor
 struct IPCCommandDispatcher {
   private let windows: Windows
@@ -7,7 +6,6 @@ struct IPCCommandDispatcher {
   private let tiling: Tiling
   private let reload: ConfigReload
 
-  /// Create a dispatcher backed by explicit window, Space, and display services.
   init(
     windows: Windows,
     spaces: Spaces,
@@ -21,7 +19,6 @@ struct IPCCommandDispatcher {
     self.reload = ConfigReload(tiling: tiling, spaces: spaces, windows: windows)
   }
 
-  /// Dispatch a request to its domain-specific command handler.
   func dispatch(_ request: IPCRequest) async -> IPCResponse {
     switch request.domain {
     case .query:
@@ -62,7 +59,6 @@ struct IPCCommandDispatcher {
     }
   }
 
-  /// Refresh runtime state even when a bridge activation produces no workspace notification.
   private func activateSpace(index: Int) async throws {
     let snapshot = try await SpaceActivation.shared.activate(index: index)
     if let focusedID = snapshot.activeSpaceID,

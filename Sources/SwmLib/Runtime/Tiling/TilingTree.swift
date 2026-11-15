@@ -1,25 +1,16 @@
 import CoreGraphics
 
-/// Persistent binary relationships and stable order for tiled windows.
 indirect enum TilingTree: Equatable {
-  /// A tiled window.
   case leaf(CGWindowID)
 
-  /// Two sibling subtrees sharing one layout region.
   case branch(TilingTree, TilingTree, split: TilingSplit = .equal)
 
-  /// A subtree to update, found by a window's leaf.
   private enum Match {
-    /// The window's leaf.
     case leaf(CGWindowID)
 
-    /// The window's nearest split once hidden leaves are removed: a branch where one side holds
-    /// only the window's leaf and the other side holds a visible window.
     case parent(of: CGWindowID, hiding: Set<CGWindowID>)
   }
 
-  /// Whether a branch's sides hold only a window's leaf and another visible window once hidden
-  /// leaves are removed.
   private static func isParent(
     of windowID: CGWindowID,
     first: TilingTree,
@@ -32,7 +23,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Window IDs in stable tree order.
   var windowIDs: [CGWindowID] {
     switch self {
     case .leaf(let windowID):
@@ -42,9 +32,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Insert a new sibling beside the focused leaf, or the final leaf as fallback.
-  ///
-  /// The new branch assigns `ratio` of its region to the existing leaf.
   mutating func insert(
     _ windowID: CGWindowID,
     beside focusedWindowID: CGWindowID?,
@@ -62,7 +49,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Return a copy with omitted leaves removed and unary branches collapsed.
   func removing(_ windowIDs: Set<CGWindowID>) -> TilingTree? {
     switch self {
     case .leaf(let windowID):
@@ -79,7 +65,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Swap two window leaves while retaining branch geometry.
   mutating func swap(_ firstWindowID: CGWindowID, with secondWindowID: CGWindowID) -> Bool {
     let windowIDs = windowIDs
     guard firstWindowID != secondWindowID else { return windowIDs.contains(firstWindowID) }
@@ -91,7 +76,6 @@ indirect enum TilingTree: Equatable {
     return true
   }
 
-  /// Change the nearest visible parent split for a window leaf.
   @discardableResult
   mutating func changeSplitRatio(
     _ change: LayoutRatioChange,
@@ -100,7 +84,6 @@ indirect enum TilingTree: Equatable {
   ) -> CGFloat? {
     updateFirst(.parent(of: windowID, hiding: hiddenWindowIDs)) { tree in
       guard case .branch(let first, let second, var split) = tree else { return nil }
-      // The ratio is the first subtree's share, so a second-side window adjusts its complement.
       let isFirst = first.windowIDs.contains(windowID)
       let selectedRatio = change.applying(to: isFirst ? split.ratio : 1 - split.ratio)
       split.ratio = isFirst ? selectedRatio : 1 - selectedRatio
@@ -109,7 +92,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Toggle the nearest resolved visible parent split containing a window leaf.
   mutating func toggleSplitDirection(
     containing windowID: CGWindowID,
     hiding hiddenWindowIDs: Set<CGWindowID> = []
@@ -124,7 +106,6 @@ indirect enum TilingTree: Equatable {
     } ?? false
   }
 
-  /// Exchange the two subtrees of the nearest visible parent containing a window leaf.
   mutating func swapSplit(
     containing windowID: CGWindowID,
     hiding hiddenWindowIDs: Set<CGWindowID> = []
@@ -136,7 +117,6 @@ indirect enum TilingTree: Equatable {
     } ?? false
   }
 
-  /// Return a copy whose branches dynamically resolve their split directions.
   func clearingSplitDirections() -> TilingTree {
     switch self {
     case .leaf:
@@ -151,7 +131,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Return a copy with every branch ratio replaced, keeping retained split directions.
   func settingSplitRatios(_ ratio: CGFloat) -> TilingTree {
     switch self {
     case .leaf:
@@ -166,13 +145,11 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Whether this subtree is the one `match` describes.
   private func matches(_ match: Match) -> Bool {
     switch (match, self) {
     case (.leaf(let windowID), .leaf(let candidate)):
       candidate == windowID
     case (.parent(let windowID, let hiddenWindowIDs), .branch(let first, let second, _)):
-      // A hidden window has no visible split, so it keeps its full-tree parent.
       Self.isParent(
         of: windowID,
         first: first,
@@ -184,11 +161,6 @@ indirect enum TilingTree: Equatable {
     }
   }
 
-  /// Apply `body` to the first subtree in tree order that `match` describes, rebuilding the path
-  /// to it.
-  ///
-  /// Returns `body`'s result, or nil when no subtree matches. Only the first match is offered,
-  /// so `body` returns nil to leave the tree unchanged.
   @discardableResult
   private mutating func updateFirst<Result>(
     _ match: Match,
@@ -208,7 +180,6 @@ indirect enum TilingTree: Equatable {
     return nil
   }
 
-  /// Return a copy with two leaf identifiers exchanged.
   private func swappingWindows(
     _ firstWindowID: CGWindowID,
     _ secondWindowID: CGWindowID
@@ -232,23 +203,16 @@ indirect enum TilingTree: Equatable {
   }
 }
 
-/// Geometry retained for one dwindle branch.
 struct TilingSplit: Equatable {
-  /// Default equal split with direction selected from current bounds.
   static let equal = TilingSplit(ratio: 0.5, direction: nil)
 
-  /// Fraction assigned to the first subtree.
   var ratio: CGFloat
 
-  /// Fixed split direction, or nil to follow the current longest edge.
   var direction: TilingSplitDirection?
 }
 
-/// Direction in which a dwindle branch divides its bounds.
 enum TilingSplitDirection: Equatable {
-  /// Divide the bounds into leading and trailing columns.
   case vertical
 
-  /// Divide the bounds into upper and lower rows.
   case horizontal
 }

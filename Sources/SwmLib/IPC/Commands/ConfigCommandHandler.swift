@@ -1,4 +1,3 @@
-/// Handles IPC commands that update global configuration for every known space.
 @MainActor
 struct ConfigCommandHandler {
   private let windows: Windows
@@ -6,14 +5,12 @@ struct ConfigCommandHandler {
   private let tiling: Tiling
   private let arguments = SettingArguments(scope: "config")
 
-  /// Create a config command handler backed by window, Space, and tiling services.
   init(windows: Windows, spaces: Spaces, tiling: Tiling) {
     self.windows = windows
     self.spaces = spaces
     self.tiling = tiling
   }
 
-  /// Dispatch a config IPC request to the matching setting update.
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       if request.args.isEmpty, let value = currentValue(of: request.command) {
@@ -47,7 +44,6 @@ struct ConfigCommandHandler {
     }
   }
 
-  /// The current global value of a setting, in the form its command accepts.
   private func currentValue(of setting: String) -> String? {
     switch setting {
     case "animation-easing": tiling.animationEasing.rawValue
@@ -73,7 +69,6 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: easing.rawValue)
   }
 
-  /// Configure window animations.
   private func animationDuration(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(
       request.args,
@@ -86,7 +81,6 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Select how pointer movement focuses managed windows.
   private func focusFollowsMouse(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(
       request.args,
@@ -102,7 +96,6 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: mode.rawValue)
   }
 
-  /// Set or adjust the global master pane ratio, and apply it to every current and future Space.
   private func masterRatio(_ request: IPCRequest) throws -> IPCResponse {
     tiling.changeMasterRatioForAllSpaces(
       try arguments.ratioChange(request.args, setting: "master-ratio")
@@ -110,7 +103,6 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or cycle the global master pane edge, and apply it to every current and future Space.
   private func masterPlacement(_ request: IPCRequest) throws -> IPCResponse {
     let placement =
       switch try arguments.masterPlacement(request.args) {
@@ -121,7 +113,6 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: placement.rawValue)
   }
 
-  /// Set or adjust the global dwindle split ratio, and apply it to every current and future Space.
   private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
     tiling.changeSplitRatioForAllSpaces(
       try arguments.ratioChange(request.args, setting: "split-ratio")
@@ -129,14 +120,12 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set retained dwindle split directions for every current and future Space.
   private func preserveSplitDirections(_ request: IPCRequest) throws -> IPCResponse {
     let enabled = try arguments.preserveSplit(request.args)
     tiling.setSplitDirectionPreservationForAllSpaces(enabled)
     return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
-  /// Select floating or automatic layout for every Space.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try arguments.layout(request.args)
     tiling.setLayoutForSpaces(selection)
@@ -144,7 +133,6 @@ struct ConfigCommandHandler {
     return .success(id: request.id, message: selection.rawValue)
   }
 
-  /// Set or adjust the global window gap, and apply it to every known space.
   private func gap(_ request: IPCRequest) throws -> IPCResponse {
     let gap = try arguments.gap(request.args, current: spaces.defaultSettings.gap)
     spaces.updateAllSettings { settings in
@@ -155,7 +143,6 @@ struct ConfigCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or adjust global padding sides, and apply the changed sides to every known space.
   private func padding(_ request: IPCRequest) throws -> IPCResponse {
     let changes = try arguments.paddingChanges(request.args)
     let padding = try PaddingSideChange.applying(

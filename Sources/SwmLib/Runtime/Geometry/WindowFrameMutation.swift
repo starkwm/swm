@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Applies a frame change with best-effort rollback for partial failures.
 enum WindowFrameMutation {
-  /// Optionally move before growing, rolling back the first component if the second fails.
   static func apply(
     from currentFrame: CGRect,
     to targetFrame: CGRect,
@@ -35,20 +33,14 @@ enum WindowFrameMutation {
   }
 }
 
-/// Result of applying a window frame through separate accessibility mutations.
 enum WindowFrameMutationResult: Equatable {
-  /// Requested size and position changes completed.
   case success
 
-  /// Resizing failed with no remaining partial position change.
   case resizeFailed
 
-  /// Resizing and the best-effort position rollback both failed.
   case resizeFailedAndRollbackFailed
 
-  /// Moving failed with no remaining partial size change.
   case moveFailed
 
-  /// Moving and the best-effort size rollback both failed.
   case moveFailedAndRollbackFailed
 }

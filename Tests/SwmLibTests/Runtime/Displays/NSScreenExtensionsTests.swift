@@ -12,7 +12,6 @@ struct NSScreenExtensionsTests {
   }
 }
 
-/// Screen whose display ID has no Core Graphics display, as during a disconnect.
 private final class DisconnectedTestScreen: NSScreen {
   override var deviceDescription: [NSDeviceDescriptionKey: Any] {
     [NSDeviceDescriptionKey("NSScreenNumber"): NSNumber(value: UInt32(0xffff_fff0))]

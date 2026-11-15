@@ -1,5 +1,4 @@
 extension Array {
-  /// Return the position named by a one-based index or, for non-numeric selectors, a label.
   func index(selector: String, label: (Element) -> String?) -> Int? {
     if let number = Int(selector) {
       return number > 0 && indices.contains(number - 1) ? number - 1 : nil
@@ -7,7 +6,6 @@ extension Array {
     return firstIndex { label($0) == selector }
   }
 
-  /// Append an element unless another element already has its label.
   mutating func appendUniquelyLabeled(
     _ element: Element,
     kind: String,
@@ -19,7 +17,6 @@ extension Array {
     append(element)
   }
 
-  /// Remove the element named by a one-based index or label.
   mutating func remove(selector: String, kind: String, label: (Element) -> String?) throws {
     guard let index = index(selector: selector, label: label) else {
       throw IPCCommandError.invalidRequest("\(kind) not found: \(selector)")

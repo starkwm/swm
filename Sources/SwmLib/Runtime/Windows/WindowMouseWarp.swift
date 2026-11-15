@@ -1,6 +1,5 @@
 import AppKit
 
-/// Moves the cursor into an on-screen window without posting a mouse event.
 @MainActor
 struct WindowMouseWarp {
   static let shared = WindowMouseWarp()
@@ -31,7 +30,6 @@ struct WindowMouseWarp {
     self.cursorWindowID = cursorWindowID
   }
 
-  /// Start cursor navigation from the managed window beneath it, falling back to focus.
   func sourceWindow(
     windowByID: (CGWindowID) -> Window?,
     focusedWindow: () throws -> Window
@@ -46,7 +44,6 @@ struct WindowMouseWarp {
     return try focusedWindow()
   }
 
-  /// Reject unavailable destinations before moving the cursor.
   func warp(windowID: CGWindowID, frame: CGRect?) throws {
     guard isOnScreen(windowID) else {
       throw IPCCommandError.invalidRequest("window is not on screen: \(windowID)")

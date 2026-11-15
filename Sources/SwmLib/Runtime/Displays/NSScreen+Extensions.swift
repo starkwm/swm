@@ -1,7 +1,6 @@
 import AppKit
 
 extension NSScreen {
-  /// Screens sorted by their physical arrangement.
   static var arrangedScreens: [NSScreen] {
     screens.sorted { lhs, rhs in
       if lhs.frame.minX != rhs.frame.minX {
@@ -12,25 +11,19 @@ extension NSScreen {
     }
   }
 
-  /// Return the screen with the given Core Graphics display UUID.
   static func screen(for uuid: String?) -> NSScreen? {
     screens.first { $0.uuid == uuid }
   }
 
-  /// Return the screen whose accessibility-visible frame overlaps a frame the most.
   static func screen(containingLargestIntersectionWith frame: CGRect) -> NSScreen? {
     screens.largestIntersection(with: frame, frame: \.axVisibleFrame)
   }
 
-  /// Core Graphics display ID for this screen.
   var id: UInt32? {
     let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
     return number?.uint32Value
   }
 
-  /// Core Graphics display UUID string for this screen, or an empty string when unavailable.
-  ///
-  /// Core Graphics has no UUID for a display that is being disconnected.
   var uuid: String {
     guard let id, let uuid = CGDisplayCreateUUIDFromDisplayID(id)?.takeRetainedValue() else {
       return ""
@@ -39,15 +32,10 @@ extension NSScreen {
     return (CFUUIDCreateString(nil, uuid) as String?) ?? ""
   }
 
-  /// Full frame converted to the coordinate space used by accessibility APIs.
   var axFrame: CGRect {
     accessibilityFrame(for: frame)
   }
 
-  /// Visible frame converted to the coordinate space used by accessibility APIs.
-  ///
-  /// An automatically hidden Dock does not reduce the visible frame, so layouts stay the
-  /// same whether or not the Dock is showing when they are made.
   var axVisibleFrame: CGRect {
     accessibilityFrame(
       for: ScreenGeometry.visibleFrame(
@@ -58,7 +46,6 @@ extension NSScreen {
     )
   }
 
-  /// Convert an AppKit screen frame to the coordinate space used by accessibility APIs.
   private func accessibilityFrame(for frame: CGRect) -> CGRect {
     guard let primaryFrame = NSScreen.screens.first?.frame else {
       return frame

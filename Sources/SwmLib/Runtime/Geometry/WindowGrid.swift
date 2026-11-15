@@ -1,6 +1,5 @@
 import CoreGraphics
 
-/// Grid placement for resizing a window within visible screen bounds.
 struct WindowGrid: Equatable {
   private let rows: Int
   private let columns: Int
@@ -9,7 +8,6 @@ struct WindowGrid: Equatable {
   private let width: Int
   private let height: Int
 
-  /// Create a clamped grid placement.
   init?(
     rows: Int,
     columns: Int,
@@ -33,7 +31,6 @@ struct WindowGrid: Equatable {
     self.height = height
   }
 
-  /// Calculate the target frame inside screen bounds using space padding and gap settings.
   func frame(in bounds: CGRect, settings: SpaceSettings) -> CGRect? {
     guard bounds.isFiniteAndNonEmpty else { return nil }
 
@@ -72,7 +69,6 @@ struct WindowGrid: Equatable {
 }
 
 extension WindowGrid {
-  /// Parse a grid placement in `columns:rows:x:y:width:height` format.
   init?(argument: String) {
     let parts = argument.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
 

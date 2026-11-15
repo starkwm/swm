@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Focus displays.
 struct DisplayCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "display",
@@ -36,7 +35,6 @@ struct DisplayCommand: ParsableCommand {
   }
 }
 
-/// Display selector accepted by `swm display focus`.
 struct DisplayFocusTarget: ExpressibleByArgument {
   static let keywords = [
     "next", "prev", "first", "last", "recent", "mouse", "left", "right", "up", "down",

@@ -1,8 +1,6 @@
 import AppKit
 
-/// Space state returned by query commands.
 struct SpaceSerializer: Encodable, Equatable {
-  /// JSON keys used for space query output.
   enum CodingKeys: String, CodingKey {
     case id
     case index
@@ -14,7 +12,6 @@ struct SpaceSerializer: Encodable, Equatable {
     case isNativeFullscreen = "is-native-fullscreen"
   }
 
-  /// Snapshot all spaces, including their display and window relationships.
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [SpaceSerializer] {
     var screenIDsBySpaceID = [UInt64: [String]]()
@@ -63,27 +60,19 @@ struct SpaceSerializer: Encodable, Equatable {
     }
   }
 
-  /// WindowServer space ID.
   let id: UInt64
 
-  /// One-based Space index in the current Space order.
   let index: Int
 
-  /// Human-readable space type.
   let type: String
 
-  /// Core Graphics display IDs associated with this space.
   let displays: [UInt32]
 
-  /// Window IDs currently associated with this space.
   let windows: [UInt32]
 
-  /// Whether this space is the active space.
   let hasFocus: Bool
 
-  /// Whether this space is currently visible on its display.
   let isVisible: Bool
 
-  /// Whether this space is a native fullscreen space.
   let isNativeFullscreen: Bool
 }

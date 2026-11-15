@@ -70,7 +70,6 @@ struct WindowLifecycleHandlerTests {
     #expect(!tiling.isWindowTiled(1))
     #expect(snapshots == before + 1)
 
-    // A repeated notification for the invalidated window is ignored.
     handler.handle(.destroyed(destroyed))
     #expect(snapshots == before + 1)
   }
@@ -112,7 +111,6 @@ struct WindowLifecycleHandlerTests {
     #expect(tiling.layoutPlan(for: layoutID(10))?.keys.sorted() == [1, 2])
   }
 
-  /// Return windows that already manage the given IDs without an owning application.
   private func windowsManaging(_ ids: [CGWindowID]) -> Windows {
     let process = SwmLib.Process(
       psn: .init(),
@@ -132,7 +130,6 @@ struct WindowLifecycleHandlerTests {
     )
     if let application = windows.manage(process) {
       windows.addWindows(for: application)
-      // Unmanage the application so destruction does not schedule a rediscovery.
       windows.remove(application: application)
     }
     return windows

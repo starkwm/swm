@@ -1,16 +1,12 @@
 import ApplicationServices
 import Dispatch
 
-/// Handles window lifecycle and focus events.
 @MainActor
 struct WindowLifecycleHandler {
-  /// Window service updated by window events.
   let windows: Windows
 
-  /// Tiling coordinator updated by window lifecycle events.
   let tiling: Tiling
 
-  /// Handle one window lifecycle event.
   func handle(_ event: WindowEvent) {
     switch event {
     case .created(let pid, let windowID):
@@ -30,7 +26,6 @@ struct WindowLifecycleHandler {
     }
   }
 
-  /// Add a newly created window and replay any deferred focus event for it.
   private func windowCreated(for pid: pid_t, with windowID: CGWindowID) {
     guard windowID != 0 else { return }
     guard windows.window(by: windowID) == nil else { return }
@@ -44,7 +39,6 @@ struct WindowLifecycleHandler {
     windows.replayLostFocusedEvent(for: window.id)
   }
 
-  /// Remove and invalidate a destroyed managed window.
   private func windowDestroyed(with window: Window) {
     guard window.id != 0 else { return }
 
@@ -60,8 +54,6 @@ struct WindowLifecycleHandler {
       return
     }
 
-    // Native macOS tabs destroy one AX window before WindowServer exposes the surviving tab's
-    // updated Space membership. Let that transition settle, then rediscover and reflow once.
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [windows, tiling] in
       guard let application = windows.application(by: processID) else { return }
       windows.addWindows(for: application)
@@ -69,7 +61,6 @@ struct WindowLifecycleHandler {
     }
   }
 
-  /// Update focus tracking or defer the focus event until the window is manageable.
   private func windowFocused(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
 
@@ -99,20 +90,17 @@ struct WindowLifecycleHandler {
     log("window focused \(window) \(windows.focusedWindowState)")
   }
 
-  /// Handle a window move or resize notification.
   private func windowFrameChanged(with windowID: CGWindowID) {
     guard windowID != 0 else { return }
     tiling.windowFrameDidChange(windowID)
   }
 
-  /// Handle a window minimization notification.
   private func windowMinimized(with window: Window) {
     tiling.cancelAnimation(for: window.id)
     log("window minimized \(window)")
     tiling.reconcileAndReflowVisibleSpaces()
   }
 
-  /// Handle a window restore notification and replay deferred focus.
   private func windowDeminimized(with window: Window) {
     log("window deminimized \(window)")
     tiling.reconcileAndReflowVisibleSpaces()

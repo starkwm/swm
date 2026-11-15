@@ -1,9 +1,7 @@
-/// Manage rules on the same actor as window reconciliation.
 @MainActor
 struct RuleCommandHandler {
   let tiling: Tiling
 
-  /// Open configuration reload whose tagged requests change staged rules.
   var reload: ConfigReload?
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {

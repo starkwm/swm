@@ -1,6 +1,5 @@
 import AppKit
 
-/// Window events identified by the notified element's window ID.
 private let windowIDEvents: [String: @Sendable (CGWindowID) -> WindowEvent] = [
   kAXFocusedWindowChangedNotification: WindowEvent.focused,
   kAXWindowMovedNotification: WindowEvent.moved,
@@ -8,14 +7,12 @@ private let windowIDEvents: [String: @Sendable (CGWindowID) -> WindowEvent] = [
   kAXWindowResizedNotification: WindowEvent.resized,
 ]
 
-/// Window events for the managed window registered as the notification context.
 private let observedWindowEvents: [String: @Sendable (Window) -> WindowEvent] = [
   kAXWindowMiniaturizedNotification: WindowEvent.minimized,
   kAXWindowDeminiaturizedNotification: WindowEvent.deminimized,
   kAXUIElementDestroyedNotification: WindowEvent.destroyed,
 ]
 
-/// Forward accessibility window notifications into swm's event service.
 private func accessibilityObserverCallback(
   _ observer: AXObserver,
   _ element: AXUIElement,
@@ -34,7 +31,6 @@ private func accessibilityObserverCallback(
   } else if let event = observedWindowEvents[notification] {
     guard let context else { return }
     let observation = Unmanaged<WindowObservationContext>.fromOpaque(context).takeUnretainedValue()
-    // The observer source is installed only on CFRunLoopGetMain().
     MainActor.assumeIsolated {
       guard let window = observation.window() else { return }
       observation.post(.window(event(window)))
@@ -42,7 +38,6 @@ private func accessibilityObserverCallback(
   }
 }
 
-/// Runtime model for a single running application.
 @MainActor
 final class Application: @MainActor CustomStringConvertible, @MainActor Equatable {
   private static let notificationRegistrar = AXNotificationRegistrar(
@@ -58,7 +53,6 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     lhs === rhs
   }
 
-  /// Debug description including process, app name, and bundle identifier.
   var description: String {
     """
     <Application pid: \(processID), name: \(application.localizedName ?? "-"), \
@@ -66,30 +60,22 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     """
   }
 
-  /// Localized application name when available.
   var name: String? {
     application.localizedName
   }
 
-  /// Stable application identifier for rule matching.
   var bundleID: String? { application.bundleIdentifier }
 
-  /// Whether the application currently runs with the accessory activation policy.
   var isAccessory: Bool { application.activationPolicy == .accessory }
 
-  /// Process identifier for the running application.
   let processID: pid_t
 
-  /// Carbon process serial number used by private WindowServer operations.
   private(set) var processSerialNumber: ProcessSerialNumber
 
-  /// Accessibility observer currently registered for this application.
   private(set) var observer: AXObserver?
 
-  /// Whether notification registration should be retried later.
   private(set) var retryObserving = false
 
-  /// Accessibility element for the application process.
   private(set) var element: AXUIElement
 
   private var application: NSRunningApplication
@@ -99,7 +85,6 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
   private var observedNotifications = Set<String>()
   private var observing = false
 
-  /// Create an application model for a process discovered by the process service.
   init?(
     for process: Process,
     lookupConnection: (() -> Int32?)? = nil,
@@ -132,7 +117,6 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     unobserve()
   }
 
-  /// Register accessibility notifications for this application.
   func observe(
     addNotification: ((String) -> AXError)? = nil
   ) -> Result<Void, AccessibilityClientError> {
@@ -194,7 +178,6 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     return .success(())
   }
 
-  /// Remove registered accessibility notifications and invalidate the observer source.
   func unobserve() {
     guard let observer else { return }
     Self.notificationRegistrar.unobserve(
@@ -216,7 +199,6 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     self.observer = nil
   }
 
-  /// Return window IDs owned by this application on known spaces.
   func windowIdentifiers() -> [CGWindowID]? {
     if connection == nil { connection = lookupConnection() }
     guard let connection, connection > 0 else {
@@ -226,22 +208,18 @@ final class Application: @MainActor CustomStringConvertible, @MainActor Equatabl
     return enumerateWindows(connection)
   }
 
-  /// Return accessibility elements for this application's windows.
   func windowElements() -> [AXUIElement] {
     AccessibilityClient.shared.windowElements(for: element)
   }
 
-  /// Return the focused window ID for this application.
   func focusedWindowID() -> CGWindowID? {
     AccessibilityClient.shared.focusedWindowID(for: element)
   }
 
-  /// Activate the application and all of its windows.
   func activate() -> Bool {
     application.activate(options: .activateAllWindows)
   }
 
-  /// Temporarily disable enhanced accessibility UI while running a window operation.
   func enhancedUIWorkaround<Result>(callback: () -> Result) -> Result {
     let restore = AccessibilityClient.shared.disableEnhancedUI(for: element)
     defer { if restore { AccessibilityClient.shared.enableEnhancedUI(for: element) } }

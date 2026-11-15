@@ -1,7 +1,6 @@
 import AppKit
 import ObjectiveC
 
-/// Submits native Space operations through SkyLight's WindowManager bridge without Dock injection.
 @MainActor
 enum SpaceBridge {
   private typealias SpacesInitializer =
@@ -16,7 +15,6 @@ enum SpaceBridge {
     case windows([CGWindowID], spaceID: UInt64)
   }
 
-  /// Owns one SkyLight object and validates its methods before invoking them from Swift.
   private struct Operation {
     private static let performSelector = NSSelectorFromString("performWithWMBridgeDelegate")
 
@@ -114,7 +112,6 @@ enum SpaceBridge {
         throw SpaceBridgeError.creationFailed(feature)
       }
 
-      // alloc/init returns an owned object. Consume that ownership once after initialization.
       object = initialized.takeRetainedValue()
     }
 
@@ -124,7 +121,6 @@ enum SpaceBridge {
     }
   }
 
-  /// Construct every operation before submitting any asynchronous writes.
   static func activate(
     spaceID: UInt64,
     displayID: String,
@@ -145,7 +141,6 @@ enum SpaceBridge {
     current.perform()
   }
 
-  /// Submission is asynchronous; callers must verify the window's Space membership.
   static func move(
     windowID: CGWindowID,
     to spaceID: UInt64,

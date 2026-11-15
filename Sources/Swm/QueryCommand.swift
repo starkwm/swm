@@ -1,14 +1,12 @@
 import ArgumentParser
 import SwmLib
 
-/// Reject a provided index that is not one-based.
 private func validatePositiveIndex(_ index: Int?, name: String) throws {
   if let index, index < 1 {
     throw ValidationError("\(name) index must be positive.")
   }
 }
 
-/// Query displays, spaces, and windows tracked by the daemon.
 struct QueryCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "query",
@@ -89,7 +87,6 @@ struct QueryCommand: ParsableCommand {
   }
 }
 
-/// An optional selector shared by plural query commands.
 struct QuerySelectorOptions: ParsableArguments {
   @Option(help: "Filter by one-based display index.") var display: Int?
   @Option(help: "Filter by one-based Space index.") var space: Int?

@@ -1,6 +1,5 @@
 import Foundation
 
-/// Timing curves shared by the command-line parser and frame animator.
 public enum AnimationEasing: String, CaseIterable, Sendable {
   case linear
   case easeOutQuad = "ease-out-quad"

@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Change global defaults or selected Space settings in the running daemon.
 struct ConfigCommand: ParsableCommand {
   struct AnimationDuration: ConfigIPCCommand {
     static let configuration = CommandConfiguration(
@@ -211,7 +210,6 @@ extension FocusFollowsMouseMode: ExpressibleByArgument {}
 
 extension LayoutSelection: ExpressibleByArgument {}
 
-/// Padding sides for global or selected Space settings.
 struct PaddingSideOptions: ParsableArguments {
   @Argument(help: "Points for every side, or a signed change such as +2 or -2.")
   var points: SettingChange<Int>?
@@ -228,7 +226,6 @@ struct PaddingSideOptions: ParsableArguments {
   @Option(parsing: .unconditional, help: ArgumentHelp("Right padding.", valueName: "points"))
   var right: SettingChange<Int>?
 
-  /// Effective side changes, with side flags taking precedence, in IPC order.
   var changes: [(side: String, change: SettingChange<Int>)] {
     [
       ("top", top ?? points), ("bottom", bottom ?? points),
@@ -237,11 +234,9 @@ struct PaddingSideOptions: ParsableArguments {
     .compactMap { side, change in change.map { (side, $0) } }
   }
 
-  /// IPC arguments in `side=abs:<points>` or `side=rel:<points>` form.
   var arguments: [String] { changes.map { "\($0.side)=\($0.change.ipcValue)" } }
 }
 
-/// Explicit Space selection; omission keeps global semantics.
 struct ConfigScopeOptions: ParsableArguments {
   @Option(
     name: .long,
@@ -256,7 +251,6 @@ struct ConfigScopeOptions: ParsableArguments {
   }
 }
 
-/// A validated CLI selector translated to the existing Space IPC handler.
 enum ConfigSpaceTarget: ExpressibleByArgument {
   case current
   case index(Int)

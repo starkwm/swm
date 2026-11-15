@@ -295,7 +295,6 @@ struct DaemonTests {
       ),
       to: fd
     )
-    // Hold the actor briefly so the transport can queue the decoded request.
     usleep(100_000)
     daemon.shutdown()
     try daemon.run()
@@ -329,7 +328,6 @@ struct DaemonTests {
       #expect(socket.revents & Int16(POLLIN) != 0)
     }
 
-    // Leave the large response unread while another client completes its request.
     #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))
     daemon.shutdown()
     let response = try await runBlocking { try readToEOF(fd) }
@@ -392,7 +390,6 @@ struct DaemonTests {
 
     try #require(signal != nil)
 
-    // A fresh run must still accept commands after the cancelled request has unwound.
     try daemon.run()
 
     #expect(try await exchange(path: endpoint.path) == .success(id: "test-id", message: "ok"))

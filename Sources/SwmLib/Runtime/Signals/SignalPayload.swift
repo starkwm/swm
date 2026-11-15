@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Runtime event data used to match and execute signals.
 struct SignalPayload: Equatable, Sendable {
-  /// Build an application payload.
   static func application(
     event: SignalEvent,
     processID: pid_t,
@@ -18,7 +16,6 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
-  /// Build a window payload.
   @MainActor
   static func window(
     event: SignalEvent,
@@ -41,7 +38,6 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
-  /// Build a space-change payload.
   static func spaceChanged(
     space: Space,
     currentIndex: Int?,
@@ -71,7 +67,6 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
-  /// Build a display-change payload.
   static func displayChanged(currentID: String?, recentID: String?) -> SignalPayload {
     SignalPayload(
       event: .displayChanged,
@@ -82,7 +77,6 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
-  /// Build a display reconfiguration payload.
   static func display(
     event: SignalEvent,
     displayID: CGDirectDisplayID,
@@ -101,7 +95,6 @@ struct SignalPayload: Equatable, Sendable {
     )
   }
 
-  /// Build the environment shared by display payloads.
   private static func displayEnvironment(currentID: String?, recentID: String?) -> [String: String]
   {
     var environment = [String: String]()
@@ -117,18 +110,13 @@ struct SignalPayload: Equatable, Sendable {
     return environment
   }
 
-  /// Signal event name.
   let event: SignalEvent
 
-  /// Application name used by app filters.
   let app: String?
 
-  /// Window title used by title filters.
   let title: String?
 
-  /// Current/focused state used by active filters.
   let active: Bool?
 
-  /// Environment variables exposed to the shell action.
   let environment: [String: String]
 }

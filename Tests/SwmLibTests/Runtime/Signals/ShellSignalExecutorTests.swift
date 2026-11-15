@@ -26,7 +26,6 @@ struct ShellSignalExecutorTests {
     #expect(outcome == .timedOut)
     let text = try String(contentsOf: pidFile, encoding: .utf8)
     let child = try #require(pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)))
-    // Allow the killed child to be reaped by launchd before checking it is gone.
     var alive = true
     for _ in 0..<50 where alive {
       alive = kill(child, 0) == 0

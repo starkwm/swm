@@ -33,7 +33,6 @@ struct ScreenGeometryTests {
   ) {
     let primary = CGRect(x: 0, y: 0, width: 1440, height: 900)
     #expect(ScreenGeometry.accessibilityFrame(frame, primaryFrame: primary) == expected)
-    // A 24-point menu bar, 60-point bottom Dock, and 8-point left inset.
     let visible = CGRect(
       x: frame.minX + 8,
       y: frame.minY + 60,

@@ -10,7 +10,6 @@ struct RemoteWindowScanTests {
     var scan = RemoteWindowScan()
     var passes = 0
 
-    // Window 2 appears after the cycle starts, so this cycle cannot exhaust it.
     repeat {
       let unresolved: [CGWindowID] = passes == 0 ? [1] : [1, 2]
       _ = scan.nextBatch(for: scan.scannableWindowIDs(unresolved))
@@ -21,7 +20,6 @@ struct RemoteWindowScanTests {
     #expect(passes > 1)
     #expect(scan.scannableWindowIDs([1, 2]) == [2])
 
-    // A second full cycle exhausts window 2 as well.
     repeat {
       _ = scan.nextBatch(for: scan.scannableWindowIDs([1, 2]))
       scan.finishBatch(unresolved: [1, 2])

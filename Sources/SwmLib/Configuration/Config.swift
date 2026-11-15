@@ -1,26 +1,11 @@
 import Foundation
 
-/// Loads and runs the user's swm configuration file.
 public enum Config {
-  /// Execute the configuration file when it exists.
-  ///
-  /// A missing conventional configuration is ignored so the daemon can start
-  /// with built-in defaults. Explicit configuration paths should use `exec(path:)`.
   public static func execIfPresent(path: String) throws {
     guard FileManager.default.fileExists(atPath: path) else { return }
     try exec(path: path)
   }
 
-  /// Validate, prepare, and execute the configuration file at the given path.
-  ///
-  /// If the file is not executable by its owner, this marks it executable before
-  /// launching it and waiting for it to exit.
-  ///
-  /// - Parameters:
-  ///   - path: Absolute or relative path to the configuration file.
-  ///   - environment: Variables to set for the file, in addition to this process's environment.
-  /// - Throws: A `ConfigError` when the file is missing, cannot be made
-  ///   executable, cannot be launched, or exits with a non-zero status.
   public static func exec(path: String, environment: [String: String] = [:]) throws {
     if !FileManager.default.fileExists(atPath: path) {
       throw ConfigError.fileDoesNotExist
@@ -30,7 +15,6 @@ public enum Config {
     try runAndWait(path: path, environment: environment)
   }
 
-  /// Add owner execute permission to the configuration file when it is missing.
   private static func ensureOwnerExecutable(path: String) throws {
     do {
       let attributes = try FileManager.default.attributesOfItem(atPath: path)
@@ -55,7 +39,6 @@ public enum Config {
     }
   }
 
-  /// Launch the configuration file and wait for it to finish.
   private static func runAndWait(path: String, environment: [String: String]) throws {
     do {
       let proc = Foundation.Process()
@@ -75,23 +58,17 @@ public enum Config {
   }
 }
 
-/// Errors raised while preparing or running the user's configuration file.
 enum ConfigError: Error {
-  /// The configuration file path does not exist.
   case fileDoesNotExist
 
-  /// The configuration file could not be marked executable by its owner.
   case unableToMakeExecutable
 
-  /// The configuration file could not be launched.
   case unableToExecute
 
-  /// The configuration file launched but exited unsuccessfully.
   case configurationFailed(status: Int32)
 }
 
 extension ConfigError: CustomStringConvertible {
-  /// User-facing explanation of the configuration failure.
   var description: String {
     switch self {
     case .fileDoesNotExist:

@@ -1,10 +1,8 @@
 import AppKit
 import StarkSkyLight
 
-/// Lazy raw-state snapshot shared by display, space, and window query serializers.
 @MainActor
 final class QuerySnapshot {
-  /// Index Core Graphics metadata by window ID for constant-time lookup.
   static func indexWindowInfo(_ windowInfo: [[String: Any]]) -> [CGWindowID: [String: Any]] {
     windowInfo.reduce(into: [:]) { result, info in
       guard let windowID = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value else {
@@ -23,20 +21,13 @@ final class QuerySnapshot {
   lazy var spaces = Spaces.all(in: spaceSnapshot)
   lazy var windows = managedWindows.allWindows()
 
-  /// Space IDs keyed by WindowServer display identifier, which may be "Main".
-  ///
-  /// A display identifier that WindowServer reports more than once keeps all of its Spaces.
   lazy var displaySpaces: [String: [UInt64]] = Dictionary(
     (spaceSnapshot?.displays ?? []).map { ($0.id.rawValue, $0.spaces.map(\.id.rawValue)) },
     uniquingKeysWith: +
   )
 
-  /// Current Spaces keyed by display identifier and by screen UUID.
-  ///
-  /// Without separate Spaces, every screen shows WindowServer's Main display Space.
   lazy var currentSpaceByScreenID: [String: UInt64] = {
     let displays = spaceSnapshot?.displays ?? []
-    // Identifiers that differ only by case, or repeat, share the first known current Space.
     let currentByID = Dictionary(
       displays.map { ($0.id.rawValue.lowercased(), $0.currentSpaceID) },
       uniquingKeysWith: { first, second in first ?? second }

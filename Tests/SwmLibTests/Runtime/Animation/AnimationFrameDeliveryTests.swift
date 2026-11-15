@@ -260,11 +260,8 @@ struct AnimationFrameDeliveryTests {
       target: animationFrame(100),
       final: true
     ) { _ in obsolete = true }
-    // Stay on the main actor until the replacement is queued. Polling here can let
-    // verification finish before this test gets another turn under full-suite load.
     delivery.waitForPendingOperations(for: 1)
     #expect(app.writeCount == 1)
-    // Superseding a sequence is sufficient even when the generation stays valid.
     var replacement: AnimationFrameCompletion?
     delivery.submit(
       windowID: 1,

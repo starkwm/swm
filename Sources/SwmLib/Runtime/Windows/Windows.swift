@@ -4,10 +4,8 @@ import CHIServices
 import Carbon
 import Foundation
 
-/// Tracks observable applications, managed windows, and focus history.
 @MainActor
 public final class Windows {
-  /// Resolve the currently focused window ID from the frontmost process.
   nonisolated static func focusedWindowID() -> CGWindowID? {
     guard let processID = WindowServerClient.shared.frontmostProcessID() else {
       return nil
@@ -17,12 +15,10 @@ public final class Windows {
     return accessibility.focusedWindowID(for: accessibility.applicationElement(for: processID))
   }
 
-  /// Tracked ID of the current focused window.
   var currentFocusedWindowID: CGWindowID? {
     focusedWindowState.current
   }
 
-  /// Tracked ID of the previously focused window.
   var lastFocusedWindowID: CGWindowID? {
     focusedWindowState.last
   }
@@ -47,7 +43,6 @@ public final class Windows {
   private var remoteWindowScans = [pid_t: RemoteWindowScan]()
   private var ignoredWindowIDsByPID = [pid_t: Set<CGWindowID>]()
 
-  /// Create the window service for a workspace.
   public convenience init(workspace: Workspace) {
     self.init(workspace: workspace, focusedWindowID: Self.focusedWindowID())
   }
@@ -76,12 +71,10 @@ public final class Windows {
     for task in discoveryRetries.values { task.cancel() }
   }
 
-  /// Discover and observe windows from all supplied processes.
   public func discover(from processes: Processes, onRecovery: @escaping () -> Void) {
     for process in processes.all() {
       if !workspace.isFinishedLaunching(process) {
         guard workspace.observeUntilFinishedLaunching(process) else {
-          // Without an AppKit application there is nothing to observe, so look it up again later.
           if process.application == nil {
             retryDiscovery(
               for: process,
@@ -116,10 +109,6 @@ public final class Windows {
     }
   }
 
-  /// Share launch and startup retries, rejecting late work for a replaced process.
-  ///
-  /// Retries back off and stop after the policy's limit, so a process that never becomes
-  /// ready is not polled forever. A later discovery request starts a new schedule.
   func retryDiscovery(
     for process: Process,
     resolveProcess: @escaping () -> Process?,
@@ -150,7 +139,6 @@ public final class Windows {
     }
   }
 
-  /// Start the next failed discovery of a process from the beginning of the retry schedule.
   func resetDiscoveryRetries(for process: Process) {
     discoveryRetryCounts.removeValue(forKey: ObjectIdentifier(process))
   }
@@ -166,27 +154,22 @@ public final class Windows {
     }
   }
 
-  /// Return a managed application by process ID.
   func application(by pid: pid_t) -> Application? {
     applicationsByPID[pid]
   }
 
-  /// Return a managed window by Core Graphics window ID.
   func window(by id: CGWindowID) -> Window? {
     windowsByID[id]
   }
 
-  /// Return all managed windows owned by an application.
   func allWindows(for application: Application) -> [Window] {
     windowsByID.values.filter { $0.application == application }
   }
 
-  /// Return all managed windows.
   func allWindows() -> [Window] {
     Array(windowsByID.values)
   }
 
-  /// Resolve the closest non-minimized window on the currently visible Spaces.
   func directionalWindow(
     from sourceWindow: Window,
     in direction: CardinalDirection,
@@ -218,14 +201,12 @@ public final class Windows {
     return window(by: windowID)
   }
 
-  /// Update tracked focused-window state.
   func focusedWindowDidChange(to windowID: CGWindowID) {
     guard windowID != 0 else { return }
     pendingMouseFocusWindowID = nil
     focusedWindowState.update(to: windowID)
   }
 
-  /// Select how pointer movement focuses managed windows.
   func setFocusFollowsMouseMode(_ mode: FocusFollowsMouseMode) {
     focusFollowsMouseMode = mode
 
@@ -248,7 +229,6 @@ public final class Windows {
     }
   }
 
-  /// Focus the frontmost managed window beneath a global pointer location.
   func focusWindow(at point: CGPoint) {
     guard let windowID = WindowServerClient.shared.frontmostWindowID(at: point) else { return }
     guard windowID != currentFocusedWindowID else { return }
@@ -270,7 +250,6 @@ public final class Windows {
     }
   }
 
-  /// Retry discovery for applications with unresolved windows.
   func refreshWindows() {
     for processID in Array(unresolvedApplicationIDs) {
       guard let application = applicationsByPID[processID] else {
@@ -282,13 +261,11 @@ public final class Windows {
     }
   }
 
-  /// Rediscover windows, including windows lost after an earlier successful discovery.
   @discardableResult
   func refreshWindows(for application: Application) -> Bool {
     reconcileWindows(for: application)
   }
 
-  /// Recover an unknown focused window without waiting for another creation notification.
   func recoverFocusedWindow(with windowID: CGWindowID) -> Window? {
     guard windowID != 0 else { return nil }
     if let window = windowsByID[windowID] { return window }
@@ -307,41 +284,34 @@ public final class Windows {
     return windowsByID[windowID]
   }
 
-  /// Record a front-switched event that arrived before its application was managed.
   func addLostFrontSwitchedEvent(for processID: pid_t) {
     lostFrontSwitchedProcessIDs.insert(processID)
   }
 
-  /// Remove a recorded lost front-switched event.
   @discardableResult
   func removeLostFrontSwitchedEvent(for processID: pid_t) -> Bool {
     lostFrontSwitchedProcessIDs.remove(processID) != nil
   }
 
-  /// Record a focused-window event that arrived before its window was managed.
   func addLostFocusedEvent(for windowID: CGWindowID) {
     guard windowID != 0 else { return }
     lostFocusedWindowIDs.insert(windowID)
   }
 
-  /// Return a snapshot of window IDs with lost focused-window events.
   func lostFocusedWindowIDsSnapshot() -> [CGWindowID] {
     Array(lostFocusedWindowIDs)
   }
 
-  /// Remove a recorded lost focused-window event.
   @discardableResult
   func removeLostFocusedEvent(for windowID: CGWindowID) -> Bool {
     lostFocusedWindowIDs.remove(windowID) != nil
   }
 
-  /// Post a recorded lost focused-window event again and remove it from the record.
   func replayLostFocusedEvent(for windowID: CGWindowID) {
     guard removeLostFocusedEvent(for: windowID) else { return }
     Events.shared.post(.window(.focused(windowID)))
   }
 
-  /// Remove a managed application and associated pending event state.
   func remove(application: Application) {
     lostFrontSwitchedProcessIDs.remove(application.processID)
     unresolvedApplicationIDs.remove(application.processID)
@@ -351,10 +321,6 @@ public final class Windows {
     applicationsByPID.removeValue(forKey: application.processID)
   }
 
-  /// Create, observe, and store one managed window for an application.
-  ///
-  /// The caller passes the ID it already read from the element. An element whose ID could not
-  /// be read reports zero, and is never stored: zero is not a WindowServer window.
   @discardableResult
   func addWindow(
     for application: Application,
@@ -366,7 +332,6 @@ public final class Windows {
 
     guard let subrole = window.subrole else { return nil }
 
-    // Accessory processes own menu bar strips and panels; keep only their real windows.
     guard !application.isAccessory || subrole == "AXStandardWindow" else {
       ignoredWindowIDsByPID[application.processID, default: []].insert(window.id)
       return nil
@@ -382,13 +347,11 @@ public final class Windows {
     return window
   }
 
-  /// Find and add one window by ID from an application's accessibility elements.
   func addWindow(with windowID: CGWindowID, for application: Application) -> Window? {
     if let window = windowsByID[windowID] {
       return window
     }
 
-    // Some apps expose their focused window before including it in AXWindows.
     if let element = AccessibilityClient.shared.focusedWindowElement(for: application.element),
       AccessibilityClient.shared.optionalWindowID(for: element) == windowID,
       let window = addWindow(for: application, with: element, id: windowID)
@@ -406,7 +369,6 @@ public final class Windows {
     return windowsByID[windowID]
   }
 
-  /// Add all currently accessible windows for an application.
   func addWindows(for application: Application) {
     if let accessibleWindows {
       for window in accessibleWindows(application)
@@ -427,7 +389,6 @@ public final class Windows {
     }
   }
 
-  /// Manage one observable process and register its application observer.
   func manage(_ process: Process, retryObservation: (() -> Void)? = nil) -> Application? {
     guard !process.terminated else { return nil }
     if let application = applicationsByPID[process.pid] {
@@ -469,13 +430,11 @@ public final class Windows {
     return application
   }
 
-  /// Remove a managed window by ID.
   func remove(by windowID: CGWindowID) {
     lostFocusedWindowIDs.remove(windowID)
     windowsByID.removeValue(forKey: windowID)
   }
 
-  /// Reconcile WindowServer IDs with accessibility window elements for an application.
   private func reconcileWindows(for application: Application) -> Bool {
     let processID = application.processID
     let globalWindowIDs = application.windowIdentifiers()
@@ -485,7 +444,6 @@ public final class Windows {
       return false
     }
 
-    // Forget ignored windows that no longer exist, and do not rescan the rest.
     let liveWindowIDs = Set(globalWindowIDs)
     let ignoredWindowIDs = ignoredWindowIDsByPID[processID, default: []]
       .intersection(liveWindowIDs)
@@ -497,8 +455,6 @@ public final class Windows {
       return true
     }
 
-    // Keep the application unresolved so AXWindows is read again after Space changes, but scan
-    // remote tokens only for windows a full cycle has not already missed.
     unresolvedApplicationIDs.insert(processID)
     var scan = remoteWindowScans[processID] ?? RemoteWindowScan()
     scan.retainWindows(liveWindowIDs)
@@ -523,7 +479,6 @@ public final class Windows {
     return true
   }
 
-  /// Return window IDs that are neither managed nor ignored.
   private func unresolvedWindowIDs(
     in globalWindowIDs: [CGWindowID],
     for processID: pid_t
@@ -532,7 +487,6 @@ public final class Windows {
     return globalWindowIDs.filter { windowsByID[$0] == nil && !ignoredWindowIDs.contains($0) }
   }
 
-  /// Scan one batch of remote tokens for missing windows, adding each window it resolves.
   private func resolveRemoteWindows(
     _ windowIDs: [CGWindowID],
     scan: inout RemoteWindowScan,
@@ -576,7 +530,6 @@ public final class Windows {
     }
   }
 
-  /// Create the private accessibility remote token for a process-local window index.
   private func createRemoteToken(for pid: pid_t, with id: Int) -> CFData {
     var token = Data()
 

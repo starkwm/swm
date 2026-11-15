@@ -1,6 +1,5 @@
 import AppKit
 
-/// Applies calculated frames while tracking the Accessibility notifications they cause.
 @MainActor
 final class WindowFrameReconciler {
   typealias CurrentFrameProvider = (CGWindowID) -> CGRect?
@@ -8,7 +7,6 @@ final class WindowFrameReconciler {
   private static let expectationLifetime = Duration.seconds(1)
   private static let animationFrameInterval = Duration.seconds(1.0 / 60)
 
-  /// Keep a steady cadence and skip missed frames instead of queuing catch-up updates.
   static func nextAnimationDeadline(
     after previous: ContinuousClock.Instant,
     now: ContinuousClock.Instant
@@ -53,7 +51,6 @@ final class WindowFrameReconciler {
   private let currentFrame: CurrentFrameProvider
   private var pendingMutations = [CGWindowID: ExpectedFrameMutation]()
 
-  /// Create a reconciler that reads frames directly and writes them through a delivery.
   init(
     currentFrame: @escaping CurrentFrameProvider,
     delivery: AnimationFrameDelivery,
@@ -78,9 +75,6 @@ final class WindowFrameReconciler {
     if let interactionMonitor { NSEvent.removeMonitor(interactionMonitor) }
   }
 
-  /// Animate a batch using the same clock, or deliver final frames when disabled.
-  ///
-  /// The completion reports whether each window's final frame was verified.
   func apply(
     _ targetFrames: [CGWindowID: CGRect],
     at now: ContinuousClock.Instant = .now,
@@ -95,7 +89,6 @@ final class WindowFrameReconciler {
     }
   }
 
-  /// Drop queued work. An AX operation already started may still settle.
   func cancelAnimations(for windowIDs: some Sequence<CGWindowID>) {
     for windowID in windowIDs {
       deliveries.removeValue(forKey: windowID)?.generation.cancel()
@@ -106,13 +99,11 @@ final class WindowFrameReconciler {
     displayLink?.update(frames: animations.mapValues(\.target))
   }
 
-  /// Preserve synchronous command ordering across an already-started asynchronous AX write.
   func prepareForSynchronousMutation(for windowID: CGWindowID) {
     cancelAnimations(for: [windowID])
     delivery.waitForPendingOperations(for: windowID)
   }
 
-  /// Discard destinations calculated before a topology change.
   func cancelAnimations() {
     cancelAnimations(for: Set(animations.keys).union(deliveries.keys))
   }
@@ -130,7 +121,6 @@ final class WindowFrameReconciler {
     }
   }
 
-  /// Calculate each frame from elapsed time so delayed ticks do not slow the animation.
   func advanceAnimations(
     at now: ContinuousClock.Instant = .now,
     windowIDs: Set<CGWindowID>? = nil,
@@ -150,7 +140,6 @@ final class WindowFrameReconciler {
     updateScheduler()
   }
 
-  /// Return animation destinations, or current frames for windows that are not moving.
   func frames(for windowIDs: some Sequence<CGWindowID>) -> [CGWindowID: CGRect] {
     var framesByWindowID = [CGWindowID: CGRect]()
     for windowID in windowIDs {
@@ -160,12 +149,10 @@ final class WindowFrameReconciler {
     return framesByWindowID
   }
 
-  /// Read the current frame and return whether its notification belongs to SWM.
   func shouldSuppressNotification(for windowID: CGWindowID) -> Bool {
     shouldSuppressNotification(for: windowID) { currentFrame(windowID) }
   }
 
-  /// Suspend the window being moved or resized until mouse-up, even during reconciliation.
   func beginInteraction(for windowID: CGWindowID) {
     interactingWindows.insert(windowID)
     cancelAnimations(for: [windowID])
@@ -176,8 +163,6 @@ final class WindowFrameReconciler {
     interactionCandidateDragged = false
   }
 
-  /// Note a drag; the interaction starts only once the window's frame then changes, so a drag
-  /// inside a window, such as a text selection, does not suspend it.
   func pointerDragged() {
     interactionCandidateDragged = interactionCandidate != nil
   }
@@ -312,8 +297,6 @@ final class WindowFrameReconciler {
     let target = deliveries[id]?.target
     cancelAnimations(for: [id])
     if let target {
-      // Failed or clamped writes can still emit delayed AX notifications. Do not let
-      // those notifications restart the same failing reflow without a bound.
       expectMutation(to: target, for: id)
     }
     terminalFailure(id)
@@ -325,7 +308,6 @@ final class WindowFrameReconciler {
     displayLink = nil
   }
 
-  /// Suppress notifications caused by a mutation until the expectation expires.
   private func expectMutation(to target: CGRect, for id: CGWindowID, reachedTarget: Bool = false) {
     pendingMutations[id] = ExpectedFrameMutation(
       target: target,
@@ -334,15 +316,12 @@ final class WindowFrameReconciler {
     )
   }
 
-  /// Return whether a notification belongs to SWM, reading the frame only when a mutation is
-  /// still expected.
   private func shouldSuppressNotification(
     for windowID: CGWindowID,
     actualFrame: () -> CGRect?
   ) -> Bool {
     if interactingWindows.contains(windowID) { return true }
     if windowID == interactionCandidate, interactionCandidateDragged {
-      // The user is moving or resizing the window under the pointer.
       beginInteraction(for: windowID)
       return true
     }
@@ -362,7 +341,6 @@ final class WindowFrameReconciler {
     return true
   }
 
-  /// Stop suppressing notifications after their timeout.
   private func expireExpectations() {
     let now = ContinuousClock.now
     pendingMutations = pendingMutations.filter { $0.value.expiresAt > now }
@@ -370,19 +348,14 @@ final class WindowFrameReconciler {
 
 }
 
-/// Expected frame notification registered before an Accessibility mutation.
 private struct ExpectedFrameMutation {
-  /// Last requested frame.
   let target: CGRect
 
-  /// When to stop suppressing notifications.
   let expiresAt: ContinuousClock.Instant
 
-  /// Keep matching feedback suppressed after arrival, but allow a subsequent external move.
   var reachedTarget = false
 }
 
-/// Start frame, destination, and timing for one window.
 private struct FrameAnimation {
   let start: CGRect
   let target: CGRect
@@ -402,7 +375,6 @@ private struct FrameAnimation {
   }
 }
 
-/// Requested destination and newest pending submission, retained through final verification.
 @MainActor
 private final class FrameDeliveryState {
   let target: CGRect
@@ -417,7 +389,6 @@ private final class FrameDeliveryState {
   }
 }
 
-/// Completes only when every member has a terminal settlement in the same batch.
 @MainActor
 private final class FrameDeliveryBatch {
   private var remaining: Set<CGWindowID>

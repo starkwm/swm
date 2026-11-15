@@ -1,6 +1,5 @@
 import CoreGraphics
 
-/// Cardinal direction used to select a neighbouring window or display by frame geometry.
 public enum CardinalDirection: String, Equatable, Sendable {
   case left
   case right
@@ -20,7 +19,6 @@ public enum CardinalDirection: String, Equatable, Sendable {
     }
   }
 
-  /// Return the closest directionally aligned item from a set of frames.
   func neighbor<ID: Comparable & Hashable>(
     of id: ID,
     in framesByID: [ID: CGRect]
@@ -66,13 +64,11 @@ public enum CardinalDirection: String, Equatable, Sendable {
       .id
   }
 
-  /// Return the positive overlap between two one-dimensional ranges.
   private func overlap(_ first: ClosedRange<CGFloat>, _ second: ClosedRange<CGFloat>) -> CGFloat {
     max(0, min(first.upperBound, second.upperBound) - max(first.lowerBound, second.lowerBound))
   }
 }
 
-/// Ranking facts for one window or display in a requested direction.
 private struct DirectionalCandidate<ID> {
   let id: ID
   let isAligned: Bool

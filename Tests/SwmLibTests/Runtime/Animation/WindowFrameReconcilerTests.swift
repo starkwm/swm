@@ -56,7 +56,6 @@ struct WindowFrameReconcilerTests {
     let reconciler = makeTestReconciler(app)
     reconciler.animationDuration = 1
     reconciler.animationEasing = .linear
-    // Start in the future so the asynchronous initial read does not shift the timeline.
     let start = ContinuousClock.now.advanced(by: .seconds(10))
     reconciler.apply([1: animationFrame(100)], at: start)
     try await waitForAnimation { reconciler.isAnimating(1) }
@@ -103,8 +102,6 @@ struct WindowFrameReconcilerTests {
     app.release()
     try await waitForAnimation { reconciler.isAnimating(1) && app.readCount == 2 }
     reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(500)))
-    // The started AX operation lands at 50 after cancellation. Retarget from that
-    // actual result, not the frame observed while the old operation was blocked.
     try await waitForAnimation { app.frame == animationFrame(125) }
     reconciler.advanceAnimations(at: start.advanced(by: .seconds(1)))
     try await waitForAnimation { reconciler.isIdle }
@@ -200,7 +197,6 @@ struct WindowFrameReconcilerTests {
     reconciler.prepareForSynchronousMutation(for: 1)
     #expect(app.frame == animationFrame(100))
     #expect(app.beginCount == app.endCount)
-    // Model the subsequent synchronous command, after the old AX call has settled.
     app.frame = animationFrame(200)
     #expect(reconciler.isIdle)
     await Task.yield()
@@ -222,7 +218,6 @@ struct WindowFrameReconcilerTests {
     reconciler.endInteractions()
     reconciler.apply([1: animationFrame(300)])
     reconciler.retainWindows([])
-    // Drain cancelled backend work before checking for writes, without a timed delay.
     delivery.waitForPendingOperations(for: 1)
     await Task.yield()
     #expect(reconciler.isIdle)
@@ -277,7 +272,6 @@ struct WindowFrameReconcilerTests {
     #expect(reconciler.isAnimating(1))
     #expect(ended == 0)
 
-    // A drag that never changes the window frame, such as a text selection, is not a move.
     reconciler.pointerDown(on: 1)
     reconciler.pointerDragged()
     #expect(reconciler.isAnimating(1))

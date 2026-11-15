@@ -1,4 +1,3 @@
-/// User-visible signal event names supported by swm.
 enum SignalEvent: String, Codable, CaseIterable, Sendable {
   case applicationLaunched = "application-launched"
   case applicationTerminated = "application-terminated"
@@ -17,7 +16,6 @@ enum SignalEvent: String, Codable, CaseIterable, Sendable {
   case displayMoved = "display-moved"
   case displayResized = "display-resized"
 
-  /// Whether this event can be filtered by focused/current active state.
   var supportsActiveFilter: Bool {
     switch self {
     case .applicationLaunched, .applicationTerminated, .applicationFrontSwitched,

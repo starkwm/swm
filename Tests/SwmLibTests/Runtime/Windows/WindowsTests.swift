@@ -56,7 +56,6 @@ struct WindowsTests {
     #expect(windows.window(by: 1) != nil)
     #expect(windows.window(by: 2) == nil)
     #expect(enumerations == 0)
-    // Repeated notifications share the pending retry.
     windows.retryDiscovery(for: process, resolveProcess: { tracked }, retry: discover)
     process.terminated = outcome == "terminated"
     if outcome == "replaced" { tracked = replacement }
@@ -93,7 +92,6 @@ struct WindowsTests {
             if notification == kAXCreatedNotification {
               return permanent ? .notificationUnsupported : .cannotComplete
             }
-            // A later permanent failure must not erase an earlier recoverable one.
             return notification == kAXWindowResizedNotification
               ? .notificationUnsupported : .success
           })

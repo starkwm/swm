@@ -1,23 +1,16 @@
 import CoreGraphics
 
-/// Immutable facts used by one Space reconciliation pass.
 struct SpaceTopology: Equatable {
-  /// WindowServer Spaces keyed by their runtime IDs.
   let spacesByID: [UInt64: SpaceTopologyDescriptor]
 
-  /// Currently visible Space ID for each WindowServer display identifier.
   let visibleSpaceIDByDisplayID: [String: UInt64]
 
-  /// Complete Space membership for each managed window.
   let spaceIDsByWindowID: [CGWindowID: Set<UInt64>]
 
-  /// Attached physical displays keyed by Core Graphics UUID.
   let displaysByID: [String: SpaceTopologyDisplay]
 
-  /// Active WindowServer Space observed with this topology.
   var activeSpaceID: UInt64? = nil
 
-  /// Every normal Space and physical display pair available for tiling.
   var layoutIDs: Set<TilingLayoutID> {
     Set(
       spacesByID.values
@@ -26,7 +19,6 @@ struct SpaceTopology: Equatable {
     )
   }
 
-  /// Every visible normal Space and physical display pair available for tiling.
   var visibleLayoutIDs: Set<TilingLayoutID> {
     Set(
       visibleSpaceIDByDisplayID.flatMap { displayID, spaceID in
@@ -41,12 +33,10 @@ struct SpaceTopology: Equatable {
       .union(visibleSpaceIDByDisplayID.keys)
   }
 
-  /// Normal Space membership for a managed window.
   func normalSpaceIDs(for windowID: CGWindowID) -> Set<UInt64> {
     Set((spaceIDsByWindowID[windowID] ?? []).filter { spacesByID[$0]?.type == .normal })
   }
 
-  /// Resolve an eligible window to its Space and physical display layout.
   func layoutID(for windowID: CGWindowID, on displayID: String?) -> TilingLayoutID? {
     guard let displayID, displaysByID[displayID] != nil else { return nil }
     let normalSpaceIDs = normalSpaceIDs(for: windowID)
@@ -63,26 +53,19 @@ struct SpaceTopology: Equatable {
       return [TilingLayoutID(spaceID: spaceID, displayID: windowServerDisplayID)]
     }
 
-    // Without separate Spaces, WindowServer reports one logical display group for every screen.
     guard windowServerDisplayIDs == [windowServerDisplayID] else { return [] }
     return displaysByID.keys.map { TilingLayoutID(spaceID: spaceID, displayID: $0) }
   }
 }
 
-/// WindowServer description of one Space at snapshot time.
 struct SpaceTopologyDescriptor: Equatable {
-  /// WindowServer Space ID.
   let id: UInt64
 
-  /// WindowServer display identifier that owns the Space.
   let displayID: String
 
-  /// WindowServer Space type.
   let type: SpaceType
 }
 
-/// Physical display geometry captured alongside Space facts.
 struct SpaceTopologyDisplay: Equatable {
-  /// Visible frame in Accessibility coordinates.
   let visibleFrame: CGRect
 }

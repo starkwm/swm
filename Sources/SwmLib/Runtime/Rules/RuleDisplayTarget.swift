@@ -1,6 +1,5 @@
 import Foundation
 
-/// Absolute rule target, independent of the window's current display.
 enum RuleDisplayTarget: Equatable {
   case index(Int)
   case uuid(UUID)
@@ -15,7 +14,6 @@ enum RuleDisplayTarget: Equatable {
     }
   }
 
-  /// Resolve against display UUIDs in the same order as window display transfers.
   func resolve(in displayIDs: [String]) -> String? {
     switch self {
     case .index(let index):

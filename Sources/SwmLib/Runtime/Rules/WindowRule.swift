@@ -1,14 +1,10 @@
 import Foundation
 
-/// Window filters and optional management and placement actions.
 struct WindowRule: Encodable {
-  /// Keys accepted by rule registration.
   static let keys = ["label", "app", "title", "bundle-id", "manage", "grid", "display", "space"]
 
-  /// Filter keys that also accept `key!=value`, requiring the value not to match.
   static let invertibleKeys: Set = ["app", "title", "bundle-id"]
 
-  /// Parse and validate a registration before changing runtime state.
   static func parse(arguments: [String]) throws -> WindowRule {
     var values = [String: String]()
     for argument in arguments {
@@ -52,7 +48,6 @@ struct WindowRule: Encodable {
   let manage: Bool?
   let grid: WindowGrid?
   let display: RuleDisplayTarget?
-  /// One-based Space index, matching `swm query spaces`.
   let space: Int?
   private let values: [String: String]
   private let bundleID: String?
@@ -98,7 +93,6 @@ struct WindowRule: Encodable {
     }
   }
 
-  /// Whether the rule filters on the window title, so a title change can change its match.
   var filtersTitle: Bool { title != nil }
 
   func matches(_ window: some WindowRuleSubject) -> Bool {
@@ -119,7 +113,6 @@ struct WindowRule: Encodable {
   }
 }
 
-/// Window identity facts that rules filter on.
 protocol WindowRuleSubject {
   var app: String? { get }
   var title: String? { get }
@@ -128,7 +121,6 @@ protocol WindowRuleSubject {
 
 extension TilingWindowSnapshot: WindowRuleSubject {}
 
-/// Rule identity facts read for one window without its tiling facts.
 struct WindowRuleIdentity: WindowRuleSubject {
   let app: String?
   let title: String?

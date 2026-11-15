@@ -1,15 +1,11 @@
 import CoreGraphics
 
-/// Projects runtime events and current runtime state into signal payloads.
 @MainActor
 struct RuntimeEventSignalMapper {
-  /// Window state used to enrich window signals.
   let windows: Windows
 
-  /// Space state used to describe active-space changes.
   let spaces: Spaces
 
-  /// Display state used to describe active and reconfigured displays.
   let displays: Displays
 
   private let hasSubscribers: (SignalEvent) -> Bool
@@ -26,7 +22,6 @@ struct RuntimeEventSignalMapper {
     self.hasSubscribers = hasSubscribers
   }
 
-  /// Capture payload data that lifecycle handling would invalidate.
   func payload(beforeHandling event: RuntimeEvent) -> SignalPayload? {
     guard case .window(.destroyed(let window)) = event else { return nil }
 
@@ -37,7 +32,6 @@ struct RuntimeEventSignalMapper {
     )
   }
 
-  /// Build a signal payload from state after lifecycle handling.
   func payload(afterHandling event: RuntimeEvent) -> SignalPayload? {
     switch event {
     case .application(.launched), .application(.terminated):
@@ -106,14 +100,12 @@ struct RuntimeEventSignalMapper {
     }
   }
 
-  /// Build a window signal payload from an explicit or currently managed window.
   private func windowPayload(
     event: SignalEvent,
     windowID: CGWindowID,
     window: Window? = nil,
     active: Bool? = nil
   ) -> SignalPayload? {
-    // Reading a title requires an app round trip, including on every animation notification.
     guard hasSubscribers(event) else { return nil }
     return .window(
       event: event,
@@ -123,7 +115,6 @@ struct RuntimeEventSignalMapper {
     )
   }
 
-  /// Build a display signal payload for a CoreGraphics reconfiguration callback.
   private func displayPayload(
     event: SignalEvent,
     displayID: CGDirectDisplayID

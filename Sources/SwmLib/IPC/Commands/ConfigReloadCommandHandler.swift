@@ -1,9 +1,7 @@
 import Foundation
 
-/// Handles the config commands that open, commit, and roll back a configuration reload.
 @MainActor
 struct ConfigReloadCommandHandler {
-  /// Config commands this handler owns.
   static let commands: Set = ["--begin-reload", "--commit-reload", "--rollback-reload"]
 
   let reload: ConfigReload

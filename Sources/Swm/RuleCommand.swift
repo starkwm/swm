@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Manage automatic window rules.
 struct RuleCommand: ParsableCommand {
   struct Add: RuleIPCCommand {
     static let configuration = CommandConfiguration(

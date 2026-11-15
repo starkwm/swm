@@ -1,6 +1,5 @@
 import Foundation
 
-/// Bounded queue for asynchronous signal action processes.
 final class SignalExecutionQueue: @unchecked Sendable {
   typealias Executor =
     @Sendable (
@@ -29,7 +28,6 @@ final class SignalExecutionQueue: @unchecked Sendable {
   private var pendingJobs = [Job]()
   private var runningActions = 0
 
-  /// Create a queue with bounded running and pending action counts.
   init(
     maximumConcurrentActions: Int = 4,
     maximumPendingActions: Int = 128,
@@ -42,10 +40,6 @@ final class SignalExecutionQueue: @unchecked Sendable {
     self.executor = executor
   }
 
-  /// Enqueue an action, returning false when the pending bound is full.
-  ///
-  /// A pending action with the same coalescing key takes the new environment instead of
-  /// queueing another run, so a burst of updates for one subject runs once with the latest.
   @discardableResult
   func enqueue(
     action: String,
@@ -84,14 +78,12 @@ final class SignalExecutionQueue: @unchecked Sendable {
     }
   }
 
-  /// Start one action and advance the queue when it completes.
   private func start(_ job: Job) {
     executor(job.action, job.environment) { [weak self] in
       self?.actionDidFinish()
     }
   }
 
-  /// Release one running slot and start the next pending action.
   private func actionDidFinish() {
     let nextJob = lock.withLock { () -> Job? in
       guard runningActions > 0 else { return nil }

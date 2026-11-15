@@ -1,6 +1,5 @@
 import CoreGraphics
 
-/// Owns automatic-tiling state and reconciles it from coherent topology snapshots.
 @MainActor
 public final class Tiling {
   typealias RulePlacementHandler = (WindowRulePlacement, CGWindowID, TilingLayoutID) ->
@@ -11,10 +10,8 @@ public final class Tiling {
   typealias UnavailableFactsProvider = (Set<CGWindowID>) -> Set<CGWindowID>
   typealias RuleIdentityProvider = (CGWindowID) -> WindowRuleIdentity?
 
-  /// Longest wait, in membership polls, between retries of failed Accessibility reads.
   private static let maximumFactRetryInterval = 16
 
-  /// Rules in registration order.
   private(set) var rules = [WindowRule]()
 
   private let masterLayout = MasterLayout()
@@ -58,7 +55,6 @@ public final class Tiling {
   private var factRetryInterval = 1
   private var factRetryCountdown = 1
 
-  /// Create tiling backed by the live runtime models.
   public convenience init(windows: Windows, spaces: Spaces) {
     self.init(
       snapshot: {
@@ -96,7 +92,6 @@ public final class Tiling {
     )
   }
 
-  /// Create tiling with an injectable reconciliation snapshot.
   init(
     snapshot: @escaping SnapshotProvider,
     spaces: Spaces,
@@ -164,28 +159,22 @@ public final class Tiling {
     for task in ruleSpaceMoveTasks.values { task.cancel() }
   }
 
-  /// Seed and reconcile all per-Space state from the current runtime inventory.
   public func initialize() {
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Seconds that window frame animations last, or zero when disabled.
   var animationDuration: Double { frameReconciler?.animationDuration ?? 0 }
 
-  /// Curve used by window frame animations.
   var animationEasing: AnimationEasing { frameReconciler?.animationEasing ?? .easeOutQuad }
 
-  /// Set the frame animation duration in seconds.
   func setAnimationDuration(_ duration: Double) {
     frameReconciler?.animationDuration = duration
   }
 
-  /// Select the curve captured by newly started or retargeted animations.
   func setAnimationEasing(_ easing: AnimationEasing) {
     frameReconciler?.animationEasing = easing
   }
 
-  /// Capture animation and layout settings for the defaults and every layout.
   func settingsSnapshot() -> TilingSettingsSnapshot {
     TilingSettingsSnapshot(
       animationDuration: animationDuration,
@@ -195,10 +184,6 @@ public final class Tiling {
     )
   }
 
-  /// Restore settings captured by `settingsSnapshot()`, returning whether any layout changed.
-  ///
-  /// A layout created since the capture takes the captured defaults. The caller reconciles and
-  /// reflows after a change, so it can do so once for other settings too.
   @discardableResult
   func restoreSettings(_ snapshot: TilingSettingsSnapshot) -> Bool {
     setAnimationDuration(snapshot.animationDuration)
@@ -217,19 +202,16 @@ public final class Tiling {
     return changed
   }
 
-  /// Return the pending destination so repeated geometry commands accumulate.
   func destinationFrame(for windowID: CGWindowID) -> CGRect? {
     frameReconciler?.frames(for: [windowID])[windowID]
   }
 
-  /// Animate a direct geometry command when the configured settings allow it.
   func animateFrame(_ frame: CGRect, for windowID: CGWindowID) -> Bool {
     guard let frameReconciler, frameReconciler.animationEnabled else { return false }
     frameReconciler.apply([windowID: frame])
     return true
   }
 
-  /// Stop an animation before a direct window command changes its frame.
   func cancelAnimation(for windowID: CGWindowID) {
     frameReconciler?.cancelAnimations(for: [windowID])
   }
@@ -238,18 +220,15 @@ public final class Tiling {
     frameReconciler?.isInteracting(windowID) == true
   }
 
-  /// Drain started writes before a command or placement changes the same window synchronously.
   func prepareForSynchronousMutation(for windowID: CGWindowID) {
     frameReconciler?.prepareForSynchronousMutation(for: windowID)
   }
 
-  /// Invalidate destinations immediately when a topology event arrives.
   func cancelAnimations() {
     frameReconciler?.cancelAnimations()
     dwindleAttempts.removeAll()
   }
 
-  /// Reconcile retained layouts, membership, and dispositions from one fresh snapshot.
   func reconcile() {
     var snapshot = snapshot()
     guard snapshot.topology != nil else {
@@ -276,7 +255,6 @@ public final class Tiling {
     )
     let placedWindowIDs = applyRulePlacements(actions, snapshot: snapshot)
     if !placedWindowIDs.isEmpty {
-      // Transfers must be reflected in membership and display facts before planning a layout.
       snapshot = self.snapshot()
       windows = snapshot.windows.sorted { $0.id < $1.id }
       liveIDs = Set(windows.map(\.id))
@@ -314,7 +292,6 @@ public final class Tiling {
 
     for window in windows {
       if ruleSpaceMoveTasks[window.id] != nil {
-        // Keep a window bound for another Space out of its source layout until it arrives.
         if let layoutID = layoutIDByWindowID[window.id], retainedLayoutIDs.contains(layoutID) {
           retainedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
           omittedWindowIDsByLayoutID[layoutID, default: []].insert(window.id)
@@ -438,33 +415,25 @@ public final class Tiling {
     updateMembershipPolling()
   }
 
-  /// Add a rule and immediately update existing windows.
   func addRule(_ rule: WindowRule) throws {
     try rules.appendUniquelyLabeled(rule, kind: "rule", label: \.label)
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Remove a rule by one-based index or unique label.
   func removeRule(selector: String) throws {
     try rules.remove(selector: selector, kind: "rule", label: \.label)
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Remove every rule.
   func removeAllRules() {
     replaceRules([])
   }
 
-  /// Replace every rule at once and reconcile a single time.
-  ///
-  /// Placements already applied are kept, so a window whose resolved placement is the same
-  /// under the new rules is not moved again.
   func replaceRules(_ rules: [WindowRule]) {
     self.rules = rules
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Select floating or an automatic layout for a known normal Space.
   @discardableResult
   func setLayout(_ selection: LayoutSelection, for spaceID: UInt64) -> Bool {
     let updated = updateLayouts(for: spaceID, reflowing: nil) { state in
@@ -477,14 +446,12 @@ public final class Tiling {
     return true
   }
 
-  /// Select floating or an automatic layout for all current and future Spaces.
   func setLayoutForSpaces(_ selection: LayoutSelection) {
     frameReconciler?.cancelAnimations()
     updateAllLayouts(reflowing: nil) { $0.selection = selection }
     applyLayoutSelection(selection) { reflowVisibleSpaces() }
   }
 
-  /// Set or adjust the master ratio for one Space.
   @discardableResult
   func changeMasterRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
     guard let state = layoutState(for: spaceID) else { return false }
@@ -492,19 +459,16 @@ public final class Tiling {
     return updateLayouts(for: spaceID, reflowing: .master) { $0.masterRatio = ratio }
   }
 
-  /// Set or adjust the default master ratio, and apply it to all current and future Spaces.
   func changeMasterRatioForAllSpaces(_ change: LayoutRatioChange) {
     let ratio = change.applying(to: defaultState.masterRatio)
     updateAllLayouts(reflowing: .master) { $0.masterRatio = ratio }
   }
 
-  /// Set the master placement for one Space.
   @discardableResult
   func setMasterPlacement(_ placement: MasterPlacement, for spaceID: UInt64) -> Bool {
     updateLayouts(for: spaceID, reflowing: .master) { $0.masterPlacement = placement }
   }
 
-  /// Cycle the master placement for one Space.
   @discardableResult
   func cycleMasterPlacement(
     _ direction: CycleDirection,
@@ -516,12 +480,10 @@ public final class Tiling {
     return placement
   }
 
-  /// Set the master placement for all current and future Spaces.
   func setMasterPlacementForAllSpaces(_ placement: MasterPlacement) {
     updateAllLayouts(reflowing: .master) { $0.masterPlacement = placement }
   }
 
-  /// Set or adjust the dwindle split ratio for one Space, rebalancing its existing splits.
   @discardableResult
   func changeSplitRatio(_ change: LayoutRatioChange, for spaceID: UInt64) -> Bool {
     guard let state = layoutState(for: spaceID) else { return false }
@@ -529,14 +491,11 @@ public final class Tiling {
     return updateLayouts(for: spaceID, reflowing: .dwindle) { $0.setSplitRatio(ratio) }
   }
 
-  /// Set or adjust the default dwindle split ratio, and apply it to all current and future
-  /// Spaces, rebalancing their existing splits.
   func changeSplitRatioForAllSpaces(_ change: LayoutRatioChange) {
     let ratio = change.applying(to: defaultState.splitRatio)
     updateAllLayouts(reflowing: .dwindle) { $0.setSplitRatio(ratio) }
   }
 
-  /// Enable or disable retained dwindle split directions for one Space.
   @discardableResult
   func setSplitDirectionPreservation(_ enabled: Bool, for spaceID: UInt64) -> Bool {
     updateLayouts(for: spaceID, reflowing: .dwindle) {
@@ -544,17 +503,14 @@ public final class Tiling {
     }
   }
 
-  /// Set retained dwindle split directions for all current and future Spaces.
   func setSplitDirectionPreservationForAllSpaces(_ enabled: Bool) {
     updateAllLayouts(reflowing: .dwindle) { $0.setPreserveSplitDirections(enabled) }
   }
 
-  /// Return the first stable layout's state for a Space, or nil when it has no automatic tiling.
   func layoutState(for spaceID: UInt64) -> TilingLayoutState? {
     layoutIDs(for: spaceID).first.flatMap { layoutsByID[$0] }
   }
 
-  /// Swap a window with its closest neighbour in a direction.
   @discardableResult
   func swapWindow(_ windowID: CGWindowID, in direction: CardinalDirection) -> Bool {
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
@@ -571,7 +527,6 @@ public final class Tiling {
     }
   }
 
-  /// Swap a tiled window with the current master pane.
   @discardableResult
   func swapWindowWithMaster(_ windowID: CGWindowID) -> Bool {
     guard let masterWindowID = masterWindowID(inLayoutContaining: windowID) else { return false }
@@ -580,14 +535,12 @@ public final class Tiling {
     }
   }
 
-  /// Return the active master window in the selected window's layout.
   func masterWindowID(inLayoutContaining windowID: CGWindowID) -> CGWindowID? {
     guard let layoutID = layoutIDByWindowID[windowID] else { return nil }
     guard let state = layoutsByID[layoutID], state.selection == .master else { return nil }
     return activeTree(of: state)?.windowIDs.first
   }
 
-  /// Return whether an automatic layout currently owns a window's geometry.
   func isWindowTiled(_ windowID: CGWindowID) -> Bool {
     guard let layoutID = layoutIDByWindowID[windowID] else { return false }
     guard let state = layoutsByID[layoutID], state.selection != .float else { return false }
@@ -595,7 +548,6 @@ public final class Tiling {
       && !state.omittedWindowIDs.contains(windowID)
   }
 
-  /// Set a window's explicit floating or tiled participation.
   @discardableResult
   func setWindowLayout(_ selection: WindowLayoutSelection, for windowID: CGWindowID) -> Bool {
     guard let topology = currentTopology else { return false }
@@ -613,15 +565,12 @@ public final class Tiling {
     if shouldFloat, layoutsByID[layoutID]?.focusedWindowID == windowID {
       layoutsByID[layoutID]?.focusedWindowID = nil
     }
-    // Floating applies a grid deferred while the window was tiled. Tiling needs current display
-    // ownership, since floating frame changes do not reconcile and shared Spaces keep membership.
     reconcile()
     let refreshedLayoutID = layoutIDByWindowID[windowID]
     applyPlans(for: Set([layoutID, refreshedLayoutID].compactMap { $0 }).sorted())
     return true
   }
 
-  /// Return the next available window in stable layout order.
   func cycledWindowID(
     from windowID: CGWindowID?,
     in direction: CycleDirection,
@@ -661,7 +610,6 @@ public final class Tiling {
     }
   }
 
-  /// Swap a tiled window with its neighbour in stable layout order.
   @discardableResult
   func swapWindowInOrder(_ windowID: CGWindowID, in direction: CycleDirection) -> Bool {
     guard let neighborWindowID = cycledWindowID(from: windowID, in: direction) else {
@@ -672,7 +620,6 @@ public final class Tiling {
     }
   }
 
-  /// Set or adjust the nearest dwindle split containing a tiled window.
   @discardableResult
   func changeDwindleSplitRatio(
     _ change: LayoutRatioChange,
@@ -687,7 +634,6 @@ public final class Tiling {
     return ratio
   }
 
-  /// Toggle the selected window's nearest dwindle split direction when directions are preserved.
   @discardableResult
   func toggleDwindleSplit(for windowID: CGWindowID) -> Bool {
     guard !floatingOverrideWindowIDs.contains(windowID) else { return false }
@@ -707,7 +653,6 @@ public final class Tiling {
     }
   }
 
-  /// Exchange the selected window's nearest dwindle sibling subtrees.
   @discardableResult
   func swapDwindleSplit(for windowID: CGWindowID) -> Bool {
     let hiddenWindowIDs = hiddenWindowIDs(inLayoutContaining: windowID)
@@ -716,12 +661,10 @@ public final class Tiling {
     }
   }
 
-  /// Update the insertion anchor for the focused window's tiled Space.
   func windowDidFocus(_ windowID: CGWindowID) {
     pendingFocusedWindowID = nil
     guard !floatingOverrideWindowIDs.contains(windowID) else { return }
     guard let layoutID = layoutIDByWindowID[windowID] else {
-      // Focus can arrive before WindowServer exposes a new window's Space membership.
       pendingFocusedWindowID = windowID
       return
     }
@@ -731,9 +674,6 @@ public final class Tiling {
     layoutsByID[layoutID] = state
   }
 
-  /// Reconcile current facts and apply every visible enabled Space plan.
-  ///
-  /// This also satisfies a scheduled reconcile, which would only repeat the same work.
   func reconcileAndReflowVisibleSpaces() {
     scheduledReconcile?.cancel()
     scheduledReconcile = nil
@@ -741,9 +681,6 @@ public final class Tiling {
     reflowVisibleSpaces()
   }
 
-  /// Reconcile and reflow once on a later main-actor turn, however many events ask first.
-  ///
-  /// High-frequency notifications use this so a burst costs one full reconcile.
   func scheduleReconcileAndReflow() {
     guard scheduledReconcile == nil else { return }
     scheduledReconcile = Task { @MainActor [weak self] in
@@ -753,12 +690,10 @@ public final class Tiling {
     }
   }
 
-  /// Wait for a scheduled reconcile to run.
   func waitForScheduledReconcile() async {
     await scheduledReconcile?.value
   }
 
-  /// Re-evaluate rules for one retitled window, reconciling only when its actions change.
   func windowTitleDidChange(_ windowID: CGWindowID) {
     guard rules.contains(where: \.filtersTitle) else { return }
     guard let identity = ruleIdentity(windowID) else { return }
@@ -768,14 +703,12 @@ public final class Tiling {
     scheduleReconcileAndReflow()
   }
 
-  /// Wait for in-flight rule Space moves and the reconciliation that follows each one.
   func waitForRuleSpaceMoves() async {
     while let task = ruleSpaceMoveTasks.values.first {
       await task.value
     }
   }
 
-  /// Suppress expected frame feedback or reconcile an external move or resize.
   func windowFrameDidChange(_ windowID: CGWindowID) {
     if frameReconciler?.shouldSuppressNotification(for: windowID) == true {
       return
@@ -787,19 +720,15 @@ public final class Tiling {
     scheduleReconcileAndReflow()
   }
 
-  /// Apply a fresh plan for one Space when it is visible and enabled.
   func reflow(spaceID: UInt64) {
     applyPlans(for: layoutIDs(for: spaceID))
   }
 
-  /// Apply fresh plans for all currently visible normal Spaces.
   func reflowVisibleSpaces() {
     guard let currentTopology else { return }
     applyPlans(for: currentTopology.visibleLayoutIDs.sorted())
   }
 
-  /// Calculate frames for an enabled, visible layout without applying them, or nil when the
-  /// layout is floating, hidden, unknown, or too small for its windows.
   func layoutPlan(for layoutID: TilingLayoutID) -> [CGWindowID: CGRect]? {
     guard var state = layoutsByID[layoutID], state.selection != .float else { return nil }
     guard let topology = currentTopology, topology.visibleLayoutIDs.contains(layoutID) else {
@@ -845,7 +774,6 @@ public final class Tiling {
     }
   }
 
-  /// Apply changed placement rules without snapping back windows on subsequent events.
   private func applyRulePlacements(
     _ actions: [CGWindowID: WindowRuleActions],
     snapshot: TilingReconciliationSnapshot
@@ -884,7 +812,6 @@ public final class Tiling {
         else { continue }
         applied.space = space
         if spaceIDs[space - 1] != layoutID.spaceID {
-          // A grid from the old Space is not a completed placement on the new one.
           applied.grid = nil
           startRuleSpaceMove(window.id, to: space)
           continue
@@ -914,12 +841,10 @@ public final class Tiling {
       case .deferred:
         continue
       case .applied, .failed:
-        // Record rejected mutations too, so their frame notifications cannot trigger retries.
         changedWindowIDs.insert(window.id)
       }
       if let display = placement.display {
         applied.display = display
-        // A grid from the old display is not a completed placement on the new one.
         applied.grid = nil
       }
       if let grid = placement.grid { applied.grid = grid }
@@ -927,7 +852,6 @@ public final class Tiling {
     return changedWindowIDs
   }
 
-  /// Move a window to a rule's Space in the background, then place it in the destination layout.
   private func startRuleSpaceMove(_ windowID: CGWindowID, to index: Int) {
     prepareForSynchronousMutation(for: windowID)
     ruleSpaceMoveTasks[windowID] = Task { [weak self, ruleSpaceMove] in
@@ -944,7 +868,6 @@ public final class Tiling {
     }
   }
 
-  /// Reflow when authoritative WindowServer membership changed without a lifecycle event.
   private func reflowIfMembershipChanged() {
     let membership = windowSpaceMembership()
     let previousMembership = currentTopology?.spaceIDsByWindowID ?? [:]
@@ -967,9 +890,6 @@ public final class Tiling {
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Reconcile once a window answers reads that failed, backing off while they keep failing.
-  ///
-  /// Only the affected windows are read, since a busy app can block each read until it times out.
   private func retryUnavailableFacts() {
     guard !unavailableFactWindowIDs.isEmpty else { return }
     factRetryCountdown -= 1
@@ -988,7 +908,6 @@ public final class Tiling {
     reconcileAndReflowVisibleSpaces()
   }
 
-  /// Retain layout state while preventing writes with stale display geometry.
   private func suspendTopology() {
     frameReconciler?.cancelAnimations()
     currentTopology = nil
@@ -996,7 +915,6 @@ public final class Tiling {
     updateMembershipPolling()
   }
 
-  /// Poll membership while automatic tiling is active because Mission Control emits no event.
   private func updateMembershipPolling() {
     guard
       defaultState.selection != .float
@@ -1021,7 +939,6 @@ public final class Tiling {
     }
   }
 
-  /// Change a tiled window's layout tree, then store and reflow it when the change succeeds.
   private func mutateTree(
     containing windowID: CGWindowID,
     requiring selection: LayoutSelection? = nil,
@@ -1042,7 +959,6 @@ public final class Tiling {
     return true
   }
 
-  /// Apply actionable plans for a stable sequence of layouts.
   private func applyPlans(for layoutIDs: some Sequence<TilingLayoutID>) {
     for layoutID in layoutIDs {
       guard let frames = layoutPlan(for: layoutID) else {
@@ -1073,7 +989,6 @@ public final class Tiling {
     )
   }
 
-  /// Cache one attempt per Space/display so refused sizes do not cause repeated reflows.
   private func applyDwindle(_ id: TilingLayoutID, frames: [CGWindowID: CGRect]) {
     guard let context = dwindleContext(id), !frames.isEmpty else { return }
     if dwindleAttempts[id]?.context == context { return }
@@ -1089,12 +1004,10 @@ public final class Tiling {
     }
   }
 
-  /// Report a dwindle layout that its windows could not satisfy; its cached attempt stops retries.
   private func logUnsatisfiedDwindle(_ id: TilingLayoutID) {
     log("dwindle layout unsatisfied space=\(id.spaceID)", level: .warn)
   }
 
-  /// Explicit layout adjustments permit a fresh attempt after a refused size.
   private func retryDwindle(_ ids: some Sequence<TilingLayoutID>) {
     for id in ids {
       dwindleAttempts.removeValue(forKey: id)
@@ -1102,7 +1015,6 @@ public final class Tiling {
     }
   }
 
-  /// Create empty layout state, inheriting per-Space controls when a display changes.
   private func initialState(
     for layoutID: TilingLayoutID,
     previousLayoutsByID: [TilingLayoutID: TilingLayoutState]
@@ -1118,7 +1030,6 @@ public final class Tiling {
     return state
   }
 
-  /// Update every layout on a Space, then reflow it when it uses the selected kind.
   @discardableResult
   private func updateLayouts(
     for spaceID: UInt64,
@@ -1140,7 +1051,6 @@ public final class Tiling {
     return true
   }
 
-  /// Update the defaults and every layout, then reflow visible layouts using the selected kind.
   private func updateAllLayouts(
     reflowing selection: LayoutSelection?,
     _ update: (inout TilingLayoutState) -> Void
@@ -1157,34 +1067,27 @@ public final class Tiling {
     }
   }
 
-  /// Track a new layout selection, reconciling when it floats and otherwise reflowing.
   private func applyLayoutSelection(_ selection: LayoutSelection, reflow: () -> Void) {
     updateMembershipPolling()
     if selection == .float {
-      // Floating releases layout geometry, so grids deferred while tiled can now apply.
       reconcile()
     } else {
       reflow()
     }
   }
 
-  /// Return a layout's tree without omitted windows or windows floated over the layout.
   private func activeTree(of state: TilingLayoutState) -> TilingTree? {
     state.tree?.removing(hiddenWindowIDs(in: state))
   }
 
-  /// Return a layout's leaves that receive no geometry: omitted windows and floated windows.
   private func hiddenWindowIDs(in state: TilingLayoutState) -> Set<CGWindowID> {
     state.omittedWindowIDs.union(floatingOverrideWindowIDs)
   }
 
-  /// Return the hidden leaves of the layout tiling a window, or none when it is not tiled.
   private func hiddenWindowIDs(inLayoutContaining windowID: CGWindowID) -> Set<CGWindowID> {
     layoutIDByWindowID[windowID].flatMap { layoutsByID[$0] }.map(hiddenWindowIDs(in:)) ?? []
   }
 
-  /// Return a layout's non-omitted windows in tree order, keeping only floated windows or only
-  /// tiled windows unless the whole layout floats.
   private func availableWindowIDs(in state: TilingLayoutState, floating: Bool) -> [CGWindowID] {
     (state.tree?.windowIDs ?? []).filter { windowID in
       guard !state.omittedWindowIDs.contains(windowID) else { return false }
@@ -1193,12 +1096,10 @@ public final class Tiling {
     }
   }
 
-  /// Return stable layout IDs for a Space.
   private func layoutIDs(for spaceID: UInt64) -> [TilingLayoutID] {
     layoutsByID.keys.filter { $0.spaceID == spaceID }.sorted()
   }
 
-  /// Swap complete frames for neighbouring windows outside automatic layout geometry.
   private func swapFloatingWindow(
     _ windowID: CGWindowID,
     in direction: CardinalDirection,
@@ -1226,13 +1127,11 @@ public final class Tiling {
     return true
   }
 
-  /// Apply fresh plans for every visible layout with the selected kind.
   private func reflowVisibleLayouts(matching selection: LayoutSelection) {
     guard let currentTopology else { return }
     applyPlans(for: currentTopology.visibleLayoutIDs.sorted(), matching: selection)
   }
 
-  /// Apply fresh plans only where the selected layout settings affect geometry.
   private func applyPlans(
     for layoutIDs: some Sequence<TilingLayoutID>,
     matching selection: LayoutSelection
@@ -1241,12 +1140,9 @@ public final class Tiling {
   }
 }
 
-/// Coherent runtime facts consumed by one tiling reconciliation.
 struct TilingReconciliationSnapshot {
-  /// Current manageable window facts.
   let windows: [TilingWindowSnapshot]
 
-  /// Space membership and visible display topology for those windows.
   let topology: SpaceTopology?
 }
 

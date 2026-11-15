@@ -1,16 +1,11 @@
-/// Handles space lifecycle events.
 @MainActor
 struct SpaceLifecycleHandler {
-  /// Space service updated by space events.
   let spaces: Spaces
 
-  /// Window service refreshed after space changes.
   let windows: Windows
 
-  /// Tiling coordinator refreshed after Space topology changes.
   let tiling: Tiling
 
-  /// Handle one space lifecycle event.
   func handle(_ event: SpaceEvent) {
     switch event {
     case .changed(let space):
@@ -22,7 +17,6 @@ struct SpaceLifecycleHandler {
     }
   }
 
-  /// Refresh visible windows and layouts without changing the tracked focused Space.
   func refresh() {
     tiling.cancelAnimations()
     windows.refreshWindows()
@@ -30,7 +24,6 @@ struct SpaceLifecycleHandler {
     tiling.reconcileAndReflowVisibleSpaces()
   }
 
-  /// Update active-space tracking and refresh the runtime after a Space change.
   private func spaceChanged(with space: Space) {
     spaces.activeSpaceDidChange(to: space.id)
     refresh()
@@ -38,7 +31,6 @@ struct SpaceLifecycleHandler {
     log("space changed \(space) \(spaces.activeSpace)")
   }
 
-  /// Replay focused-window events that arrived before their windows were manageable.
   private func replayLostFocusedEvent() {
     for windowID in windows.lostFocusedWindowIDsSnapshot() {
       guard let window = windows.window(by: windowID) else { continue }

@@ -8,7 +8,6 @@ do {
   exit(EX_USAGE)
 }
 
-/// Execute one parsed client or daemon invocation.
 @MainActor
 func runSwm(with arguments: StartCommand) {
   setMinimumLogLevel(arguments.logLevel)
@@ -27,8 +26,6 @@ func runSwm(with arguments: StartCommand) {
     try LockFile.acquire()
   }
 
-  // Establish AppKit's window-system connection before runtime initialization
-  // reads NSScreen, so screen changes are observed after docking and waking.
   let application = NSApplication.shared
 
   let workspace = Workspace()
@@ -90,8 +87,6 @@ func runSwm(with arguments: StartCommand) {
     return source
   }
 
-  // Wait until the AppKit event loop is processing main-actor work before running
-  // configuration commands, which call back into this daemon over IPC.
   DispatchQueue.main.async {
     DispatchQueue.global(qos: .userInitiated).async {
       do {
@@ -109,19 +104,16 @@ func runSwm(with arguments: StartCommand) {
     }
   }
 
-  // Run the AppKit event loop used by accessibility and workspace callbacks.
   withExtendedLifetime(terminationSignalSources) {
     application.run()
   }
 }
 
-/// Print an error message and terminate with failure.
 func fail(_ message: String) -> Never {
   fputs("Error: \(message)\n", stderr)
   exit(EXIT_FAILURE)
 }
 
-/// Run a throwing operation and terminate with a prefixed error on failure.
 func runOrFail(_ message: String, _ operation: () throws -> Void) {
   do {
     try operation()

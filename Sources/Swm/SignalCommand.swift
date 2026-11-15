@@ -1,7 +1,6 @@
 import ArgumentParser
 import SwmLib
 
-/// Manage commands triggered by daemon events.
 struct SignalCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "signal",

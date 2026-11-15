@@ -154,7 +154,6 @@ struct AnimationDisplayLinkTests {
     #expect(!healthy.stopped)
     silent.fire()
     #expect(ticks == [[20]])
-    // A later pass makes a new link. A callback from the retired session cannot tick it.
     scheduler.update(frames: [10: frame(0), 20: frame(1100)])
     silent.fire()
     created[1]?.fire()

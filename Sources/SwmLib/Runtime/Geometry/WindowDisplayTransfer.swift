@@ -1,12 +1,10 @@
 import CoreGraphics
 
-/// Calculates equivalent window placement on another display.
 struct WindowDisplayTransfer: Equatable {
   let windowFrame: CGRect
   let sourceFrame: CGRect
   let targetFrame: CGRect
 
-  /// Calculate a target frame preserving relative origin and fitting destination bounds.
   func targetWindowFrame() -> CGRect {
     let width = min(windowFrame.width, targetFrame.width)
     let height = min(windowFrame.height, targetFrame.height)

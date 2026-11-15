@@ -1,6 +1,5 @@
 import CoreGraphics
 
-/// Converts AppKit's upward Y axis to Accessibility's downward Y axis.
 enum ScreenGeometry {
   static func accessibilityFrame(_ frame: CGRect, primaryFrame: CGRect) -> CGRect {
     CGRect(
@@ -11,10 +10,6 @@ enum ScreenGeometry {
     )
   }
 
-  /// Give a hidden Dock's edge back to the visible frame, in AppKit coordinates.
-  ///
-  /// AppKit reserves the Dock's space while an automatically hidden Dock is showing,
-  /// so layouts made then would keep that gap after the Dock hides.
   static func visibleFrame(
     _ visibleFrame: CGRect,
     in frame: CGRect,

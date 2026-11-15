@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Pure ordered geometry calculator that recursively bisects the remaining bounds.
 struct DwindleLayout {
-  /// Calculate frames for persistent dwindle sibling relationships, or nil when they do not fit.
   func layout(
     tree: TilingTree?,
     in bounds: CGRect,
@@ -18,10 +16,6 @@ struct DwindleLayout {
     return framesByWindowID
   }
 
-  /// Resolve dynamic branch directions from their current bounds and retain them in a copy.
-  ///
-  /// Hidden windows receive no bounds, so a branch with a hidden side keeps its own direction and
-  /// passes its whole region to the visible side, matching the geometry drawn without them.
   func resolvingSplitDirections(
     in tree: TilingTree?,
     bounds: CGRect,
@@ -37,7 +31,6 @@ struct DwindleLayout {
     )
   }
 
-  /// Recursively calculate leaf frames from the retained binary tree, returning whether they fit.
   private func layout(
     _ tree: TilingTree,
     in bounds: CGRect,
@@ -58,7 +51,6 @@ struct DwindleLayout {
     }
   }
 
-  /// Resolve unset directions recursively while preserving existing branch ratios.
   private func resolvingSplitDirections(
     in tree: TilingTree,
     bounds: CGRect,
@@ -72,7 +64,6 @@ struct DwindleLayout {
       let firstIsVisible = first.removing(hiddenWindowIDs) != nil
       let secondIsVisible = second.removing(hiddenWindowIDs) != nil
       guard firstIsVisible, secondIsVisible else {
-        // A branch with a hidden side draws as its visible side, which keeps the whole region.
         let resolve = {
           resolvingSplitDirections(in: $0, bounds: bounds, gap: gap, hiding: hiddenWindowIDs)
         }
@@ -104,13 +95,10 @@ struct DwindleLayout {
     }
   }
 
-  /// Select a split direction from the longest edge of the current bounds.
   private func direction(for bounds: CGRect) -> TilingSplitDirection {
     bounds.width >= bounds.height ? .vertical : .horizontal
   }
 
-  /// Divide bounds using retained geometry or the current longest edge, or return nil when the
-  /// gap leaves either side below the minimum length.
   private func splitBounds(
     _ bounds: CGRect,
     gap: CGFloat,
@@ -124,7 +112,6 @@ struct DwindleLayout {
     return dividedBounds(bounds, gap: gap, vertical: vertical, allocation: allocation)
   }
 
-  /// Construct sibling rectangles after the caller chooses a feasible allocation.
   private func dividedBounds(
     _ bounds: CGRect,
     gap: CGFloat,

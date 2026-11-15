@@ -5,8 +5,6 @@ import Testing
 
 @testable import SwmLib
 
-// Synchronous clients use GCD threads so they cannot exhaust the cooperative pool
-// needed by the server's async handlers when these tests run in parallel.
 func runBlocking<Value: Sendable>(
   _ operation: @escaping @Sendable () throws -> Value
 ) async throws -> Value {
@@ -17,7 +15,6 @@ func runBlocking<Value: Sendable>(
   }
 }
 
-// A blocking newline client, matching the old wire exchange without BlueSocket.
 func legacyExchange(path: String, input: Data, endWriting: Bool = false) throws -> Data {
   let fd = try LocalSocket.connect(path: path)
   defer { close(fd) }

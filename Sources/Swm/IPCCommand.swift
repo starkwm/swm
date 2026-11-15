@@ -3,7 +3,6 @@ import Darwin
 import Foundation
 import SwmLib
 
-/// A typed command translated to the existing daemon IPC protocol.
 protocol IPCCommand: ParsableCommand {
   static var domain: CommandDomain { get }
   static var command: String { get }
@@ -11,10 +10,8 @@ protocol IPCCommand: ParsableCommand {
   var requestDomain: CommandDomain { get }
   var arguments: [String] { get }
 
-  /// The daemon command and its arguments.
   var commandArguments: [String] { get }
 
-  /// Format a successful response for output to a terminal or a pipe.
   func formatted(_ message: String, forTerminal: Bool) -> String
 }
 
@@ -58,7 +55,6 @@ extension ConfigIPCCommand {
   static var domain: CommandDomain { .config }
 }
 
-/// Shared settings retain global IPC semantics unless a Space is explicitly selected.
 protocol ScopedConfigIPCCommand: ConfigIPCCommand {
   var scope: ConfigScopeOptions { get }
   var settingArguments: [String] { get }
@@ -79,7 +75,6 @@ protocol QueryIPCCommand: IPCCommand {}
 extension QueryIPCCommand {
   static var domain: CommandDomain { .query }
 
-  /// Indent JSON for a terminal, and keep it on one line for pipes.
   func formatted(_ message: String, forTerminal: Bool) -> String {
     guard
       forTerminal,
@@ -128,12 +123,10 @@ extension WindowIPCCommand {
   static var domain: CommandDomain { .window }
 }
 
-/// A master-area edge, or the next or previous edge in turn.
 enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
   case left, right, top, bottom, next, prev
 }
 
-/// Enable or disable a setting.
 enum ToggleState: String, CaseIterable, ExpressibleByArgument {
   case on, off
 }

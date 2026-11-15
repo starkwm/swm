@@ -98,7 +98,6 @@ struct ApplicationLifecycleHandlerTests {
 
   @Test("launched: retries a process that has no AppKit application yet")
   func launchedRetriesAProcessThatHasNoAppKitApplicationYet() async {
-    // No running application has this process ID, so AppKit cannot resolve it.
     let process = SwmLib.Process(
       psn: ProcessSerialNumber(highLongOfPSN: 0, lowLongOfPSN: 7),
       pid: .max,
@@ -136,7 +135,6 @@ struct ApplicationLifecycleHandlerTests {
   }
 }
 
-/// Running application that reports itself as a launched, regular app.
 private final class ReadyApplication: NSRunningApplication {
   override var isFinishedLaunching: Bool { true }
   override var activationPolicy: NSApplication.ActivationPolicy { .regular }
@@ -155,7 +153,6 @@ private func readyProcess() -> SwmLib.Process {
   )
 }
 
-/// Windows that manage any process and expose one accessible window with ID 1.
 @MainActor
 private func managingWindows() -> Windows {
   Windows(

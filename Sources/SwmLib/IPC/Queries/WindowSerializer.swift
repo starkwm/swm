@@ -1,8 +1,6 @@
 import AppKit
 
-/// Window state returned by query commands.
 struct WindowSerializer: Encodable, Equatable {
-  /// JSON keys used for window query output.
   enum CodingKeys: String, CodingKey {
     case id
     case pid
@@ -23,7 +21,6 @@ struct WindowSerializer: Encodable, Equatable {
     case isMinimized = "is-minimized"
   }
 
-  /// Snapshot all manageable windows.
   @MainActor
   static func all(snapshot: QuerySnapshot) -> [WindowSerializer] {
     snapshot.windows.map { window in
@@ -41,58 +38,40 @@ struct WindowSerializer: Encodable, Equatable {
     }
   }
 
-  /// Core Graphics window ID.
   let id: CGWindowID
 
-  /// Owning process ID when available.
   let pid: pid_t?
 
-  /// Owning application name when available.
   let app: String?
 
-  /// Window title when available.
   let title: String?
 
-  /// Window frame from accessibility data when available.
   let frame: FrameSerializer?
 
-  /// Accessibility role when available.
   let role: String?
 
-  /// Accessibility subrole when available.
   let subrole: String?
 
-  /// Core Graphics display ID for the display containing most of the window.
   let display: UInt32?
 
-  /// One-based Space index containing the window.
   let space: Int?
 
-  /// Core Graphics window layer when available.
   let layer: Int?
 
-  /// Whether the window's position can be changed through accessibility.
   let canMove: Bool?
 
-  /// Whether the window's size can be changed through accessibility.
   let canResize: Bool?
 
-  /// Whether this is the focused window of the frontmost application, when known.
   let hasFocus: Bool?
 
-  /// Whether the window has an accessibility element reference.
   let hasAXReference: Bool
 
-  /// Whether the window is on a native fullscreen space.
   let isNativeFullscreen: Bool
 
-  /// Whether Core Graphics reports the window as onscreen.
   let isVisible: Bool
 
-  /// Whether accessibility reports the window as minimized.
   let isMinimized: Bool
 
-  /// Encode window state using stable query output keys.
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
@@ -116,7 +95,6 @@ struct WindowSerializer: Encodable, Equatable {
 }
 
 extension WindowSerializer {
-  /// Create query output by combining window, accessibility, and Core Graphics metadata.
   @MainActor
   init(
     window: Window,
@@ -151,7 +129,6 @@ extension WindowSerializer {
     display = displayScreen?.id
     space = spaceIndex
     layer = (info?[kCGWindowLayer as String] as? NSNumber)?.intValue
-    // Without an accessibility element, whether the window can move or resize is unknown.
     canMove = element.map { _ in window.isMovable }
     canResize = element.map { _ in window.isResizable }
     hasFocus = focusedWindowID.map { $0 == window.id }

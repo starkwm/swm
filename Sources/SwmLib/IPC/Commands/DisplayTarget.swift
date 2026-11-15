@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Display target for focusing a display.
 enum DisplayTarget: Equatable {
-  /// A one-based index, or the display after or before the source display.
   case cyclic(CyclicTarget)
   case first
   case last
@@ -10,11 +8,9 @@ enum DisplayTarget: Equatable {
   case mouse
   case direction(CardinalDirection)
 
-  /// Accepted target forms, for error messages.
   static let form =
     "a one-based display index, next, prev, first, last, recent, mouse, left, right, up, or down"
 
-  /// Parse a display target.
   init?(argument: String) {
     if let target = CyclicTarget(argument: argument) {
       self = .cyclic(target)
@@ -32,9 +28,6 @@ enum DisplayTarget: Equatable {
     }
   }
 
-  /// Resolve the target display ID from displays in arrangement order.
-  ///
-  /// `next` and `prev` wrap around, matching `window move --display`.
   func displayID(
     from sourceID: String?,
     displays: [DisplayCandidate],
@@ -66,7 +59,6 @@ enum DisplayTarget: Equatable {
   }
 }
 
-/// A display's ID and frame in accessibility coordinates.
 struct DisplayCandidate: Equatable {
   let id: String
   let frame: CGRect

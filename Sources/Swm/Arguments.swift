@@ -2,7 +2,6 @@ import ArgumentParser
 import Foundation
 import SwmLib
 
-/// Root command for the swm executable.
 struct Arguments: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "swm",
@@ -21,11 +20,6 @@ struct Arguments: ParsableCommand {
     ]
   )
 
-  /// Prepare raw arguments for parsing.
-  ///
-  /// No arguments, or leading `start` options, start the daemon. Any other leading
-  /// word must name a subcommand, so a typo is reported instead of reaching `start`.
-  /// Negative numbers are escaped for commands that accept signed adjustments.
   static func resolve(_ arguments: [String]) throws -> [String] {
     guard let first = arguments.first else { return [StartCommand._commandName] }
     if StartCommand.isOption(first) {
@@ -57,7 +51,6 @@ struct Arguments: ParsableCommand {
     return arguments
   }
 
-  /// The only candidate `name` prefixes or names a word of, else one within two edits.
   static func closestName(to name: String, in candidates: [String]) -> String? {
     let partial = candidates.filter {
       $0.hasPrefix(name) || $0.split(separator: "-").contains(Substring(name))
@@ -72,7 +65,6 @@ struct Arguments: ParsableCommand {
       .0
   }
 
-  /// Levenshtein distance between two strings.
   private static func editDistance(_ source: String, _ target: String) -> Int {
     let target = Array(target)
     var previous = Array(0...target.count)
@@ -87,18 +79,15 @@ struct Arguments: ParsableCommand {
     return previous[target.count]
   }
 
-  /// Show version information.
   @Flag(name: .shortAndLong, help: "Show the version.")
   var version = false
 
-  /// Print the version, or the root help when no subcommand was given.
   func run() throws {
     guard version else { throw CleanExit.helpRequest(self) }
     print("swm version \(Version.current.value)")
   }
 }
 
-/// Run the configuration file again in the running daemon.
 struct ReloadCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "reload",
@@ -110,7 +99,6 @@ struct ReloadCommand: ParsableCommand {
       """
   )
 
-  /// Path to the configuration file, defaulting to the one `start` uses.
   @Option(
     name: .shortAndLong,
     help: ArgumentHelp("Path to the configuration file.", valueName: "path"),
@@ -132,10 +120,6 @@ struct ReloadCommand: ParsableCommand {
     )
   }
 
-  /// Run the configuration file in a daemon reload, committing it only when the file succeeds.
-  ///
-  /// `execute` receives the reload's token, or nil for a daemon that predates reloads; that
-  /// daemon gets the previous behaviour of clearing rules and signals, then running the file.
   func run(
     send: (CommandDomain, [String]) -> Client.SendResult,
     execute: (String, String?) throws -> Void,
@@ -176,7 +160,6 @@ struct ReloadCommand: ParsableCommand {
     }
   }
 
-  /// Clear rules and signals, then execute the configuration file.
   private func clearThenRun(
     path: String,
     send: (CommandDomain, [String]) -> Client.SendResult,
@@ -200,18 +183,13 @@ struct ReloadCommand: ParsableCommand {
   }
 }
 
-/// A leading word that does not name a subcommand of the command before it.
 struct UnknownSubcommandError: Error, Equatable, CustomStringConvertible {
-  /// The unrecognized word.
   let name: String
 
-  /// The command path the word followed, such as `swm window`.
   let path: String
 
-  /// A similarly named subcommand, if one exists.
   let suggestion: String?
 
-  /// Usage error text written to standard error.
   var description: String {
     var message = "Error: Unknown subcommand '\(name)' for '\(path)'."
     if let suggestion {
@@ -221,7 +199,6 @@ struct UnknownSubcommandError: Error, Equatable, CustomStringConvertible {
   }
 }
 
-/// Start the window manager daemon.
 struct StartCommand: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "start",
@@ -229,20 +206,17 @@ struct StartCommand: ParsableCommand {
     discussion: "Runs when swm is given no subcommand."
   )
 
-  /// Conventional configuration path used when `--config` is omitted.
   static let defaultConfigPath = FileManager
     .default
     .homeDirectoryForCurrentUser
     .appending(path: ".config/swm/swmrc")
     .path()
 
-  /// Whether a leading argument is a `start` option, which implies `start`.
   static func isOption(_ argument: String) -> Bool {
     let name = argument.split(separator: "=", maxSplits: 1).first.map(String.init) ?? argument
     return ["-c", "--config", "--log-level"].contains(name)
   }
 
-  /// Path to the user configuration file executed at daemon startup.
   @Option(
     name: .shortAndLong,
     help: ArgumentHelp("Path to the configuration file.", valueName: "path"),
@@ -250,11 +224,9 @@ struct StartCommand: ParsableCommand {
   )
   var config: String?
 
-  /// Minimum runtime log level.
   @Option(name: .long, help: "Minimum log level.")
   var logLevel: LogLevel = .info
 
-  /// Start the daemon using the parsed options.
   mutating func run() {
     MainActor.assumeIsolated {
       runSwm(with: self)

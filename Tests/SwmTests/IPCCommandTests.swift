@@ -188,7 +188,6 @@ struct IPCCommandTests {
   }
 }
 
-/// Records the requests and file runs of one reload against a simulated daemon.
 private final class RecordedReload {
   private(set) var calls = [String]()
   private let begin: Client.SendResult

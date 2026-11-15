@@ -6,25 +6,20 @@ import CoreGraphics
 import Darwin
 import StarkSkyLight
 
-/// Thin wrapper around private WindowServer APIs used by swm.
 final class WindowServerClient {
-  /// Shared WindowServer client.
   static let shared = WindowServerClient()
 
   @MainActor
   static let spaceClient = Result { try SpaceClient() }
 
-  /// Return whether two Carbon process serial numbers identify the same process.
   static func sameProcess(_ lhs: ProcessSerialNumber, _ rhs: ProcessSerialNumber) -> Bool {
     lhs.highLongOfPSN == rhs.highLongOfPSN && lhs.lowLongOfPSN == rhs.lowLongOfPSN
   }
 
-  /// Return the main WindowServer connection ID for this process.
   func mainConnectionID() -> Int32 {
     SLSMainConnectionID()
   }
 
-  /// Return the process ID for the current frontmost process.
   func frontmostProcessID() -> pid_t? {
     var psn = ProcessSerialNumber()
     guard _SLPSGetFrontProcess(&psn) == noErr else { return nil }
@@ -35,14 +30,10 @@ final class WindowServerClient {
     return pid
   }
 
-  /// Return the frontmost window at a global pointer location.
   func frontmostWindowID(at point: CGPoint) -> CGWindowID? {
     frontmostWindowAndOwner(at: point)?.windowID
   }
 
-  /// Focus the frontmost window at a point, such as Finder's desktop on an empty display.
-  ///
-  /// Making that window key moves the active display without needing a managed window.
   func focusFrontmostWindow(at point: CGPoint) -> Bool {
     guard let (windowID, connectionID) = frontmostWindowAndOwner(at: point) else { return false }
 
@@ -57,7 +48,6 @@ final class WindowServerClient {
     )
   }
 
-  /// Return on-screen window IDs ordered from front to back.
   func onScreenWindowIDs() -> [CGWindowID] {
     let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
     guard
@@ -69,7 +59,6 @@ final class WindowServerClient {
     return windows.compactMap { $0[kCGWindowNumber as String] as? CGWindowID }
   }
 
-  /// Focus a window without changing its stacking order.
   func focusWindowWithoutRaise(
     processSerialNumber: ProcessSerialNumber,
     windowID: CGWindowID,
@@ -106,7 +95,6 @@ final class WindowServerClient {
     return postMakeKeyWindow(windowID, processSerialNumber: &processSerialNumber)
   }
 
-  /// Return the WindowServer connection ID for a process serial number.
   func connectionID(for psn: ProcessSerialNumber) -> Int32? {
     var psn = psn
     var connectionID: Int32 = -1
@@ -118,31 +106,26 @@ final class WindowServerClient {
     return connectionID > 0 ? connectionID : nil
   }
 
-  /// Capture topology without turning query failure into an empty Space list.
   @MainActor
   func spaceSnapshot() throws -> SpaceSnapshot {
     try Self.spaceClient.get().snapshot()
   }
 
-  /// Capture topology, or nil after logging when it cannot be read.
   @MainActor
   func spaceSnapshotIfAvailable() -> SpaceSnapshot? {
     querySpaces(default: nil) { try $0.snapshot() }
   }
 
-  /// Return the active WindowServer space ID, or nil when it cannot be read.
   @MainActor
   func activeSpace() -> UInt64? {
     querySpaces(default: nil) { try $0.activeSpace()?.rawValue }
   }
 
-  /// Return all known WindowServer space IDs.
   @MainActor
   func allSpaceIDs() -> [UInt64] {
     querySpaces(default: []) { try $0.snapshot().allSpaceIDs.map(\.rawValue) }
   }
 
-  /// Return the display UUID for a space ID.
   @MainActor
   func screenID(for spaceID: UInt64) -> String? {
     querySpaces(default: nil) {
@@ -150,13 +133,11 @@ final class WindowServerClient {
     }
   }
 
-  /// Return the space IDs containing a window.
   @MainActor
   func spaceIDs(containing windowID: CGWindowID) -> [UInt64] {
     querySpaces(default: []) { try $0.spaceIDs(containing: windowID).map(\.rawValue) }
   }
 
-  /// Return the WindowServer type for a space.
   @MainActor
   func spaceType(for spaceID: UInt64) -> SpaceType {
     guard spaceID != 0 else { return .unknown }
@@ -165,7 +146,6 @@ final class WindowServerClient {
     }
   }
 
-  /// Return valid top-level window IDs owned by an application connection on spaces.
   func windowIdentifiers(
     applicationConnectionID: Int32,
     spaceIDs: [UInt64]
@@ -178,7 +158,6 @@ final class WindowServerClient {
     var setTags: UInt64 = 0
     var clearTags: UInt64 = 0
 
-    // WindowServer returns NULL rather than an empty result when a query fails.
     guard
       let windows = SLSCopyWindowsWithOptionsAndTags(
         mainConnectionID(),
@@ -217,7 +196,6 @@ final class WindowServerClient {
     return windowIDs
   }
 
-  /// Return the frontmost window and its owning connection at a global point.
   private func frontmostWindowAndOwner(at point: CGPoint) -> (
     windowID: CGWindowID, connectionID: Int32
   )? {
@@ -245,7 +223,6 @@ final class WindowServerClient {
     return (windowID, windowConnectionID)
   }
 
-  /// Preserve the existing unavailable-value conventions at the package boundary.
   @MainActor
   private func querySpaces<Value>(default fallback: Value, _ query: (SpaceClient) throws -> Value)
     -> Value
@@ -258,7 +235,6 @@ final class WindowServerClient {
     }
   }
 
-  /// Post yabai-compatible events that make a window key without raising it.
   private func postMakeKeyWindow(
     _ windowID: CGWindowID,
     processSerialNumber: inout ProcessSerialNumber
@@ -272,7 +248,6 @@ final class WindowServerClient {
     return postEventRecord(&event, processSerialNumber: &processSerialNumber)
   }
 
-  /// Notify an application when key focus moves between two of its windows.
   private func postFocusTransition(
     from currentWindowID: CGWindowID,
     to windowID: CGWindowID,
@@ -293,7 +268,6 @@ final class WindowServerClient {
     return postEventRecord(&event, processSerialNumber: &processSerialNumber)
   }
 
-  /// Build the private event record used to make a window key.
   private func eventRecord(for windowID: CGWindowID) -> [UInt8] {
     var event = [UInt8](repeating: 0, count: 0xf8)
     event[0x04] = 0xf8
@@ -303,14 +277,12 @@ final class WindowServerClient {
     return event
   }
 
-  /// Copy a window ID into a private process event record.
   private func copy(_ windowID: CGWindowID, to event: inout [UInt8], at offset: Int) {
     withUnsafeBytes(of: windowID) { bytes in
       event.replaceSubrange(offset..<(offset + bytes.count), with: bytes)
     }
   }
 
-  /// Post a private event record to a process.
   private func postEventRecord(
     _ event: inout [UInt8],
     processSerialNumber: inout ProcessSerialNumber
@@ -321,7 +293,6 @@ final class WindowServerClient {
     }
   }
 
-  /// Return whether WindowServer attributes and tags describe a manageable window.
   private func validWindow(attributes: UInt64, tags: UInt64) -> Bool {
     if ((attributes & 0x2) != 0 || (tags & 0x400_0000_0000_0000) != 0)
       && (((tags & 0x1) != 0) || ((tags & 0x2) != 0 && (tags & 0x8000_0000) != 0))

@@ -1,13 +1,11 @@
 import AppKit
 
-/// Handles window operations and mouse cursor placement.
 @MainActor
 struct WindowCommandHandler {
   private let windows: Windows
   private let spaces: Spaces
   private let tiling: Tiling
 
-  /// Create a window command handler backed by window, Space, and tiling services.
   init(
     windows: Windows,
     spaces: Spaces,
@@ -18,7 +16,6 @@ struct WindowCommandHandler {
     self.tiling = tiling
   }
 
-  /// Dispatch a window IPC request to the matching window operation.
   func dispatch(_ request: IPCRequest) async -> IPCResponse {
     await IPCCommandError.catching(id: request.id) {
       switch request.command {
@@ -86,7 +83,6 @@ struct WindowCommandHandler {
     }
   }
 
-  /// Focus a selected window or the closest visible window in a direction.
   private func focus(_ request: IPCRequest) throws -> IPCResponse {
     guard let target = WindowTarget(arguments: request.args) else {
       throw IPCCommandError.invalidRequest("invalid window focus arguments")
@@ -117,7 +113,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Move the cursor into a selected window without changing focus or stacking order.
   private func warp(_ request: IPCRequest) throws -> IPCResponse {
     guard let target = WindowTarget(arguments: request.args) else {
       throw IPCCommandError.invalidRequest("invalid window warp arguments")
@@ -155,7 +150,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set the selected window's floating or tiled participation.
   private func layout(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "layout")
     guard let layout = WindowLayoutSelection(rawValue: selection.value) else {
@@ -168,7 +162,6 @@ struct WindowCommandHandler {
     return .success(id: request.id, message: layout.rawValue)
   }
 
-  /// Focus the next available window in stable layout order.
   private func cycle(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "window cycle").requiredValue()
     guard let direction = CycleDirection(rawValue: argument) else {
@@ -190,7 +183,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Swap the selected window with its neighbour in a direction.
   private func swap(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "swap")
     guard let direction = CardinalDirection(rawValue: selection.value) else {
@@ -205,7 +197,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Swap the focused tiled window with its neighbour in stable layout order.
   private func swapCycle(_ request: IPCRequest) throws -> IPCResponse {
     let argument = try IPCArguments(request.args, context: "window swap-cycle").requiredValue()
     guard let direction = CycleDirection(rawValue: argument) else {
@@ -220,7 +211,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Swap the selected tiled window with the master pane.
   private func swapWithMaster(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "swap-with-master")
     let window = try selectedWindow(selector: selector)
@@ -230,7 +220,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Focus the master window in the selected window's layout.
   private func focusMaster(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "focus-master")
     let window = try selectedWindow(selector: selector)
@@ -243,7 +232,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or adjust the selected window's nearest dwindle split ratio.
   private func splitRatio(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "split-ratio")
     guard let change = CommandValueParser.ratioChange(from: selection.value) else {
@@ -260,7 +248,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Toggle and retain the selected window's nearest dwindle split direction.
   private func toggleSplit(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "toggle-split")
     let window = try selectedWindow(selector: selector)
@@ -272,7 +259,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Exchange the selected window's nearest dwindle sibling subtrees.
   private func swapSplit(_ request: IPCRequest) throws -> IPCResponse {
     let selector = try parseSelector(request.args, action: "swap-split")
     let window = try selectedWindow(selector: selector)
@@ -282,7 +268,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Perform an action on a selected window.
   private func performWindowAction(
     _ request: IPCRequest,
     action: String,
@@ -299,7 +284,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Perform a two-axis geometry action on a selected window.
   private func performGeometryAction(
     _ request: IPCRequest,
     action: String,
@@ -330,7 +314,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Move the selected window to another display.
   private func display(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "move --display")
     let invalidDisplay = IPCCommandError.invalidValue(
@@ -368,7 +351,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Move a window without switching the active Space or immediately restoring focus.
   private func space(_ request: IPCRequest) async throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "move --space")
 
@@ -411,7 +393,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Move and resize the selected window into a grid cell span.
   private func grid(_ request: IPCRequest) throws -> IPCResponse {
     let selection = try parseValueSelection(request.args, action: "grid")
 
@@ -449,7 +430,6 @@ struct WindowCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Move a window to the equivalent position on another screen without animation.
   private func transfer(
     _ window: Window,
     frame: CGRect,
@@ -465,21 +445,18 @@ struct WindowCommandHandler {
     try applyFrame(targetFrame, window: window, failureMessage: failureMessage, animated: false)
   }
 
-  /// Reject direct geometry changes that an automatic layout would overwrite.
   private func requireUntiledWindow(_ window: Window) throws {
     guard !tiling.isWindowTiled(window.id) else {
       throw IPCCommandError.invalidRequest("window is tiled: \(window.id)")
     }
   }
 
-  /// Reject frame changes while the user is dragging the window.
   private func requireUndraggedWindow(_ windowID: CGWindowID) throws {
     guard !tiling.isInteractingWithWindow(windowID) else {
       throw IPCCommandError.invalidRequest("window is being dragged: \(windowID)")
     }
   }
 
-  /// Apply a multi-part frame change and report unrecoverable partial state.
   private func applyFrame(
     _ targetFrame: CGRect,
     window: Window,
@@ -508,7 +485,6 @@ struct WindowCommandHandler {
     }
   }
 
-  /// Resolve a window selector to a concrete window.
   private func selectedWindow(selector: String?) throws -> Window {
     let windowID: CGWindowID
 
@@ -542,12 +518,10 @@ struct WindowCommandHandler {
     return window
   }
 
-  /// Parse an optional single window selector argument.
   private func parseSelector(_ args: [String], action: String) throws -> String? {
     try IPCArguments(args, context: "window \(action)").optionalValue()
   }
 
-  /// Parse an optional selector and one required action value.
   private func parseValueSelection(
     _ args: [String],
     action: String
@@ -556,11 +530,9 @@ struct WindowCommandHandler {
   }
 }
 
-/// Two-axis window geometry change in `mode:first:second` format.
 private typealias WindowGeometryChange = NumericChange<(first: Int, second: Int)>
 
 extension WindowGeometryChange {
-  /// Parse the `first:second` integers after the mode.
   fileprivate static func pair(_ text: String) -> (first: Int, second: Int)? {
     let parts = text.split(separator: ":", omittingEmptySubsequences: false)
     guard parts.count == 2, let first = Int(parts[0]), let second = Int(parts[1]) else {
@@ -569,7 +541,6 @@ extension WindowGeometryChange {
     return (first, second)
   }
 
-  /// Return the frame with this change applied to its origin.
   fileprivate func moving(_ frame: CGRect) -> CGRect {
     var target = frame
     switch self {
@@ -582,7 +553,6 @@ extension WindowGeometryChange {
     return target
   }
 
-  /// Return the frame with this change applied to its size.
   fileprivate func resizing(_ frame: CGRect) -> CGRect {
     var target = frame
     switch self {

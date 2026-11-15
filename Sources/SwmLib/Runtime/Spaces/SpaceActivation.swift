@@ -1,6 +1,5 @@
 import StarkSkyLight
 
-/// Validates and confirms activation on the target's managed display.
 @MainActor
 final class SpaceActivation {
   static let shared = SpaceActivation()
@@ -24,9 +23,6 @@ final class SpaceActivation {
     self.wait = wait
   }
 
-  /// Activate the Space at a one-based index from `swm query spaces`.
-  ///
-  /// A timeout or cancellation after submission does not imply that nothing changed.
   func activate(index: Int) async throws -> SpaceSnapshot {
     try Task.checkCancellation()
     let before = try snapshotProvider()

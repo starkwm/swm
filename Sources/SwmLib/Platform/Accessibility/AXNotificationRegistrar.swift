@@ -1,14 +1,8 @@
 import ApplicationServices
 
-/// Registers and unregisters a fixed list of accessibility notifications.
 struct AXNotificationRegistrar: Sendable {
-  /// Notification names to register.
   let notifications: [String]
 
-  /// Register notifications and update the observed-name set.
-  ///
-  /// Registration stops at the first request that times out: the application is not answering,
-  /// and each later request would wait out the full messaging timeout as well.
   func observe(
     observedNotifications: inout Set<String>,
     addNotification: (String) -> ApplicationServices.AXError,
@@ -28,7 +22,6 @@ struct AXNotificationRegistrar: Sendable {
     return observedNotifications.isSuperset(of: notifications)
   }
 
-  /// Unregister notifications that were previously observed.
   func unobserve(
     observedNotifications: inout Set<String>,
     removeNotification: (String) -> Void

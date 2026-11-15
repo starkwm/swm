@@ -1,4 +1,3 @@
-/// Handles IPC commands that update the selected space.
 @MainActor
 struct SpaceCommandHandler {
   private let spaces: Spaces
@@ -7,7 +6,6 @@ struct SpaceCommandHandler {
   private let activateSpace: (Int) async throws -> Void
   private let arguments = SettingArguments(scope: "space")
 
-  /// Create a space command handler backed by space and tiling services.
   init(
     spaces: Spaces,
     tiling: Tiling,
@@ -24,7 +22,6 @@ struct SpaceCommandHandler {
     self.activateSpace = activateSpace
   }
 
-  /// Dispatch a space IPC request to the matching selected-space update.
   func dispatch(_ request: IPCRequest) async -> IPCResponse {
     await IPCCommandError.catching(id: request.id) {
       if request.command == "--activate" {
@@ -68,7 +65,6 @@ struct SpaceCommandHandler {
     }
   }
 
-  /// The selected Space's current value of a setting, in the form its command accepts.
   private func currentValue(of command: String, for spaceID: UInt64) throws -> String {
     let setting = String(command.dropFirst(2))
     if let value = SettingArguments.currentValue(of: setting, in: spaces.settings(for: spaceID)) {
@@ -84,7 +80,6 @@ struct SpaceCommandHandler {
     return value
   }
 
-  /// Set or adjust the master pane ratio for the selected Space.
   private func masterRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let change = try arguments.ratioChange(request.args, setting: "master-ratio")
     guard tiling.changeMasterRatio(change, for: spaceID) else {
@@ -93,7 +88,6 @@ struct SpaceCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or adjust the dwindle split ratio for the selected Space, rebalancing its splits.
   private func splitRatio(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let change = try arguments.ratioChange(request.args, setting: "split-ratio")
     guard tiling.changeSplitRatio(change, for: spaceID) else {
@@ -102,7 +96,6 @@ struct SpaceCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or cycle the master pane edge for the selected Space.
   private func masterPlacement(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let placement: MasterPlacement?
     switch try arguments.masterPlacement(request.args) {
@@ -118,7 +111,6 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: placement.rawValue)
   }
 
-  /// Set whether dwindle branches preserve their resolved direction on the selected Space.
   private func preserveSplitDirections(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse
   {
     let enabled = try arguments.preserveSplit(request.args)
@@ -128,7 +120,6 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: enabled ? "on" : "off")
   }
 
-  /// Select floating or automatic layout for the selected Space.
   private func layout(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let selection = try arguments.layout(request.args)
     guard tiling.setLayout(selection, for: spaceID) else {
@@ -138,7 +129,6 @@ struct SpaceCommandHandler {
     return .success(id: request.id, message: selection.rawValue)
   }
 
-  /// Set or adjust padding sides for the selected space, keeping sides left out.
   private func padding(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let padding = try PaddingSideChange.applying(
       arguments.paddingChanges(request.args),
@@ -151,7 +141,6 @@ struct SpaceCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Set or adjust the window gap for the selected space.
   private func gap(_ request: IPCRequest, spaceID: UInt64) throws -> IPCResponse {
     let gap = try arguments.gap(request.args, current: spaces.settings(for: spaceID).gap)
     spaces.setGap(gap, for: spaceID)
@@ -160,7 +149,6 @@ struct SpaceCommandHandler {
     return .acknowledged(id: request.id)
   }
 
-  /// Return the currently active space ID.
   private func currentSpaceID() throws -> UInt64 {
     guard let id = spaces.resolveActiveSpaceID() else {
       throw IPCCommandError.invalidRequest("no active space")
@@ -169,7 +157,6 @@ struct SpaceCommandHandler {
     return id
   }
 
-  /// Resolve an optional one-based space selector and remove it from command arguments.
   private func targetedRequest(_ request: IPCRequest) throws -> (IPCRequest, UInt64) {
     guard request.args.first == "--space" else {
       return (request, try currentSpaceID())

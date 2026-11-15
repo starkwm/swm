@@ -1,8 +1,6 @@
 import Foundation
 
-/// Main-thread dispatcher for runtime events.
 public final class Events: Sendable {
-  /// Shared event service used by model callbacks.
   public static let shared = Events()
 
   @MainActor
@@ -14,7 +12,6 @@ public final class Events: Sendable {
     self.handleEvent = handleEvent
   }
 
-  /// Configure the services used to handle runtime events.
   @MainActor
   public func configure(
     workspace: Workspace,
@@ -34,7 +31,6 @@ public final class Events: Sendable {
     )
   }
 
-  /// Enqueue a runtime event for main-thread handling.
   func post(_ event: RuntimeEvent) {
     DispatchQueue.main.async {
       if let handleEvent = self.handleEvent {
@@ -45,7 +41,6 @@ public final class Events: Sendable {
     }
   }
 
-  /// Capture transient signal state, dispatch the event, and emit its signal.
   @MainActor
   func handle(_ event: RuntimeEvent) {
     guard let dependencies else {
@@ -67,7 +62,6 @@ public final class Events: Sendable {
     }
   }
 
-  /// Dispatch an event to its domain-specific lifecycle handler.
   @MainActor
   private func dispatch(_ event: RuntimeEvent, dependencies: EventDependencies) {
     switch event {
@@ -101,7 +95,6 @@ public final class Events: Sendable {
   }
 }
 
-/// Runtime dependencies required by the event dispatcher.
 private struct EventDependencies {
   let workspace: Workspace
   let processes: Processes

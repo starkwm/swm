@@ -1,6 +1,5 @@
 import AppKit
 
-/// Validates and confirms asynchronous moves between normal desktop Spaces.
 @MainActor
 final class WindowSpaceTransfer {
   static let shared = WindowSpaceTransfer()
@@ -27,7 +26,6 @@ final class WindowSpaceTransfer {
     self.wait = wait
   }
 
-  /// Return only after membership changes; a submitted request alone is not success.
   @discardableResult
   func move(
     windowID: CGWindowID,
@@ -88,11 +86,6 @@ final class WindowSpaceTransfer {
 }
 
 extension WindowSpaceTransfer {
-  /// Move a window to a Space without switching to it, then fit it to that Space's display.
-  ///
-  /// `fit` runs only when the destination Space is on another display. It receives the window's
-  /// frame, the frame keeping its relative position on the destination display, and the
-  /// destination Space ID.
   @discardableResult
   func move(
     _ window: Window,

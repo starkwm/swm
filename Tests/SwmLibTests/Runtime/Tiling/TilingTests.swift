@@ -310,7 +310,6 @@ struct TilingTests {
     #expect(spaces.settings(for: 10) == settings)
     #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
-    // Settings commands must retain their changes without writing stale frames.
     let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
     let response = await handler.dispatch(
       IPCRequest(id: "gap", domain: .space, command: "--gap", args: ["abs:20"])
@@ -443,7 +442,6 @@ struct TilingTests {
         == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
 
-    // Membership is unchanged, so only the failed-read retry can recover the window.
     readsFail = false
     try await waitForAnimation { tiling.layoutPlan(for: layoutID(10)) == promoted }
   }
@@ -862,7 +860,6 @@ struct TilingTests {
     }
     #expect(placements.count == 1)
     #expect(placements.last?.grid != nil)
-    // A manual move afterwards must not snap the window back to the grid.
     tiling.windowFrameDidChange(1)
     tiling.reconcile()
     #expect(placements.count == 1)
@@ -939,7 +936,6 @@ struct TilingTests {
     #expect(moves.map(\.0) == [2])
     #expect(moves.map(\.1) == [2])
     #expect(tiling.isWindowTiled(2))
-    // Moving the window back by hand must not replay the rule.
     memberships[2] = [10]
     tiling.reconcileAndReflowVisibleSpaces()
     await tiling.waitForRuleSpaceMoves()
@@ -962,11 +958,9 @@ struct TilingTests {
     )
     tiling.initialize()
     tiling.setLayout(.master, for: 10)
-    // The current Space completes the action without a move.
     try tiling.addRule(WindowRule.parse(arguments: ["label=current", "space=1"]))
     #expect(moves == 0)
     #expect(tiling.isWindowTiled(1))
-    // Fullscreen and missing Spaces wait for a usable destination.
     try tiling.addRule(WindowRule.parse(arguments: ["label=fullscreen", "space=3"]))
     try tiling.addRule(WindowRule.parse(arguments: ["label=missing", "space=4"]))
     #expect(moves == 0)
@@ -1046,7 +1040,6 @@ struct TilingTests {
     #expect(placements.count == 2)
     #expect(placements.last?.grid != nil)
     #expect(placements.last?.display == nil)
-    // Moving the window manually back must not replay the display action.
     currentDisplay = "left"
     currentSpace = 10
     tiling.reconcile()
@@ -1499,7 +1492,6 @@ struct TilingTests {
       #expect(tiling.setWindowLayout(.float, for: 1))
     }
 
-    // Moving between displays that share a Space leaves membership unchanged.
     moved = window(id: 1, displayID: "display-b")
     moved.title = "Moved"
     windows[0] = moved
@@ -1911,7 +1903,6 @@ struct TilingTests {
     reconciler.advanceAnimations(at: start.advanced(by: .milliseconds(180)))
     try await waitForAnimation { app.frame(for: 1) == firstTarget }
 
-    // A combined move and resize can deliver more than one notification at the final frame.
     tiling.windowFrameDidChange(1)
     tiling.windowFrameDidChange(1)
     tiling.windowFrameDidChange(1)
@@ -1922,7 +1913,6 @@ struct TilingTests {
     try await waitForAnimation { reconciler.isIdle }
     #expect(app.frame(for: 2) == secondTarget)
 
-    // A real user move after completion must still reach reconciliation on the next turn.
     app.setFrame(firstTarget.offsetBy(dx: 50, dy: 0), for: 1)
     tiling.windowFrameDidChange(1)
     await tiling.waitForScheduledReconcile()
@@ -1950,7 +1940,6 @@ struct TilingTests {
     await tiling.waitForScheduledReconcile()
     #expect(snapshots == initialSnapshots + 1)
 
-    // A synchronous reconcile satisfies a pending one.
     tiling.windowFrameDidChange(1)
     tiling.reconcileAndReflowVisibleSpaces()
     await tiling.waitForScheduledReconcile()
@@ -1980,7 +1969,6 @@ struct TilingTests {
     before = snapshots
     tiling.windowTitleDidChange(1)
     await tiling.waitForScheduledReconcile()
-    // Reading this window's rule identity takes one snapshot in tests; no reconcile follows.
     #expect(snapshots == before + 1)
 
     candidate.title = "Preferences"
@@ -2066,7 +2054,6 @@ struct TilingTests {
     tiling.setLayout(.master, for: 10)
     tiling.windowFrameDidChange(2)
 
-    // Exercise departing and arriving windows in the same automatic polling tick.
     app.setFrame(CGRect(x: 100, y: 100, width: 300, height: 300), for: 3)
     memberships[2] = [11]
     memberships[3] = [10]

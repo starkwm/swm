@@ -1,6 +1,5 @@
 import AppKit
 
-/// Apply display selection and grid geometry as one frame mutation.
 @MainActor
 struct WindowRulePlacementApplier {
   static func displayIDs() -> [String] { NSScreen.arrangedScreens.map(\.uuid) }
@@ -34,7 +33,6 @@ struct WindowRulePlacementApplier {
     return .applied
   }
 
-  /// Move a window to a Space without switching to it, then fit it to that Space's display.
   func move(_ windowID: CGWindowID, toSpace index: Int) async throws {
     guard let window = windows.window(by: windowID) else {
       throw IPCCommandError.invalidRequest("window not found: \(windowID)")
@@ -53,7 +51,6 @@ struct WindowRulePlacementApplier {
 }
 
 extension WindowRulePlacement {
-  /// Grid coordinates always refer to the destination display.
   func frame(
     from frame: CGRect,
     sourceBounds: CGRect,

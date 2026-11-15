@@ -1,6 +1,5 @@
 import AppKit
 
-/// Runtime model for an accessibility-backed window.
 @MainActor
 final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
   private static let notificationRegistrar = AXNotificationRegistrar(
@@ -11,7 +10,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     ]
   )
 
-  // Title notifications are optional; unsupported notifications must not prevent discovery.
   private static let titleNotificationRegistrar = AXNotificationRegistrar(
     notifications: [kAXTitleChangedNotification]
   )
@@ -20,21 +18,17 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     lhs.id == rhs.id
   }
 
-  /// Owning application, held weakly to avoid a retain cycle.
   weak var application: Application?
 
-  /// Debug description including window ID and title.
   var description: String {
     "<Window id: \(id), title: \(title)>"
   }
 
-  /// Accessibility subrole for the window.
   var subrole: String? {
     guard let element else { return nil }
     return AccessibilityClient.shared.subrole(for: element)
   }
 
-  /// Whether accessibility reports the window as minimized.
   var isMinimized: Bool {
     guard let element else { return false }
     return AccessibilityClient.shared.boolAttribute(
@@ -43,7 +37,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     ) ?? false
   }
 
-  /// Whether accessibility allows moving the window.
   var isMovable: Bool {
     guard let element else { return false }
     return AccessibilityClient.shared.isAttributeSettable(
@@ -52,25 +45,20 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Whether accessibility allows resizing the window.
   var isResizable: Bool {
     guard let element else { return false }
     return AccessibilityClient.shared.isAttributeSettable(kAXSizeAttribute as String, for: element)
   }
 
-  /// Whether a tiling eligibility read failed without confirming the window's capabilities.
   var hasUnavailableTilingFacts: Bool {
     guard let element else { return false }
     return eligibilityReads(for: element).isUnavailable
   }
 
-  /// Accessibility element for the window when still valid.
   private(set) var element: AXUIElement?
 
-  /// Core Graphics window ID.
   private(set) var id: CGWindowID
 
-  /// Accessibility title for the window, or nil when accessibility reports none.
   var accessibilityTitle: String? {
     guard let element else { return nil }
 
@@ -80,7 +68,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Accessibility title for the window, or an empty string when accessibility reports none.
   var title: String {
     accessibilityTitle ?? ""
   }
@@ -98,7 +85,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     unobserve()
   }
 
-  /// Stop observing and clear references to invalid window state.
   func invalidate() {
     unobserve()
     element = nil
@@ -106,7 +92,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     id = 0
   }
 
-  /// Focus and raise the window through accessibility.
   @discardableResult
   func focus() -> Bool {
     guard let element else { return false }
@@ -134,7 +119,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     return true
   }
 
-  /// Focus the window through WindowServer without changing its stacking order.
   @discardableResult
   func focusWithoutRaise(from currentWindow: Window?) -> Bool {
     guard let application else { return false }
@@ -147,7 +131,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Minimize the window through accessibility.
   @discardableResult
   func minimize() -> Bool {
     guard let element else { return false }
@@ -159,7 +142,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Restore the window from a minimized state through accessibility.
   @discardableResult
   func unminimize() -> Bool {
     guard let element else { return false }
@@ -171,13 +153,11 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Return the window frame from accessibility.
   func frame() -> CGRect? {
     guard let element else { return nil }
     return AccessibilityClient.shared.frame(for: element)
   }
 
-  /// Capture the window facts used by automatic-tiling policy.
   func tilingSnapshot() -> TilingWindowSnapshot {
     guard let element else {
       return TilingWindowSnapshot(
@@ -207,17 +187,14 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Apply a target frame, retrying once from the applied frame when an app clamps it.
   func setFrame(_ targetFrame: CGRect, from currentFrame: CGRect) -> WindowFrameMutationResult {
     let result = applyFrame(targetFrame, from: currentFrame)
-    // Some apps clamp a resize at the old origin before accepting the accompanying move.
     guard result == .success, let appliedFrame = frame(),
       !appliedFrame.matches(targetFrame, tolerance: 1)
     else { return result }
     return applyFrame(targetFrame, from: appliedFrame)
   }
 
-  /// Apply a target frame, restoring the original size when moving fails.
   private func applyFrame(
     _ targetFrame: CGRect,
     from currentFrame: CGRect
@@ -227,7 +204,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
       return targetFrame.size != currentFrame.size ? .resizeFailed : .moveFailed
     }
 
-    // Keep the workaround active across the resize, move, and any rollback.
     return application.enhancedUIWorkaround {
       WindowFrameMutation.apply(
         from: currentFrame,
@@ -250,7 +226,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     }
   }
 
-  /// Register window-specific accessibility notifications.
   func observe() -> Bool {
     guard let application else { return false }
     guard let observer = application.observer else { return false }
@@ -268,8 +243,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
         context: context
       )
     }
-    // Title notifications are optional, but a timeout means the app is not answering, and the
-    // required notifications would each wait out the timeout too.
     var titleTimedOut = false
     _ = Self.titleNotificationRegistrar.observe(
       observedNotifications: &observedNotifications,
@@ -284,7 +257,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     )
   }
 
-  /// Remove registered window-specific accessibility notifications.
   func unobserve() {
     guard let observer = application?.observer else { return }
     guard let element else { return }
@@ -305,7 +277,6 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     observationContext = nil
   }
 
-  /// Read the Accessibility facts that decide whether the window can be tiled.
   private func eligibilityReads(for element: AXUIElement) -> WindowEligibilityReads {
     let client = AccessibilityClient.shared
     return WindowEligibilityReads(
@@ -316,39 +287,30 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
   }
 }
 
-/// Weak observation context passed through accessibility notification callbacks.
 @MainActor
 final class WindowObservationContext {
   private weak var observedWindow: Window?
 
-  /// Create a context for an observed window.
   init(window: Window) {
     observedWindow = window
   }
 
-  /// Post a runtime event for the observed window.
   func post(_ event: RuntimeEvent) {
     Events.shared.post(event)
   }
 
-  /// Return the observed window if it is still alive.
   func window() -> Window? {
     observedWindow
   }
 }
 
-/// Accessibility reads that decide whether a window can be tiled.
 private struct WindowEligibilityReads {
-  /// Window subrole read.
   let subrole: AccessibilityRead<String?>
 
-  /// Position settability read.
   let movable: AccessibilityRead<Bool>
 
-  /// Size settability read.
   let resizable: AccessibilityRead<Bool>
 
-  /// Whether any read failed without confirming its value.
   var isUnavailable: Bool {
     subrole.isUnavailable || movable.isUnavailable || resizable.isUnavailable
   }

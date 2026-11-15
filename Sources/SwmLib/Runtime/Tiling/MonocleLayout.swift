@@ -1,8 +1,6 @@
 import CoreGraphics
 
-/// Pure monocle layout geometry calculator.
 struct MonocleLayout {
-  /// Give every tiled window the complete padded visible bounds, or nil when they are too small.
   func layout(
     windowIDs: [CGWindowID],
     in bounds: CGRect,

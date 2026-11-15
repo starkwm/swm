@@ -20,7 +20,6 @@ struct WindowMinimizeCommandTests {
         request in
         #expect(request.domain == .window)
         #expect(request.command == "--\(action)")
-        // No selector retains the daemon's focused-window default for minimize.
         #expect(request.args == values)
         return .acknowledged(id: request.id)
       }

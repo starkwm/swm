@@ -27,7 +27,6 @@ struct ConfigReloadTests {
       )
       .ok
     )
-    // A duplicate is checked against the staged registrations, not the live ones.
     #expect(!fixture.send(.rule, "--add", ["label=new", "manage=on"], token: token).ok)
     #expect(
       fixture.send(
@@ -69,7 +68,6 @@ struct ConfigReloadTests {
     #expect(fixture.send(.config, "--commit-reload", [token]).ok)
     #expect(placements == 1)
 
-    // Clearing and adding the rule live, as reload used to, places the window again.
     #expect(fixture.send(.rule, "--clear").ok)
     #expect(fixture.send(.rule, "--add", rule).ok)
     #expect(placements == 2)
@@ -154,7 +152,6 @@ struct ConfigReloadTests {
     let token = try fixture.begin()
     #expect(fixture.send(.rule, "--add", ["label=b", "manage=off"], token: "unknown").ok)
     #expect(fixture.send(.config, "--commit-reload", [token]).ok)
-    // A program the configuration file left running still sends the old token.
     #expect(fixture.send(.rule, "--add", ["label=c", "manage=off"], token: token).ok)
     #expect(
       fixture.send(
@@ -177,7 +174,6 @@ struct ConfigReloadTests {
     process.standardOutput = FileHandle.nullDevice
     try process.run()
 
-    // The returned action owns the source, so it must stay alive until the exit arrives.
     var stop: (() -> Void)?
     let exited = await withCheckedContinuation { continuation in
       stop = ConfigReload.watchExit(of: process.processIdentifier) {
@@ -192,7 +188,6 @@ struct ConfigReloadTests {
   }
 }
 
-/// A reload backed by a test tiling, a private signal registry, and a simulated process.
 @MainActor
 private final class ReloadFixture {
   let tiling: Tiling
@@ -201,7 +196,6 @@ private final class ReloadFixture {
   let signals = Signals()
   var stoppedWatching: Bool { process.stopped }
 
-  /// Every setting a rollback restores.
   var settings: ReloadedSettings {
     ReloadedSettings(
       spaces: spaces.settingsSnapshot(),
@@ -254,7 +248,6 @@ private final class ReloadFixture {
     case .rule: RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request)
     case .signal: SignalCommandHandler(signals: signals, reload: reload).dispatch(request)
     case .config where !ConfigReloadCommandHandler.commands.contains(command):
-      // Settings commands are not staged, so the request's token does not route them.
       ConfigCommandHandler(windows: windows, spaces: spaces, tiling: tiling).dispatch(request)
     default: ConfigReloadCommandHandler(reload: reload).dispatch(request)
     }
@@ -271,14 +264,12 @@ private final class ReloadFixture {
   }
 }
 
-/// Every setting a rollback restores, compared as one value.
 private struct ReloadedSettings: Equatable {
   let spaces: SpaceSettingsSnapshot
   let tiling: TilingSettingsSnapshot
   let focusFollowsMouse: FocusFollowsMouseMode
 }
 
-/// The simulated reload process a fixture watches.
 @MainActor
 private final class WatchedProcess {
   var onExit: (@MainActor @Sendable () -> Void)?

@@ -5,7 +5,6 @@ import Testing
 
 @Suite("DisplayTarget")
 struct DisplayTargetTests {
-  // Three displays in arrangement order: left, centre, and one above the centre.
   private let displays = [
     DisplayCandidate(id: "left", frame: CGRect(x: -1920, y: 0, width: 1920, height: 1080)),
     DisplayCandidate(id: "centre", frame: CGRect(x: 0, y: 0, width: 2560, height: 1440)),

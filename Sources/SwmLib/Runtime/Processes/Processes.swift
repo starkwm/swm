@@ -1,7 +1,6 @@
 import CHIServices
 import Carbon
 
-/// Forward Carbon process events to a process observation instance.
 private func processEventHandler(
   _: EventHandlerCallRef?,
   event: EventRef?,
@@ -14,22 +13,18 @@ private func processEventHandler(
   return processes.handle(event: event)
 }
 
-/// Tracks running application processes and publishes process lifecycle events.
 @MainActor
 public final class Processes {
   private var processes = [UInt32: Process]()
 
-  /// Create an empty process observation.
   public init() {}
 
-  /// Create a process observation that already tracks the given processes.
   init(tracking processes: [Process]) {
     for process in processes {
       self.processes[process.psn.lowLongOfPSN] = process
     }
   }
 
-  /// Seed the process list and start observing Carbon application events.
   public func observe() -> Result<Void, ProcessesError> {
     addRunningProcesses()
 
@@ -61,17 +56,14 @@ public final class Processes {
       ? .success(()) : .failure(.accessFailed("failed to install event handler"))
   }
 
-  /// Return all currently tracked processes.
   public func all() -> [Process] {
     Array(processes.values)
   }
 
-  /// Find a tracked process by process serial number.
   func find(by psn: ProcessSerialNumber) -> Process? {
     processes[psn.lowLongOfPSN]
   }
 
-  /// Handle a Carbon application event.
   nonisolated func handle(event: EventRef) -> OSStatus {
     var psn = ProcessSerialNumber()
 
@@ -93,7 +85,6 @@ public final class Processes {
     return noErr
   }
 
-  /// Update process state for a parsed Carbon application event.
   private func handle(eventKind: Int, psn: ProcessSerialNumber) {
     switch eventKind {
     case kEventAppLaunched:
@@ -110,7 +101,6 @@ public final class Processes {
     }
   }
 
-  /// Add all currently running processes to the tracked process map.
   private func addRunningProcesses() {
     var psn = ProcessSerialNumber()
 
@@ -120,7 +110,6 @@ public final class Processes {
     }
   }
 
-  /// Track a newly launched process and publish an application launch event.
   private func applicationLaunched(with psn: ProcessSerialNumber) {
     guard processes[psn.lowLongOfPSN] == nil else { return }
     guard let process = Process(psn: psn) else { return }
@@ -130,7 +119,6 @@ public final class Processes {
     Events.shared.post(.application(.launched(process)))
   }
 
-  /// Mark a tracked process as terminated and publish an application termination event.
   private func applicationTerminated(with psn: ProcessSerialNumber) {
     guard let process = processes[psn.lowLongOfPSN] else { return }
 
@@ -140,7 +128,6 @@ public final class Processes {
     Events.shared.post(.application(.terminated(process)))
   }
 
-  /// Publish a frontmost-application change event for a tracked process.
   private func applicationFrontSwitched(to psn: ProcessSerialNumber) {
     guard let process = processes[psn.lowLongOfPSN] else { return }
 
@@ -148,12 +135,9 @@ public final class Processes {
   }
 }
 
-/// Errors raised while starting or accessing process observation.
 public enum ProcessesError: Error, CustomStringConvertible {
-  /// Process observation could not be started or accessed.
   case accessFailed(String)
 
-  /// Human-readable process observation failure description.
   public var description: String {
     switch self {
     case .accessFailed(let message):

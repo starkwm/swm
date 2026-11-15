@@ -1,22 +1,16 @@
 import CoreGraphics
 
-/// Selector that narrows query results to a display, space, or window.
 enum QuerySelection: Equatable {
-  /// No selector; query all items for the requested command.
   case none
 
-  /// Select a display by one-based arrangement index, or the focused display when absent.
   case display(Int?)
 
-  /// Select a space by index, or the focused space when the index is absent.
   case space(Int?)
 
-  /// Select a window by ID, or the focused window when the ID is absent.
   case window(CGWindowID?)
 
   private static let selectorFlags = Set(["--display", "--space", "--window"])
 
-  /// Parse at most one selector flag from an IPC request's arguments.
   static func parse(arguments: [String]) throws -> QuerySelection {
     var selection: QuerySelection = .none
     var index = 0
@@ -56,7 +50,6 @@ enum QuerySelection: Equatable {
     return selection
   }
 
-  /// Return non-flag values following a selector flag.
   private static func selectorValues(after index: Int, in arguments: [String]) -> [String] {
     var values = [String]()
     var next = index + 1
@@ -69,7 +62,6 @@ enum QuerySelection: Equatable {
     return values
   }
 
-  /// Parse a positive one-based display or Space index for the named selector.
   private static func parseIndex(_ value: String, selector: String) throws -> Int {
     guard let index = Int(value), index > 0 else {
       throw IPCCommandError.invalidRequest(
@@ -80,7 +72,6 @@ enum QuerySelection: Equatable {
     return index
   }
 
-  /// Parse a Core Graphics window ID.
   private static func parseWindowID(_ value: String) throws -> CGWindowID {
     guard let id = UInt32(value) else {
       throw IPCCommandError.invalidRequest("query window selector value must be a window id")

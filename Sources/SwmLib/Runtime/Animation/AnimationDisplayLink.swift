@@ -1,7 +1,6 @@
 import AppKit
 import QuartzCore
 
-/// One capped display link per active display, with stalled-link recovery and a no-display fallback.
 @MainActor
 final class AnimationDisplayLink {
   typealias Tick = (ContinuousClock.Instant) -> Void
@@ -20,13 +19,11 @@ final class AnimationDisplayLink {
 
   private static let stallTimeout = Duration.seconds(2)
 
-  /// Convert the presentation timestamp's Core Animation clock into ContinuousClock time.
   static func presentationTime(
     targetTimestamp: CFTimeInterval,
     mediaTime: CFTimeInterval,
     now: ContinuousClock.Instant
   ) -> ContinuousClock.Instant {
-    // A stale or discontinuous timestamp must not jump an animation far into the future.
     let delta = targetTimestamp - mediaTime
     return now.advanced(by: .seconds(delta.isFinite ? min(1.0 / 30, max(0, delta)) : 0))
   }
@@ -108,7 +105,6 @@ final class AnimationDisplayLink {
     }
   }
 
-  /// Retire silent links before settling their windows, so late callbacks cannot resume them.
   func checkForStalledLinks(at now: ContinuousClock.Instant = .now) {
     let stale = links.compactMap { id, session in
       session.lastTick.duration(to: now) >= Self.stallTimeout ? id : nil
@@ -163,7 +159,6 @@ private final class ScreenAnimationLink: NSObject, AnimationScreenLink {
     self.tick = tick
     super.init()
     let link = screen.displayLink(target: self, selector: #selector(advance))
-    // Keep the AX traffic cap until live throughput supports a higher rate.
     link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
     self.link = link
     link.add(to: .main, forMode: .common)
