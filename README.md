@@ -18,7 +18,7 @@ brew install starkwm/formulae/swm
 brew services start swm
 ```
 
-Grant Accessibility permission when prompted. `swm` starts with a floating layout. Create `~/.config/swm/swmrc` to enable tiling and apply settings at startup.
+Grant Accessibility permission when prompted. On macOS 27.3 and later, there is no prompt: add the `swm` binary in System Settings > Privacy & Security > System & App Protection Override, as described in [getting started](docs/getting-started.md#grant-accessibility-permission). `swm` starts with a floating layout. Create `~/.config/swm/swmrc` to enable tiling and apply settings at startup.
 
 See [getting started](docs/getting-started.md) for requirements and source builds, or the [configuration guide](docs/configuration.md) for an example startup script.
 
