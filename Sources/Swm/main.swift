@@ -17,7 +17,7 @@ func runSwm(with arguments: StartCommand) {
   }
 
   if !AccessibilityClient.shared.askForAccessibilityIfNeeded() {
-    fail("could not access accessibility features")
+    fail(AccessibilityPermission.deniedMessage())
   }
 
   AccessibilityClient.shared.limitMessagingTimeout()
