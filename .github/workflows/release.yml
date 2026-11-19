@@ -12,123 +12,13 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  TAG: ${{ github.ref_name }}
-  TAP: starkwm/formulae
-  TAP_REPOSITORY: starkwm/homebrew-formulae
-
 jobs:
-  bottle:
+  release:
     if: github.repository == 'starkwm/swm' && !github.event.deleted
-    runs-on: xcode-27
-    timeout-minutes: 25
-    steps:
-      # A full rerun replaces the run artifact. Preserve the exact tested bytes for retries.
-      - name: Restore or cache the tested release package
-        id: package
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ runner.temp }}/swm-release
-          key: swm-release-${{ github.run_id }}-${{ github.sha }}
-
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        if: steps.package.outputs.cache-hit != 'true'
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Validate the tagged source
-        if: steps.package.outputs.cache-hit != 'true'
-        shell: bash
-        run: |
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          make lint
-          make test
-          test "$("$(swift build --show-bin-path)/swm" --version)" = "swm version $TAG"
-          mkdir -p "$RUNNER_TEMP/swm-release"
-          git rev-parse HEAD > "$RUNNER_TEMP/swm-release/commit"
-          if [[ "$(git cat-file -t "refs/tags/$TAG")" == tag ]]; then
-            git for-each-ref --format='%(contents:subject)%0a%0a%(contents:body)' "refs/tags/$TAG" \
-              > "$RUNNER_TEMP/swm-release/notes.md"
-          fi
-          if previous_tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD^); then
-            echo "$previous_tag" > "$RUNNER_TEMP/swm-release/previous-tag"
-          fi
-
-      - name: Build and pour the Golden Gate bottle
-        if: steps.package.outputs.cache-hit != 'true'
-        shell: bash
-        env:
-          HOMEBREW_NO_AUTO_UPDATE: '1'
-        run: ./scripts/build-release-bottle.sh
-
-      - name: Upload the tested bottle and formula
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: swm-release
-          path: ${{ runner.temp }}/swm-release
-          if-no-files-found: error
-
-  publish:
-    needs: bottle
-    runs-on: ubuntu-latest
     permissions:
       contents: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          path: source
-          persist-credentials: false
-
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: swm-release
-          path: release
-
-      - name: Publish the verified bottle as a prerelease
-        working-directory: release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAP_APP_CLIENT_ID: ${{ vars.HOMEBREW_TAP_APP_CLIENT_ID }}
-        run: ../source/scripts/publish-release.sh
-
-  tap:
-    needs: publish
-    if: vars.HOMEBREW_TAP_APP_CLIENT_ID != ''
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          path: source
-          persist-credentials: false
-
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: swm-release
-          path: release
-
-      - name: Get a token for the tap
-        id: app
-        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3
-        with:
-          client-id: ${{ vars.HOMEBREW_TAP_APP_CLIENT_ID }}
-          private-key: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
-          owner: starkwm
-          repositories: homebrew-formulae
-          permission-contents: write
-          permission-pull-requests: write
-
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: starkwm/homebrew-formulae
-          ref: main
-          token: ${{ steps.app.outputs.token }}
-          path: tap
-
-      - name: Open the formula update PR
-        working-directory: tap
-        shell: bash
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: ../source/scripts/open-tap-pr.sh
+    uses: starkwm/workflows/.github/workflows/release-bottle.yml@ed4c349a9260ad04c26f1972e54ce362bb367684
+    with:
+      version-prefix: swm version
+    secrets:
+      HOMEBREW_TAP_APP_PRIVATE_KEY: ${{ secrets.HOMEBREW_TAP_APP_PRIVATE_KEY }}
