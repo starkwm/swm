@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+formula=Formula/swm.rb
+candidate=../release/swm.rb
+branch="swm-$TAG"
+if cmp -s "$formula" "$candidate"; then
+  echo "The tap already has the tested formula for $TAG."
+  exit 0
+fi
+if [[ "$(git hash-object "$formula")" != "$(cat ../release/tap-formula-base)" ]]; then
+  echo 'The tap formula changed after the bottle was built.' >&2
+  exit 1
+fi
+
+# Reuse a branch from an earlier attempt only if it contains this formula.
+existing=$(git ls-remote origin "refs/heads/$branch")
+if [[ -n "$existing" ]]; then
+  git fetch origin "refs/heads/$branch"
+  git show "FETCH_HEAD:$formula" | cmp - "$candidate"
+else
+  cp "$candidate" "$formula"
+  git add "$formula"
+  git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+    commit -m "Update swm to $TAG"
+  git push origin "HEAD:refs/heads/$branch"
+fi
+
+pr=$(gh pr list --repo "$TAP_REPOSITORY" --base main --head "$branch" --json url --jq '.[0].url // empty')
+if [[ -z "$pr" ]]; then
+  gh pr create --repo "$TAP_REPOSITORY" --base main --head "$branch" --title "Update swm to $TAG" \
+    --body "Source and Golden Gate bottle for $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG."
+else
+  echo "$pr"
+fi
