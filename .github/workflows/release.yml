@@ -17,7 +17,7 @@ jobs:
     if: github.repository == 'starkwm/swm' && !github.event.deleted
     permissions:
       contents: write
-    uses: starkwm/workflows/.github/workflows/release-bottle.yml@ed4c349a9260ad04c26f1972e54ce362bb367684
+    uses: starkwm/workflows/.github/workflows/release-bottle.yml@a7080f23323dd61120f9ee402c410502b042271a
     with:
       version-prefix: swm version
     secrets:
