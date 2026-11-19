@@ -26,10 +26,13 @@ else
   git push origin "HEAD:refs/heads/$branch"
 fi
 
-pr=$(gh pr list --repo "$TAP_REPOSITORY" --base main --head "$branch" --json url --jq '.[0].url // empty')
+pulls="repos/$TAP_REPOSITORY/pulls"
+pr=$(gh api --method GET "$pulls" -f state=open -f base=main \
+  -f head="${TAP_REPOSITORY%/*}:$branch" --jq '.[0].html_url // empty')
 if [[ -z "$pr" ]]; then
-  gh pr create --repo "$TAP_REPOSITORY" --base main --head "$branch" --title "Update swm to $TAG" \
-    --body "Source and Golden Gate bottle for $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG."
+  gh api --method POST "$pulls" -f base=main -f head="$branch" -f title="Update swm to $TAG" \
+    -f body="Source and Golden Gate bottle for $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG." \
+    -F maintainer_can_modify=false --jq .html_url
 else
   echo "$pr"
 fi
