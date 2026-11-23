@@ -26,6 +26,7 @@ struct WindowSerializerTests {
       isNativeFullscreen: false,
       isVisible: false,
       isMinimized: false,
+      tiling: nil
     )
 
     let object = try encodedObject(window)
@@ -47,5 +48,36 @@ struct WindowSerializerTests {
     #expect(object["is-native-fullscreen"] as? Bool == false)
     #expect(object["is-visible"] as? Bool == false)
     #expect(object["is-minimized"] as? Bool == false)
+    #expect(object["tiling"] is NSNull)
+    #expect(object["tiling-reason"] is NSNull)
+  }
+
+  @Test("encode: reports the tiling state and reason")
+  func encodeReportsTilingStateAndReason() throws {
+    let window = WindowSerializer(
+      id: 1,
+      pid: nil,
+      app: nil,
+      title: nil,
+      frame: nil,
+      role: nil,
+      subrole: nil,
+      display: nil,
+      space: nil,
+      layer: nil,
+      canMove: nil,
+      canResize: nil,
+      hasFocus: nil,
+      hasAXReference: true,
+      isNativeFullscreen: false,
+      isVisible: true,
+      isMinimized: false,
+      tiling: .floating(.dialog)
+    )
+
+    let object = try encodedObject(window)
+
+    #expect(object["tiling"] as? String == "floating")
+    #expect(object["tiling-reason"] as? String == "dialog")
   }
 }

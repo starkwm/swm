@@ -162,7 +162,8 @@ struct QueryResolverTests {
       hasAXReference: false,
       isNativeFullscreen: false,
       isVisible: false,
-      isMinimized: false
+      isMinimized: false,
+      tiling: nil
     )
   }
 
