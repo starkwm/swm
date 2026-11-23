@@ -3,7 +3,7 @@ import Testing
 
 @testable import SwmLib
 
-@Suite("NSScreen extensions")
+@Suite("NSScreenExtensions")
 @MainActor
 struct NSScreenExtensionsTests {
   @Test("uuid: is empty for a display that Core Graphics no longer knows")

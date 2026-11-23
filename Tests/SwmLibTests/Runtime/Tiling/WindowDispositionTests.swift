@@ -43,7 +43,7 @@ struct WindowEligibilityPolicyTests {
   }
 
   @Test("disposition: tiles a dialog-like window that a rule manages")
-  func dispositionTilesDialogLikeWindowThatRuleManages() {
+  func dispositionTilesADialogLikeWindowThatARuleManages() {
     let topology = SpaceTopology(
       spacesByID: [10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)],
       visibleSpaceIDByDisplayID: ["display": 10],

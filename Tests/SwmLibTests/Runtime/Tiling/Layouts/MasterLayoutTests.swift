@@ -132,7 +132,7 @@ struct MasterLayoutTests {
       (CGRect(x: 0, y: 0, width: 1, height: 2), 0, 3),
     ]
   )
-  func layoutReturnsNoFramesForUndersizedRows(
+  func layoutReturnsNoFramesForUndersizedTopAndBottomPlacements(
     bounds: CGRect,
     gap: Int,
     windowCount: Int
@@ -172,7 +172,7 @@ struct MasterLayoutTests {
   }
 
   @Test("layout: grows a top master to its known minimum height")
-  func layoutGrowsTopMasterToItsKnownMinimumHeight() {
+  func layoutGrowsATopMasterToItsKnownMinimumHeight() {
     let result = MasterLayout().layout(
       windowIDs: [1, 2],
       in: CGRect(x: 0, y: 0, width: 1_000, height: 800),

@@ -11,7 +11,7 @@ struct WindowFrameReconcilerTests {
     "apply: batch feedback reports which windows reached their frames",
     arguments: [false, true]
   )
-  func batchSettlementFrames(animated: Bool) async throws {
+  func applyBatchFeedbackReportsWhichWindowsReachedTheirFrames(animated: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
     let unchanged = animationFrame(0)
     let requested = CGRect(x: 100, y: 0, width: 200, height: 100)

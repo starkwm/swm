@@ -11,7 +11,11 @@ struct AccessibilityPermissionTests {
     "deniedMessage: macOS 27.3 and later point to System & App Protection Override",
     arguments: [(27, 3, 0), (27, 4, 1), (28, 0, 0)]
   )
-  func deniedMessagePointsToProtectionOverride(major: Int, minor: Int, patch: Int) {
+  func deniedMessageMacOS273AndLaterPointToSystemAndAppProtectionOverride(
+    major: Int,
+    minor: Int,
+    patch: Int
+  ) {
     let message = AccessibilityPermission.deniedMessage(
       osVersion: OperatingSystemVersion(
         majorVersion: major,
@@ -32,7 +36,11 @@ struct AccessibilityPermissionTests {
     "deniedMessage: earlier macOS versions point to Accessibility",
     arguments: [(26, 0, 0), (27, 2, 9)]
   )
-  func deniedMessagePointsToAccessibility(major: Int, minor: Int, patch: Int) {
+  func deniedMessageEarlierMacOSVersionsPointToAccessibility(
+    major: Int,
+    minor: Int,
+    patch: Int
+  ) {
     let message = AccessibilityPermission.deniedMessage(
       osVersion: OperatingSystemVersion(
         majorVersion: major,

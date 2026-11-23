@@ -8,10 +8,10 @@ import Testing
 @Suite("Tiling")
 struct TilingTests {
   @Test(
-    "dwindle moves a split to fit a window that refuses to shrink",
+    "reflow: dwindle moves a split to fit a window that refuses to shrink",
     arguments: [false, true]
   )
-  func dwindleFitsRefusedMinimumSize(animated: Bool) async throws {
+  func reflowDwindleMovesASplitToFitAWindowThatRefusesToShrink(animated: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [2: CGSize(width: 400, height: 1)]
     let reconciler = makeTestReconciler(app, automaticallySchedule: true)
@@ -34,8 +34,8 @@ struct TilingTests {
     #expect(app.writeCount == writes)
   }
 
-  @Test("master moves its split and stack rows to fit windows that refuse to shrink")
-  func masterFitsRefusedMinimumSizes() async throws {
+  @Test("reflow: master moves its split and stack rows to fit windows that refuse to shrink")
+  func reflowMasterMovesItsSplitAndStackRowsToFitWindowsThatRefuseToShrink() async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [1: CGSize(width: 700, height: 1), 3: CGSize(width: 1, height: 500)]
     let reconciler = makeTestReconciler(app, automaticallySchedule: true)
@@ -54,10 +54,10 @@ struct TilingTests {
   }
 
   @Test(
-    "new commands and closed windows discard obsolete refusal batches",
+    "reflow: new commands and closed windows discard obsolete refusal batches",
     arguments: [0, 1, 2, 3]
   )
-  func dwindleObsoleteBatch(mode: Int) async throws {
+  func reflowNewCommandsAndClosedWindowsDiscardObsoleteRefusalBatches(mode: Int) async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [2: CGSize(width: 400, height: 1)]
     let reconciler = makeTestReconciler(app)
@@ -100,8 +100,8 @@ struct TilingTests {
     #expect(app.writeCount == settledWrites)
   }
 
-  @Test("dwindle keeps a new split direction when minimum sizes cannot fit")
-  func dwindleKeepsNewDirection() async throws {
+  @Test("reflow: dwindle keeps a new split direction when minimum sizes cannot fit")
+  func reflowDwindleKeepsANewSplitDirectionWhenMinimumSizesCannotFit() async throws {
     let app = AnimationTestApp(processID: 1)
     let reconciler = makeTestReconciler(app)
     let tiling = makeTiling(
@@ -125,8 +125,8 @@ struct TilingTests {
     #expect(app.writeCount == writes)
   }
 
-  @Test("dwindle minimum sizes that exceed the display stop retrying after one refit")
-  func dwindleOversizedWindows() async throws {
+  @Test("reflow: dwindle minimum sizes that exceed the display stop retrying after one refit")
+  func reflowDwindleMinimumSizesThatExceedTheDisplayStopRetryingAfterOneRefit() async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
     let reconciler = makeTestReconciler(app)
@@ -1064,7 +1064,7 @@ struct TilingTests {
   }
 
   @Test("reconcile: floats dialog-like windows unless a rule manages them")
-  func reconcileFloatsDialogLikeWindowsUnlessRuleManagesThem() throws {
+  func reconcileFloatsDialogLikeWindowsUnlessARuleManagesThem() throws {
     var settings = window(id: 2)
     settings.isDialog = true
     settings.title = "Settings"

@@ -150,7 +150,7 @@ struct WindowCommandHandlerTests {
     "dispatch: transfers reject previous before resolving the window",
     arguments: ["display", "space"]
   )
-  func dispatchTransfersRejectPrevious(mode: String) async {
+  func dispatchTransfersRejectPreviousBeforeResolvingTheWindow(mode: String) async {
     for selector in [[], ["recent"], ["42"]] {
       let response = await handler().dispatch(
         request(command: "--\(mode)", args: selector + ["previous"])

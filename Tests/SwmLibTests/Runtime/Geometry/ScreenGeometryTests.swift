@@ -56,7 +56,10 @@ struct ScreenGeometryTests {
       (DockEdge.left, CGRect(x: 0, y: 53, width: 1710, height: 1021)),
     ]
   )
-  func visibleFrameGivesAnAutomaticallyHiddenDocksEdgeBack(edge: DockEdge?, expected: CGRect) {
+  func visibleFrameGivesAnAutomaticallyHiddenDocksEdgeBackAndKeepsTheMenuBar(
+    edge: DockEdge?,
+    expected: CGRect
+  ) {
     let frame = CGRect(x: 0, y: 0, width: 1710, height: 1112)
     let withDock = CGRect(x: 0, y: 53, width: 1710, height: 1021)
 

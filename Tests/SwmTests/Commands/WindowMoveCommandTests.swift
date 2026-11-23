@@ -4,13 +4,13 @@ import Testing
 @testable import Swm
 @testable import SwmLib
 
-@Suite("Window move CLI")
+@Suite("WindowMoveCommand")
 struct WindowMoveCommandTests {
   @Test(
-    "transfers preserve targets and selectors in existing IPC",
+    "parseAsRoot: transfers preserve targets and selectors in existing IPC",
     arguments: ["display", "space"]
   )
-  func routesTransfers(mode: String) throws {
+  func parseAsRootTransfersPreserveTargetsAndSelectorsInExistingIPC(mode: String) throws {
     let output = try #require(tmpfile())
     defer { fclose(output) }
     let cases: [([String], [String])] = [
@@ -41,8 +41,8 @@ struct WindowMoveCommandTests {
     }
   }
 
-  @Test("reports conflicting modes before incomplete coordinates")
-  func reportsConflictingModes() {
+  @Test("parseAsRoot: reports conflicting modes before incomplete coordinates")
+  func parseAsRootReportsConflictingModesBeforeIncompleteCoordinates() {
     for values in [["--display", "next", "5"], ["-20", "--space", "3"]] {
       #expect {
         try Arguments.parseAsRoot(Arguments.resolve(["window", "move"] + values))
@@ -52,8 +52,9 @@ struct WindowMoveCommandTests {
     }
   }
 
-  @Test("rejects conflicting modes, incomplete coordinates, and transfer absolute flags")
-  func rejectsInvalidModes() {
+  @Test(
+    "parseAsRoot: rejects conflicting modes, incomplete coordinates, and transfer absolute flags")
+  func parseAsRootRejectsConflictingModesIncompleteCoordinatesAndTransferAbsoluteFlags() {
     for values in [
       [], ["--absolute"], ["1"], ["--display"], ["--space"],
       ["--display", "next", "--space", "3"], ["--display=2", "--space=3"],

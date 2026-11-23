@@ -53,7 +53,7 @@ struct WindowSerializerTests {
   }
 
   @Test("encode: reports the tiling state and reason")
-  func encodeReportsTilingStateAndReason() throws {
+  func encodeReportsTheTilingStateAndReason() throws {
     let window = WindowSerializer(
       id: 1,
       pid: nil,

@@ -4,13 +4,13 @@ import Testing
 @testable import SwmLib
 
 @MainActor
-@Suite("Padding CLI behavior")
+@Suite("PaddingCommand")
 struct PaddingCommandTests {
   @Test(
-    "uniform and per-side values reach the selected settings",
+    "padding: uniform and per-side values reach the selected settings",
     arguments: ["global", "current", "2"]
   )
-  func uniformAndPerSideValuesReachSelectedSettings(scope: String) async throws {
+  func paddingUniformAndPerSideValuesReachTheSelectedSettings(scope: String) async throws {
     let spaces = Spaces(activeSpaceID: 10)
     let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
     let tiling = Tiling(
@@ -76,8 +76,11 @@ struct PaddingCommandTests {
     }
   }
 
-  @Test("rejects malformed and extra positional values", arguments: ["global", "current", "2"])
-  func rejectsMalformedAndExtraPositionalValues(scope: String) {
+  @Test(
+    "parseAsRoot: rejects malformed and extra positional values",
+    arguments: ["global", "current", "2"]
+  )
+  func parseAsRootRejectsMalformedAndExtraPositionalValues(scope: String) {
     for values in [["wide"], ["8", "9"], ["rel:2"], ["8", "--top", "wide"]] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(

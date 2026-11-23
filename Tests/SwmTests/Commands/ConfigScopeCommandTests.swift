@@ -5,18 +5,21 @@ import Testing
 @testable import Swm
 @testable import SwmLib
 
-@Suite("Config scope CLI behavior")
+@Suite("ConfigScopeCommand")
 struct ConfigScopeCommandTests {
   static let settings = [
     "layout", "master-ratio", "master-placement", "split-ratio", "preserve-split", "padding", "gap",
   ]
 
   @Test(
-    "queries send the selected scope through the IPC client",
+    "parseAsRoot: queries send the selected scope through the IPC client",
     arguments: settings,
     ["global", "current", "2"]
   )
-  func queriesSendSelectedScope(setting: String, scope: String) throws {
+  func parseAsRootQueriesSendTheSelectedScopeThroughTheIPCClient(
+    setting: String,
+    scope: String
+  ) throws {
     let selector = scope == "global" ? [] : ["--space", scope]
     var command = try #require(
       Arguments.parseAsRoot(["config", setting] + selector) as? any IPCCommand
@@ -39,8 +42,8 @@ struct ConfigScopeCommandTests {
     #expect(sent)
   }
 
-  @Test("help exposes Space scope only on shared settings")
-  func helpExposesScopeOnlyOnSharedSettings() {
+  @Test("helpMessage: exposes Space scope only on shared settings")
+  func helpMessageExposesSpaceScopeOnlyOnSharedSettings() {
     #expect(ConfigCommand.Gap.helpMessage().contains("--space"))
     #expect(ConfigCommand.Padding.helpMessage().contains("--top"))
     #expect(!ConfigCommand.FocusFollowsMouse.helpMessage().contains("--space"))
@@ -53,8 +56,8 @@ struct ConfigScopeCommandTests {
     }
   }
 
-  @Test("shared settings reject invalid selectors", arguments: settings)
-  func rejectsInvalidSelectors(setting: String) {
+  @Test("parseAsRoot: shared settings reject invalid selectors", arguments: settings)
+  func parseAsRootSharedSettingsRejectInvalidSelectors(setting: String) {
     for selector in [[], ["0"], ["-1"], ["next"], ["1.5"], ["999999999999999999999999"]] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(Arguments.resolve(["config", setting, "--space"] + selector))
@@ -63,10 +66,10 @@ struct ConfigScopeCommandTests {
   }
 
   @Test(
-    "global-only settings reject Space selection",
+    "parseAsRoot: global-only settings reject Space selection",
     arguments: ["animation-duration", "animation-easing", "focus-follows-mouse"]
   )
-  func globalOnlySettingsRejectSpaceSelection(setting: String) {
+  func parseAsRootGlobalOnlySettingsRejectSpaceSelection(setting: String) {
     for selector in ["current", "2"] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(["config", setting, "--space", selector])
@@ -74,16 +77,16 @@ struct ConfigScopeCommandTests {
     }
   }
 
-  @Test("removed Space setting commands fail", arguments: settings)
-  func removedSpaceSettingsFail(setting: String) {
+  @Test("parseAsRoot: removed Space setting commands fail", arguments: settings)
+  func parseAsRootRemovedSpaceSettingCommandsFail(setting: String) {
     #expect(throws: (any Error).self) {
       try Arguments.parseAsRoot(Arguments.resolve(["space", setting]))
     }
   }
 
   @MainActor
-  @Test("gap changes preserve global defaults and independent Space adjustments")
-  func gapChangesPreserveScopeBehavior() async throws {
+  @Test("gap: changes preserve global defaults and independent Space adjustments")
+  func gapChangesPreserveGlobalDefaultsAndIndependentSpaceAdjustments() async throws {
     let spaces = Spaces(activeSpaceID: 10)
     let tiling = Tiling(
       snapshot: { TilingReconciliationSnapshot(windows: [], topology: nil) },

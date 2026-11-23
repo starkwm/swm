@@ -21,7 +21,7 @@ struct WindowDisplayTargetTests {
   }
 
   @Test("init: rejects the previous navigation alias")
-  func initRejectsPreviousAlias() {
+  func initRejectsThePreviousNavigationAlias() {
     #expect(WindowDisplayTarget(argument: "previous") == nil)
   }
 

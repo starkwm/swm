@@ -146,7 +146,7 @@ struct ArgumentsTests {
   }
 
   @Test(
-    "navigation accepts prev and rejects previous",
+    "parseAsRoot: navigation accepts prev and rejects previous",
     arguments: [
       (["window", "move", "--display"], ["--display", "prev"]),
       (["window", "move", "--space"], ["--space", "prev"]),
@@ -155,7 +155,10 @@ struct ArgumentsTests {
       (["display", "focus"], ["--focus", "prev"]),
     ]
   )
-  func navigationUsesPrev(path: [String], expected: [String]) throws {
+  func parseAsRootNavigationAcceptsPrevAndRejectsPrevious(
+    path: [String],
+    expected: [String]
+  ) throws {
     let command = try #require(
       Arguments.parseAsRoot(Arguments.resolve(path + ["prev"])) as? any IPCCommand
     )

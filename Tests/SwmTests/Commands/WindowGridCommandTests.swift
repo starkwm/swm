@@ -3,10 +3,10 @@ import Testing
 
 @testable import Swm
 
-@Suite("Window grid CLI")
+@Suite("WindowGridCommand")
 struct WindowGridCommandTests {
-  @Test("translates cells and window selection to IPC")
-  func translatesPlacement() throws {
+  @Test("parseAsRoot: translates cells and window selection to IPC")
+  func parseAsRootTranslatesCellsAndWindowSelectionToIPC() throws {
     let cases: [([String], [String])] = [
       (["2", "1", "0", "0", "1", "1"], ["2:1:0:0:1:1"]),
       (["3", "2", "1", "0", "2", "2"], ["3:2:1:0:2:2"]),
@@ -26,8 +26,8 @@ struct WindowGridCommandTests {
     }
   }
 
-  @Test("rejects non-integers and missing or extra cells")
-  func rejectsInvalidPlacement() {
+  @Test("parseAsRoot: rejects non-integers and missing or extra cells")
+  func parseAsRootRejectsNonIntegersAndMissingOrExtraCells() {
     let valid = ["2", "1", "0", "0", "1", "1"]
     var cases = (0..<6).map { Array(valid.prefix($0)) }
     cases += [
@@ -47,8 +47,8 @@ struct WindowGridCommandTests {
     }
   }
 
-  @Test("rejects nonpositive row and column counts before IPC")
-  func rejectsNonpositiveCounts() {
+  @Test("parseAsRoot: rejects nonpositive row and column counts before IPC")
+  func parseAsRootRejectsNonpositiveRowAndColumnCountsBeforeIPC() {
     for counts in [["0", "1"], ["2", "0"], ["-2", "1"], ["2", "-1"]] {
       #expect(throws: (any Error).self) {
         try Arguments.parseAsRoot(
@@ -58,8 +58,8 @@ struct WindowGridCommandTests {
     }
   }
 
-  @Test("help lists grid arguments and examples")
-  func helpDocumentsPositionals() {
+  @Test("helpMessage: lists grid arguments and examples")
+  func helpMessageListsGridArgumentsAndExamples() {
     let help = WindowCommand.Grid.helpMessage()
     #expect(help.contains("<columns> <rows> <x> <y> <width> <height>"))
     #expect(help.contains("swm window grid 2 1 0 0 1 1"))

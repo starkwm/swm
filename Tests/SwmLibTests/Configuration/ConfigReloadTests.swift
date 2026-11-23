@@ -7,7 +7,7 @@ import Testing
 @Suite("ConfigReload")
 struct ConfigReloadTests {
   @Test("commit: swaps staged rules and signals in at once, leaving live ones until then")
-  func commitSwapsStagedRulesAndSignalsInAtOnce() throws {
+  func commitSwapsStagedRulesAndSignalsInAtOnceLeavingLiveOnesUntilThen() throws {
     let fixture = ReloadFixture()
     try fixture.tiling.addRule(WindowRule.parse(arguments: ["label=old", "manage=off"]))
     #expect(

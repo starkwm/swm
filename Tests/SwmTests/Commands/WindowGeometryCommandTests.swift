@@ -2,13 +2,15 @@ import Testing
 
 @testable import Swm
 
-@Suite("Window geometry CLI")
+@Suite("WindowGeometryCommand")
 struct WindowGeometryCommandTests {
   @Test(
-    "defaults to relative and preserves IPC geometry and window selection",
+    "parseAsRoot: defaults to relative and preserves IPC geometry and window selection",
     arguments: ["move", "resize"]
   )
-  func translatesGeometry(action: String) throws {
+  func parseAsRootDefaultsToRelativeAndPreservesIPCGeometryAndWindowSelection(
+    action: String
+  ) throws {
     let cases: [([String], [String])] = [
       (["20", "0"], ["rel:20:0"]),
       (["--absolute", "1200", "800"], ["abs:1200:800"]),
@@ -35,10 +37,10 @@ struct WindowGeometryCommandTests {
   }
 
   @Test(
-    "rejects replaced syntax, non-integers, and missing or extra values",
+    "parseAsRoot: rejects replaced syntax, non-integers, and missing or extra values",
     arguments: ["move", "resize"]
   )
-  func rejectsInvalidGeometry(action: String) {
+  func parseAsRootRejectsReplacedSyntaxNonIntegersAndMissingOrExtraValues(action: String) {
     for values in [
       [], ["20"], ["20", "0", "10"], ["abs:0:25"], ["rel:-20:0"],
       ["abs:0:25", "0"], ["rel:40:0", "0"], ["wide", "0"], ["1.5", "0"],

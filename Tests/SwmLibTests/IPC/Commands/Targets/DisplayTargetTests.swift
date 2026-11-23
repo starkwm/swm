@@ -23,7 +23,11 @@ struct DisplayTargetTests {
       ("2", "above", "centre"),
     ]
   )
-  func displayIDResolvesOrderTargets(argument: String, source: String, expected: String) throws {
+  func displayIDResolvesOrderTargetsFromTheSourceDisplayWrappingAtTheEnds(
+    argument: String,
+    source: String,
+    expected: String
+  ) throws {
     let target = try #require(DisplayTarget(argument: argument))
 
     #expect(resolve(target, from: source) == expected)
@@ -38,7 +42,11 @@ struct DisplayTargetTests {
       ("right", "left", "centre"),
     ]
   )
-  func displayIDResolvesDirections(argument: String, source: String, expected: String) throws {
+  func displayIDResolvesDirectionsByDisplayGeometry(
+    argument: String,
+    source: String,
+    expected: String
+  ) throws {
     let target = try #require(DisplayTarget(argument: argument))
 
     #expect(resolve(target, from: source) == expected)
@@ -59,7 +67,7 @@ struct DisplayTargetTests {
   }
 
   @Test("displayID: resolves the recent display and the display under the mouse")
-  func displayIDResolvesRecentAndMouse() {
+  func displayIDResolvesTheRecentDisplayAndTheDisplayUnderTheMouse() {
     #expect(resolve(.recent, from: "centre", recentID: "left") == "left")
     #expect(resolve(.mouse, from: "centre", mouseLocation: CGPoint(x: -10, y: 10)) == "left")
     #expect(resolve(.mouse, from: "left", mouseLocation: CGPoint(x: 400, y: -10)) == "above")
