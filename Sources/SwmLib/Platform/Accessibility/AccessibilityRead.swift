@@ -16,6 +16,13 @@ enum AccessibilityRead<Value> {
     }
   }
 
+  func map<Transformed>(_ transform: (Value) -> Transformed) -> AccessibilityRead<Transformed> {
+    switch self {
+    case .value(let value): .value(transform(value))
+    case .unavailable: .unavailable
+    }
+  }
+
   var value: Value? {
     guard case .value(let value) = self else { return nil }
     return value

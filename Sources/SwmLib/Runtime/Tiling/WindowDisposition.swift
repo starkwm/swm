@@ -20,6 +20,8 @@ enum WindowExclusionReason: Equatable {
   case notMovable
 
   case notResizable
+
+  case dialog
 }
 
 struct TilingWindowSnapshot: Equatable {
@@ -35,6 +37,8 @@ struct TilingWindowSnapshot: Equatable {
 
   let isResizable: Bool
 
+  var isDialog = false
+
   var hasUnavailableFacts = false
 
   var app: String? = nil
@@ -43,9 +47,23 @@ struct TilingWindowSnapshot: Equatable {
 }
 
 enum WindowEligibilityPolicy {
+  /// Whether a standard window behaves like a dialog rather than a document window.
+  ///
+  /// Modal windows are dialogs. So are windows that can be closed but not made full
+  /// screen, such as settings windows, open and save panels, and splash screens.
+  /// Windows with neither button, such as borderless terminals, are not.
+  static func isDialog(
+    isModal: Bool,
+    hasCloseButton: Bool,
+    isFullscreenButtonEnabled: Bool
+  ) -> Bool {
+    isModal || (hasCloseButton && !isFullscreenButtonEnabled)
+  }
+
   static func disposition(
     for window: TilingWindowSnapshot,
-    topology: SpaceTopology
+    topology: SpaceTopology,
+    allowsDialogTiling: Bool = false
   ) -> WindowDisposition {
     guard !window.hasUnavailableFacts else { return .pending }
     guard window.subrole == "AXStandardWindow" else {
@@ -62,7 +80,7 @@ enum WindowEligibilityPolicy {
       return .floating(.multipleSpaces)
     }
     if normalSpaceIDs.count == 1 {
-      return .tiled
+      return window.isDialog && !allowsDialogTiling ? .floating(.dialog) : .tiled
     }
     if membership.contains(where: { topology.spacesByID[$0]?.type == .fullscreen }) {
       return .excluded(.nativeFullscreen)

@@ -174,9 +174,32 @@ public final class AccessibilityClient {
   }
 
   func subroleRead(for element: AXUIElement) -> AccessibilityRead<String?> {
+    attributeRead(kAXSubroleAttribute as String, for: element, absent: nil) { $0 as? String }
+  }
+
+  func boolAttributeRead(_ attribute: String, for element: AXUIElement) -> AccessibilityRead<Bool> {
+    attributeRead(attribute, for: element, absent: false) { ($0 as? NSNumber)?.boolValue ?? false }
+  }
+
+  func elementAttributeRead(
+    _ attribute: String,
+    for element: AXUIElement
+  ) -> AccessibilityRead<AXUIElement?> {
+    attributeRead(attribute, for: element, absent: nil) { value in
+      guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+      return (value as! AXUIElement)
+    }
+  }
+
+  private func attributeRead<Value>(
+    _ attribute: String,
+    for element: AXUIElement,
+    absent: Value,
+    value transform: (AnyObject?) -> Value
+  ) -> AccessibilityRead<Value> {
     var value: AnyObject?
-    let error = AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &value)
-    return AccessibilityRead(error, value: { value as? String }, absent: nil)
+    let error = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
+    return AccessibilityRead(error, value: { transform(value) }, absent: absent)
   }
 
   func isWindow(_ element: AXUIElement) -> Bool {

@@ -1095,6 +1095,22 @@ struct TilingTests {
     #expect(tiling.cycledWindowID(from: 2, in: .next) == 1)
   }
 
+  @Test("reconcile: floats dialog-like windows unless a rule manages them")
+  func reconcileFloatsDialogLikeWindowsUnlessRuleManagesThem() throws {
+    var settings = window(id: 2)
+    settings.isDialog = true
+    settings.title = "Settings"
+    let tiling = makeTiling(windows: [window(id: 1), settings], memberships: [1: [10], 2: [10]])
+    tiling.initialize()
+    tiling.setLayout(.dwindle, for: 10)
+    #expect(
+      tiling.layoutPlan(for: layoutID(10)) == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
+    )
+
+    try tiling.addRule(WindowRule.parse(arguments: ["title=^Settings$", "manage=on"]))
+    #expect(tiling.layoutPlan(for: layoutID(10))?.keys.sorted() == [1, 2])
+  }
+
   @Test("addRule: cancels animation before synchronous placement")
   func addRuleCancelsAnimationBeforeSynchronousPlacement() async throws {
     let reconciler = makeTestReconciler(AnimationTestApp(processID: 1))

@@ -72,8 +72,8 @@ swm rule add label=finder-projects app='^Finder$' title='^Projects$' manage=on
 
 `manage=off` leaves a window out of automatic tiling and tiling cycles. Queries,
 focus, and direct window commands still work. `manage=on` allows tiling if the
-window supports it. It cannot force fixed-size, nonstandard, or native-fullscreen
-windows into a layout.
+window supports it, and tiles windows that swm would otherwise float as dialogs. It
+cannot force fixed-size, nonstandard, or native-fullscreen windows into a layout.
 
 swm checks rules before a new window's first layout, when rules change, and during
 later window updates. When a rule filters on `title`, a title change rechecks that
