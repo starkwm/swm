@@ -56,7 +56,9 @@ Actions run asynchronously through `/usr/bin/env sh -c`. Depending on the event,
 
 `SWM_SPACE_INDEX` and `SWM_RECENT_SPACE_INDEX` are one-based and match `swm query spaces`.
 
-Up to four actions run at once, and up to 128 more wait in a queue. swm drops actions that arrive while the queue is full. Each action reads standard input from `/dev/null`. An action still running after 30 seconds is sent `SIGTERM`, along with every command it started, and `SIGKILL` two seconds later, so a hung action cannot hold a slot.
+Up to four actions run at once, and up to 128 more wait in a queue. swm drops actions that arrive while the queue is full. Each action reads standard input from `/dev/null`.
+
+If the action's shell is still running after 30 seconds, swm sends `SIGTERM` to its process group. If the shell is still running two seconds later, swm sends `SIGKILL` to the same group. A child process can survive if the shell exits before that second signal or if the child has left the group.
 
 While a window is dragged it can emit many `window-moved` and `window-resized` events. A waiting action for the same registration, event, and window is replaced by the newest one, so it runs once with the latest values.
 

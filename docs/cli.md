@@ -33,13 +33,13 @@ A reload is all-or-nothing for rules and signals:
 
 - While the file runs, the rules and signals it adds, removes, clears, or lists belong to the reload, which starts with none. The current rules and signals stay in effect until the file finishes.
 - If the file exits successfully, its rules and signals replace the current ones in one step. A window whose rule placement is unchanged is not placed again, so windows you moved stay where they are.
-- If the file exits unsuccessfully, or `swm reload` stops before the file finishes, the current rules and signals stay, and settings the file changed are restored. `reload` exits with status 1.
+- If the file exits unsuccessfully, `reload` exits with status 1. The daemon keeps the current rules and signals and restores settings to their values at the start of the reload. It does the same if `swm reload` stops before the file finishes.
 
 Settings commands such as `swm config gap 8` take effect as the file runs. Settings the file no longer sets keep their current values. A reload cannot undo window, Space, or display commands the file ran, or programs it started. Restoring a layout setting reflows the affected layouts. Restoring `split-ratio` rebalances every split to the restored ratio, and turning `preserve-split` back on cannot recover split directions the file cleared.
 
 A failed command does not cancel the reload by itself; the file's exit status decides. Add `set -e` to a shell script to stop, and roll back, at the first failed command.
 
-Only one reload runs at a time; a second `swm reload` fails until the first finishes. Commands sent from outside the file, such as hotkeys, still apply immediately. A rule or signal one of them adds during a reload is replaced when the reload succeeds. Programs the file starts inherit its `SWM_RELOAD_TOKEN` environment variable, so their commands join the reload while it runs and apply immediately once it finishes.
+Only one reload runs at a time. A second `swm reload` fails until the first finishes. Commands sent from outside the file, such as hotkeys, still apply immediately. A successful reload replaces any rule or signal added by a hotkey while the file ran. A failed reload undoes even a hotkey's change to a setting the file never touched. Programs the file starts inherit its `SWM_RELOAD_TOKEN` environment variable, so their commands join the reload while it runs and apply immediately once it finishes.
 
 A daemon started before atomic reloads existed does not support them. `reload` then warns, removes every rule and signal, and runs the file. Restart the daemon to use atomic reloads.
 

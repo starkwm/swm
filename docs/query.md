@@ -26,7 +26,15 @@ swm query space [space-index]
 swm query window [window-id]
 ```
 
-Display and Space indexes are one-based. Display indexes follow the physical display arrangement. A filtered query returns one JSON object when the selector identifies the same type as the query; otherwise it returns an array of related objects.
+Display and Space indexes are one-based. Display indexes follow the physical display arrangement.
+
+| Query | No selector | `--display` | `--space` | `--window` |
+| --- | --- | --- | --- | --- |
+| `swm query displays` | Array | Object | Object | Object |
+| `swm query spaces` | Array | Array | Object | Object |
+| `swm query windows` | Array | Array | Array | Object |
+
+When nothing matches, an object query returns `null` and an array query returns `[]`.
 
 Window `has-focus` compares each ID with the focused window of the frontmost application. It is `null` when focus cannot be determined; a singular window query then returns `null`.
 

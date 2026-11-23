@@ -81,10 +81,12 @@ window, if the app supports title notifications, and updates layouts only when t
 window's matching rules change. Removing a management rule restores the earlier matching value or
 the normal default.
 
-`swm window float on` floats a window and `swm window float off` returns it to
-tiling. `swm window float toggle` switches between the two. These choices override
-management rules until the window closes or the daemon restarts. Editing rules
-does not reset them.
+`swm window float on` floats a window eligible for tiling. `swm window float off`
+allows the Space's layout to tile it again. `swm window float toggle` switches
+between the two. These choices override management rules until the window closes
+or the daemon restarts. Editing rules does not reset them. Tiling a dialog-like
+window still requires a matching `manage=on` rule.
+
 Rules do not change the Space's layout. A Space using `float` keeps its usual
 floating-window commands and cycling.
 

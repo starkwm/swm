@@ -6,7 +6,8 @@
 
 - macOS 26 or later
 - Accessibility permission for `swm`
-- Xcode 26 or later when building from source
+- Apple Silicon for Homebrew installs
+- A Swift toolchain that supports Swift tools version 6.4 for source builds
 
 `swm` uses private macOS frameworks. A macOS update may change behavior that it relies on.
 

@@ -122,7 +122,7 @@ swm window toggle-split [--window <window|recent>]
 swm window swap-split [--window <window|recent>]
 ```
 
-- `float on` floats the selected window. `float off` returns it to tiling, and `float toggle` switches between the two. These choices override management rules until the window closes or the daemon restarts.
+- `float on` floats a window eligible for tiling. `float off` allows the Space's layout to tile it again, and `float toggle` switches between the two. These choices override management rules until the window closes or the daemon restarts. If swm floats the window as a dialog, tiling it requires a matching [`manage=on` rule](rules.md#tiling).
 - `swap left|right|up|down` swaps tiled positions with the neighbour in that direction, or complete frames in a floating layout.
 - `swap next|prev` swaps the focused tiled window with its neighbour in stable layout order, and does not accept `--window`.
 - `swap master` promotes a window in a master layout.
