@@ -8,7 +8,7 @@ struct SignalCommand: ParsableCommand {
     subcommands: [Add.self, List.self, Remove.self, Clear.self]
   )
 
-  struct Add: SignalIPCCommand {
+  struct Add: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a command for a matching event.",
       discussion: """
@@ -20,31 +20,31 @@ struct SignalCommand: ParsableCommand {
           swm signal add event=window-created app='^Safari$' action='swm window warp'
         """
     )
-    static let command = "--add"
 
     @Argument(help: "Signal properties written as key=value or key!=value.")
     var properties: [String]
 
-    var arguments: [String] { properties }
+    var ipcCommand: IPCCommand { .signal(.add(properties)) }
   }
 
-  struct List: SignalIPCCommand {
+  struct List: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "List registered signals.")
-    static let command = "--list"
+
+    var ipcCommand: IPCCommand { .signal(.list) }
   }
 
-  struct Clear: SignalIPCCommand {
+  struct Clear: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Remove every registered signal.")
-    static let command = "--clear"
+
+    var ipcCommand: IPCCommand { .signal(.clear) }
   }
 
-  struct Remove: SignalIPCCommand {
+  struct Remove: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Remove a registered signal.")
-    static let command = "--remove"
 
     @Argument(help: "Signal index or label.")
     var signal: String
 
-    var arguments: [String] { [signal] }
+    var ipcCommand: IPCCommand { .signal(.remove(signal)) }
   }
 }

@@ -10,51 +10,37 @@ struct DisplayCommandHandler {
     self.displays = displays
   }
 
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
-    IPCCommandError.catching(id: request.id) {
-      switch request.command {
-      case "--focus":
-        return try focus(request)
-      default:
-        throw IPCCommandError.unsupportedCommand("unsupported display command: \(request.command)")
+  func dispatch(id: String, target: DisplayTarget) -> IPCResponse {
+    IPCCommandError.catching(id: id) {
+      let screens = NSScreen.arrangedScreens
+      let sourceID = currentDisplayID()
+      guard
+        let targetID = target.displayID(
+          from: sourceID,
+          displays: screens.map { DisplayCandidate(id: $0.uuid, frame: $0.axFrame) },
+          recentID: displays.lastActiveDisplayID,
+          mouseLocation: CGEvent(source: nil)?.location
+        ),
+        let screen = screens.first(where: { $0.uuid == targetID })
+      else {
+        throw IPCCommandError.invalidRequest("could not locate display")
       }
+
+      guard targetID != sourceID else { return .acknowledged(id: id) }
+
+      if let window = frontmostWindow(on: screen) {
+        try window.focusOrThrow()
+        return .acknowledged(id: id)
+      }
+
+      let center = CGPoint(x: screen.axFrame.midX, y: screen.axFrame.midY)
+      CGWarpMouseCursorPosition(center)
+      guard WindowServerClient.shared.focusFrontmostWindow(at: center) else {
+        throw IPCCommandError.internalError("could not focus display")
+      }
+
+      return .acknowledged(id: id)
     }
-  }
-
-  private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    let argument = try IPCArguments(request.args, context: "display focus").requiredValue()
-    guard let target = DisplayTarget(argument: argument) else {
-      throw IPCCommandError.invalidValue("display focus", argument, expected: DisplayTarget.form)
-    }
-
-    let screens = NSScreen.arrangedScreens
-    let sourceID = currentDisplayID()
-    guard
-      let targetID = target.displayID(
-        from: sourceID,
-        displays: screens.map { DisplayCandidate(id: $0.uuid, frame: $0.axFrame) },
-        recentID: displays.lastActiveDisplayID,
-        mouseLocation: CGEvent(source: nil)?.location
-      ),
-      let screen = screens.first(where: { $0.uuid == targetID })
-    else {
-      throw IPCCommandError.invalidRequest("could not locate display: \(argument)")
-    }
-
-    guard targetID != sourceID else { return .acknowledged(id: request.id) }
-
-    if let window = frontmostWindow(on: screen) {
-      try window.focusOrThrow()
-      return .acknowledged(id: request.id)
-    }
-
-    let center = CGPoint(x: screen.axFrame.midX, y: screen.axFrame.midY)
-    CGWarpMouseCursorPosition(center)
-    guard WindowServerClient.shared.focusFrontmostWindow(at: center) else {
-      throw IPCCommandError.internalError("could not focus display: \(argument)")
-    }
-
-    return .acknowledged(id: request.id)
   }
 
   private func currentDisplayID() -> String? {

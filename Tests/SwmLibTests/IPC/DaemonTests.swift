@@ -47,7 +47,7 @@ struct DaemonTests {
     try daemon.run()
     defer { daemon.shutdown() }
     let result = try await runBlocking {
-      let response = Client.send(domain: .config, args: ["gap", "abs:17"]) {
+      let response = Client.send(.config(.gap(scope: .global, .absolute(17)))) {
         try Client.exchange($0, path: endpoint.path)
       }
       return (response.ok, response.outputMessage)
@@ -72,26 +72,23 @@ struct DaemonTests {
     let daemon = Daemon(path: endpoint.path, dispatch: dispatcher.dispatch)
     try daemon.run()
     defer { daemon.shutdown() }
-    @Sendable func send(_ domain: CommandDomain, _ args: [String], token: String? = nil)
-      -> Client.SendResult
-    {
+    @Sendable func send(_ command: IPCCommand, token: String? = nil) -> Client.SendResult {
       Client.send(
-        domain: domain,
-        args: args,
+        command,
         environment: token.map { [Client.reloadTokenVariable: $0] } ?? [:]
       ) { try Client.exchange($0, path: endpoint.path) }
     }
 
     let processID = getpid()
     let token = try await runBlocking {
-      send(.config, ["--begin-reload", String(processID)]).outputMessage
+      send(.reload(.begin(processID: processID))).outputMessage
     }
     let staged = try await runBlocking {
-      send(.rule, ["--add", "label=staged", "manage=off"], token: token).ok
+      send(.rule(.add(["label=staged", "manage=off"])), token: token).ok
     }
     #expect(staged)
     #expect(tiling.rules.isEmpty)
-    let committed = try await runBlocking { send(.config, ["--commit-reload", token]).ok }
+    let committed = try await runBlocking { send(.reload(.commit(token: token))).ok }
     #expect(committed)
     #expect(tiling.rules.map(\.label) == ["staged"])
   }
@@ -106,10 +103,13 @@ struct DaemonTests {
     }
     try daemon.run()
     defer { daemon.shutdown() }
-    let response = try await exchange(path: endpoint.path, version: 2)
+    let response = try await exchange(path: endpoint.path, version: 1)
     #expect(response.id == "test-id")
     #expect(response.errorCode == .invalidRequest)
-    #expect(response.message == "unsupported IPC request version: 2; expected 1")
+    #expect(
+      response.message
+        == "unsupported IPC request version: 1; expected \(IPCRequest.currentVersion)"
+    )
   }
 
   @Test("run: rejects malformed legacy input with an empty ID")
@@ -135,22 +135,16 @@ struct DaemonTests {
   func runAcceptsALegacyNewlineClientRequest() async throws {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
+    let expected = IPCCommand.window(.focus(.selected(.id(42))))
     let daemon = Daemon(path: endpoint.path) { request in
-      #expect(request.domain == .window)
-      #expect(request.command == "--focus")
-      #expect(request.args == ["42"])
+      #expect(request.command == expected)
       return .success(id: request.id, message: "ok")
     }
     try daemon.run()
     defer { daemon.shutdown() }
+    let payload = try JSONEncoder().encode(IPCRequest(id: "old-client", command: expected))
     let response = try await runBlocking {
-      let data = try legacyExchange(
-        path: endpoint.path,
-        input: Data(
-          (#"{"version":1,"id":"old-client","domain":"window","command":"--focus","args":["42"]}"#
-            + "\n").utf8
-        )
-      )
+      let data = try legacyExchange(path: endpoint.path, input: payload + Data("\n".utf8))
       return try JSONDecoder().decode(IPCResponse.self, from: data)
     }
     #expect(response == .success(id: "old-client", message: "ok"))
@@ -169,9 +163,7 @@ struct DaemonTests {
     let data = try await runBlocking {
       try legacyExchange(
         path: endpoint.path,
-        input: JSONEncoder().encode(
-          IPCRequest(id: "test", domain: .query, command: "windows", args: [])
-        ),
+        input: JSONEncoder().encode(IPCRequest(id: "test", command: .query(.windows, .none))),
         endWriting: true
       )
     }
@@ -249,14 +241,14 @@ struct DaemonTests {
     defer { endpoint.remove() }
     let argument = String(repeating: "x", count: 70_000)
     let daemon = Daemon(path: endpoint.path) { request in
-      #expect(request.args == [argument])
+      #expect(request.command == .rule(.add([argument])))
       return .success(id: request.id, message: "ok")
     }
     try daemon.run()
     defer { daemon.shutdown() }
     let response = try await runBlocking {
       try Client.exchange(
-        IPCRequest(id: "large-request", domain: .rule, command: "--add", args: [argument]),
+        IPCRequest(id: "large-request", command: .rule(.add([argument]))),
         path: endpoint.path
       )
     }
@@ -291,9 +283,8 @@ struct DaemonTests {
     let fd = try LocalSocket.connect(path: endpoint.path)
     defer { close(fd) }
     try LocalSocket.send(
-      Data(
-        (#"{"version":1,"id":"queued","domain":"query","command":"windows","args":[]}"# + "\n").utf8
-      ),
+      try JSONEncoder().encode(IPCRequest(id: "queued", command: .query(.windows, .none)))
+        + Data("\n".utf8),
       to: fd
     )
     usleep(100_000)
@@ -311,16 +302,15 @@ struct DaemonTests {
     defer { endpoint.remove() }
     let large = String(repeating: "x", count: 200_000)
     let daemon = Daemon(path: endpoint.path) { request in
-      .success(id: request.id, message: request.command == "large" ? large : "ok")
+      .success(id: request.id, message: request.id == "slow" ? large : "ok")
     }
     try daemon.run()
     defer { daemon.shutdown() }
     let fd = try LocalSocket.connect(path: endpoint.path)
     defer { close(fd) }
     try LocalSocket.send(
-      Data(
-        (#"{"version":1,"id":"slow","domain":"query","command":"large","args":[]}"# + "\n").utf8
-      ),
+      try JSONEncoder().encode(IPCRequest(id: "slow", command: .query(.windows, .none)))
+        + Data("\n".utf8),
       to: fd
     )
     try await runBlocking {
@@ -348,7 +338,7 @@ struct DaemonTests {
     let (cancelled, cancellationContinuation) = AsyncStream<Void>.makeStream()
 
     let daemon = Daemon(path: endpoint.path) { request in
-      if request.command == "slow" {
+      if request.id == "slow" {
         defer { cancellationContinuation.finish() }
 
         startContinuation.yield(())
@@ -375,7 +365,8 @@ struct DaemonTests {
     defer { close(fd) }
 
     try LocalSocket.send(
-      Data((#"{"version":1,"id":"slow","domain":"query","command":"slow","args":[]}"# + "\n").utf8),
+      try JSONEncoder().encode(IPCRequest(id: "slow", command: .query(.windows, .none)))
+        + Data("\n".utf8),
       to: fd
     )
 
@@ -428,10 +419,13 @@ struct DaemonTests {
     #expect(await cancellations.next() == true)
   }
 
-  private func exchange(path: String, version: Int = 1) async throws -> IPCResponse {
+  private func exchange(
+    path: String,
+    version: Int = IPCRequest.currentVersion
+  ) async throws -> IPCResponse {
     try await runBlocking {
       try Client.exchange(
-        IPCRequest(version: version, id: "test-id", domain: .query, command: "windows", args: []),
+        IPCRequest(version: version, id: "test-id", command: .query(.windows, .none)),
         path: path
       )
     }

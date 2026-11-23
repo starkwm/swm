@@ -105,7 +105,7 @@ final class ConfigReload {
   func staging(for request: IPCRequest) -> ReloadStaging? {
     guard let token = request.transaction else { return nil }
     guard let transaction, transaction.token == token else {
-      log("applying \(request.domain.rawValue) \(request.command) live; its reload is not open")
+      log("applying \(request.command.logDescription) live; its reload is not open")
       return nil
     }
     return transaction.staging

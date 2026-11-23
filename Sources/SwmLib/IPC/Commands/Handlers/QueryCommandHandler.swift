@@ -8,20 +8,17 @@ struct QueryCommandHandler {
     self.tiling = tiling
   }
 
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
-    IPCCommandError.catching(id: request.id) {
-      let selection = try QuerySelection.parse(arguments: request.args)
+  func dispatch(id: String, kind: QueryKind, selection: QuerySelection) -> IPCResponse {
+    IPCCommandError.catching(id: id) {
       let resolver = QueryResolver(windows: windows, tiling: tiling)
 
-      switch request.command {
-      case "--displays":
-        return try response(id: request.id, result: resolver.displays(for: selection))
-      case "--windows":
-        return try response(id: request.id, result: resolver.windows(for: selection))
-      case "--spaces":
-        return try response(id: request.id, result: resolver.spaces(for: selection))
-      default:
-        throw IPCCommandError.unsupportedCommand("unsupported query command: \(request.command)")
+      switch kind {
+      case .displays:
+        return try response(id: id, result: resolver.displays(for: selection))
+      case .windows:
+        return try response(id: id, result: resolver.windows(for: selection))
+      case .spaces:
+        return try response(id: id, result: resolver.spaces(for: selection))
       }
     }
   }

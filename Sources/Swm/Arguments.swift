@@ -121,13 +121,13 @@ struct ReloadCommand: ParsableCommand {
   }
 
   func run(
-    send: (CommandDomain, [String]) -> Client.SendResult,
+    send: (IPCCommand) -> Client.SendResult,
     execute: (String, String?) throws -> Void,
     processID: pid_t,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
     let path = config ?? StartCommand.defaultConfigPath
-    let begin = send(.config, ["--begin-reload", String(processID)])
+    let begin = send(.reload(.begin(processID: processID)))
     guard begin.ok else {
       guard begin.errorCode == .unsupportedCommand else {
         fputs("\(begin.outputMessage)\n", errors)
@@ -143,7 +143,7 @@ struct ReloadCommand: ParsableCommand {
       try execute(path, token)
     } catch {
       fputs("Error: \(error)\n", errors)
-      let rollback = send(.config, ["--rollback-reload", token])
+      let rollback = send(.reload(.rollback(token: token)))
       fputs(
         rollback.ok
           ? "Kept the previous rules, signals, and settings.\n"
@@ -153,7 +153,7 @@ struct ReloadCommand: ParsableCommand {
       throw ExitCode.failure
     }
 
-    let commit = send(.config, ["--commit-reload", token])
+    let commit = send(.reload(.commit(token: token)))
     guard commit.ok else {
       fputs("\(commit.outputMessage)\n", errors)
       throw ExitCode.failure
@@ -162,12 +162,12 @@ struct ReloadCommand: ParsableCommand {
 
   private func clearThenRun(
     path: String,
-    send: (CommandDomain, [String]) -> Client.SendResult,
+    send: (IPCCommand) -> Client.SendResult,
     execute: (String, String?) throws -> Void,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
-    for domain in [CommandDomain.rule, .signal] {
-      let result = send(domain, ["--clear"])
+    for command in [IPCCommand.rule(.clear), .signal(.clear)] {
+      let result = send(command)
       guard result.ok else {
         fputs("\(result.outputMessage)\n", errors)
         throw ExitCode.failure

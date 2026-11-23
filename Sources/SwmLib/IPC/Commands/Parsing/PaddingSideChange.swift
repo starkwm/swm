@@ -1,6 +1,4 @@
-struct PaddingSideChange: Equatable {
-  static let form = "<side>=abs:<points> or <side>=rel:<points>, such as top=abs:8"
-
+public struct PaddingSideChange: Codable, Equatable, Sendable {
   static func applying(
     _ changes: [Self],
     to padding: SpacePadding,
@@ -13,24 +11,17 @@ struct PaddingSideChange: Equatable {
     return padding.clamped()
   }
 
-  let side: PaddingSide
+  public let side: PaddingSide
 
-  let change: NumericChange<Int>
+  public let change: NumericChange<Int>
 
-  init?(argument: String) {
-    let assignment = argument.split(separator: "=", maxSplits: 1).map(String.init)
-    guard assignment.count == 2, let side = PaddingSide(rawValue: assignment[0]) else {
-      return nil
-    }
-
-    guard let change = NumericChange(assignment[1], value: { Int($0) }) else { return nil }
-
+  public init(side: PaddingSide, change: NumericChange<Int>) {
     self.side = side
     self.change = change
   }
 }
 
-enum PaddingSide: String, CaseIterable {
+public enum PaddingSide: String, CaseIterable, Codable, Sendable {
   case top
   case bottom
   case left

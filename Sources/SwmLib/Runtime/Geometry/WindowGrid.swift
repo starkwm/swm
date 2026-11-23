@@ -1,6 +1,6 @@
 import CoreGraphics
 
-struct WindowGrid: Equatable {
+public struct WindowGrid: Codable, Equatable, Sendable {
   private let rows: Int
   private let columns: Int
   private let x: Int
@@ -8,7 +8,7 @@ struct WindowGrid: Equatable {
   private let width: Int
   private let height: Int
 
-  init?(
+  public init?(
     rows: Int,
     columns: Int,
     x: Int,

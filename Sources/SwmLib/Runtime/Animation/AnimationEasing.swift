@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AnimationEasing: String, CaseIterable, Sendable {
+public enum AnimationEasing: String, CaseIterable, Codable, Sendable {
   case linear
   case easeOutQuad = "ease-out-quad"
   case easeOutCubic = "ease-out-cubic"

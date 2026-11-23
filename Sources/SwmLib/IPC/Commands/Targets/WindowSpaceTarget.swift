@@ -1,4 +1,4 @@
-typealias WindowSpaceTarget = CyclicTarget
+public typealias WindowSpaceTarget = CyclicTarget
 
 extension WindowSpaceTarget {
   func space(from sourceID: UInt64, spaces: [Space]) -> Space? {

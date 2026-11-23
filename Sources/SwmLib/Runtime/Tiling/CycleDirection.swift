@@ -1,4 +1,4 @@
-public enum CycleDirection: String, Equatable, Sendable {
+public enum CycleDirection: String, Equatable, Codable, Sendable {
   case next
 
   case prev

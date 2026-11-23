@@ -2,7 +2,7 @@ import ArgumentParser
 import SwmLib
 
 struct WindowCommand: ParsableCommand {
-  struct Focus: WindowIPCCommand {
+  struct Focus: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Focus a neighbouring, recent, master, or specific window.",
       discussion: """
@@ -13,7 +13,6 @@ struct WindowCommand: ParsableCommand {
           swm window focus master
         """
     )
-    static let command = "--focus"
 
     @Argument(
       help: "left, right, up, down, next, prev, recent, master, or a window ID.",
@@ -21,21 +20,20 @@ struct WindowCommand: ParsableCommand {
     )
     var target: FocusTarget
 
-    var commandArguments: [String] {
+    var ipcCommand: IPCCommand {
       switch target {
-      case .direction(let direction): ["--focus", direction.rawValue]
-      case .order(let direction): ["--cycle", direction.rawValue]
-      case .master: ["--focus-master"]
-      case .window(let selector): ["--focus", selector]
+      case .direction(let direction): .window(.focus(.direction(direction)))
+      case .order(let direction): .window(.focusCycle(direction))
+      case .master: .window(.focusMaster(.focused))
+      case .window(let selection): .window(.focus(.selected(selection)))
       }
     }
   }
 
-  struct Warp: WindowIPCCommand {
+  struct Warp: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Move the mouse cursor to a window or its nearest neighbour in a direction."
     )
-    static let command = "--warp"
 
     @Argument(
       help:
@@ -44,10 +42,10 @@ struct WindowCommand: ParsableCommand {
     )
     var target: WarpTarget?
 
-    var arguments: [String] { target.map { [$0.value] } ?? [] }
+    var ipcCommand: IPCCommand { .window(.warp(target?.target ?? .selected(.focused))) }
   }
 
-  struct Minimize: WindowIPCCommand {
+  struct Minimize: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Minimize a window.",
       discussion: """
@@ -56,18 +54,17 @@ struct WindowCommand: ParsableCommand {
           swm window minimize recent
         """
     )
-    static let command = "--minimize"
 
     @Argument(
       help: "recent or a positive window ID; defaults to focused.",
       completion: .list(["recent"])
     )
-    var target: WindowIdentityTarget?
+    var target: WindowSelection?
 
-    var arguments: [String] { target.map { [$0.value] } ?? [] }
+    var ipcCommand: IPCCommand { .window(.minimize(target ?? .focused)) }
   }
 
-  struct Unminimize: WindowIPCCommand {
+  struct Unminimize: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Restore a minimized window.",
       discussion: """
@@ -78,18 +75,17 @@ struct WindowCommand: ParsableCommand {
           swm window unminimize 123
         """
     )
-    static let command = "--unminimize"
 
     @Argument(
       help: "recent or a positive window ID.",
       completion: .list(["recent"])
     )
-    var target: WindowIdentityTarget
+    var target: WindowSelection
 
-    var arguments: [String] { [target.value] }
+    var ipcCommand: IPCCommand { .window(.unminimize(target)) }
   }
 
-  struct Move: WindowIPCCommand, SignedPositionalCommand {
+  struct Move: DaemonCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Move a window.",
       usage: """
@@ -114,13 +110,12 @@ struct WindowCommand: ParsableCommand {
           swm window move --window 123 --display 2
         """
     )
-    static let command = "--move"
     static let valueOptions: Set<String> = ["--window", "--display", "--space"]
 
     enum Mode {
       case coordinates(x: Int, y: Int)
-      case display(WindowTransferTarget)
-      case space(WindowTransferTarget)
+      case display(WindowDisplayTarget)
+      case space(WindowSpaceTarget)
     }
 
     @OptionGroup var selector: WindowSelector
@@ -139,15 +134,15 @@ struct WindowCommand: ParsableCommand {
         "One-based display index, next, or prev.",
         valueName: "target"
       ),
-      completion: .list(WindowTransferTarget.keywords)
+      completion: .list(["next", "prev"])
     )
-    var display: WindowTransferTarget?
+    var display: WindowDisplayTarget?
 
     @Option(
       help: ArgumentHelp("One-based Space index, next, or prev.", valueName: "target"),
-      completion: .list(WindowTransferTarget.keywords)
+      completion: .list(["next", "prev"])
     )
-    var space: WindowTransferTarget?
+    var space: WindowSpaceTarget?
 
     var mode: Mode? {
       switch (x, y, display, space) {
@@ -158,23 +153,17 @@ struct WindowCommand: ParsableCommand {
       }
     }
 
-    var arguments: [String] {
+    var ipcCommand: IPCCommand {
       switch mode {
       case .coordinates(let x, let y):
-        selector.arguments + ["\(absolute ? "abs" : "rel"):\(x):\(y)"]
-      case .display(let target), .space(let target):
-        selector.arguments + [target.value]
+        let pair = IntPair(x, y)
+        return .window(.move(selector.selection, absolute ? .absolute(pair) : .relative(pair)))
+      case .display(let target):
+        return .window(.display(selector.selection, target))
+      case .space(let target):
+        return .window(.space(selector.selection, target))
       case nil:
         preconditionFailure("validate() rejects moves without exactly one mode")
-      }
-    }
-
-    var commandArguments: [String] {
-      switch mode {
-      case .coordinates: [Self.command] + arguments
-      case .display: ["--display"] + arguments
-      case .space: ["--space"] + arguments
-      case nil: preconditionFailure("validate() rejects moves without exactly one mode")
       }
     }
 
@@ -194,7 +183,7 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct Resize: WindowIPCCommand, SignedPositionalCommand {
+  struct Resize: DaemonCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Resize a window.",
       discussion: """
@@ -207,7 +196,6 @@ struct WindowCommand: ParsableCommand {
           swm window resize 40 0
         """
     )
-    static let command = "--resize"
     static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
@@ -221,12 +209,13 @@ struct WindowCommand: ParsableCommand {
     @Argument(help: "Height or height offset in points.")
     var height: Int
 
-    var arguments: [String] {
-      selector.arguments + ["\(absolute ? "abs" : "rel"):\(width):\(height)"]
+    var ipcCommand: IPCCommand {
+      let pair = IntPair(width, height)
+      return .window(.resize(selector.selection, absolute ? .absolute(pair) : .relative(pair)))
     }
   }
 
-  struct Grid: WindowIPCCommand, SignedPositionalCommand {
+  struct Grid: DaemonCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Place a window on a grid.",
       discussion: """
@@ -242,7 +231,6 @@ struct WindowCommand: ParsableCommand {
           swm window grid 1 1 0 0 1 1   # whole display
         """
     )
-    static let command = "--grid"
     static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
@@ -265,8 +253,20 @@ struct WindowCommand: ParsableCommand {
     @Argument(help: "Rows to span.")
     var height: Int
 
-    var arguments: [String] {
-      selector.arguments + ["\(columns):\(rows):\(x):\(y):\(width):\(height)"]
+    var ipcCommand: IPCCommand {
+      guard
+        let grid = WindowGrid(
+          rows: rows,
+          columns: columns,
+          x: x,
+          y: y,
+          width: width,
+          height: height
+        )
+      else {
+        preconditionFailure("validate() rejects non-positive grid dimensions")
+      }
+      return .window(.grid(selector.selection, grid))
     }
 
     func validate() throws {
@@ -276,11 +276,10 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct Float: WindowIPCCommand {
+  struct Float: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Enable, disable, or toggle a window floating override."
     )
-    static let command = "--layout"
 
     @OptionGroup var selector: WindowSelector
 
@@ -290,10 +289,10 @@ struct WindowCommand: ParsableCommand {
     )
     var state: WindowFloatState
 
-    var arguments: [String] { selector.arguments + [state.layoutValue] }
+    var ipcCommand: IPCCommand { .window(.layout(selector.selection, state.layoutSelection)) }
   }
 
-  struct Swap: WindowIPCCommand {
+  struct Swap: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Swap a window with a neighbour or the master window.",
       discussion: """
@@ -303,7 +302,6 @@ struct WindowCommand: ParsableCommand {
           swm window swap master
         """
     )
-    static let command = "--swap"
 
     @OptionGroup var selector: WindowSelector
 
@@ -313,11 +311,11 @@ struct WindowCommand: ParsableCommand {
     )
     var target: SwapTarget
 
-    var commandArguments: [String] {
+    var ipcCommand: IPCCommand {
       switch target {
-      case .direction(let direction): ["--swap"] + selector.arguments + [direction.rawValue]
-      case .order(let direction): ["--swap-cycle", direction.rawValue]
-      case .master: ["--swap-with-master"] + selector.arguments
+      case .direction(let direction): .window(.swap(selector.selection, direction))
+      case .order(let direction): .window(.swapCycle(direction))
+      case .master: .window(.swapWithMaster(selector.selection))
       }
     }
 
@@ -328,7 +326,7 @@ struct WindowCommand: ParsableCommand {
     }
   }
 
-  struct SplitRatio: WindowIPCCommand, SignedPositionalCommand {
+  struct SplitRatio: DaemonCommand, SignedPositionalCommand {
     static let configuration = CommandConfiguration(
       abstract: "Change a dwindle split ratio.",
       discussion: """
@@ -337,7 +335,6 @@ struct WindowCommand: ParsableCommand {
           swm window split-ratio +0.05
         """
     )
-    static let command = "--split-ratio"
     static let valueOptions: Set<String> = ["--window"]
 
     @OptionGroup var selector: WindowSelector
@@ -345,29 +342,27 @@ struct WindowCommand: ParsableCommand {
     @Argument(help: "Ratio from 0.1 through 0.9, or a signed change such as -0.05.")
     var ratio: SettingChange<Double>
 
-    var arguments: [String] { selector.arguments + [ratio.ipcValue] }
+    var ipcCommand: IPCCommand { .window(.splitRatio(selector.selection, ratio.ratioChange)) }
 
     func validate() throws {
       try ratio.validate(0.1...0.9, name: "Split ratio")
     }
   }
 
-  struct ToggleSplit: WindowIPCCommand {
+  struct ToggleSplit: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Toggle a dwindle split direction.")
-    static let command = "--toggle-split"
 
     @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { selector.arguments }
+    var ipcCommand: IPCCommand { .window(.toggleSplit(selector.selection)) }
   }
 
-  struct SwapSplit: WindowIPCCommand {
+  struct SwapSplit: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Exchange dwindle split subtrees.")
-    static let command = "--swap-split"
 
     @OptionGroup var selector: WindowSelector
 
-    var arguments: [String] { selector.arguments }
+    var ipcCommand: IPCCommand { .window(.swapSplit(selector.selection)) }
   }
 
   static let configuration = CommandConfiguration(

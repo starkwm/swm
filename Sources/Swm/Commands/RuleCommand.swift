@@ -2,7 +2,7 @@ import ArgumentParser
 import SwmLib
 
 struct RuleCommand: ParsableCommand {
-  struct Add: RuleIPCCommand {
+  struct Add: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Register a window management rule.",
       discussion: """
@@ -16,33 +16,34 @@ struct RuleCommand: ParsableCommand {
           swm rule add app='^Slack$' space=3
         """
     )
-    static let command = "--add"
 
     @Argument(help: "Rule properties written as key=value or key!=value.")
     var properties: [String]
 
-    var arguments: [String] { properties }
+    var ipcCommand: IPCCommand { .rule(.add(properties)) }
   }
 
-  struct List: RuleIPCCommand {
+  struct List: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "List registered rules.")
-    static let command = "--list"
+
+    var ipcCommand: IPCCommand { .rule(.list) }
   }
 
-  struct Clear: RuleIPCCommand {
+  struct Clear: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Remove every registered rule.")
-    static let command = "--clear"
+
+    var ipcCommand: IPCCommand { .rule(.clear) }
   }
 
-  struct Remove: RuleIPCCommand {
+  struct Remove: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Remove a registered rule.")
-    static let command = "--remove"
 
     @Argument(help: "Rule index or label.")
     var rule: String
 
-    var arguments: [String] { [rule] }
+    var ipcCommand: IPCCommand { .rule(.remove(rule)) }
   }
+
   static let configuration = CommandConfiguration(
     commandName: "rule",
     abstract: "Manage window rules.",

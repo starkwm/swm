@@ -1,5 +1,7 @@
 import ArgumentParser
+import CoreGraphics
 import Foundation
+import SwmLib
 
 struct SettingChange<Value: LosslessStringConvertible & Comparable & SignedNumeric>: Equatable,
   ExpressibleByArgument
@@ -8,7 +10,9 @@ struct SettingChange<Value: LosslessStringConvertible & Comparable & SignedNumer
 
   let value: Value
 
-  var ipcValue: String { "\(isRelative ? "rel" : "abs"):\(value)" }
+  var numericChange: NumericChange<Value> {
+    isRelative ? .relative(value) : .absolute(value)
+  }
 
   init?(argument: String) {
     guard let value = Value(argument) else { return nil }
@@ -20,5 +24,11 @@ struct SettingChange<Value: LosslessStringConvertible & Comparable & SignedNumer
     guard isRelative || range.contains(value) else {
       throw ValidationError("\(name) must be between \(range.lowerBound) and \(range.upperBound).")
     }
+  }
+}
+
+extension SettingChange<Double> {
+  var ratioChange: LayoutRatioChange {
+    isRelative ? .relative(CGFloat(value)) : .absolute(CGFloat(value))
   }
 }

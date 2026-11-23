@@ -1,24 +1,33 @@
 import AppKit
 
 extension WindowCommandHandler {
-  func move(_ request: IPCRequest) throws -> IPCResponse {
-    try performGeometryAction(
-      request,
-      action: "move",
-      form: "abs|rel:<x>:<y>, such as rel:20:0"
-    ) { $1.moving($0) }
+  func move(
+    id: String,
+    selection: WindowSelection,
+    change: NumericChange<IntPair>
+  ) throws -> IPCResponse {
+    try performGeometryAction(id: id, selection: selection, change: change, action: "move") {
+      $1.moving($0)
+    }
   }
 
-  func resize(_ request: IPCRequest) throws -> IPCResponse {
+  func resize(
+    id: String,
+    selection: WindowSelection,
+    change: NumericChange<IntPair>
+  ) throws -> IPCResponse {
     try performGeometryAction(
-      request,
+      id: id,
+      selection: selection,
+      change: change,
       action: "resize",
-      form: "abs|rel:<width>:<height>, such as rel:40:0",
-      validate: { change, value in
+      validate: { change in
         guard case .absolute(let size) = change, size.first <= 0 || size.second <= 0 else {
           return
         }
-        throw IPCCommandError.invalidRequest("window size must be positive: \(value)")
+        throw IPCCommandError.invalidRequest(
+          "window size must be positive: \(size.first)x\(size.second)"
+        )
       },
       operation: { frame, change in
         let target = change.resizing(frame)
@@ -32,18 +41,12 @@ extension WindowCommandHandler {
     )
   }
 
-  func display(_ request: IPCRequest) throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: "move --display")
-    let invalidDisplay = IPCCommandError.invalidValue(
-      "window move --display",
-      selection.value,
-      expected: "a one-based display index, next, or prev"
-    )
-    guard let target = WindowDisplayTarget(argument: selection.value) else {
-      throw invalidDisplay
-    }
-
-    let window = try selectedWindow(selector: selection.selector)
+  func display(
+    id: String,
+    selection: WindowSelection,
+    target: WindowDisplayTarget
+  ) throws -> IPCResponse {
+    let window = try selectedWindow(selection)
 
     guard let frame = window.frame() else {
       throw IPCCommandError.internalError("could not move window to display: \(window.id)")
@@ -55,7 +58,7 @@ extension WindowCommandHandler {
 
     guard let targetScreen = target.screen(from: sourceScreen, screens: NSScreen.arrangedScreens)
     else {
-      throw invalidDisplay
+      throw IPCCommandError.invalidRequest("could not locate target display")
     }
 
     try transfer(
@@ -66,21 +69,15 @@ extension WindowCommandHandler {
       failureMessage: "could not move window to display: \(window.id)"
     )
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
-  func space(_ request: IPCRequest) async throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: "move --space")
-
-    guard let target = WindowSpaceTarget(argument: selection.value) else {
-      throw IPCCommandError.invalidValue(
-        "window move --space",
-        selection.value,
-        expected: "a one-based Space index, next, or prev"
-      )
-    }
-
-    let window = try selectedWindow(selector: selection.selector)
+  func space(
+    id: String,
+    selection: WindowSelection,
+    target: WindowSpaceTarget
+  ) async throws -> IPCResponse {
+    let window = try selectedWindow(selection)
     let windowID = window.id
 
     try requireUndraggedWindow(windowID)
@@ -108,21 +105,15 @@ extension WindowCommandHandler {
       }
     }
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
-  func grid(_ request: IPCRequest) throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: "grid")
-
-    guard let grid = WindowGrid(argument: selection.value) else {
-      throw IPCCommandError.invalidValue(
-        "window grid",
-        selection.value,
-        expected: "columns:rows:x:y:width:height, such as 2:1:0:0:1:1"
-      )
-    }
-
-    let window = try selectedWindow(selector: selection.selector)
+  func grid(
+    id: String,
+    selection: WindowSelection,
+    grid: WindowGrid
+  ) throws -> IPCResponse {
+    let window = try selectedWindow(selection)
     try requireUntiledWindow(window)
 
     guard
@@ -145,25 +136,20 @@ extension WindowCommandHandler {
       failureMessage: "could not grid window: \(window.id)"
     )
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
   private func performGeometryAction(
-    _ request: IPCRequest,
+    id: String,
+    selection: WindowSelection,
+    change: NumericChange<IntPair>,
     action: String,
-    form: String,
-    validate: (WindowGeometryChange, String) throws -> Void = { _, _ in },
-    operation: (CGRect, WindowGeometryChange) throws -> CGRect
+    validate: (NumericChange<IntPair>) throws -> Void = { _ in },
+    operation: (CGRect, NumericChange<IntPair>) throws -> CGRect
   ) throws -> IPCResponse {
-    let selection = try parseValueSelection(request.args, action: action)
+    try validate(change)
 
-    guard let change = WindowGeometryChange(selection.value, value: WindowGeometryChange.pair)
-    else {
-      throw IPCCommandError.invalidValue("window \(action)", selection.value, expected: form)
-    }
-    try validate(change, selection.value)
-
-    let window = try selectedWindow(selector: selection.selector)
+    let window = try selectedWindow(selection)
     try requireUntiledWindow(window)
 
     guard let destination = tiling.destinationFrame(for: window.id) ?? window.frame() else {
@@ -175,7 +161,7 @@ extension WindowCommandHandler {
       failureMessage: "could not \(action) window: \(window.id)"
     )
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
   private func transfer(
@@ -234,17 +220,7 @@ extension WindowCommandHandler {
   }
 }
 
-private typealias WindowGeometryChange = NumericChange<(first: Int, second: Int)>
-
-extension WindowGeometryChange {
-  fileprivate static func pair(_ text: String) -> (first: Int, second: Int)? {
-    let parts = text.split(separator: ":", omittingEmptySubsequences: false)
-    guard parts.count == 2, let first = Int(parts[0]), let second = Int(parts[1]) else {
-      return nil
-    }
-    return (first, second)
-  }
-
+extension NumericChange<IntPair> {
   fileprivate func moving(_ frame: CGRect) -> CGRect {
     var target = frame
     switch self {

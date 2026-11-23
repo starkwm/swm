@@ -1,4 +1,4 @@
-public enum LayoutSelection: String, Equatable, CaseIterable, Sendable {
+public enum LayoutSelection: String, Equatable, CaseIterable, Codable, Sendable {
   case float
 
   case master

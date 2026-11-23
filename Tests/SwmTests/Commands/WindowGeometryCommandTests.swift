@@ -1,6 +1,7 @@
 import Testing
 
 @testable import Swm
+@testable import SwmLib
 
 @Suite("WindowGeometryCommand")
 struct WindowGeometryCommandTests {
@@ -11,28 +12,31 @@ struct WindowGeometryCommandTests {
   func parseAsRootDefaultsToRelativeAndPreservesIPCGeometryAndWindowSelection(
     action: String
   ) throws {
-    let cases: [([String], [String])] = [
-      (["20", "0"], ["rel:20:0"]),
-      (["--absolute", "1200", "800"], ["abs:1200:800"]),
-      (["--window", "recent", "20", "0"], ["recent", "rel:20:0"]),
-      (["-20", "0"], ["rel:-20:0"]),
-      (["20", "-10"], ["rel:20:-10"]),
-      (["-20", "-10"], ["rel:-20:-10"]),
-      (["-20", "--window", "42", "10"], ["42", "rel:-20:10"]),
-      (["20", "--window=recent", "-10"], ["recent", "rel:20:-10"]),
-      (["-20", "--absolute", "10"], ["abs:-20:10"]),
-      (["20", "-10", "--absolute", "--window", "42"], ["42", "abs:20:-10"]),
-      (["--absolute", "--window", "recent", "-20", "-10"], ["recent", "abs:-20:-10"]),
-      (["--window", "42", "--absolute", "--", "-20", "10"], ["42", "abs:-20:10"]),
-      (["--absolute", "0", "25"], ["abs:0:25"]),
-      (["40", "0"], ["rel:40:0"]),
+    let cases: [([String], WindowSelection, NumericChange<IntPair>)] = [
+      (["20", "0"], .focused, .relative(IntPair(20, 0))),
+      (["--absolute", "1200", "800"], .focused, .absolute(IntPair(1200, 800))),
+      (["--window", "recent", "20", "0"], .recent, .relative(IntPair(20, 0))),
+      (["-20", "0"], .focused, .relative(IntPair(-20, 0))),
+      (["20", "-10"], .focused, .relative(IntPair(20, -10))),
+      (["-20", "-10"], .focused, .relative(IntPair(-20, -10))),
+      (["-20", "--window", "42", "10"], .id(42), .relative(IntPair(-20, 10))),
+      (["20", "--window=recent", "-10"], .recent, .relative(IntPair(20, -10))),
+      (["-20", "--absolute", "10"], .focused, .absolute(IntPair(-20, 10))),
+      (["20", "-10", "--absolute", "--window", "42"], .id(42), .absolute(IntPair(20, -10))),
+      (["--absolute", "--window", "recent", "-20", "-10"], .recent, .absolute(IntPair(-20, -10))),
+      (["--window", "42", "--absolute", "--", "-20", "10"], .id(42), .absolute(IntPair(-20, 10))),
+      (["--absolute", "0", "25"], .focused, .absolute(IntPair(0, 25))),
+      (["40", "0"], .focused, .relative(IntPair(40, 0))),
     ]
-    for (values, expected) in cases {
+    for (values, selection, change) in cases {
       let command = try #require(
-        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any IPCCommand
+        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any DaemonCommand
       )
-      #expect(command.commandArguments == ["--\(action)"] + expected)
-      #expect(type(of: command).domain == .window)
+      let expected: IPCCommand =
+        action == "move"
+        ? .window(.move(selection, change))
+        : .window(.resize(selection, change))
+      #expect(command.ipcCommand == expected)
     }
   }
 

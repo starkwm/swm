@@ -1,6 +1,6 @@
 import CoreGraphics
 
-typealias LayoutRatioChange = NumericChange<CGFloat>
+public typealias LayoutRatioChange = NumericChange<CGFloat>
 
 extension LayoutRatioChange {
   func applying(to currentRatio: CGFloat) -> CGFloat {

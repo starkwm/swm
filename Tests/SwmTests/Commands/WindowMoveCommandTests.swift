@@ -13,24 +13,26 @@ struct WindowMoveCommandTests {
   func parseAsRootTransfersPreserveTargetsAndSelectorsInExistingIPC(mode: String) throws {
     let output = try #require(tmpfile())
     defer { fclose(output) }
-    let cases: [([String], [String])] = [
-      (["--\(mode)", "next"], ["next"]),
-      (["--\(mode)=2", "--window", "123"], ["123", "2"]),
-      (["--window=recent", "--\(mode)", "prev"], ["recent", "prev"]),
+    let cases: [([String], WindowSelection, CyclicTarget)] = [
+      (["--\(mode)", "next"], .focused, .next),
+      (["--\(mode)=2", "--window", "123"], .id(123), .index(2)),
+      (["--window=recent", "--\(mode)", "prev"], .recent, .previous),
     ]
-    for (values, expected) in cases {
+    for (values, selection, target) in cases {
       var command = try #require(
         Arguments.parseAsRoot(Arguments.resolve(["window", "move"] + values))
           as? WindowCommand.Move
       )
+      let expected: IPCCommand =
+        mode == "display"
+        ? .window(.display(selection, target))
+        : .window(.space(selection, target))
       var sent = false
       try command.run(
-        send: { domain, args in
-          Client.send(domain: domain, args: args) { request in
+        send: { ipcCommand in
+          Client.send(ipcCommand) { request in
             sent = true
-            #expect(request.domain == .window)
-            #expect(request.command == "--\(mode)")
-            #expect(request.args == expected)
+            #expect(request.command == expected)
             return .acknowledged(id: request.id)
           }
         },

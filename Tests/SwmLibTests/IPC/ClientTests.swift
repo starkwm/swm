@@ -13,7 +13,7 @@ struct ClientTests {
     try daemon.run()
     defer { daemon.shutdown() }
     let output = try await runBlocking {
-      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
+      let result = Client.send(.window(.focus(.selected(.id(42))))) {
         try Client.exchange($0, path: endpoint.path)
       }
       return (result.ok, result.outputMessage)
@@ -27,7 +27,7 @@ struct ClientTests {
     let endpoint = try TestEndpoint()
     defer { endpoint.remove() }
     let output = try await runBlocking {
-      let result = Client.send(domain: .window, args: ["--focus", "42"]) {
+      let result = Client.send(.window(.focus(.selected(.id(42))))) {
         try Client.exchange($0, path: endpoint.path)
       }
       return (result.ok, result.outputMessage)
@@ -49,7 +49,7 @@ struct ClientTests {
     try daemon.run()
     defer { daemon.shutdown() }
     let output = try await runBlocking {
-      let result = Client.send(domain: .query, args: ["--windows"]) {
+      let result = Client.send(.query(.windows, .none)) {
         try Client.exchange($0, path: endpoint.path)
       }
       return (result.ok, result.outputMessage)
@@ -62,7 +62,7 @@ struct ClientTests {
   func sendTagsARequestWithANonEmptyReloadTokenFromTheEnvironment() {
     var transactions = [String?]()
     for environment in [[:], [Client.reloadTokenVariable: ""], [Client.reloadTokenVariable: "t"]] {
-      _ = Client.send(domain: .rule, args: ["--clear"], environment: environment) { request in
+      _ = Client.send(.rule(.clear), environment: environment) { request in
         transactions.append(request.transaction)
         return .acknowledged(id: request.id)
       }
@@ -72,7 +72,7 @@ struct ClientTests {
 
   @Test("send: reports the daemon's error code")
   func sendReportsTheDaemonsErrorCode() {
-    let result = Client.send(domain: .config, args: ["--unknown"], environment: [:]) { request in
+    let result = Client.send(.config(.gap(scope: .global, nil)), environment: [:]) { request in
       .failure(id: request.id, message: "unsupported", errorCode: .unsupportedCommand)
     }
     #expect(!result.ok)
