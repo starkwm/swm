@@ -180,6 +180,13 @@ extension Tiling {
 
     minimumSizeByWindowID[windowID] = minimum
     log("window minimum size id: \(windowID) \(minimum.width)x\(minimum.height)")
+    // Refit once the whole dwindle batch reports, so every refusal in it shapes one layout.
+    if let id = layoutIDByWindowID[windowID], let attempt = dwindleAttempts[id], attempt.isPending,
+      attempt.context.tree?.windowIDs.contains(windowID) == true
+    {
+      attempt.needsRefit = true
+      return
+    }
     scheduleReconcileAndReflow()
   }
 
@@ -197,9 +204,13 @@ extension Tiling {
     dwindleAttempts[id] = attempt
 
     frameReconciler?.apply(frames) { [weak self] results in
-      guard let self, self.dwindleAttempts[id] === attempt,
-        self.dwindleContext(id) == attempt.context
-      else { return }
+      guard let self, self.dwindleAttempts[id] === attempt else { return }
+      attempt.isPending = false
+      if attempt.needsRefit {
+        self.scheduleReconcileAndReflow()
+        return
+      }
+      guard self.dwindleContext(id) == attempt.context else { return }
       attempt.verified = results.values.allSatisfy { $0 }
       if !attempt.verified { self.logUnsatisfiedDwindle(id) }
     }
@@ -278,6 +289,8 @@ struct DwindleContext: Equatable {
 final class DwindleAttempt {
   let context: DwindleContext
   var verified = false
+  var isPending = true
+  var needsRefit = false
 
   init(context: DwindleContext) { self.context = context }
 }

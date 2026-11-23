@@ -287,8 +287,8 @@ final class WindowFrameReconciler {
       else { return }
       if result.outcome == .failed {
         self.deliveryFailed(id)
-        state.batch?.receive(id, verified: false)
         if let actual = result.frame { self.onFrameRefused?(id, target, actual) }
+        state.batch?.receive(id, verified: false)
       } else if result.outcome == .verified {
         self.deliveries.removeValue(forKey: id)
         self.expectMutation(to: state.target, for: id, reachedTarget: true)

@@ -117,7 +117,7 @@ struct TilingTests {
     try await waitForAnimation { reconciler.isIdle }
     app.minimumSizes = [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
     tiling.toggleDwindleSplit(for: 1)
-    try await waitForAnimation { reconciler.isIdle }
+    try await settle(tiling, reconciler)
     #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 600, height: 800))
     #expect(app.frame(for: 2) == CGRect(x: 500, y: 0, width: 600, height: 800))
     let writes = app.writeCount
