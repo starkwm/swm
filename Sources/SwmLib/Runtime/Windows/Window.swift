@@ -180,6 +180,7 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
       isMinimized: isMinimized,
       isMovable: reads.movable.value ?? false,
       isResizable: reads.resizable.value ?? false,
+      isDialog: reads.isDialog,
       hasUnavailableFacts: reads.isUnavailable,
       app: application?.name,
       title: title,
@@ -282,8 +283,24 @@ final class Window: @MainActor CustomStringConvertible, @MainActor Equatable {
     return WindowEligibilityReads(
       subrole: client.subroleRead(for: element),
       movable: client.attributeSettability(kAXPositionAttribute as String, for: element),
-      resizable: client.attributeSettability(kAXSizeAttribute as String, for: element)
+      resizable: client.attributeSettability(kAXSizeAttribute as String, for: element),
+      modal: client.boolAttributeRead(kAXModalAttribute as String, for: element),
+      hasCloseButton: client.elementAttributeRead(kAXCloseButtonAttribute as String, for: element)
+        .map { $0 != nil },
+      fullscreenButtonEnabled: fullscreenButtonEnabledRead(for: element)
     )
+  }
+
+  private func fullscreenButtonEnabledRead(for element: AXUIElement) -> AccessibilityRead<Bool> {
+    let client = AccessibilityClient.shared
+    switch client.elementAttributeRead(kAXFullScreenButtonAttribute as String, for: element) {
+    case .value(let button?):
+      return client.boolAttributeRead(kAXEnabledAttribute as String, for: button)
+    case .value(nil):
+      return .value(false)
+    case .unavailable:
+      return .unavailable
+    }
   }
 }
 
@@ -311,7 +328,23 @@ private struct WindowEligibilityReads {
 
   let resizable: AccessibilityRead<Bool>
 
+  let modal: AccessibilityRead<Bool>
+
+  let hasCloseButton: AccessibilityRead<Bool>
+
+  let fullscreenButtonEnabled: AccessibilityRead<Bool>
+
+  var isDialog: Bool {
+    WindowEligibilityPolicy.isDialog(
+      isModal: modal.value ?? false,
+      hasCloseButton: hasCloseButton.value ?? false,
+      isFullscreenButtonEnabled: fullscreenButtonEnabled.value ?? true
+    )
+  }
+
   var isUnavailable: Bool {
     subrole.isUnavailable || movable.isUnavailable || resizable.isUnavailable
+      || modal.isUnavailable || hasCloseButton.isUnavailable
+      || fullscreenButtonEnabled.isUnavailable
   }
 }

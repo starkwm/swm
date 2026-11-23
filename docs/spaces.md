@@ -61,4 +61,6 @@ Background reflows do not repeatedly retry an arrangement that an application re
 
 Each physical display has an independent tiling layout, including when macOS's **Displays have separate Spaces** setting is disabled. Moving a tiled window between displays moves it into the destination layout. Manually moving or resizing a tiled window causes it to snap back into place.
 
+Layouts tile standard windows that can be moved and resized. Windows that act like dialogs float where they open: modal windows, and windows with a close button but no enabled full-screen button, such as settings windows, open and save panels, and splash screens. Windows with neither button, such as a borderless terminal, still tile. Use a [`manage=on` rule](rules.md#tiling) to tile a dialog-like window anyway.
+
 Use [global defaults](configuration.md#global-defaults) to set the default layout, padding, and gaps. [Window tiling commands](windows.md#control-tiling) control individual windows within a layout.

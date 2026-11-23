@@ -5,24 +5,24 @@ import Testing
 
 @Suite("WindowEligibilityPolicy")
 struct WindowEligibilityPolicyTests {
-  @Test(
-    "disposition: explains eligibility outcomes",
-    arguments: [
-      (window(id: 1), Set([UInt64(10)]), WindowDisposition.tiled),
-      (window(id: 2), Set([UInt64(10), 11]), .floating(.multipleSpaces)),
-      (window(id: 3), Set([UInt64(12)]), .excluded(.nativeFullscreen)),
-      (window(id: 4), Set<UInt64>(), .pending),
-      (window(id: 8, displayID: nil), Set([UInt64(10)]), .pending),
-      (window(id: 5, subrole: "AXDialog"), Set([UInt64(10)]), .excluded(.unsupportedSubrole)),
-      (window(id: 6, isMovable: false), Set([UInt64(10)]), .excluded(.notMovable)),
-      (window(id: 7, isResizable: false), Set([UInt64(10)]), .excluded(.notResizable)),
-      (window(id: 9, subrole: nil), Set([UInt64(10)]), .excluded(.unsupportedSubrole)),
-      (
-        window(id: 10, subrole: nil, isMovable: false, hasUnavailableFacts: true),
-        Set([UInt64(10)]), .pending
-      ),
-    ]
-  )
+  static let cases: [(TilingWindowSnapshot, Set<UInt64>, WindowDisposition)] = [
+    (window(id: 1), [10], .tiled),
+    (window(id: 2), [10, 11], .floating(.multipleSpaces)),
+    (window(id: 3), [12], .excluded(.nativeFullscreen)),
+    (window(id: 4), [], .pending),
+    (window(id: 8, displayID: nil), [10], .pending),
+    (window(id: 5, subrole: "AXDialog"), [10], .excluded(.unsupportedSubrole)),
+    (window(id: 6, isMovable: false), [10], .excluded(.notMovable)),
+    (window(id: 7, isResizable: false), [10], .excluded(.notResizable)),
+    (window(id: 9, subrole: nil), [10], .excluded(.unsupportedSubrole)),
+    (window(id: 10, subrole: nil, isMovable: false, hasUnavailableFacts: true), [10], .pending),
+    (window(id: 11, isDialog: true), [10], .floating(.dialog)),
+    (window(id: 12, isDialog: true), [10, 11], .floating(.multipleSpaces)),
+    (window(id: 13, isDialog: true), [12], .excluded(.nativeFullscreen)),
+    (window(id: 14, isResizable: false, isDialog: true), [10], .excluded(.notResizable)),
+  ]
+
+  @Test("disposition: explains eligibility outcomes", arguments: cases)
   func dispositionExplainsEligibilityOutcomes(
     snapshot: TilingWindowSnapshot,
     membership: Set<UInt64>,
@@ -41,6 +41,48 @@ struct WindowEligibilityPolicyTests {
 
     #expect(WindowEligibilityPolicy.disposition(for: snapshot, topology: topology) == expected)
   }
+
+  @Test("disposition: tiles a dialog-like window that a rule manages")
+  func dispositionTilesDialogLikeWindowThatRuleManages() {
+    let topology = SpaceTopology(
+      spacesByID: [10: SpaceTopologyDescriptor(id: 10, displayID: "display", type: .normal)],
+      visibleSpaceIDByDisplayID: ["display": 10],
+      spaceIDsByWindowID: [1: [10]],
+      displaysByID: [:]
+    )
+
+    #expect(
+      WindowEligibilityPolicy.disposition(
+        for: window(id: 1, isDialog: true),
+        topology: topology,
+        allowsDialogTiling: true
+      ) == .tiled
+    )
+  }
+
+  @Test(
+    "isDialog: treats modal and closable windows without full screen as dialogs",
+    arguments: [
+      (false, true, true, false),
+      (false, true, false, true),
+      (true, true, true, true),
+      (false, false, false, false),
+    ]
+  )
+  func isDialogTreatsModalAndClosableWindowsWithoutFullScreenAsDialogs(
+    isModal: Bool,
+    hasCloseButton: Bool,
+    isFullscreenButtonEnabled: Bool,
+    expected: Bool
+  ) {
+    #expect(
+      WindowEligibilityPolicy.isDialog(
+        isModal: isModal,
+        hasCloseButton: hasCloseButton,
+        isFullscreenButtonEnabled: isFullscreenButtonEnabled
+      ) == expected
+    )
+  }
 }
 
 private func window(
@@ -49,6 +91,7 @@ private func window(
   subrole: String? = "AXStandardWindow",
   isMovable: Bool = true,
   isResizable: Bool = true,
+  isDialog: Bool = false,
   hasUnavailableFacts: Bool = false
 ) -> TilingWindowSnapshot {
   TilingWindowSnapshot(
@@ -58,6 +101,7 @@ private func window(
     isMinimized: false,
     isMovable: isMovable,
     isResizable: isResizable,
+    isDialog: isDialog,
     hasUnavailableFacts: hasUnavailableFacts
   )
 }

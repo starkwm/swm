@@ -299,11 +299,15 @@ public final class Tiling {
         }
         continue
       }
-      let disposition = WindowEligibilityPolicy.disposition(for: window, topology: topology)
+      let disposition = WindowEligibilityPolicy.disposition(
+        for: window,
+        topology: topology,
+        allowsDialogTiling: actions[window.id]?.manage == true
+      )
       let placement: (layoutID: TilingLayoutID, isOmitted: Bool)
 
       switch disposition {
-      case .excluded(.notResizable):
+      case .excluded(.notResizable), .floating(.dialog):
         if !window.isMinimized,
           let layoutID = topology.layoutID(for: window.id, on: window.displayID)
         {
