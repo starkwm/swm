@@ -8,55 +8,10 @@ import Testing
 @Suite("Tiling")
 struct TilingTests {
   @Test(
-    "three-window minimum sizes preserve planned ratios and directions",
+    "dwindle moves a split to fit a window that refuses to shrink",
     arguments: [false, true]
   )
-  func threeWindowRefusal(preserved: Bool) async throws {
-    let app = AnimationTestApp(processID: 1)
-    app.minimumSizes = [2: CGSize(width: 600, height: 1200), 3: CGSize(width: 840, height: 1)]
-    let reconciler = makeTestReconciler(app)
-    var inventory = [window(id: 1), window(id: 3)]
-    var membership: [CGWindowID: Set<UInt64>] = [1: [10], 3: [10]]
-    let bounds = CGRect(x: 6, y: 44, width: 1698, height: 1062)
-    let tiling = makeTiling(
-      windows: { inventory },
-      memberships: { membership },
-      displayBounds: { bounds },
-      frameReconciler: reconciler
-    )
-    tiling.initialize()
-    tiling.windowDidFocus(1)
-    inventory.append(window(id: 2))
-    membership[2] = [10]
-    tiling.reconcile()
-    tiling.changeSplitRatio(.absolute(0.8), for: 10)
-    tiling.setSplitDirectionPreservation(preserved, for: 10)
-    tiling.setLayout(.dwindle, for: 10)
-    let plan = tiling.layoutPlan(for: layoutID(10))
-    guard let plannedFrames = plan else {
-      Issue.record("Expected dwindle frames")
-      return
-    }
-    try await waitForAnimation { reconciler.isIdle }
-    for id: CGWindowID in [1, 2, 3] {
-      var expected = try #require(plannedFrames[id])
-      if let minimum = app.minimumSizes[id] {
-        expected.size.width = max(expected.width, minimum.width)
-        expected.size.height = max(expected.height, minimum.height)
-      }
-      #expect(app.frame(for: id) == expected)
-    }
-    #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
-    #expect(app.frame(for: 1).width == 1086)
-    #expect(app.frame(for: 3).minX == 1364)
-    #expect(app.writeCount <= 6)
-  }
-
-  @Test(
-    "dwindle keeps planned positions, caches refusal, and retries after an adjustment",
-    arguments: [false, true]
-  )
-  func dwindleRefusalKeepsPositions(animated: Bool) async throws {
+  func dwindleFitsRefusedMinimumSize(animated: Bool) async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [2: CGSize(width: 400, height: 1)]
     let reconciler = makeTestReconciler(app, automaticallySchedule: true)
@@ -68,21 +23,34 @@ struct TilingTests {
     )
     tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
-    try await waitForAnimation { reconciler.isIdle }
     tiling.changeSplitRatio(.absolute(0.8), for: 10)
-    try await waitForAnimation { reconciler.isIdle }
-    #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 800, height: 800))
-    #expect(app.frame(for: 2).minX == 800)
-    #expect(app.frame(for: 2).width == 400)
+    try await settle(tiling, reconciler)
+
+    #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 600, height: 800))
+    #expect(app.frame(for: 2) == CGRect(x: 600, y: 0, width: 400, height: 800))
+    #expect(tiling.layoutState(for: 10)?.splitRatio == 0.8)
     let writes = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
     #expect(app.writeCount == writes)
-    #expect(tiling.layoutState(for: 10)?.splitRatio == 0.8)
-    app.minimumSizes = [:]
-    tiling.changeSplitRatio(.absolute(0.8), for: 10)
-    try await waitForAnimation { reconciler.isIdle }
-    #expect(app.frame(for: 2).width == 200)
-    #expect(app.writeCount <= writes + (animated ? 10 : 2))
+  }
+
+  @Test("master moves its split and stack rows to fit windows that refuse to shrink")
+  func masterFitsRefusedMinimumSizes() async throws {
+    let app = AnimationTestApp(processID: 1)
+    app.minimumSizes = [1: CGSize(width: 700, height: 1), 3: CGSize(width: 1, height: 500)]
+    let reconciler = makeTestReconciler(app, automaticallySchedule: true)
+    let tiling = makeTiling(
+      windows: [window(id: 1), window(id: 2), window(id: 3)],
+      memberships: [1: [10], 2: [10], 3: [10]],
+      frameReconciler: reconciler
+    )
+    tiling.initialize()
+    tiling.setLayout(.master, for: 10)
+    try await settle(tiling, reconciler)
+
+    #expect(app.frame(for: 1) == CGRect(x: 0, y: 0, width: 700, height: 800))
+    #expect(app.frame(for: 2) == CGRect(x: 700, y: 0, width: 300, height: 300))
+    #expect(app.frame(for: 3) == CGRect(x: 700, y: 300, width: 300, height: 500))
   }
 
   @Test(
@@ -124,8 +92,8 @@ struct TilingTests {
       tiling.changeSplitRatio(.absolute(0.5), for: 10)
     }
     app.release()
-    try await waitForAnimation { reconciler.isIdle }
-    #expect(app.frame(for: 1).width == (mode == 0 ? 500 : mode == 3 ? 960 : 1000))
+    try await settle(tiling, reconciler)
+    #expect(app.frame(for: 1).width == (mode == 0 ? 500 : mode == 3 ? 800 : 1000))
     if mode == 0 { #expect(app.frame(for: 2).width == 500) }
     let settledWrites = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
@@ -157,7 +125,7 @@ struct TilingTests {
     #expect(app.writeCount == writes)
   }
 
-  @Test("dwindle minimum sizes that exceed the display stop retrying")
+  @Test("dwindle minimum sizes that exceed the display stop retrying after one refit")
   func dwindleOversizedWindows() async throws {
     let app = AnimationTestApp(processID: 1)
     app.minimumSizes = [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
@@ -169,11 +137,11 @@ struct TilingTests {
     )
     tiling.initialize()
     tiling.setLayout(.dwindle, for: 10)
-    try await waitForAnimation { reconciler.isIdle }
+    try await settle(tiling, reconciler)
     let writes = app.writeCount
     for _ in 0..<10 { tiling.reconcileAndReflowVisibleSpaces() }
     #expect(app.writeCount == writes)
-    #expect(writes == 4)
+    #expect(writes == 8)
   }
 
   @Test("initialize: excludes ineligible windows from disabled Space geometry")
@@ -2147,4 +2115,11 @@ private func makeSpaceRuleTiling(
     ruleSpaceIDs: spaceIDs,
     ruleSpaceMove: move
   )
+}
+
+@MainActor
+private func settle(_ tiling: Tiling, _ reconciler: WindowFrameReconciler) async throws {
+  try await waitForAnimation { reconciler.isIdle }
+  await tiling.waitForScheduledReconcile()
+  try await waitForAnimation { reconciler.isIdle }
 }

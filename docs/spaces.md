@@ -55,7 +55,7 @@ In a dwindle layout, new windows split the focused tiled window and removing a w
 
 A dwindle split ratio is the share of a region given to its left or upper side. `swm config split-ratio --space current 0.6` sets that ratio for new splits on the Space and rebalances every existing split to it; a signed change such as `+0.05` adjusts the Space's ratio and rebalances the same way. Use `swm window split-ratio` to change one split afterwards.
 
-Dwindle keeps the requested split ratios and directions even when an application's minimum size exceeds its tile. SWM still requests the planned frame, but the application may remain larger, overlap neighboring tiles, or extend beyond the display. Other tiles keep their planned positions.
+When an application refuses to shrink a tiled window to its tile, swm remembers the size the window kept as its minimum until the window closes. Dwindle and master layouts then move their splits so the window gets at least that size, taking the space from neighboring tiles. Split ratios and directions stay as set; only the position of the split changes. If the known minimum sizes cannot all fit, swm keeps the planned split, and the window may overlap neighboring tiles or extend beyond the display.
 
 Background reflows do not repeatedly retry an arrangement that an application refused. Explicit layout adjustments and completed pointer resize interactions allow a fresh attempt.
 

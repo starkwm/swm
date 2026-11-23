@@ -8,6 +8,17 @@ enum TilingLimits {
   static func clampedRatio(_ ratio: CGFloat) -> CGFloat {
     min(max(ratio, ratioRange.lowerBound), ratioRange.upperBound)
   }
+
+  /// Moves a split so both sides get at least their minimum length, when both fit.
+  static func allocation(
+    _ preferred: CGFloat,
+    of available: CGFloat,
+    firstMinimum: CGFloat,
+    secondMinimum: CGFloat
+  ) -> CGFloat {
+    guard firstMinimum + secondMinimum <= available else { return preferred }
+    return min(max(preferred, firstMinimum), available - secondMinimum)
+  }
 }
 
 extension CGSize {

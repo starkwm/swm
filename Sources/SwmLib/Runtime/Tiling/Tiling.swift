@@ -48,6 +48,7 @@ public final class Tiling {
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var dispositionByWindowID = [CGWindowID: WindowDisposition]()
+  private var minimumSizeByWindowID = [CGWindowID: CGSize]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
   private var dwindleAttempts = [TilingLayoutID: DwindleAttempt]()
   private var pendingFocusedWindowID: CGWindowID?
@@ -139,6 +140,9 @@ public final class Tiling {
           WindowRuleIdentity(app: $0.app, title: $0.title, bundleID: $0.bundleID)
         }
       }
+    frameReconciler?.onFrameRefused = { [weak self] id, target, actual in
+      self?.recordRefusedFrame(for: id, target: target, actual: actual)
+    }
     if let windows {
       frameReconciler?.onInteractionEnded = { [weak self] in
         guard let self else { return }
@@ -243,6 +247,7 @@ public final class Tiling {
     var liveIDs = Set(windows.map(\.id))
     let previousFloatingIDs = floatingOverrideWindowIDs
     manualFloatingByWindowID = manualFloatingByWindowID.filter { liveIDs.contains($0.key) }
+    minimumSizeByWindowID = minimumSizeByWindowID.filter { liveIDs.contains($0.key) }
     let actions = Dictionary(
       uniqueKeysWithValues: windows.map {
         ($0.id, WindowRuleActions.resolve(rules, for: $0))
@@ -764,7 +769,8 @@ public final class Tiling {
         in: state.tree,
         bounds: display.visibleFrame,
         settings: spaceSettings,
-        hiding: hiddenWindowIDs(in: state)
+        hiding: hiddenWindowIDs(in: state),
+        minimumSizes: minimumSizeByWindowID
       )
       layoutsByID[layoutID] = state
     }
@@ -779,7 +785,8 @@ public final class Tiling {
         in: display.visibleFrame,
         settings: spaceSettings,
         masterRatio: state.masterRatio,
-        placement: state.masterPlacement
+        placement: state.masterPlacement,
+        minimumSizes: minimumSizeByWindowID
       )
     case .monocle:
       return monocleLayout.layout(
@@ -791,7 +798,8 @@ public final class Tiling {
       return dwindleLayout.layout(
         tree: activeTree,
         in: display.visibleFrame,
-        settings: spaceSettings
+        settings: spaceSettings,
+        minimumSizes: minimumSizeByWindowID
       )
     }
   }
@@ -1004,10 +1012,13 @@ public final class Tiling {
       let topology = currentTopology, topology.visibleLayoutIDs.contains(id),
       let display = topology.displaysByID[id.displayID]
     else { return nil }
+    let tree = activeTree(of: state)
+    let windowIDs = Set(tree?.windowIDs ?? [])
     return DwindleContext(
-      tree: activeTree(of: state),
+      tree: tree,
       bounds: display.visibleFrame,
-      settings: spaces.settings(for: id.spaceID)
+      settings: spaces.settings(for: id.spaceID),
+      minimumSizes: minimumSizeByWindowID.filter { windowIDs.contains($0.key) }
     )
   }
 
@@ -1024,6 +1035,25 @@ public final class Tiling {
       attempt.verified = results.values.allSatisfy { $0 }
       if !attempt.verified { self.logUnsatisfiedDwindle(id) }
     }
+  }
+
+  /// Remembers the size a window kept when it refused to shrink to its tile, so later
+  /// layouts make room for it.
+  private func recordRefusedFrame(for windowID: CGWindowID, target: CGRect, actual: CGRect) {
+    let tolerance: CGFloat = 1
+    let previous = minimumSizeByWindowID[windowID] ?? .zero
+    var minimum = previous
+    if actual.width > target.width + tolerance {
+      minimum.width = max(minimum.width, actual.width)
+    }
+    if actual.height > target.height + tolerance {
+      minimum.height = max(minimum.height, actual.height)
+    }
+    guard minimum != previous else { return }
+
+    minimumSizeByWindowID[windowID] = minimum
+    log("window minimum size id: \(windowID) \(minimum.width)x\(minimum.height)")
+    scheduleReconcileAndReflow()
   }
 
   private func logUnsatisfiedDwindle(_ id: TilingLayoutID) {
@@ -1172,6 +1202,7 @@ private struct DwindleContext: Equatable {
   let tree: TilingTree?
   let bounds: CGRect
   let settings: SpaceSettings
+  let minimumSizes: [CGWindowID: CGSize]
 }
 
 private final class DwindleAttempt {
