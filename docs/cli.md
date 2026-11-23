@@ -41,8 +41,6 @@ A failed command does not cancel the reload by itself; the file's exit status de
 
 Only one reload runs at a time. A second `swm reload` fails until the first finishes. Commands sent from outside the file, such as hotkeys, still apply immediately. A successful reload replaces any rule or signal added by a hotkey while the file ran. A failed reload undoes even a hotkey's change to a setting the file never touched. Programs the file starts inherit its `SWM_RELOAD_TOKEN` environment variable, so their commands join the reload while it runs and apply immediately once it finishes.
 
-A daemon started before atomic reloads existed does not support them. `reload` then warns, removes every rule and signal, and runs the file. Restart the daemon to use atomic reloads.
-
 ## Send commands
 
 Send commands to the running daemon through command-specific subcommands:
