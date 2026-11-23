@@ -12,4 +12,4 @@ permissions:
 jobs:
   lint-and-test:
     # main as of 2026-09-20; starkwm/workflows has no release tags.
-    uses: starkwm/workflows/.github/workflows/lint-and-test.yml@86f5f1dd93c944f43013fe7eaf55e2468e46f15a
+    uses: starkwm/workflows/.github/workflows/lint-and-test.yml@fb41a4e2c943e782f0f0cc791a920679b415b101
