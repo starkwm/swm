@@ -1106,9 +1106,36 @@ struct TilingTests {
     #expect(
       tiling.layoutPlan(for: layoutID(10)) == [1: CGRect(x: 0, y: 0, width: 1_000, height: 800)]
     )
+    #expect(tiling.tilingStatus(for: 2) == .floating(.dialog))
 
     try tiling.addRule(WindowRule.parse(arguments: ["title=^Settings$", "manage=on"]))
     #expect(tiling.layoutPlan(for: layoutID(10))?.keys.sorted() == [1, 2])
+    #expect(tiling.tilingStatus(for: 2) == .tiled)
+  }
+
+  @Test("tilingStatus: explains why each window is or is not tiled")
+  func tilingStatusExplainsWhyEachWindowIsOrIsNotTiled() throws {
+    var ruled = window(id: 3)
+    ruled.title = "Ruled"
+    let tiling = makeTiling(
+      windows: [
+        window(id: 1), window(id: 2), ruled, window(id: 4, isMinimized: true),
+        window(id: 5, isResizable: false), window(id: 6), window(id: 7),
+      ],
+      memberships: [1: [10], 2: [10], 3: [10], 4: [10], 5: [10], 6: [10, 11], 7: [11]]
+    )
+    try tiling.addRule(WindowRule.parse(arguments: ["title=^Ruled$", "manage=off"]))
+    tiling.setLayout(.dwindle, for: 10)
+    #expect(tiling.setWindowLayout(.float, for: 2))
+
+    #expect(tiling.tilingStatus(for: 1) == .tiled)
+    #expect(tiling.tilingStatus(for: 2) == .floating(.manual))
+    #expect(tiling.tilingStatus(for: 3) == .floating(.rule))
+    #expect(tiling.tilingStatus(for: 4) == .excluded(.minimized))
+    #expect(tiling.tilingStatus(for: 5) == .floating(.notResizable))
+    #expect(tiling.tilingStatus(for: 6) == .floating(.multipleSpaces))
+    #expect(tiling.tilingStatus(for: 7) == .floating(.floatLayout))
+    #expect(tiling.tilingStatus(for: 99) == nil)
   }
 
   @Test("addRule: cancels animation before synchronous placement")

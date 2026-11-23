@@ -62,11 +62,18 @@ final class QuerySnapshot {
     return Self.indexWindowInfo(windowInfo)
   }()
 
+  let tiling: Tiling?
+
   private let managedWindows: Windows
   private let focusProvider: () -> CGWindowID?
 
-  init(windows: Windows, focusedWindowID: @escaping () -> CGWindowID? = Windows.focusedWindowID) {
+  init(
+    windows: Windows,
+    tiling: Tiling? = nil,
+    focusedWindowID: @escaping () -> CGWindowID? = Windows.focusedWindowID
+  ) {
     managedWindows = windows
+    self.tiling = tiling
     focusProvider = focusedWindowID
   }
 }

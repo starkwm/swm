@@ -8,20 +8,44 @@ enum WindowDisposition: Equatable {
   case excluded(WindowExclusionReason)
 
   case pending
+
+  var state: String {
+    switch self {
+    case .tiled: "tiled"
+    case .floating: "floating"
+    case .excluded: "excluded"
+    case .pending: "pending"
+    }
+  }
+
+  var reason: WindowExclusionReason? {
+    switch self {
+    case .floating(let reason), .excluded(let reason): reason
+    case .tiled, .pending: nil
+    }
+  }
 }
 
-enum WindowExclusionReason: Equatable {
-  case multipleSpaces
+enum WindowExclusionReason: String, Equatable {
+  case manual
 
-  case nativeFullscreen
+  case rule
 
-  case unsupportedSubrole
+  case floatLayout = "float-layout"
 
-  case notMovable
+  case multipleSpaces = "multiple-spaces"
 
-  case notResizable
+  case nativeFullscreen = "native-fullscreen"
+
+  case unsupportedSubrole = "unsupported-subrole"
+
+  case notMovable = "not-movable"
+
+  case notResizable = "not-resizable"
 
   case dialog
+
+  case minimized
 }
 
 struct TilingWindowSnapshot: Equatable {
@@ -70,7 +94,7 @@ enum WindowEligibilityPolicy {
       return .excluded(.unsupportedSubrole)
     }
     guard window.isMovable else { return .excluded(.notMovable) }
-    guard window.isResizable else { return .excluded(.notResizable) }
+    guard window.isResizable else { return .floating(.notResizable) }
     guard window.displayID != nil else { return .pending }
 
     let membership = topology.spaceIDsByWindowID[window.id] ?? []

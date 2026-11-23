@@ -47,6 +47,7 @@ public final class Tiling {
   private var floatingOverrideWindowIDs = Set<CGWindowID>()
   private var layoutIDByWindowID = [CGWindowID: TilingLayoutID]()
   private var fixedSizeLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
+  private var dispositionByWindowID = [CGWindowID: WindowDisposition]()
   private var layoutsByID = [TilingLayoutID: TilingLayoutState]()
   private var dwindleAttempts = [TilingLayoutID: DwindleAttempt]()
   private var pendingFocusedWindowID: CGWindowID?
@@ -289,6 +290,7 @@ public final class Tiling {
     var omittedWindowIDsByLayoutID = [TilingLayoutID: Set<CGWindowID>]()
     var newLayoutIDByWindowID = [CGWindowID: TilingLayoutID]()
     fixedSizeLayoutIDByWindowID.removeAll(keepingCapacity: true)
+    dispositionByWindowID.removeAll(keepingCapacity: true)
 
     for window in windows {
       if ruleSpaceMoveTasks[window.id] != nil {
@@ -304,10 +306,12 @@ public final class Tiling {
         topology: topology,
         allowsDialogTiling: actions[window.id]?.manage == true
       )
+      dispositionByWindowID[window.id] =
+        disposition == .tiled && window.isMinimized ? .excluded(.minimized) : disposition
       let placement: (layoutID: TilingLayoutID, isOmitted: Bool)
 
       switch disposition {
-      case .excluded(.notResizable), .floating(.dialog):
+      case .floating(.notResizable), .floating(.dialog):
         if !window.isMinimized,
           let layoutID = topology.layoutID(for: window.id, on: window.displayID)
         {
@@ -550,6 +554,20 @@ public final class Tiling {
     guard let state = layoutsByID[layoutID], state.selection != .float else { return false }
     return !floatingOverrideWindowIDs.contains(windowID)
       && !state.omittedWindowIDs.contains(windowID)
+  }
+
+  /// How the last reconcile treated a window, or `nil` when it was not part of it.
+  func tilingStatus(for windowID: CGWindowID) -> WindowDisposition? {
+    guard let disposition = dispositionByWindowID[windowID] else { return nil }
+    guard disposition == .tiled else { return disposition }
+
+    if floatingOverrideWindowIDs.contains(windowID) {
+      return .floating(manualFloatingByWindowID[windowID] == true ? .manual : .rule)
+    }
+    guard let layoutID = layoutIDByWindowID[windowID], let state = layoutsByID[layoutID] else {
+      return .pending
+    }
+    return state.selection == .float ? .floating(.floatLayout) : .tiled
   }
 
   @discardableResult

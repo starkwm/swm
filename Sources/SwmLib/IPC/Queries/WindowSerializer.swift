@@ -19,6 +19,8 @@ struct WindowSerializer: Encodable, Equatable {
     case isNativeFullscreen = "is-native-fullscreen"
     case isVisible = "is-visible"
     case isMinimized = "is-minimized"
+    case tiling
+    case tilingReason = "tiling-reason"
   }
 
   @MainActor
@@ -33,7 +35,8 @@ struct WindowSerializer: Encodable, Equatable {
         info: snapshot.windowInfoByID[window.id],
         screens: snapshot.screens,
         spaceIndex: spaceIndex,
-        nativeFullscreen: spaceIDs.first.map(snapshot.nativeFullscreenSpaceIDs.contains) ?? false
+        nativeFullscreen: spaceIDs.first.map(snapshot.nativeFullscreenSpaceIDs.contains) ?? false,
+        tiling: snapshot.tiling?.tilingStatus(for: window.id)
       )
     }
   }
@@ -72,6 +75,8 @@ struct WindowSerializer: Encodable, Equatable {
 
   let isMinimized: Bool
 
+  let tiling: WindowDisposition?
+
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
@@ -91,6 +96,8 @@ struct WindowSerializer: Encodable, Equatable {
     try container.encodeNilOrValue(isNativeFullscreen, forKey: .isNativeFullscreen)
     try container.encodeNilOrValue(isVisible, forKey: .isVisible)
     try container.encodeNilOrValue(isMinimized, forKey: .isMinimized)
+    try container.encodeNilOrValue(tiling?.state, forKey: .tiling)
+    try container.encodeNilOrValue(tiling?.reason?.rawValue, forKey: .tilingReason)
   }
 }
 
@@ -102,7 +109,8 @@ extension WindowSerializer {
     info: [String: Any]?,
     screens: [NSScreen],
     spaceIndex: Int?,
-    nativeFullscreen: Bool
+    nativeFullscreen: Bool,
+    tiling: WindowDisposition?
   ) {
     let element = window.element
     let frame = window.frame()
@@ -136,5 +144,6 @@ extension WindowSerializer {
     isNativeFullscreen = nativeFullscreen
     isVisible = (info?[kCGWindowIsOnscreen as String] as? NSNumber)?.boolValue ?? false
     isMinimized = window.isMinimized
+    self.tiling = tiling
   }
 }

@@ -1,15 +1,17 @@
 @MainActor
 struct QueryCommandHandler {
   private let windows: Windows
+  private let tiling: Tiling
 
-  init(windows: Windows) {
+  init(windows: Windows, tiling: Tiling) {
     self.windows = windows
+    self.tiling = tiling
   }
 
   func dispatch(_ request: IPCRequest) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       let selection = try QuerySelection.parse(arguments: request.args)
-      let resolver = QueryResolver(windows: windows)
+      let resolver = QueryResolver(windows: windows, tiling: tiling)
 
       switch request.command {
       case "--displays":

@@ -232,7 +232,8 @@ struct DaemonTests {
         hasAXReference: true,
         isNativeFullscreen: false,
         isVisible: true,
-        isMinimized: false
+        isMinimized: false,
+        tiling: nil
       )
     }
     let expected = try IPCResponse.json(id: "test-id", payload: payload)

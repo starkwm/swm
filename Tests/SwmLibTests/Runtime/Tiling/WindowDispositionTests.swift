@@ -13,13 +13,13 @@ struct WindowEligibilityPolicyTests {
     (window(id: 8, displayID: nil), [10], .pending),
     (window(id: 5, subrole: "AXDialog"), [10], .excluded(.unsupportedSubrole)),
     (window(id: 6, isMovable: false), [10], .excluded(.notMovable)),
-    (window(id: 7, isResizable: false), [10], .excluded(.notResizable)),
+    (window(id: 7, isResizable: false), [10], .floating(.notResizable)),
     (window(id: 9, subrole: nil), [10], .excluded(.unsupportedSubrole)),
     (window(id: 10, subrole: nil, isMovable: false, hasUnavailableFacts: true), [10], .pending),
     (window(id: 11, isDialog: true), [10], .floating(.dialog)),
     (window(id: 12, isDialog: true), [10, 11], .floating(.multipleSpaces)),
     (window(id: 13, isDialog: true), [12], .excluded(.nativeFullscreen)),
-    (window(id: 14, isResizable: false, isDialog: true), [10], .excluded(.notResizable)),
+    (window(id: 14, isResizable: false, isDialog: true), [10], .floating(.notResizable)),
   ]
 
   @Test("disposition: explains eligibility outcomes", arguments: cases)

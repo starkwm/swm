@@ -12,8 +12,8 @@ final class QueryResolver {
   private let spaceProvider: () -> [SpaceSerializer]
   private let windowProvider: () -> [WindowSerializer]
 
-  init(windows: Windows) {
-    let snapshot = QuerySnapshot(windows: windows)
+  init(windows: Windows, tiling: Tiling) {
+    let snapshot = QuerySnapshot(windows: windows, tiling: tiling)
     displayProvider = { DisplaySerializer.all(snapshot: snapshot) }
     spaceProvider = { SpaceSerializer.all(snapshot: snapshot) }
     windowProvider = { WindowSerializer.all(snapshot: snapshot) }
