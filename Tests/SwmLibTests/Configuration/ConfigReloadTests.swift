@@ -11,39 +11,35 @@ struct ConfigReloadTests {
     let fixture = ReloadFixture()
     try fixture.tiling.addRule(WindowRule.parse(arguments: ["label=old", "manage=off"]))
     #expect(
-      fixture.send(.signal, "--add", ["label=old", "event=window-focused", "action=true"]).ok
+      fixture.send(.signal(.add(["label=old", "event=window-focused", "action=true"]))).ok
     )
     let token = try fixture.begin()
 
-    #expect(fixture.send(.rule, "--clear", token: token).ok)
-    #expect(fixture.send(.rule, "--add", ["label=new", "manage=off"], token: token).ok)
-    #expect(fixture.send(.signal, "--clear", token: token).ok)
+    #expect(fixture.send(.rule(.clear), token: token).ok)
+    #expect(fixture.send(.rule(.add(["label=new", "manage=off"])), token: token).ok)
+    #expect(fixture.send(.signal(.clear), token: token).ok)
     #expect(
       fixture.send(
-        .signal,
-        "--add",
-        ["label=new", "event=space-changed", "action=true"],
+        .signal(.add(["label=new", "event=space-changed", "action=true"])),
         token: token
       )
       .ok
     )
-    #expect(!fixture.send(.rule, "--add", ["label=new", "manage=on"], token: token).ok)
+    #expect(!fixture.send(.rule(.add(["label=new", "manage=on"])), token: token).ok)
     #expect(
       fixture.send(
-        .signal,
-        "--add",
-        ["label=old", "event=window-focused", "action=true"],
+        .signal(.add(["label=old", "event=window-focused", "action=true"])),
         token: token
       ).ok
     )
 
     #expect(fixture.tiling.rules.map(\.label) == ["old"])
     #expect(fixture.signals.list().map(\.signal.label) == ["old"])
-    #expect(try fixture.labels(.rule, token: token) == ["new"])
-    #expect(try fixture.labels(.signal, token: token) == ["new", "old"])
-    #expect(try fixture.labels(.rule) == ["old"])
+    #expect(try fixture.labels(.rule(.list), token: token) == ["new"])
+    #expect(try fixture.labels(.signal(.list), token: token) == ["new", "old"])
+    #expect(try fixture.labels(.rule(.list)) == ["old"])
 
-    #expect(fixture.send(.config, "--commit-reload", [token]).ok)
+    #expect(fixture.send(.reload(.commit(token: token))).ok)
     #expect(fixture.tiling.rules.map(\.label) == ["new"])
     #expect(fixture.signals.list().map(\.signal.label) == ["new", "old"])
     #expect(fixture.stoppedWatching)
@@ -59,17 +55,17 @@ struct ConfigReloadTests {
       })
     )
     let rule = ["label=grid", "grid=2:1:1:0:1:1"]
-    #expect(fixture.send(.rule, "--add", rule).ok)
+    #expect(fixture.send(.rule(.add(rule))).ok)
     #expect(placements == 1)
 
     let token = try fixture.begin()
-    #expect(fixture.send(.rule, "--clear", token: token).ok)
-    #expect(fixture.send(.rule, "--add", rule, token: token).ok)
-    #expect(fixture.send(.config, "--commit-reload", [token]).ok)
+    #expect(fixture.send(.rule(.clear), token: token).ok)
+    #expect(fixture.send(.rule(.add(rule)), token: token).ok)
+    #expect(fixture.send(.reload(.commit(token: token))).ok)
     #expect(placements == 1)
 
-    #expect(fixture.send(.rule, "--clear").ok)
-    #expect(fixture.send(.rule, "--add", rule).ok)
+    #expect(fixture.send(.rule(.clear)).ok)
+    #expect(fixture.send(.rule(.add(rule))).ok)
     #expect(placements == 2)
   }
 
@@ -78,14 +74,14 @@ struct ConfigReloadTests {
     let fixture = ReloadFixture()
     try fixture.tiling.addRule(WindowRule.parse(arguments: ["label=old", "manage=off"]))
     let token = try fixture.begin()
-    #expect(fixture.send(.rule, "--clear", token: token).ok)
-    #expect(!fixture.send(.config, "--begin-reload", ["42"]).ok)
-    #expect(!fixture.send(.config, "--commit-reload", ["other"]).ok)
+    #expect(fixture.send(.rule(.clear), token: token).ok)
+    #expect(!fixture.send(.reload(.begin(processID: 42))).ok)
+    #expect(!fixture.send(.reload(.commit(token: "other"))).ok)
 
-    #expect(fixture.send(.config, "--rollback-reload", [token]).ok)
+    #expect(fixture.send(.reload(.rollback(token: token))).ok)
     #expect(fixture.tiling.rules.map(\.label) == ["old"])
     #expect(fixture.stoppedWatching)
-    #expect(!fixture.send(.config, "--commit-reload", [token]).ok)
+    #expect(!fixture.send(.reload(.commit(token: token))).ok)
     _ = try fixture.begin()
   }
 
@@ -100,21 +96,29 @@ struct ConfigReloadTests {
     )
     tiling.initialize()
     let fixture = ReloadFixture(tiling: tiling)
-    #expect(fixture.send(.config, "gap", ["abs:4"]).ok)
+    #expect(fixture.send(.config(.gap(scope: .global, .absolute(4)))).ok)
     let before = fixture.settings
     let token = try fixture.begin()
 
-    for (setting, value) in [
-      ("layout", ["dwindle"]), ("master-ratio", ["abs:0.6"]), ("master-placement", ["top"]),
-      ("split-ratio", ["abs:0.7"]), ("preserve-split", ["on"]), ("gap", ["abs:12"]),
-      ("padding", ["top=abs:8"]), ("focus-follows-mouse", ["autofocus"]),
-    ] {
-      #expect(fixture.send(.config, setting, value, token: token).ok)
+    let commands: [IPCCommand.Config] = [
+      .layout(scope: .global, .dwindle),
+      .masterRatio(scope: .global, .absolute(0.6)),
+      .masterPlacement(scope: .global, .set(.top)),
+      .splitRatio(scope: .global, .absolute(0.7)),
+      .preserveSplit(scope: .global, true),
+      .gap(scope: .global, .absolute(12)),
+      .padding(scope: .global, [PaddingSideChange(side: .top, change: .absolute(8))]),
+      .focusFollowsMouse(.autofocus),
+    ]
+    for command in commands {
+      #expect(fixture.send(.config(command), token: token).ok)
     }
     fixture.spaces.setGap(30, for: 10)
     let plan = try #require(tiling.layoutPlan(for: layoutID(10)))
 
-    #expect(fixture.send(.config, commit ? "--commit-reload" : "--rollback-reload", [token]).ok)
+    #expect(
+      fixture.send(.reload(commit ? .commit(token: token) : .rollback(token: token))).ok
+    )
     if commit {
       #expect(fixture.settings != before)
       #expect(tiling.layoutPlan(for: layoutID(10)) == plan)
@@ -128,36 +132,33 @@ struct ConfigReloadTests {
   func beginRollsBackWhenTheReloadProcessExitsBeforeFinishing() throws {
     let fixture = ReloadFixture()
     let token = try fixture.begin()
-    #expect(fixture.send(.rule, "--add", ["label=new", "manage=off"], token: token).ok)
+    #expect(fixture.send(.rule(.add(["label=new", "manage=off"])), token: token).ok)
 
     fixture.exitProcess()
     #expect(fixture.tiling.rules.isEmpty)
-    #expect(!fixture.send(.config, "--commit-reload", [token]).ok)
+    #expect(!fixture.send(.reload(.commit(token: token))).ok)
     _ = try fixture.begin()
   }
 
-  @Test("begin: rejects a process that is not running and malformed process IDs")
-  func beginRejectsAProcessThatIsNotRunningAndMalformedProcessIDs() {
+  @Test("begin: rejects a process that is not running and non-positive process IDs")
+  func beginRejectsAProcessThatIsNotRunningAndNonPositiveProcessIDs() {
     let fixture = ReloadFixture(runningProcessIDs: [])
-    for value in ["42", "0", "-1", "x"] {
-      #expect(!fixture.send(.config, "--begin-reload", [value]).ok)
+    for processID: pid_t in [42, 0, -1] {
+      #expect(!fixture.send(.reload(.begin(processID: processID))).ok)
     }
-    #expect(!fixture.send(.config, "--begin-reload").ok)
   }
 
   @Test("staging: applies requests with an unknown or closed token live")
   func stagingAppliesRequestsWithAnUnknownOrClosedTokenLive() throws {
     let fixture = ReloadFixture()
-    #expect(fixture.send(.rule, "--add", ["label=a", "manage=off"], token: "unknown").ok)
+    #expect(fixture.send(.rule(.add(["label=a", "manage=off"])), token: "unknown").ok)
     let token = try fixture.begin()
-    #expect(fixture.send(.rule, "--add", ["label=b", "manage=off"], token: "unknown").ok)
-    #expect(fixture.send(.config, "--commit-reload", [token]).ok)
-    #expect(fixture.send(.rule, "--add", ["label=c", "manage=off"], token: token).ok)
+    #expect(fixture.send(.rule(.add(["label=b", "manage=off"])), token: "unknown").ok)
+    #expect(fixture.send(.reload(.commit(token: token))).ok)
+    #expect(fixture.send(.rule(.add(["label=c", "manage=off"])), token: token).ok)
     #expect(
       fixture.send(
-        .signal,
-        "--add",
-        ["label=c", "event=window-focused", "action=true"],
+        .signal(.add(["label=c", "event=window-focused", "action=true"])),
         token: token
       ).ok
     )
@@ -228,7 +229,7 @@ private final class ReloadFixture {
   }
 
   func begin() throws -> String {
-    let response = send(.config, "--begin-reload", ["42"])
+    let response = send(.reload(.begin(processID: 42)))
     try #require(response.ok)
     return response.message
   }
@@ -237,24 +238,40 @@ private final class ReloadFixture {
     process.onExit?()
   }
 
-  func send(
-    _ domain: CommandDomain,
-    _ command: String,
-    _ args: [String] = [],
-    token: String? = nil
-  ) -> IPCResponse {
-    let request = IPCRequest(domain: domain, command: command, args: args, transaction: token)
-    return switch domain {
-    case .rule: RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request)
-    case .signal: SignalCommandHandler(signals: signals, reload: reload).dispatch(request)
-    case .config where !ConfigReloadCommandHandler.commands.contains(command):
-      ConfigCommandHandler(windows: windows, spaces: spaces, tiling: tiling).dispatch(request)
-    default: ConfigReloadCommandHandler(reload: reload).dispatch(request)
+  func send(_ command: IPCCommand, token: String? = nil) -> IPCResponse {
+    let request = IPCRequest(command: command, transaction: token)
+    return switch command {
+    case .rule(let rule):
+      RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request, command: rule)
+    case .signal(let signal):
+      SignalCommandHandler(signals: signals, reload: reload).dispatch(request, command: signal)
+    case .config(let config):
+      ConfigCommandHandler(windows: windows, spaces: spaces, tiling: tiling).dispatch(
+        id: request.id,
+        command: config
+      )
+    case .reload(let reloadCommand):
+      IPCCommandError.catching(id: request.id) {
+        switch reloadCommand {
+        case .begin(let processID):
+          guard processID > 0 else {
+            throw IPCCommandError.invalidRequest("invalid reload process ID: \(processID)")
+          }
+          return .success(id: request.id, message: try reload.begin(processID: processID))
+        case .commit(let token):
+          try reload.commit(token: token)
+        case .rollback(let token):
+          try reload.rollback(token: token)
+        }
+        return .acknowledged(id: request.id)
+      }
+    default:
+      .failure(id: request.id, message: "unexpected test command", errorCode: .unsupportedCommand)
     }
   }
 
-  func labels(_ domain: CommandDomain, token: String? = nil) throws -> [String?] {
-    let response = send(domain, "--list", token: token)
+  func labels(_ command: IPCCommand, token: String? = nil) throws -> [String?] {
+    let response = send(command, token: token)
     let entries = try #require(
       JSONSerialization.jsonObject(with: Data(response.message.utf8)) as? [[String: Any]]
     )

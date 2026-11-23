@@ -1,4 +1,5 @@
 import ArgumentParser
+import CoreGraphics
 import SwmLib
 
 struct WindowSelector: ParsableArguments {
@@ -7,25 +8,20 @@ struct WindowSelector: ParsableArguments {
     help: "Window ID or recent; defaults to focused.",
     completion: .list(["recent"])
   )
-  var window: String?
+  var window: WindowSelection?
 
-  var arguments: [String] { window.map { [$0] } ?? [] }
+  var selection: WindowSelection { window ?? .focused }
 }
 
-struct WindowIdentityTarget: ExpressibleByArgument {
-  let value: String
+extension WindowSelection: ExpressibleByArgument {}
 
-  init?(argument: String) {
-    guard argument == "recent" || UInt32(argument).map({ $0 > 0 }) == true else { return nil }
-    value = argument
-  }
-}
+extension CyclicTarget: ExpressibleByArgument {}
 
 enum FocusTarget: Equatable, ExpressibleByArgument {
   case direction(CardinalDirection)
   case order(CycleDirection)
   case master
-  case window(String)
+  case window(WindowSelection)
 
   init?(argument: String) {
     if let direction = CardinalDirection(rawValue: argument) {
@@ -34,8 +30,8 @@ enum FocusTarget: Equatable, ExpressibleByArgument {
       self = .order(direction)
     } else if argument == "master" {
       self = .master
-    } else if argument == "recent" || UInt32(argument) != nil {
-      self = .window(argument)
+    } else if let selection = WindowSelection(argument: argument) {
+      self = .window(selection)
     } else {
       return nil
     }
@@ -60,37 +56,25 @@ enum SwapTarget: Equatable, ExpressibleByArgument {
 enum WindowFloatState: String, CaseIterable, ExpressibleByArgument {
   case on, off, toggle
 
-  var layoutValue: String {
+  var layoutSelection: WindowLayoutSelection {
     switch self {
-    case .on: "float"
-    case .off: "tile"
-    case .toggle: "toggle"
+    case .on: .float
+    case .off: .tile
+    case .toggle: .toggle
     }
   }
 }
 
 struct WarpTarget: ExpressibleByArgument {
-  let value: String
+  let target: WindowTarget
 
   init?(argument: String) {
-    guard
-      CardinalDirection(rawValue: argument) != nil
-        || argument == "recent" || UInt32(argument).map({ $0 > 0 }) == true
-    else { return nil }
-    value = argument
-  }
-}
-
-struct WindowTransferTarget: ExpressibleByArgument {
-  static let keywords = ["next", "prev"]
-
-  let value: String
-
-  init?(argument: String) {
-    guard
-      Self.keywords.contains(argument)
-        || Int(argument).map({ $0 > 0 }) == true
-    else { return nil }
-    value = argument
+    if let direction = CardinalDirection(rawValue: argument) {
+      target = .direction(direction)
+    } else if let selection = WindowSelection(argument: argument) {
+      target = .selected(selection)
+    } else {
+      return nil
+    }
   }
 }

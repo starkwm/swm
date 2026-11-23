@@ -5,50 +5,22 @@ import Testing
 
 @Suite("IPCRequest")
 struct IPCRequestTests {
-  @Test("make: preserves literal command arguments")
-  func makePreservesLiteralCommandArguments() throws {
-    let arguments = ["--focus", "main display", "--title=A window with spaces", "a=b"]
-    let request = try IPCRequest.make(domain: .window, arguments: arguments)
-    #expect(request.version == IPCRequest.currentVersion)
-    #expect(request.domain == .window)
-    #expect(request.command == "--focus")
-    #expect(request.args == Array(arguments.dropFirst()))
-  }
-
-  @Test("make: requires command")
-  func makeRequiresCommand() {
-    do {
-      _ = try IPCRequest.make(domain: .config, arguments: [])
-      Issue.record("Expected missing command error")
-    } catch let error as IPCCommandError {
-      #expect(error.description == "missing command for config")
-      #expect(error.errorCode == .invalidRequest)
-    } catch {
-      Issue.record("Unexpected error: \(error)")
-    }
-  }
-
-  @Test("encode/decode: preserves the legacy request schema")
-  func encodeDecodePreservesTheLegacyRequestSchema() throws {
-    let fixture =
-      #"{"args":["main display","--title=A window with spaces"],"command":"focus","domain":"window","id":"request-id","version":1}"#
+  @Test("encode/decode: round trips typed commands")
+  func encodeDecodeRoundTripsTypedCommands() throws {
     let request = IPCRequest(
       id: "request-id",
-      domain: .window,
-      command: "focus",
-      args: ["main display", "--title=A window with spaces"]
+      command: .window(.move(.recent, .relative(IntPair(10, -20))))
     )
-    #expect(try wireJSON(request) == fixture)
-    #expect(try JSONDecoder().decode(IPCRequest.self, from: Data(fixture.utf8)) == request)
+    let json = try wireJSON(request)
+    #expect(!json.contains("transaction"))
+    #expect(try JSONDecoder().decode(IPCRequest.self, from: Data(json.utf8)) == request)
   }
 
   @Test("encode/decode: carries a reload transaction only when one is set")
   func encodeDecodeCarriesAReloadTransactionOnlyWhenOneIsSet() throws {
     let request = IPCRequest(
       id: "request-id",
-      domain: .rule,
-      command: "--add",
-      args: ["manage=off"],
+      command: .rule(.add(["manage=off"])),
       transaction: "token"
     )
     let json = try wireJSON(request)

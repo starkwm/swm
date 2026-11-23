@@ -1,4 +1,4 @@
-enum MasterPlacement: String, Equatable {
+public enum MasterPlacement: String, Equatable, CaseIterable, Codable, Sendable {
   case left
 
   case right

@@ -1,6 +1,6 @@
 import AppKit
 
-typealias WindowDisplayTarget = CyclicTarget
+public typealias WindowDisplayTarget = CyclicTarget
 
 extension WindowDisplayTarget {
   func screen(from source: NSScreen, screens: [NSScreen]) -> NSScreen? {

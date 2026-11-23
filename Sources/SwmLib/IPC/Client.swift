@@ -18,19 +18,18 @@ public enum Client {
     }
   }
 
-  public static func send(domain: CommandDomain, args: [String]) -> SendResult {
-    send(domain: domain, args: args, exchange: { try exchange($0) })
+  public static func send(_ command: IPCCommand) -> SendResult {
+    send(command, exchange: { try exchange($0) })
   }
 
   static func send(
-    domain: CommandDomain,
-    args: [String],
+    _ command: IPCCommand,
     environment: [String: String] = ProcessInfo.processInfo.environment,
     exchange: (IPCRequest) throws -> IPCResponse
   ) -> SendResult {
     do {
       let token = environment[reloadTokenVariable].flatMap { $0.isEmpty ? nil : $0 }
-      let request = try IPCRequest.make(domain: domain, arguments: args, transaction: token)
+      let request = IPCRequest(command: command, transaction: token)
       let response = try exchange(request)
       guard response.id == request.id else {
         throw IPCClientError.responseIDMismatch

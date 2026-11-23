@@ -1,6 +1,6 @@
 import CoreGraphics
 
-enum DisplayTarget: Equatable {
+public enum DisplayTarget: Codable, Equatable, Sendable {
   case cyclic(CyclicTarget)
   case first
   case last
@@ -8,10 +8,7 @@ enum DisplayTarget: Equatable {
   case mouse
   case direction(CardinalDirection)
 
-  static let form =
-    "a one-based display index, next, prev, first, last, recent, mouse, left, right, up, or down"
-
-  init?(argument: String) {
+  public init?(argument: String) {
     if let target = CyclicTarget(argument: argument) {
       self = .cyclic(target)
       return

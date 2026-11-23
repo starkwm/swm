@@ -22,18 +22,31 @@ struct ConfigScopeCommandTests {
   ) throws {
     let selector = scope == "global" ? [] : ["--space", scope]
     var command = try #require(
-      Arguments.parseAsRoot(["config", setting] + selector) as? any IPCCommand
+      Arguments.parseAsRoot(["config", setting] + selector) as? any DaemonCommand
     )
+    let expectedScope: ConfigScope =
+      switch scope {
+      case "global": .global
+      case "current": .currentSpace
+      default: .space(2)
+      }
+    let expectedCommand: IPCCommand =
+      switch setting {
+      case "layout": .config(.layout(scope: expectedScope, nil))
+      case "master-ratio": .config(.masterRatio(scope: expectedScope, nil))
+      case "master-placement": .config(.masterPlacement(scope: expectedScope, nil))
+      case "split-ratio": .config(.splitRatio(scope: expectedScope, nil))
+      case "preserve-split": .config(.preserveSplit(scope: expectedScope, nil))
+      case "padding": .config(.padding(scope: expectedScope, []))
+      default: .config(.gap(scope: expectedScope, nil))
+      }
     let output = try #require(tmpfile())
     defer { fclose(output) }
     var sent = false
     try command.run(
-      send: { domain, arguments in
+      send: { ipcCommand in
         sent = true
-        #expect(domain == (scope == "global" ? .config : .space))
-        #expect(
-          arguments == [(scope == "global" ? "" : "--") + setting] + (scope == "2" ? selector : [])
-        )
+        #expect(ipcCommand == expectedCommand)
         return Client.SendResult(ok: true, outputMessage: "")
       },
       output: output,
@@ -86,7 +99,7 @@ struct ConfigScopeCommandTests {
 
   @MainActor
   @Test("gap: changes preserve global defaults and independent Space adjustments")
-  func gapChangesPreserveGlobalDefaultsAndIndependentSpaceAdjustments() async throws {
+  func gapChangesPreserveGlobalDefaultsAndIndependentSpaceAdjustments() throws {
     let spaces = Spaces(activeSpaceID: 10)
     let tiling = Tiling(
       snapshot: { TilingReconciliationSnapshot(windows: [], topology: nil) },
@@ -95,33 +108,31 @@ struct ConfigScopeCommandTests {
     let config = ConfigCommandHandler(
       windows: Windows(workspace: Workspace(), focusedWindowID: nil),
       spaces: spaces,
-      tiling: tiling
+      tiling: tiling,
+      spaceIDProvider: { [10, 20] }
     )
-    let space = SpaceCommandHandler(spaces: spaces, tiling: tiling, spaceIDProvider: { [10, 20] })
 
-    func send(_ arguments: [String]) async throws -> IPCResponse {
+    func send(_ arguments: [String]) throws -> IPCResponse {
       let command = try #require(
-        Arguments.parseAsRoot(Arguments.resolve(["config", "gap"] + arguments)) as? any IPCCommand
+        Arguments.parseAsRoot(Arguments.resolve(["config", "gap"] + arguments))
+          as? any DaemonCommand
       )
-      let request = IPCRequest(
-        id: "gap",
-        domain: command.requestDomain,
-        command: command.commandArguments[0],
-        args: Array(command.commandArguments.dropFirst())
-      )
-      return command.requestDomain == .space
-        ? await space.dispatch(request) : config.dispatch(request)
+      guard case .config(let configCommand) = command.ipcCommand else {
+        Issue.record("Expected config command")
+        return .failure(id: "gap", message: "unexpected", errorCode: .invalidRequest)
+      }
+      return config.dispatch(id: "gap", command: configCommand)
     }
 
-    #expect(try await send(["8"]).ok)
-    #expect(try await send(["--space", "current", "+2"]).ok)
-    #expect(try await send(["--space", "2", "-3"]).ok)
-    #expect(try await send([]).message == "8")
-    #expect(try await send(["--space", "current"]).message == "10")
-    #expect(try await send(["--space", "2"]).message == "5")
+    #expect(try send(["8"]).ok)
+    #expect(try send(["--space", "current", "+2"]).ok)
+    #expect(try send(["--space", "2", "-3"]).ok)
+    #expect(try send([]).message == "8")
+    #expect(try send(["--space", "current"]).message == "10")
+    #expect(try send(["--space", "2"]).message == "5")
     #expect(spaces.settings(for: 30).gap == 8)
-    #expect(!(try await send(["--space", "3", "9"])).ok)
-    #expect(try await send(["+1"]).ok)
+    #expect(!(try send(["--space", "3", "9"])).ok)
+    #expect(try send(["+1"]).ok)
     #expect(spaces.settings(for: 10).gap == 9)
     #expect(spaces.settings(for: 20).gap == 9)
     #expect(spaces.settings(for: 40).gap == 9)

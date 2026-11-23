@@ -3,25 +3,13 @@ import Darwin
 import Foundation
 import SwmLib
 
-protocol IPCCommand: ParsableCommand {
-  static var domain: CommandDomain { get }
-  static var command: String { get }
-
-  var requestDomain: CommandDomain { get }
-  var arguments: [String] { get }
-
-  var commandArguments: [String] { get }
+protocol DaemonCommand: ParsableCommand {
+  var ipcCommand: IPCCommand { get }
 
   func formatted(_ message: String, forTerminal: Bool) -> String
 }
 
-extension IPCCommand {
-  var requestDomain: CommandDomain { Self.domain }
-
-  var arguments: [String] { [] }
-
-  var commandArguments: [String] { [Self.command] + arguments }
-
+extension DaemonCommand {
   func formatted(_ message: String, forTerminal: Bool) -> String { message }
 
   mutating func run() throws {
@@ -29,11 +17,11 @@ extension IPCCommand {
   }
 
   mutating func run(
-    send: (CommandDomain, [String]) -> Client.SendResult,
+    send: (IPCCommand) -> Client.SendResult,
     output: UnsafeMutablePointer<FILE>,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
-    let result = send(requestDomain, commandArguments)
+    let result = send(ipcCommand)
     let message =
       result.ok
       ? formatted(result.outputMessage, forTerminal: isatty(fileno(output)) != 0)
@@ -49,32 +37,9 @@ extension IPCCommand {
   }
 }
 
-protocol ConfigIPCCommand: IPCCommand {}
+protocol QueryDaemonCommand: DaemonCommand {}
 
-extension ConfigIPCCommand {
-  static var domain: CommandDomain { .config }
-}
-
-protocol ScopedConfigIPCCommand: ConfigIPCCommand {
-  var scope: ConfigScopeOptions { get }
-  var settingArguments: [String] { get }
-}
-
-extension ScopedConfigIPCCommand {
-  var requestDomain: CommandDomain { scope.space == nil ? .config : .space }
-
-  var arguments: [String] { scope.arguments + settingArguments }
-
-  var commandArguments: [String] {
-    [scope.space == nil ? Self.command : "--" + Self.command] + arguments
-  }
-}
-
-protocol QueryIPCCommand: IPCCommand {}
-
-extension QueryIPCCommand {
-  static var domain: CommandDomain { .query }
-
+extension QueryDaemonCommand {
   func formatted(_ message: String, forTerminal: Bool) -> String {
     guard
       forTerminal,
@@ -93,40 +58,23 @@ extension QueryIPCCommand {
   }
 }
 
-protocol SignalIPCCommand: IPCCommand {}
-
-extension SignalIPCCommand {
-  static var domain: CommandDomain { .signal }
-}
-
-protocol RuleIPCCommand: IPCCommand {}
-
-extension RuleIPCCommand {
-  static var domain: CommandDomain { .rule }
-}
-
-protocol SpaceIPCCommand: IPCCommand {}
-
-extension SpaceIPCCommand {
-  static var domain: CommandDomain { .space }
-}
-
-protocol DisplayIPCCommand: IPCCommand {}
-
-extension DisplayIPCCommand {
-  static var domain: CommandDomain { .display }
-}
-
-protocol WindowIPCCommand: IPCCommand {}
-
-extension WindowIPCCommand {
-  static var domain: CommandDomain { .window }
-}
-
 enum MasterPlacementName: String, CaseIterable, ExpressibleByArgument {
   case left, right, top, bottom, next, prev
+
+  var change: MasterPlacementChange {
+    switch self {
+    case .left: .set(.left)
+    case .right: .set(.right)
+    case .top: .set(.top)
+    case .bottom: .set(.bottom)
+    case .next: .cycle(.next)
+    case .prev: .cycle(.prev)
+    }
+  }
 }
 
 enum ToggleState: String, CaseIterable, ExpressibleByArgument {
   case on, off
+
+  var isEnabled: Bool { self == .on }
 }

@@ -1,21 +1,12 @@
-enum NumericChange<Value> {
+public enum NumericChange<Value> {
   case absolute(Value)
 
   case relative(Value)
-
-  init?(_ argument: some StringProtocol, value parse: (String) -> Value?) {
-    let parts = argument.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-    guard parts.count == 2, let value = parse(String(parts[1])) else { return nil }
-
-    switch parts[0] {
-    case "abs": self = .absolute(value)
-    case "rel": self = .relative(value)
-    default: return nil
-    }
-  }
 }
 
 extension NumericChange: Equatable where Value: Equatable {}
+extension NumericChange: Codable where Value: Codable {}
+extension NumericChange: Sendable where Value: Sendable {}
 
 extension NumericChange<Int> {
   func applying(to current: Int, context: String) throws -> Int {

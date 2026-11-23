@@ -4,33 +4,28 @@ struct RuleCommandHandler {
 
   var reload: ConfigReload?
 
-  func dispatch(_ request: IPCRequest) -> IPCResponse {
+  func dispatch(_ request: IPCRequest, command: IPCCommand.Rule) -> IPCResponse {
     IPCCommandError.catching(id: request.id) {
       let staging = reload?.staging(for: request)
-      switch request.command {
-      case "--add":
-        let rule = try WindowRule.parse(arguments: request.args)
+      switch command {
+      case .add(let arguments):
+        let rule = try WindowRule.parse(arguments: arguments)
         if let staging { try staging.addRule(rule) } else { try tiling.addRule(rule) }
-      case "--remove":
-        let selector = try IPCArguments(request.args, context: "rule remove").requiredValue()
+      case .remove(let selector):
         if let staging {
           try staging.removeRule(selector: selector)
         } else {
           try tiling.removeRule(selector: selector)
         }
-      case "--clear":
-        try IPCArguments(request.args, context: "rule clear").requireEmpty()
+      case .clear:
         if let staging { staging.removeAllRules() } else { tiling.removeAllRules() }
-      case "--list":
-        try IPCArguments(request.args, context: "rule list").requireEmpty()
+      case .list:
         return try .json(
           id: request.id,
           payload: (staging?.rules ?? tiling.rules).enumerated().map {
             IndexedRule(index: $0.offset + 1, rule: $0.element)
           }
         )
-      default:
-        throw IPCCommandError.unsupportedCommand("unsupported rule command: \(request.command)")
       }
       return .acknowledged(id: request.id)
     }

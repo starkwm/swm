@@ -28,11 +28,9 @@ struct IPCCommandTests {
     var command = try #require(
       Arguments.parseAsRoot(["window", "focus", "42"]) as? WindowCommand.Focus
     )
-    let send: (CommandDomain, [String]) -> Client.SendResult = { domain, args in
-      Client.send(domain: domain, args: args) { request in
-        #expect(request.domain == .window)
-        #expect(request.command == "--focus")
-        #expect(request.args == ["42"])
+    let send: (IPCCommand) -> Client.SendResult = { ipcCommand in
+      Client.send(ipcCommand) { request in
+        #expect(request.command == .window(.focus(.selected(.id(42)))))
         return ok
           ? .success(id: request.id, message: message)
           : .failure(id: request.id, message: message, errorCode: .invalidRequest)
@@ -53,20 +51,20 @@ struct IPCCommandTests {
   @Test(
     "query: singular commands send the plural command with a selector",
     arguments: [
-      (["display"], ["--displays", "--display"]),
-      (["display", "2"], ["--displays", "--display", "2"]),
-      (["space", "3"], ["--spaces", "--space", "3"]),
-      (["window"], ["--windows", "--window"]),
-      (["window", "42"], ["--windows", "--window", "42"]),
-      (["windows", "--space", "3"], ["--windows", "--space", "3"]),
+      (["display"], IPCCommand.query(.displays, .display(nil))),
+      (["display", "2"], .query(.displays, .display(2))),
+      (["space", "3"], .query(.spaces, .space(3))),
+      (["window"], .query(.windows, .window(nil))),
+      (["window", "42"], .query(.windows, .window(42))),
+      (["windows", "--space", "3"], .query(.windows, .space(3))),
     ]
   )
   func querySingularCommandsSendThePluralCommandWithASelector(
     arguments: [String],
-    expected: [String]
+    expected: IPCCommand
   ) throws {
-    let command = try #require(Arguments.parseAsRoot(["query"] + arguments) as? any IPCCommand)
-    #expect(command.commandArguments == expected)
+    let command = try #require(Arguments.parseAsRoot(["query"] + arguments) as? any DaemonCommand)
+    #expect(command.ipcCommand == expected)
   }
 
   @Test("formatted: indents query JSON for terminals and keeps it compact for pipes")
@@ -104,7 +102,9 @@ struct IPCCommandTests {
 
     #expect(
       reload.calls == [
-        "config --begin-reload 42", "exec /tmp/swmrc token", "config --commit-reload token",
+        .command(.reload(.begin(processID: 42))),
+        .exec("/tmp/swmrc", "token"),
+        .command(.reload(.commit(token: "token"))),
       ]
     )
     #expect(read(errors).isEmpty)
@@ -124,7 +124,9 @@ struct IPCCommandTests {
     }
     #expect(
       reload.calls == [
-        "config --begin-reload 42", "exec /tmp/swmrc token", "config --rollback-reload token",
+        .command(.reload(.begin(processID: 42))),
+        .exec("/tmp/swmrc", "token"),
+        .command(.reload(.rollback(token: "token"))),
       ]
     )
     #expect(
@@ -150,7 +152,7 @@ struct IPCCommandTests {
     #expect(throws: ExitCode.failure) {
       try command.run(send: reload.send, execute: reload.execute, processID: 42, errors: errors)
     }
-    #expect(reload.calls == ["config --begin-reload 42"])
+    #expect(reload.calls == [.command(.reload(.begin(processID: 42)))])
     #expect(read(errors) == "Error: a configuration reload is already in progress\n")
   }
 
@@ -164,7 +166,7 @@ struct IPCCommandTests {
     let reload = RecordedReload(
       begin: Client.SendResult(
         ok: false,
-        outputMessage: "Error: unsupported config command: --begin-reload",
+        outputMessage: "Error: unsupported reload command",
         errorCode: .unsupportedCommand
       )
     )
@@ -173,7 +175,10 @@ struct IPCCommandTests {
 
     #expect(
       reload.calls == [
-        "config --begin-reload 42", "rule --clear", "signal --clear", "exec /tmp/swmrc none",
+        .command(.reload(.begin(processID: 42))),
+        .command(.rule(.clear)),
+        .command(.signal(.clear)),
+        .exec("/tmp/swmrc", nil),
       ]
     )
     #expect(read(errors) == "Warning: restart the daemon to make reloads all-or-nothing.\n")
@@ -189,7 +194,12 @@ struct IPCCommandTests {
 }
 
 private final class RecordedReload {
-  private(set) var calls = [String]()
+  enum Call: Equatable {
+    case command(IPCCommand)
+    case exec(String, String?)
+  }
+
+  private(set) var calls = [Call]()
   private let begin: Client.SendResult
   private let executeFails: Bool
 
@@ -201,13 +211,14 @@ private final class RecordedReload {
     self.executeFails = executeFails
   }
 
-  func send(_ domain: CommandDomain, _ args: [String]) -> Client.SendResult {
-    calls.append("\(domain.rawValue) \(args.joined(separator: " "))")
-    return args.first == "--begin-reload" ? begin : Client.SendResult(ok: true, outputMessage: "")
+  func send(_ command: IPCCommand) -> Client.SendResult {
+    calls.append(.command(command))
+    if case .reload(.begin) = command { return begin }
+    return Client.SendResult(ok: true, outputMessage: "")
   }
 
   func execute(_ path: String, _ token: String?) throws {
-    calls.append("exec \(path) \(token ?? "none")")
+    calls.append(.exec(path, token))
     if executeFails { throw ConfigError.configurationFailed(status: 1) }
   }
 }

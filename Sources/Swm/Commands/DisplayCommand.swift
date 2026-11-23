@@ -8,7 +8,7 @@ struct DisplayCommand: ParsableCommand {
     subcommands: [Focus.self]
   )
 
-  struct Focus: DisplayIPCCommand {
+  struct Focus: DaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Focus a display by index, order, recency, mouse position, or direction.",
       discussion: """
@@ -22,30 +22,18 @@ struct DisplayCommand: ParsableCommand {
           swm display focus right
         """
     )
-    static let command = "--focus"
 
     @Argument(
       help:
         "One-based display index, next, prev, first, last, recent, mouse, left, right, up, or down.",
-      completion: .list(DisplayFocusTarget.keywords)
+      completion: .list([
+        "next", "prev", "first", "last", "recent", "mouse", "left", "right", "up", "down",
+      ])
     )
-    var target: DisplayFocusTarget
+    var target: DisplayTarget
 
-    var arguments: [String] { [target.argument] }
+    var ipcCommand: IPCCommand { .displayFocus(target) }
   }
 }
 
-struct DisplayFocusTarget: ExpressibleByArgument {
-  static let keywords = [
-    "next", "prev", "first", "last", "recent", "mouse", "left", "right", "up", "down",
-  ]
-
-  let argument: String
-
-  init?(argument: String) {
-    guard Self.keywords.contains(argument) || (Int(argument).map { $0 > 0 } ?? false) else {
-      return nil
-    }
-    self.argument = argument
-  }
-}
+extension DisplayTarget: ExpressibleByArgument {}

@@ -2,27 +2,28 @@ import ArgumentParser
 import Testing
 
 @testable import Swm
+@testable import SwmLib
 
 @Suite("WindowGridCommand")
 struct WindowGridCommandTests {
   @Test("parseAsRoot: translates cells and window selection to IPC")
   func parseAsRootTranslatesCellsAndWindowSelectionToIPC() throws {
-    let cases: [([String], [String])] = [
-      (["2", "1", "0", "0", "1", "1"], ["2:1:0:0:1:1"]),
-      (["3", "2", "1", "0", "2", "2"], ["3:2:1:0:2:2"]),
-      (["--window", "recent", "2", "1", "1", "0", "1", "1"], ["recent", "2:1:1:0:1:1"]),
-      (["2", "1", "--window=42", "1", "0", "1", "1"], ["42", "2:1:1:0:1:1"]),
-      (["2", "1", "0", "0", "1", "1", "--window", "42"], ["42", "2:1:0:0:1:1"]),
-      (["3", "2", "-1", "99", "0", "-2"], ["3:2:-1:99:0:-2"]),
-      (["3", "2", "-1", "--window", "recent", "-2", "99", "99"], ["recent", "3:2:-1:-2:99:99"]),
-      (["--window=recent", "--", "3", "2", "-1", "-2", "1", "1"], ["recent", "3:2:-1:-2:1:1"]),
+    let cases: [([String], WindowSelection, String)] = [
+      (["2", "1", "0", "0", "1", "1"], .focused, "2:1:0:0:1:1"),
+      (["3", "2", "1", "0", "2", "2"], .focused, "3:2:1:0:2:2"),
+      (["--window", "recent", "2", "1", "1", "0", "1", "1"], .recent, "2:1:1:0:1:1"),
+      (["2", "1", "--window=42", "1", "0", "1", "1"], .id(42), "2:1:1:0:1:1"),
+      (["2", "1", "0", "0", "1", "1", "--window", "42"], .id(42), "2:1:0:0:1:1"),
+      (["3", "2", "-1", "99", "0", "-2"], .focused, "3:2:-1:99:0:-2"),
+      (["3", "2", "-1", "--window", "recent", "-2", "99", "99"], .recent, "3:2:-1:-2:99:99"),
+      (["--window=recent", "--", "3", "2", "-1", "-2", "1", "1"], .recent, "3:2:-1:-2:1:1"),
     ]
-    for (values, expected) in cases {
+    for (values, selection, gridSpec) in cases {
       let command = try #require(
         Arguments.parseAsRoot(Arguments.resolve(["window", "grid"] + values)) as? WindowCommand.Grid
       )
-      #expect(command.commandArguments == ["--grid"] + expected)
-      #expect(WindowCommand.Grid.domain == .window)
+      let grid = try #require(WindowGrid(argument: gridSpec))
+      #expect(command.ipcCommand == .window(.grid(selection, grid)))
     }
   }
 

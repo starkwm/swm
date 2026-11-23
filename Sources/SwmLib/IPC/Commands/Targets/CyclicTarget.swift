@@ -1,4 +1,4 @@
-enum CyclicTarget: Equatable {
+public enum CyclicTarget: Codable, Equatable, Sendable {
   case index(Int)
   case next
   case previous
@@ -8,7 +8,7 @@ enum CyclicTarget: Equatable {
     return index
   }
 
-  init?(argument: String) {
+  public init?(argument: String) {
     switch argument {
     case "next": self = .next
     case "prev": self = .previous

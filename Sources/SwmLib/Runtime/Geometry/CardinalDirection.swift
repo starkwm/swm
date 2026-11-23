@@ -1,6 +1,6 @@
 import CoreGraphics
 
-public enum CardinalDirection: String, Equatable, Sendable {
+public enum CardinalDirection: String, Equatable, Codable, Sendable {
   case left
   case right
   case up

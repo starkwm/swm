@@ -1,4 +1,4 @@
-enum WindowLayoutSelection: String, Equatable {
+public enum WindowLayoutSelection: String, Equatable, Codable, Sendable {
   case float
 
   case tile

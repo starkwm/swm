@@ -278,9 +278,14 @@ struct TilingTests {
     #expect(spaces.settings(for: 10) == settings)
     #expect(tiling.layoutPlan(for: layoutID(10)) == nil)
     try tiling.addRule(WindowRule.parse(arguments: ["grid=2:1:1:0:1:1"]))
-    let handler = SpaceCommandHandler(spaces: spaces, tiling: tiling)
-    let response = await handler.dispatch(
-      IPCRequest(id: "gap", domain: .space, command: "--gap", args: ["abs:20"])
+    let handler = ConfigCommandHandler(
+      windows: Windows(workspace: Workspace(), focusedWindowID: nil),
+      spaces: spaces,
+      tiling: tiling
+    )
+    let response = handler.dispatch(
+      id: "gap",
+      command: .gap(scope: .currentSpace, .absolute(20))
     )
     #expect(response.ok)
     #expect(spaces.settings(for: 10).gap == 20)

@@ -84,7 +84,7 @@ public final class Daemon {
         }
 
         try request.validateVersion()
-        log("daemon recv: \(request.domain.rawValue) \(request.command) \(request.args)")
+        log("daemon recv: \(request.command.logDescription)")
 
         return await dispatch(request)
       }
@@ -109,7 +109,7 @@ public final class Daemon {
     deadline.cancel()
 
     if await deadline.value, !response.ok {
-      log("daemon request timed out: \(request.domain.rawValue) \(request.command)", level: .warn)
+      log("daemon request timed out: \(request.command.logDescription)", level: .warn)
       return SocketReply(
         IPCCommandError.internalError("request timed out and was cancelled").response(
           id: request.id

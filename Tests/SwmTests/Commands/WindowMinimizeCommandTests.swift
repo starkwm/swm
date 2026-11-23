@@ -12,17 +12,25 @@ struct WindowMinimizeCommandTests {
   func parseAsRootExplicitTargetsAndMinimizesOmittedTargetPreserveDaemonIPCSelection(
     action: String
   ) throws {
-    let omitted: [String?] = action == "minimize" ? [nil] : []
-    for target in omitted + ["recent", "1", "123", "4294967295"] {
+    let omitted: [(String?, WindowSelection)] = action == "minimize" ? [(nil, .focused)] : []
+    let targets: [(String?, WindowSelection)] =
+      omitted + [
+        ("recent", .recent),
+        ("1", .id(1)),
+        ("123", .id(123)),
+        ("4294967295", .id(4_294_967_295)),
+      ]
+    for (target, expectedSelection) in targets {
       let values = target.map { [$0] } ?? []
       let command = try #require(
-        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any IPCCommand
+        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any DaemonCommand
       )
-      let result = Client.send(domain: command.requestDomain, args: command.commandArguments) {
-        request in
-        #expect(request.domain == .window)
-        #expect(request.command == "--\(action)")
-        #expect(request.args == values)
+      let expected: IPCCommand =
+        action == "minimize"
+        ? .window(.minimize(expectedSelection))
+        : .window(.unminimize(expectedSelection))
+      let result = Client.send(command.ipcCommand) { request in
+        #expect(request.command == expected)
         return .acknowledged(id: request.id)
       }
       #expect(result.ok)
@@ -56,17 +64,23 @@ struct WindowMinimizeCommandTests {
 
   @Test("parseAsRoot: other window commands retain --window selection")
   func parseAsRootOtherWindowCommandsRetainWindowSelection() throws {
-    let cases: [(String, [String], [String])] = [
-      ("move", ["--window", "recent", "20", "0"], ["--move", "recent", "rel:20:0"]),
-      ("resize", ["--window", "123", "40", "0"], ["--resize", "123", "rel:40:0"]),
-      ("swap", ["--window", "recent", "left"], ["--swap", "recent", "left"]),
-      ("swap", ["--window", "123", "master"], ["--swap-with-master", "123"]),
+    let cases: [(String, [String], IPCCommand)] = [
+      (
+        "move", ["--window", "recent", "20", "0"],
+        .window(.move(.recent, .relative(IntPair(20, 0))))
+      ),
+      (
+        "resize", ["--window", "123", "40", "0"],
+        .window(.resize(.id(123), .relative(IntPair(40, 0))))
+      ),
+      ("swap", ["--window", "recent", "left"], .window(.swap(.recent, .left))),
+      ("swap", ["--window", "123", "master"], .window(.swapWithMaster(.id(123)))),
     ]
     for (action, values, expected) in cases {
       let command = try #require(
-        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any IPCCommand
+        Arguments.parseAsRoot(Arguments.resolve(["window", action] + values)) as? any DaemonCommand
       )
-      #expect(command.commandArguments == expected)
+      #expect(command.ipcCommand == expected)
     }
   }
 }

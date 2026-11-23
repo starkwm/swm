@@ -2,14 +2,13 @@ import ArgumentParser
 import SwmLib
 
 struct SpaceCommand: ParsableCommand {
-  struct Activate: SpaceIPCCommand {
+  struct Activate: DaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Activate a desktop Space.")
-    static let command = "--activate"
 
     @Argument(help: "One-based Space index from swm query spaces.")
     var index: Int
 
-    var arguments: [String] { [String(index)] }
+    var ipcCommand: IPCCommand { .spaceActivate(index: index) }
 
     func validate() throws {
       guard index >= 1 else {

@@ -6,62 +6,60 @@ struct WindowCommandHandler {
   let spaces: Spaces
   let tiling: Tiling
 
-  func dispatch(_ request: IPCRequest) async -> IPCResponse {
-    await IPCCommandError.catching(id: request.id) {
-      switch request.command {
-      case "--focus":
-        return try focus(request)
-      case "--warp":
-        return try warp(request)
-      case "--minimize":
-        return try performWindowAction(request, action: "minimize") { $0.minimize() }
-      case "--unminimize":
-        return try performWindowAction(request, action: "unminimize") { $0.unminimize() }
-      case "--layout":
-        return try layout(request)
-      case "--cycle":
-        return try cycle(request)
-      case "--swap":
-        return try swap(request)
-      case "--swap-cycle":
-        return try swapCycle(request)
-      case "--swap-with-master":
-        return try swapWithMaster(request)
-      case "--focus-master":
-        return try focusMaster(request)
-      case "--split-ratio":
-        return try splitRatio(request)
-      case "--toggle-split":
-        return try toggleSplit(request)
-      case "--swap-split":
-        return try swapSplit(request)
-      case "--move":
-        return try move(request)
-      case "--resize":
-        return try resize(request)
-      case "--grid":
-        return try grid(request)
-      case "--display":
-        return try display(request)
-      case "--space":
-        return try await space(request)
-      default:
-        throw IPCCommandError.unsupportedCommand("unsupported window command: \(request.command)")
+  func dispatch(id: String, command: IPCCommand.Window) async -> IPCResponse {
+    await IPCCommandError.catching(id: id) {
+      switch command {
+      case .focus(let target):
+        return try focus(id: id, target: target)
+      case .warp(let target):
+        return try warp(id: id, target: target)
+      case .minimize(let selection):
+        return try performWindowAction(id: id, selection: selection, action: "minimize") {
+          $0.minimize()
+        }
+      case .unminimize(let selection):
+        return try performWindowAction(id: id, selection: selection, action: "unminimize") {
+          $0.unminimize()
+        }
+      case .layout(let selection, let layout):
+        return try self.layout(id: id, selection: selection, layout: layout)
+      case .focusCycle(let direction):
+        return try cycle(id: id, direction: direction)
+      case .swap(let selection, let direction):
+        return try swap(id: id, selection: selection, direction: direction)
+      case .swapCycle(let direction):
+        return try swapCycle(id: id, direction: direction)
+      case .swapWithMaster(let selection):
+        return try swapWithMaster(id: id, selection: selection)
+      case .focusMaster(let selection):
+        return try focusMaster(id: id, selection: selection)
+      case .splitRatio(let selection, let change):
+        return try splitRatio(id: id, selection: selection, change: change)
+      case .toggleSplit(let selection):
+        return try toggleSplit(id: id, selection: selection)
+      case .swapSplit(let selection):
+        return try swapSplit(id: id, selection: selection)
+      case .move(let selection, let change):
+        return try move(id: id, selection: selection, change: change)
+      case .resize(let selection, let change):
+        return try resize(id: id, selection: selection, change: change)
+      case .grid(let selection, let grid):
+        return try self.grid(id: id, selection: selection, grid: grid)
+      case .display(let selection, let target):
+        return try display(id: id, selection: selection, target: target)
+      case .space(let selection, let target):
+        return try await space(id: id, selection: selection, target: target)
       }
     }
   }
 
-  private func focus(_ request: IPCRequest) throws -> IPCResponse {
-    guard let target = WindowTarget(arguments: request.args) else {
-      throw IPCCommandError.invalidRequest("invalid window focus arguments")
-    }
-
+  private func focus(id: String, target: WindowTarget) throws -> IPCResponse {
     let window: Window
     switch target {
-    case .selected(let selector):
-      window = try selectedWindow(selector: selector)
+    case .selected(let selection):
+      window = try selectedWindow(selection)
     case .direction(let direction):
-      let sourceWindow = try selectedWindow(selector: nil)
+      let sourceWindow = try selectedWindow(.focused)
       guard
         let directionalWindow = windows.directionalWindow(
           from: sourceWindow,
@@ -78,23 +76,19 @@ struct WindowCommandHandler {
 
     try window.focusOrThrow()
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
-  private func warp(_ request: IPCRequest) throws -> IPCResponse {
-    guard let target = WindowTarget(arguments: request.args) else {
-      throw IPCCommandError.invalidRequest("invalid window warp arguments")
-    }
-
+  private func warp(id: String, target: WindowTarget) throws -> IPCResponse {
     let mouseWarp = WindowMouseWarp.shared
     let window: Window
     switch target {
-    case .selected(let selector):
-      window = try selectedWindow(selector: selector)
+    case .selected(let selection):
+      window = try selectedWindow(selection)
     case .direction(let direction):
       let sourceWindow = try mouseWarp.sourceWindow(
         windowByID: windows.window(by:),
-        focusedWindow: { try selectedWindow(selector: nil) }
+        focusedWindow: { try selectedWindow(.focused) }
       )
 
       guard
@@ -115,49 +109,46 @@ struct WindowCommandHandler {
 
     try mouseWarp.warp(windowID: window.id, frame: window.frame())
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
   private func performWindowAction(
-    _ request: IPCRequest,
+    id: String,
+    selection: WindowSelection,
     action: String,
     operation: (Window) -> Bool
   ) throws -> IPCResponse {
-    let selector = try parseSelector(request.args, action: action)
-    let window = try selectedWindow(selector: selector)
+    let window = try selectedWindow(selection)
 
     tiling.prepareForSynchronousMutation(for: window.id)
     guard operation(window) else {
       throw IPCCommandError.internalError("could not \(action) window: \(window.id)")
     }
 
-    return .acknowledged(id: request.id)
+    return .acknowledged(id: id)
   }
 
-  func selectedWindow(selector: String?) throws -> Window {
+  func selectedWindow(_ selection: WindowSelection) throws -> Window {
     let windowID: CGWindowID
 
-    if let selector {
-      switch selector {
-      case "recent":
-        guard let recentWindowID = windows.lastFocusedWindowID else {
-          throw IPCCommandError.invalidRequest("no recent window")
-        }
-
-        windowID = recentWindowID
-
-      default:
-        guard let id = UInt32(selector), id != 0 else {
-          throw IPCCommandError.invalidRequest("invalid window selector: \(selector)")
-        }
-
-        windowID = CGWindowID(id)
-      }
-    } else {
+    switch selection {
+    case .focused:
       guard let focusedWindowID = Windows.focusedWindowID() else {
         throw IPCCommandError.invalidRequest("no focused window")
       }
       windowID = focusedWindowID
+
+    case .recent:
+      guard let recentWindowID = windows.lastFocusedWindowID else {
+        throw IPCCommandError.invalidRequest("no recent window")
+      }
+      windowID = recentWindowID
+
+    case .id(let id):
+      guard id != 0 else {
+        throw IPCCommandError.invalidRequest("invalid window selector: 0")
+      }
+      windowID = id
     }
 
     guard let window = windows.window(by: windowID) else {
@@ -165,33 +156,5 @@ struct WindowCommandHandler {
     }
 
     return window
-  }
-
-  func parseSelector(_ args: [String], action: String) throws -> String? {
-    try IPCArguments(args, context: "window \(action)").optionalValue()
-  }
-
-  func parseValueSelection(
-    _ args: [String],
-    action: String
-  ) throws -> (selector: String?, value: String) {
-    try IPCArguments(args, context: "window \(action)").selectedValue()
-  }
-}
-
-enum WindowTarget: Equatable {
-  case selected(String?)
-  case direction(CardinalDirection)
-
-  init?(arguments: [String]) {
-    guard arguments.count <= 1 else { return nil }
-
-    if let argument = arguments.first,
-      let direction = CardinalDirection(rawValue: argument)
-    {
-      self = .direction(direction)
-    } else {
-      self = .selected(arguments.first)
-    }
   }
 }

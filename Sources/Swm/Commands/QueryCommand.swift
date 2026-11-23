@@ -1,4 +1,5 @@
 import ArgumentParser
+import CoreGraphics
 import SwmLib
 
 private func validatePositiveIndex(_ index: Int?, name: String) throws {
@@ -15,75 +16,69 @@ struct QueryCommand: ParsableCommand {
     subcommands: [Displays.self, Spaces.self, Windows.self, Display.self, Space.self, Window.self]
   )
 
-  struct Displays: QueryIPCCommand {
+  struct Displays: QueryDaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Query all displays.")
-    static let command = "--displays"
 
     @OptionGroup var selector: QuerySelectorOptions
 
-    var arguments: [String] { selector.arguments }
+    var ipcCommand: IPCCommand { .query(.displays, selector.selection) }
   }
 
-  struct Spaces: QueryIPCCommand {
+  struct Spaces: QueryDaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Query all Spaces.")
-    static let command = "--spaces"
 
     @OptionGroup var selector: QuerySelectorOptions
 
-    var arguments: [String] { selector.arguments }
+    var ipcCommand: IPCCommand { .query(.spaces, selector.selection) }
   }
 
-  struct Windows: QueryIPCCommand {
+  struct Windows: QueryDaemonCommand {
     static let configuration = CommandConfiguration(abstract: "Query all windows.")
-    static let command = "--windows"
 
     @OptionGroup var selector: QuerySelectorOptions
 
-    var arguments: [String] { selector.arguments }
+    var ipcCommand: IPCCommand { .query(.windows, selector.selection) }
   }
 
-  struct Display: QueryIPCCommand {
+  struct Display: QueryDaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a display by index, or the focused display."
     )
-    static let command = "--displays"
 
     @Argument(help: "One-based display index.")
     var index: Int?
 
-    var arguments: [String] { ["--display"] + (index.map { [String($0)] } ?? []) }
+    var ipcCommand: IPCCommand { .query(.displays, .display(index)) }
 
     func validate() throws {
       try validatePositiveIndex(index, name: "Display")
     }
   }
 
-  struct Space: QueryIPCCommand {
+  struct Space: QueryDaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a Space by index, or the focused Space."
     )
-    static let command = "--spaces"
 
     @Argument(help: "One-based Space index.")
     var index: Int?
 
-    var arguments: [String] { ["--space"] + (index.map { [String($0)] } ?? []) }
+    var ipcCommand: IPCCommand { .query(.spaces, .space(index)) }
 
     func validate() throws {
       try validatePositiveIndex(index, name: "Space")
     }
   }
 
-  struct Window: QueryIPCCommand {
+  struct Window: QueryDaemonCommand {
     static let configuration = CommandConfiguration(
       abstract: "Query a window by ID, or the focused window."
     )
-    static let command = "--windows"
 
     @Argument(help: "Window ID.")
     var id: UInt32?
 
-    var arguments: [String] { ["--window"] + (id.map { [String($0)] } ?? []) }
+    var ipcCommand: IPCCommand { .query(.windows, .window(id)) }
   }
 }
 
@@ -92,11 +87,11 @@ struct QuerySelectorOptions: ParsableArguments {
   @Option(help: "Filter by one-based Space index.") var space: Int?
   @Option(help: "Filter by window ID.") var window: UInt32?
 
-  var arguments: [String] {
-    if let display { return ["--display", String(display)] }
-    if let space { return ["--space", String(space)] }
-    if let window { return ["--window", String(window)] }
-    return []
+  var selection: QuerySelection {
+    if let display { return .display(display) }
+    if let space { return .space(space) }
+    if let window { return .window(CGWindowID(window)) }
+    return .none
   }
 
   func validate() throws {
