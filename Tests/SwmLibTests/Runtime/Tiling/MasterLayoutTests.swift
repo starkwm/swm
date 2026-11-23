@@ -151,4 +151,42 @@ struct MasterLayoutTests {
       #expect(result == nil)
     }
   }
+
+  @Test("layout: grows stack rows to known minimum heights")
+  func layoutGrowsStackRowsToKnownMinimumHeights() {
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2, 3],
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 900),
+      settings: .defaults,
+      minimumSizes: [3: CGSize(width: 1, height: 600)]
+    )
+
+    #expect(
+      result
+        == [
+          1: CGRect(x: 0, y: 0, width: 500, height: 900),
+          2: CGRect(x: 500, y: 0, width: 500, height: 300),
+          3: CGRect(x: 500, y: 300, width: 500, height: 600),
+        ]
+    )
+  }
+
+  @Test("layout: grows a top master to its known minimum height")
+  func layoutGrowsTopMasterToItsKnownMinimumHeight() {
+    let result = MasterLayout().layout(
+      windowIDs: [1, 2],
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+      settings: .defaults,
+      placement: .top,
+      minimumSizes: [1: CGSize(width: 1, height: 600)]
+    )
+
+    #expect(
+      result
+        == [
+          1: CGRect(x: 0, y: 0, width: 1_000, height: 600),
+          2: CGRect(x: 0, y: 600, width: 1_000, height: 200),
+        ]
+    )
+  }
 }

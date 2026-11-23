@@ -110,4 +110,41 @@ struct DwindleLayoutTests {
 
     #expect(result == nil)
   }
+
+  @Test("layout: moves splits so known minimum sizes fit")
+  func layoutMovesSplitsSoKnownMinimumSizesFit() {
+    var settings = SpaceSettings.defaults
+    settings.gap = 10
+
+    let result = DwindleLayout().layout(
+      tree: tilingTree([1, 2, 3]),
+      in: CGRect(x: 0, y: 0, width: 1_000, height: 800),
+      settings: settings,
+      minimumSizes: [3: CGSize(width: 600, height: 1)]
+    )
+
+    #expect(
+      result
+        == [
+          1: CGRect(x: 0, y: 0, width: 390, height: 800),
+          2: CGRect(x: 400, y: 0, width: 600, height: 395),
+          3: CGRect(x: 400, y: 405, width: 600, height: 395),
+        ]
+    )
+  }
+
+  @Test("layout: keeps split ratios when minimum sizes cannot fit")
+  func layoutKeepsSplitRatiosWhenMinimumSizesCannotFit() {
+    let bounds = CGRect(x: 0, y: 0, width: 1_000, height: 800)
+    let layout = DwindleLayout()
+
+    #expect(
+      layout.layout(
+        tree: tilingTree([1, 2]),
+        in: bounds,
+        settings: .defaults,
+        minimumSizes: [1: CGSize(width: 600, height: 1), 2: CGSize(width: 600, height: 1)]
+      ) == layout.layout(tree: tilingTree([1, 2]), in: bounds, settings: .defaults)
+    )
+  }
 }

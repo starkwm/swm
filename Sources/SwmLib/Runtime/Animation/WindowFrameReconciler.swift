@@ -36,6 +36,9 @@ final class WindowFrameReconciler {
 
   var onInteractionEnded: () -> Void = {}
 
+  /// Called when a window ends up at a different frame than its final requested one.
+  var onFrameRefused: ((_ id: CGWindowID, _ target: CGRect, _ actual: CGRect) -> Void)?
+
   private let automaticallySchedule: Bool
   private let delivery: AnimationFrameDelivery
   private var deliveries = [CGWindowID: FrameDeliveryState]()
@@ -285,6 +288,7 @@ final class WindowFrameReconciler {
       if result.outcome == .failed {
         self.deliveryFailed(id)
         state.batch?.receive(id, verified: false)
+        if let actual = result.frame { self.onFrameRefused?(id, target, actual) }
       } else if result.outcome == .verified {
         self.deliveries.removeValue(forKey: id)
         self.expectMutation(to: state.target, for: id, reachedTarget: true)
