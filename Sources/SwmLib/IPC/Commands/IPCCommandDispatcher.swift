@@ -89,12 +89,6 @@ struct IPCCommandDispatcher {
         request,
         command: command
       )
-
-    case .signal(let command):
-      return SignalCommandHandler(reload: reload).dispatch(
-        request,
-        command: command
-      )
     }
   }
 

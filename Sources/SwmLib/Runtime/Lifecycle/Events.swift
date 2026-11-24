@@ -47,19 +47,7 @@ public final class Events: Sendable {
       preconditionFailure("Events must be configured before handling events")
     }
 
-    let signalMapper = RuntimeEventSignalMapper(
-      windows: dependencies.windows,
-      spaces: dependencies.spaces,
-      displays: dependencies.displays,
-      hasSubscribers: { Signals.shared.hasSubscribers(for: $0) }
-    )
-    let payloadBeforeHandling = signalMapper.payload(beforeHandling: event)
-
     dispatch(event, dependencies: dependencies)
-
-    if let payload = payloadBeforeHandling ?? signalMapper.payload(afterHandling: event) {
-      Signals.shared.emit(payload)
-    }
   }
 
   @MainActor

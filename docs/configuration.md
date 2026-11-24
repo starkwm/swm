@@ -6,7 +6,7 @@
 
 At startup, the daemon executes `~/.config/swm/swmrc` if it exists. Use `--config <path>` to select another file; an explicitly selected file must exist. `swm` makes the file owner-executable when needed and stops if it exits unsuccessfully.
 
-The daemon runs the file at startup as its own child process, so the file and every program it starts can use swm's Accessibility access. See [signal permissions](signals.md#permissions), which apply to the file in the same way. `swm reload` runs the file from the `swm reload` process instead, with the permissions of whatever ran that command. See [reload the configuration](cli.md#reload-the-configuration) for what a reload replaces and restores. Keep the file writable only by your user.
+The daemon runs the file at startup as its own child process, so macOS checks its privacy permissions against the same app as the daemon. The file and every program it starts can use swm's Accessibility access, and read and control the windows of any app just as swm can. `swm reload` runs the file from the `swm reload` process instead, with the permissions of whatever ran that command. See [reload the configuration](cli.md#reload-the-configuration) for what a reload replaces and restores. Keep the file writable only by your user.
 
 The file can be any executable script. A shell script is the simplest option:
 
@@ -110,4 +110,4 @@ resizing the window.
 
 Use [window rules](rules.md) to keep selected applications floating or place their windows.
 
-See [space commands](spaces.md) for per-space settings, [signals](signals.md) for actions that run on events, and [keyboard shortcuts](keyboard-shortcuts.md) for hotkey bindings.
+See [space commands](spaces.md) for per-space settings and [keyboard shortcuts](keyboard-shortcuts.md) for hotkey bindings.

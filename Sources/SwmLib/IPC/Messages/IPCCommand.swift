@@ -49,13 +49,6 @@ public enum IPCCommand: Codable, Equatable, Sendable {
     case list
   }
 
-  public enum Signal: Codable, Equatable, Sendable {
-    case add([String])
-    case remove(String)
-    case clear
-    case list
-  }
-
   case config(Config)
   case reload(Reload)
   case spaceActivate(index: Int)
@@ -63,7 +56,6 @@ public enum IPCCommand: Codable, Equatable, Sendable {
   case window(Window)
   case query(QueryKind, QuerySelection)
   case rule(Rule)
-  case signal(Signal)
 
   var logDescription: String {
     switch self {
@@ -116,13 +108,6 @@ public enum IPCCommand: Codable, Equatable, Sendable {
       case .remove: "rule remove"
       case .clear: "rule clear"
       case .list: "rule list"
-      }
-    case .signal(let command):
-      switch command {
-      case .add: "signal add"
-      case .remove: "signal remove"
-      case .clear: "signal clear"
-      case .list: "signal list"
       }
     }
   }

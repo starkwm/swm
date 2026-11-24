@@ -40,5 +40,4 @@ Command reference:
 - [Manage windows](docs/windows.md): focus, minimize, move, resize, and control tiling.
 - [Configure spaces](docs/spaces.md): activation, layouts, padding, gaps, and display behavior.
 - [Manage displays](docs/displays.md): focus displays by index, order, recency, or direction.
-- [Signals](docs/signals.md): register shell actions for runtime events.
 - [Window rules](docs/rules.md): keep windows floating or place them on a display.

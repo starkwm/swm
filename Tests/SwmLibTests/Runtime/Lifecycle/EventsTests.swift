@@ -6,16 +6,9 @@ import Testing
 @Suite("Events")
 @MainActor
 struct EventsTests {
-  @Test("post: preserves lifecycle order and destruction facts before invalidation")
-  func postPreservesLifecycleOrderAndDestructionFactsBeforeInvalidation() async {
-    let windows = Windows(workspace: Workspace(), focusedWindowID: 42)
-    let mapper = RuntimeEventSignalMapper(
-      windows: windows,
-      spaces: Spaces(activeSpaceID: nil),
-      displays: Displays()
-    )
+  @Test("post: preserves lifecycle order and releases windows after handling")
+  func postPreservesLifecycleOrderAndReleasesWindowsAfterHandling() async {
     var handled = [String]()
-    var destructionPayload: SignalPayload?
     let events = Events { event in
       switch event {
       case .window(.minimized(let window)):
@@ -24,7 +17,6 @@ struct EventsTests {
         handled.append("deminimized:\(window.id)")
       case .window(.destroyed(let window)):
         handled.append("destroyed:\(window.id)")
-        destructionPayload = mapper.payload(beforeHandling: event)
         window.invalidate()
       default: Issue.record("Unexpected event")
       }
@@ -42,9 +34,6 @@ struct EventsTests {
       DispatchQueue.main.async { continuation.resume() }
     }
     #expect(handled == ["minimized:42", "deminimized:42", "destroyed:42"])
-    #expect(destructionPayload?.event == .windowDestroyed)
-    #expect(destructionPayload?.environment["SWM_WINDOW_ID"] == "42")
-    #expect(destructionPayload?.active == true)
     #expect(retainedWindow == nil)
   }
 }
