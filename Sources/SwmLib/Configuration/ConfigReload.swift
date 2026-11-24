@@ -35,7 +35,6 @@ final class ConfigReload {
   private let tiling: Tiling
   private let spaces: Spaces
   private let windows: Windows
-  private let signals: Signals
   private let watchProcess: ProcessWatcher
   private let makeToken: () -> String
   private var transaction: Transaction?
@@ -44,14 +43,12 @@ final class ConfigReload {
     tiling: Tiling,
     spaces: Spaces,
     windows: Windows,
-    signals: Signals = .shared,
     watchProcess: @escaping ProcessWatcher = { watchExit(of: $0, onExit: $1) },
     makeToken: @escaping () -> String = { UUID().uuidString }
   ) {
     self.tiling = tiling
     self.spaces = spaces
     self.windows = windows
-    self.signals = signals
     self.watchProcess = watchProcess
     self.makeToken = makeToken
   }
@@ -84,7 +81,6 @@ final class ConfigReload {
 
   func commit(token: String) throws {
     let transaction = try close(token: token)
-    signals.replaceAll(transaction.staging.signals)
     tiling.replaceRules(transaction.staging.rules)
     log("configuration reload committed", level: .info)
   }
@@ -137,8 +133,6 @@ private struct ReloadSettings {
 final class ReloadStaging {
   private(set) var rules = [WindowRule]()
 
-  private(set) var signals = [Signal]()
-
   func addRule(_ rule: WindowRule) throws {
     try rules.appendUniquelyLabeled(rule, kind: "rule", label: \.label)
   }
@@ -149,17 +143,5 @@ final class ReloadStaging {
 
   func removeAllRules() {
     rules.removeAll()
-  }
-
-  func addSignal(_ signal: Signal) throws {
-    try signals.appendUniquelyLabeled(signal, kind: "signal", label: \.label)
-  }
-
-  func removeSignal(selector: String) throws {
-    try signals.remove(selector: selector, kind: "signal", label: \.label)
-  }
-
-  func removeAllSignals() {
-    signals.removeAll()
   }
 }

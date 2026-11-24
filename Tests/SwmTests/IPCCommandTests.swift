@@ -132,7 +132,7 @@ struct IPCCommandTests {
     #expect(
       read(errors)
         == "Error: configuration file exited with status 1\n"
-        + "Kept the previous rules, signals, and settings.\n"
+        + "Kept the previous rules and settings.\n"
     )
   }
 
@@ -156,8 +156,8 @@ struct IPCCommandTests {
     #expect(read(errors) == "Error: a configuration reload is already in progress\n")
   }
 
-  @Test("reload: clears rules and signals, then runs the file, for a daemon without reloads")
-  func reloadClearsRulesAndSignalsThenRunsTheFileForADaemonWithoutReloads() throws {
+  @Test("reload: clears rules, then runs the file, for a daemon without reloads")
+  func reloadClearsRulesThenRunsTheFileForADaemonWithoutReloads() throws {
     let errors = try #require(tmpfile())
     defer { fclose(errors) }
     let command = try #require(
@@ -177,7 +177,6 @@ struct IPCCommandTests {
       reload.calls == [
         .command(.reload(.begin(processID: 42))),
         .command(.rule(.clear)),
-        .command(.signal(.clear)),
         .exec("/tmp/swmrc", nil),
       ]
     )

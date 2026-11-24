@@ -14,7 +14,7 @@ struct Arguments: ParsableCommand {
       ),
       CommandGroup(
         name: "CONFIGURE",
-        subcommands: [ConfigCommand.self, RuleCommand.self, SignalCommand.self]
+        subcommands: [ConfigCommand.self, RuleCommand.self]
       ),
       CommandGroup(name: "INSPECT", subcommands: [QueryCommand.self]),
     ]
@@ -93,8 +93,8 @@ struct ReloadCommand: ParsableCommand {
     commandName: "reload",
     abstract: "Run the configuration file again in the running daemon.",
     discussion: """
-      Rules and signals the file registers replace the current ones when the file exits \
-      successfully. If it fails, the current rules and signals stay, and settings it changed \
+      Rules the file registers replace the current ones when the file exits \
+      successfully. If it fails, the current rules stay, and settings it changed \
       are restored. Settings the file no longer sets keep their current values.
       """
   )
@@ -146,7 +146,7 @@ struct ReloadCommand: ParsableCommand {
       let rollback = send(.reload(.rollback(token: token)))
       fputs(
         rollback.ok
-          ? "Kept the previous rules, signals, and settings.\n"
+          ? "Kept the previous rules and settings.\n"
           : "\(rollback.outputMessage)\n",
         errors
       )
@@ -166,12 +166,10 @@ struct ReloadCommand: ParsableCommand {
     execute: (String, String?) throws -> Void,
     errors: UnsafeMutablePointer<FILE>
   ) throws {
-    for command in [IPCCommand.rule(.clear), .signal(.clear)] {
-      let result = send(command)
-      guard result.ok else {
-        fputs("\(result.outputMessage)\n", errors)
-        throw ExitCode.failure
-      }
+    let result = send(.rule(.clear))
+    guard result.ok else {
+      fputs("\(result.outputMessage)\n", errors)
+      throw ExitCode.failure
     }
 
     do {

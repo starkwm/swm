@@ -6,42 +6,22 @@ import Testing
 @MainActor
 @Suite("ConfigReload")
 struct ConfigReloadTests {
-  @Test("commit: swaps staged rules and signals in at once, leaving live ones until then")
-  func commitSwapsStagedRulesAndSignalsInAtOnceLeavingLiveOnesUntilThen() throws {
+  @Test("commit: swaps staged rules in at once, leaving live ones until then")
+  func commitSwapsStagedRulesInAtOnceLeavingLiveOnesUntilThen() throws {
     let fixture = ReloadFixture()
     try fixture.tiling.addRule(WindowRule.parse(arguments: ["label=old", "manage=off"]))
-    #expect(
-      fixture.send(.signal(.add(["label=old", "event=window-focused", "action=true"]))).ok
-    )
     let token = try fixture.begin()
 
     #expect(fixture.send(.rule(.clear), token: token).ok)
     #expect(fixture.send(.rule(.add(["label=new", "manage=off"])), token: token).ok)
-    #expect(fixture.send(.signal(.clear), token: token).ok)
-    #expect(
-      fixture.send(
-        .signal(.add(["label=new", "event=space-changed", "action=true"])),
-        token: token
-      )
-      .ok
-    )
     #expect(!fixture.send(.rule(.add(["label=new", "manage=on"])), token: token).ok)
-    #expect(
-      fixture.send(
-        .signal(.add(["label=old", "event=window-focused", "action=true"])),
-        token: token
-      ).ok
-    )
 
     #expect(fixture.tiling.rules.map(\.label) == ["old"])
-    #expect(fixture.signals.list().map(\.signal.label) == ["old"])
     #expect(try fixture.labels(.rule(.list), token: token) == ["new"])
-    #expect(try fixture.labels(.signal(.list), token: token) == ["new", "old"])
     #expect(try fixture.labels(.rule(.list)) == ["old"])
 
     #expect(fixture.send(.reload(.commit(token: token))).ok)
     #expect(fixture.tiling.rules.map(\.label) == ["new"])
-    #expect(fixture.signals.list().map(\.signal.label) == ["new", "old"])
     #expect(fixture.stoppedWatching)
   }
 
@@ -156,14 +136,7 @@ struct ConfigReloadTests {
     #expect(fixture.send(.rule(.add(["label=b", "manage=off"])), token: "unknown").ok)
     #expect(fixture.send(.reload(.commit(token: token))).ok)
     #expect(fixture.send(.rule(.add(["label=c", "manage=off"])), token: token).ok)
-    #expect(
-      fixture.send(
-        .signal(.add(["label=c", "event=window-focused", "action=true"])),
-        token: token
-      ).ok
-    )
     #expect(fixture.tiling.rules.map(\.label) == ["c"])
-    #expect(fixture.signals.list().map(\.signal.label) == ["c"])
   }
 
   @Test("watchExit: reports a process exit and rejects a process that is not running")
@@ -194,7 +167,6 @@ private final class ReloadFixture {
   let tiling: Tiling
   let spaces: Spaces
   let windows = Windows(workspace: Workspace(), focusedWindowID: nil)
-  let signals = Signals()
   var stoppedWatching: Bool { process.stopped }
 
   var settings: ReloadedSettings {
@@ -218,7 +190,6 @@ private final class ReloadFixture {
       tiling: tiling,
       spaces: spaces,
       windows: windows,
-      signals: signals,
       watchProcess: { [process] processID, onExit in
         guard runningProcessIDs.contains(processID) else { return nil }
         process.onExit = onExit
@@ -243,8 +214,6 @@ private final class ReloadFixture {
     return switch command {
     case .rule(let rule):
       RuleCommandHandler(tiling: tiling, reload: reload).dispatch(request, command: rule)
-    case .signal(let signal):
-      SignalCommandHandler(signals: signals, reload: reload).dispatch(request, command: signal)
     case .config(let config):
       ConfigCommandHandler(windows: windows, spaces: spaces, tiling: tiling).dispatch(
         id: request.id,

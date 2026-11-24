@@ -51,7 +51,6 @@ struct ApplicationLifecycleHandler {
       workspace.unobserveActivationPolicy(process)
     }
 
-    let wasManaged = windows.application(by: process.pid) != nil
     guard
       let application = windows.manage(
         process,
@@ -65,7 +64,6 @@ struct ApplicationLifecycleHandler {
       retry()
     }
     tiling.reconcileAndReflowVisibleSpaces()
-    if !wasManaged { emitApplicationSignal(.applicationLaunched, application: application) }
 
     if windows.removeLostFrontSwitchedEvent(for: process.pid) {
       postEvent(.application(.frontSwitched(process)))
@@ -85,7 +83,6 @@ struct ApplicationLifecycleHandler {
     log("application terminated \(application)")
 
     windows.remove(application: application)
-    emitApplicationSignal(.applicationTerminated, application: application)
 
     let applicationWindows = windows.allWindows(for: application)
 
@@ -120,17 +117,6 @@ struct ApplicationLifecycleHandler {
 
     log(
       "frontmost application switched \(application), current focused window: \(windows.currentFocusedWindowID.map(String.init) ?? "nil"), last focused window: \(windows.lastFocusedWindowID.map(String.init) ?? "nil")"
-    )
-  }
-
-  private func emitApplicationSignal(_ event: SignalEvent, application: Application) {
-    Signals.shared.emit(
-      .application(
-        event: event,
-        processID: application.processID,
-        app: application.name,
-        active: WindowServerClient.shared.frontmostProcessID() == application.processID
-      )
     )
   }
 }
